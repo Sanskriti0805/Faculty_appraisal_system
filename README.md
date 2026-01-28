@@ -103,4 +103,3 @@ faculty_appraisal_system/
 ## License
 
 This project is created for educational purposes.
-
