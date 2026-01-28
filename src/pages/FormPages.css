@@ -1,0 +1,136 @@
+.form-page {
+  max-width: 1400px;
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2.5rem;
+}
+
+.page-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin: 0 0 0.625rem 0;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 1.0625rem;
+  color: #5a6c7d;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.save-button {
+  background-color: #27ae60;
+  color: white;
+  border: none;
+  padding: 0.875rem 2rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  white-space: nowrap;
+  box-shadow: 0 3px 8px rgba(39, 174, 96, 0.3);
+}
+
+.save-button:hover {
+  background-color: #229954;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 12px rgba(39, 174, 96, 0.4);
+}
+
+.form-card {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(59, 89, 152, 0.1);
+}
+
+.section-header-text {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 3px solid #3B5998;
+  text-decoration: none;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+.form-field-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.form-field-vertical label {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: #1e3a5f;
+  line-height: 1.5;
+}
+
+.form-field-vertical input,
+.form-field-vertical textarea {
+  font-size: 1rem;
+  color: #2c3e50;
+  padding: 1rem 1.25rem;
+  border: 2px solid #d1d8e0;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.form-field-vertical input:focus,
+.form-field-vertical textarea:focus {
+  outline: none;
+  border-color: #3B5998;
+  box-shadow: 0 0 0 3px rgba(59, 89, 152, 0.1);
+}
+
+.form-field-vertical textarea {
+  min-height: 130px;
+  line-height: 1.6;
+}
+
+.form-field-vertical input::placeholder,
+.form-field-vertical textarea::placeholder {
+  color: #a8b7c7;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  
+  .save-button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .form-card {
+    padding: 2rem;
+  }
+}
+

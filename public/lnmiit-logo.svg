@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600">
+  <!-- Orange squares pattern -->
+  <rect x="816" y="43" width="70" height="70" fill="#D97C3C"/>
+  <rect x="898" y="43" width="70" height="70" fill="#D97C3C"/>
+  <rect x="980" y="43" width="70" height="70" fill="#D97C3C"/>
+  <rect x="898" y="125" width="70" height="70" fill="#D97C3C"/>
+  <rect x="980" y="125" width="70" height="70" fill="#D97C3C"/>
+  <rect x="980" y="207" width="70" height="70" fill="#D97C3C"/>
+  
+  <!-- LNMIIT Text -->
+  <text x="65" y="280" font-family="Arial, sans-serif" font-size="180" font-weight="bold" fill="#3B5998">LNMIIT</text>
+  
+  <!-- Subtitle -->
+  <text x="65" y="380" font-family="Arial, sans-serif" font-size="48" fill="#3B5998">The LNM Institute of</text>
+  <text x="65" y="450" font-family="Arial, sans-serif" font-size="48" fill="#3B5998">Information Technology</text>
+</svg>
+
