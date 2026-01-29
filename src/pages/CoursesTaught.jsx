@@ -1,36 +1,36 @@
 import React, { useState } from 'react'
-import { Plus, Trash2, Save } from 'lucide-react'
+import { Plus, Trash2, Save, Upload, FileText, X } from 'lucide-react'
 import './CoursesTaught.css'
 
 const CoursesTaught = () => {
   const [selectedSection, setSelectedSection] = useState('courses')
   const [selectedSemester, setSelectedSemester] = useState('fall')
-  
+
   const [fallCourses, setFallCourses] = useState([
-    { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '' },
-    { id: 2, title: '', percentage: '', students: '', feedback: '', remarks: '' },
+    { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
+    { id: 2, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
   ])
 
   const [springCourses, setSpringCourses] = useState([
-    { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '' },
-    { id: 2, title: '', percentage: '', students: '', feedback: '', remarks: '' },
+    { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
+    { id: 2, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
   ])
 
   const [summerCourses, setSummerCourses] = useState([
-    { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '' },
+    { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
   ])
 
   // Projects Guided data
   const [fallProjects, setFallProjects] = useState([
-    { id: 1, projectTitle: '', studentName: '', duration: '', outcome: '', remarks: '' },
+    { id: 1, projectTitle: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null },
   ])
 
   const [springProjects, setSpringProjects] = useState([
-    { id: 1, projectTitle: '', studentName: '', duration: '', outcome: '', remarks: '' },
+    { id: 1, projectTitle: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null },
   ])
 
   const [summerProjects, setSummerProjects] = useState([
-    { id: 1, projectTitle: '', studentName: '', duration: '', outcome: '', remarks: '' },
+    { id: 1, projectTitle: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null },
   ])
 
   const handleInputChange = (semester, index, field, value) => {
@@ -61,13 +61,14 @@ const CoursesTaught = () => {
 
   const addCourse = (semester) => {
     if (selectedSection === 'courses') {
-      const newCourse = { 
-        id: Date.now(), 
-        title: '', 
-        percentage: '', 
-        students: '', 
-        feedback: '', 
-        remarks: '' 
+      const newCourse = {
+        id: Date.now(),
+        title: '',
+        percentage: '',
+        students: '',
+        feedback: '',
+        remarks: '',
+        feedbackFile: null
       }
 
       if (semester === 'fall') {
@@ -78,13 +79,15 @@ const CoursesTaught = () => {
         setSummerCourses([...summerCourses, newCourse])
       }
     } else {
-      const newProject = { 
-        id: Date.now(), 
-        projectTitle: '', 
-        studentName: '', 
-        duration: '', 
-        outcome: '', 
-        remarks: '' 
+      const newProject = {
+        id: Date.now(),
+        projectTitle: '',
+        studentName: '',
+        duration: '',
+        outcome: '',
+        outcome: '',
+        remarks: '',
+        certificateFile: null
       }
 
       if (semester === 'fall') {
@@ -164,7 +167,7 @@ const CoursesTaught = () => {
       <div className="semester-section">
         <div className="semester-header">
           <h3>{semesterLabel}</h3>
-          <button 
+          <button
             className="add-course-btn"
             onClick={() => addCourse(semester)}
           >
@@ -172,7 +175,7 @@ const CoursesTaught = () => {
             {selectedSection === 'courses' ? 'Add Course' : 'Add Project'}
           </button>
         </div>
-        
+
         <div className="table-container">
           {selectedSection === 'courses' ? renderCoursesTable(semester, items) : renderProjectsTable(semester, items)}
         </div>
@@ -185,11 +188,11 @@ const CoursesTaught = () => {
       <table className="courses-table">
         <thead>
           <tr>
-            <th style={{ width: '5%' }}>Course</th>
+            <th style={{ width: '8%' }}>Course</th>
             <th style={{ width: '25%' }}>Course Title/Name</th>
-            <th style={{ width: '20%' }}>% of Course taught / Handled Alone, if there were two or more co-instructors</th>
+            <th style={{ width: '20%' }}>% of Course taught / handled alone, if there were two or more co-instructors</th>
             <th style={{ width: '15%' }}>Number of Students Taught</th>
-            <th style={{ width: '15%' }}>Student Feedback</th>
+            <th style={{ width: '25%' }}>Student Feedback Score</th>
             <th style={{ width: '15%' }}>Remarks, if any</th>
             <th style={{ width: '5%' }}>Action</th>
           </tr>
@@ -223,12 +226,41 @@ const CoursesTaught = () => {
                 />
               </td>
               <td>
-                <input
-                  type="text"
-                  value={course.feedback}
-                  onChange={(e) => handleInputChange(semester, index, 'feedback', e.target.value)}
-                  placeholder="Feedback score"
-                />
+                <div className="feedback-container">
+                  <input
+                    type="text"
+                    value={course.feedback}
+                    onChange={(e) => handleInputChange(semester, index, 'feedback', e.target.value)}
+                    placeholder="Score"
+                    className="feedback-input"
+                  />
+
+                  <div className="compact-upload-wrapper">
+                    <input
+                      type="file"
+                      id={`file-upload-${semester}-${index}`}
+                      accept=".pdf"
+                      onChange={(e) => handleInputChange(semester, index, 'feedbackFile', e.target.files[0])}
+                      className="file-input-hidden"
+                    />
+                    <label
+                      htmlFor={`file-upload-${semester}-${index}`}
+                      className={`compact-upload-btn ${course.feedbackFile ? 'has-file' : ''}`}
+                      title={course.feedbackFile ? course.feedbackFile.name : "Upload PDF"}
+                    >
+                      {course.feedbackFile ? <FileText size={18} /> : <Upload size={18} />}
+                    </label>
+                    {course.feedbackFile && (
+                      <button
+                        className="compact-remove-btn"
+                        onClick={() => handleInputChange(semester, index, 'feedbackFile', null)}
+                        title="Remove file"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </td>
               <td>
                 <input
@@ -263,7 +295,8 @@ const CoursesTaught = () => {
             <th style={{ width: '20%' }}>Name of the Student</th>
             <th style={{ width: '15%' }}>Duration of Project</th>
             <th style={{ width: '20%' }}>Major Outcome</th>
-            <th style={{ width: '20%' }}>Remarks, if any</th>
+            <th style={{ width: '15%' }}>Remarks, if any</th>
+            <th style={{ width: '10%' }}>Upload Certificate</th>
             <th style={{ width: '5%' }}>Action</th>
           </tr>
         </thead>
@@ -311,6 +344,33 @@ const CoursesTaught = () => {
                 />
               </td>
               <td>
+                <div className="compact-upload-wrapper" style={{ margin: '0 auto' }}>
+                  <input
+                    type="file"
+                    id={`cert-upload-${semester}-${index}`}
+                    accept=".pdf"
+                    onChange={(e) => handleInputChange(semester, index, 'certificateFile', e.target.files[0])}
+                    className="file-input-hidden"
+                  />
+                  <label
+                    htmlFor={`cert-upload-${semester}-${index}`}
+                    className={`compact-upload-btn ${project.certificateFile ? 'has-file' : ''}`}
+                    title={project.certificateFile ? project.certificateFile.name : "Upload PDF"}
+                  >
+                    {project.certificateFile ? <FileText size={18} /> : <Upload size={18} />}
+                  </label>
+                  {project.certificateFile && (
+                    <button
+                      className="compact-remove-btn"
+                      onClick={() => handleInputChange(semester, index, 'certificateFile', null)}
+                      title="Remove file"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              </td>
+              <td>
                 <button
                   className="delete-btn"
                   onClick={() => removeCourse(semester, index)}
@@ -342,9 +402,9 @@ const CoursesTaught = () => {
       <div className="selector-container">
         <div className="section-selector">
           <label htmlFor="section-select">Select Section:</label>
-          <select 
+          <select
             id="section-select"
-            value={selectedSection} 
+            value={selectedSection}
             onChange={(e) => setSelectedSection(e.target.value)}
             className="section-dropdown"
           >
@@ -355,9 +415,9 @@ const CoursesTaught = () => {
 
         <div className="semester-selector">
           <label htmlFor="semester-select">Select Semester:</label>
-          <select 
+          <select
             id="semester-select"
-            value={selectedSemester} 
+            value={selectedSemester}
             onChange={(e) => setSelectedSemester(e.target.value)}
             className="semester-dropdown"
           >

@@ -4,8 +4,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .page-header {
@@ -185,6 +192,7 @@
   font-weight: 600;
   color: #5a6c7d;
   text-align: center;
+  white-space: nowrap;
 }
 
 .courses-table input,
@@ -206,6 +214,7 @@
 
 .courses-table input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .courses-table input[type="number"]::-webkit-outer-spin-button,
@@ -240,10 +249,155 @@
   .courses-table {
     font-size: 0.85rem;
   }
-  
+
   .courses-table th,
   .courses-table td {
     padding: 0.5rem;
   }
 }
 
+/* File Upload Styles */
+.file-upload-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.file-upload-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #f8f9fa;
+  border: 1px dashed #3B5998;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #3B5998;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-upload-label:hover {
+  background-color: #e8f0fe;
+  border-color: #2d4373;
+}
+
+.file-upload-label.has-file {
+  background-color: #e6fffa;
+  border-color: #27ae60;
+  border-style: solid;
+  color: #27ae60;
+  justify-content: flex-start;
+}
+
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+.remove-file-btn {
+  background: white;
+  border: 1px solid #e1e1e1;
+  color: #dc3545;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.remove-file-btn:hover {
+  background-color: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+
+/* Compact Feedback Layout */
+.feedback-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.feedback-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.compact-upload-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.compact-upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background-color: #f8f9fa;
+  border: 1px dashed #3B5998;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #3B5998;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.compact-upload-btn:hover {
+  background-color: #e8f0fe;
+  border-color: #2d4373;
+  transform: translateY(-1px);
+}
+
+.compact-upload-btn.has-file {
+  background-color: #e6fffa;
+  border-color: #27ae60;
+  border-style: solid;
+  color: #27ae60;
+}
+
+.compact-remove-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: white;
+  border: 1px solid #e1e1e1;
+  color: #dc3545;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+
+.compact-remove-btn:hover {
+  background-color: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
