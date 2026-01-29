@@ -9,7 +9,6 @@ import Courseware from './pages/Courseware'
 import TeachingInnovation from './pages/TeachingInnovation'
 import ResearchPublications from './pages/ResearchPublications'
 import ResearchGrants from './pages/ResearchGrants'
-import SubmittedProposals from './pages/SubmittedProposals'
 import Patents from './pages/Patents'
 import TechnologyTransfer from './pages/TechnologyTransfer'
 import PaperReview from './pages/PaperReview'
@@ -39,7 +38,6 @@ function App() {
           <Route path="teaching-innovation" element={<TeachingInnovation />} />
           <Route path="research-publications" element={<ResearchPublications />} />
           <Route path="research-grants" element={<ResearchGrants />} />
-          <Route path="submitted-proposals" element={<SubmittedProposals />} />
           <Route path="patents" element={<Patents />} />
           <Route path="technology-transfer" element={<TechnologyTransfer />} />
           <Route path="paper-review" element={<PaperReview />} />
