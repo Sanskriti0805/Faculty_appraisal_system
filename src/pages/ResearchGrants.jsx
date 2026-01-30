@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
 import { Plus, Trash2, Save, Upload } from 'lucide-react'
 import './CoursesTaught.css'
+import { grantsService } from '../services/grantsService'
 
 const ResearchGrants = () => {
   const [selectedType, setSelectedType] = useState('')
+  const [loading, setLoading] = useState(false)
   
   const [grants, setGrants] = useState([
     { 
@@ -97,10 +99,69 @@ const ResearchGrants = () => {
     }
   }
 
-  const handleSave = () => {
-    const data = selectedType === 'grants' ? grants : proposals
-    console.log(`Saving ${selectedType} data:`, data)
-    alert('Data saved successfully!')
+  const handleSave = async () => {
+    if (!selectedType) {
+      alert('Please select a type first')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
+
+      if (selectedType === 'grants') {
+        // Save grants
+        const promises = grants
+          .filter(g => g.projectName && g.fundingAgency) // Only save filled grants
+          .map(grant => {
+            const grantData = {
+              faculty_id: facultyId,
+              grant_type: 'External',
+              project_name: grant.projectName,
+              funding_agency: grant.fundingAgency,
+              currency: grant.currency,
+              grant_amount: grant.grantAmount,
+              amount_in_lakhs: grant.amountInLakhs,
+              duration: grant.duration,
+              researchers: grant.researchers,
+              role: grant.role,
+              evidence_file: grant.evidenceFile
+            }
+            return grantsService.createGrant(grantData)
+          })
+
+        await Promise.all(promises)
+      } else if (selectedType === 'proposals') {
+        // Save proposals
+        const promises = proposals
+          .filter(p => p.title && p.fundingAgency) // Only save filled proposals
+          .map(proposal => {
+            const proposalData = {
+              faculty_id: facultyId,
+              title: proposal.title,
+              funding_agency: proposal.fundingAgency,
+              currency: proposal.currency,
+              grant_amount: proposal.grantAmount,
+              amount_in_lakhs: proposal.amountInLakhs,
+              duration: proposal.duration,
+              submission_date: proposal.submissionDate,
+              status: proposal.status,
+              role: proposal.role
+            }
+            return grantsService.createProposal(proposalData)
+          })
+
+        await Promise.all(promises)
+      }
+
+      alert('Data saved successfully!')
+      console.log(`Saved ${selectedType} to database`)
+    } catch (error) {
+      console.error(`Error saving ${selectedType}:`, error)
+      alert('Error saving data: ' + (error.response?.data?.message || error.message))
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -110,9 +171,9 @@ const ResearchGrants = () => {
           <h1 className="page-title">Research & Development</h1>
           <p className="page-subtitle">External Sponsored Research Grants & Submitted Proposals</p>
         </div>
-        <button className="save-button" onClick={handleSave}>
+        <button className="save-button" onClick={handleSave} disabled={loading}>
           <Save size={18} />
-          Save Changes
+          {loading ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 

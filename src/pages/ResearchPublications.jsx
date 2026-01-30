@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
 import { Save, Plus, X } from 'lucide-react'
 import './FormPages.css'
+import { publicationsService } from '../services/publicationsService'
 
 const ResearchPublications = () => {
   const [publicationType, setPublicationType] = useState('')
   const [bookSubType, setBookSubType] = useState('')
   const [authors, setAuthors] = useState([{ first: '', middle: '', last: '' }])
   const [editors, setEditors] = useState([{ first: '', middle: '', last: '' }])
+  const [loading, setLoading] = useState(false)
   
   const [journalData, setJournalData] = useState({
     titleOfPaper: '',
@@ -87,19 +89,89 @@ const ResearchPublications = () => {
     setEditors(updatedEditors)
   }
 
-  const handleSave = () => {
-    const data = {
-      type: publicationType,
-      ...(publicationType === 'Monographs' && { subType: bookSubType }),
-      authors,
-      ...(publicationType === 'Journal' && journalData),
-      ...(publicationType === 'Conference' && conferenceData),
-      ...(publicationType === 'Monographs' && bookSubType === 'Book Chapter' && { ...bookChapterData, editors }),
-      ...(publicationType === 'Monographs' && bookSubType === 'Book' && bookData),
-      ...(publicationType === 'Any Other' && { details: otherDetails })
+  const handleSave = async () => {
+    setLoading(true)
+    try {
+      const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
+      
+      let publicationData = {
+        faculty_id: facultyId,
+        publication_type: publicationType,
+        authors: authors
+      }
+
+      // Add type-specific data
+      if (publicationType === 'Journal') {
+        publicationData = {
+          ...publicationData,
+          title: journalData.titleOfPaper,
+          year_of_publication: journalData.yearOfPublication,
+          journal_name: journalData.nameOfJournal,
+          volume: journalData.volume,
+          number: journalData.number,
+          pages_from: journalData.pagesFrom,
+          pages_to: journalData.pagesTo
+        }
+      } else if (publicationType === 'Conference') {
+        publicationData = {
+          ...publicationData,
+          title: conferenceData.titleOfPaper,
+          conference_name: conferenceData.fullNameOfConference,
+          abbreviation: conferenceData.abbreviation,
+          date_from: conferenceData.dateFrom,
+          date_to: conferenceData.dateTo,
+          type_of_conference: conferenceData.typeOfConference,
+          pages_from: conferenceData.pagesFrom,
+          pages_to: conferenceData.pagesTo,
+          city: conferenceData.city,
+          state: conferenceData.state,
+          country: conferenceData.country,
+          publication_agency: conferenceData.publicationAgency
+        }
+      } else if (publicationType === 'Monographs') {
+        publicationData.sub_type = bookSubType
+        if (bookSubType === 'Book Chapter') {
+          publicationData = {
+            ...publicationData,
+            title: bookChapterData.titleOfPaper,
+            year_of_publication: bookChapterData.yearOfPublication,
+            title_of_book: bookChapterData.titleOfBook,
+            pages_from: bookChapterData.pagesFrom,
+            pages_to: bookChapterData.pagesTo,
+            publication_agency: bookChapterData.publicationAgency,
+            editors: editors
+          }
+        } else if (bookSubType === 'Book') {
+          publicationData = {
+            ...publicationData,
+            title_of_book: bookData.titleOfBook,
+            year_of_publication: bookData.yearOfPublication,
+            publication_agency: bookData.publicationAgency,
+            city: bookData.city,
+            state: bookData.state,
+            country: bookData.country
+          }
+        }
+      } else if (publicationType === 'Any Other') {
+        publicationData.details = otherDetails
+      }
+
+      await publicationsService.createPublication(publicationData)
+      
+      alert('Publication saved successfully!')
+      console.log('Saved publication to database')
+      
+      // Reset form
+      setPublicationType('')
+      setBookSubType('')
+      setAuthors([{ first: '', middle: '', last: '' }])
+      setEditors([{ first: '', middle: '', last: '' }])
+    } catch (error) {
+      console.error('Error saving publication:', error)
+      alert('Error saving publication: ' + (error.response?.data?.message || error.message))
+    } finally {
+      setLoading(false)
     }
-    console.log('Saving data:', data)
-    alert('Data saved successfully!')
   }
 
   const renderAuthors = () => (
@@ -640,9 +712,9 @@ const ResearchPublications = () => {
           <h1 className="page-title">Research Publications</h1>
           <p className="page-subtitle">Section 9: Research & Development - Research Publications</p>
         </div>
-        <button className="save-button" onClick={handleSave}>
+        <button className="save-button" onClick={handleSave} disabled={loading}>
           <Save size={18} />
-          Save Changes
+          {loading ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 

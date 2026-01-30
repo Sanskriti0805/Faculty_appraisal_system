@@ -9,24 +9,11 @@
 }
 
 .logo-container {
-  padding: 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  margin: 1rem;
-  border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(59, 89, 152, 0.1);
-  overflow: hidden;
+  display: none;
 }
 
 .logo {
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: contain;
+  display: none;
 }
 
 .sidebar-nav {

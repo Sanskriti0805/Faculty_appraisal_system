@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
 import { Save, Plus, Trash2, Upload } from 'lucide-react'
 import './FormPages.css'
+import { coursesService } from '../services/coursesService'
 
 const NewCourses = () => {
   const [ugProgram, setUgProgram] = useState('')
   const [mastersProgram, setMastersProgram] = useState('')
+  const [loading, setLoading] = useState(false)
   
   const [ugCourses, setUgCourses] = useState([
     { id: 1, courseName: '', courseCode: '', level: '', remarks: '', cifFile: null }
@@ -72,14 +74,60 @@ const NewCourses = () => {
     updateCourse(section, id, 'cifFile', file)
   }
 
-  const handleSave = () => {
-    const data = {
-      ug: { program: ugProgram, courses: ugCourses },
-      masters: { program: mastersProgram, courses: mastersCourses },
-      doctoral: { courses: doctoralCourses }
+  const handleSave = async () => {
+    setLoading(true)
+    try {
+      const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
+      
+      // Collect all courses from all sections
+      const allCourses = [
+        ...ugCourses.map(course => ({
+          faculty_id: facultyId,
+          level_type: 'UG',
+          program: ugProgram,
+          course_name: course.courseName,
+          course_code: course.courseCode,
+          level: course.level,
+          remarks: course.remarks,
+          cif_file: course.cifFile
+        })),
+        ...mastersCourses.map(course => ({
+          faculty_id: facultyId,
+          level_type: 'Masters',
+          program: mastersProgram,
+          course_name: course.courseName,
+          course_code: course.courseCode,
+          level: course.level,
+          remarks: course.remarks,
+          cif_file: course.cifFile
+        })),
+        ...doctoralCourses.map(course => ({
+          faculty_id: facultyId,
+          level_type: 'Doctoral',
+          program: '',
+          course_name: course.courseName,
+          course_code: course.courseCode,
+          level: course.level,
+          remarks: course.remarks,
+          cif_file: course.cifFile
+        }))
+      ]
+
+      // Save each course
+      const promises = allCourses
+        .filter(course => course.course_name && course.course_code) // Only save filled courses
+        .map(course => coursesService.createNewCourse(course))
+
+      await Promise.all(promises)
+      
+      alert('Data saved successfully!')
+      console.log('Saved courses to database')
+    } catch (error) {
+      console.error('Error saving courses:', error)
+      alert('Error saving data: ' + (error.response?.data?.message || error.message))
+    } finally {
+      setLoading(false)
     }
-    console.log('Saving data:', data)
-    alert('Data saved successfully!')
   }
 
   const renderCourseTable = (section, courses, showProgramDropdown = false, programs = [], selectedProgram = '', setProgram = null, levelOptions = []) => (
@@ -234,9 +282,9 @@ const NewCourses = () => {
           <h1 className="page-title">New Courses Developed</h1>
           <p className="page-subtitle">Section 6: New Courses Developed</p>
         </div>
-        <button className="save-button" onClick={handleSave}>
+        <button className="save-button" onClick={handleSave} disabled={loading}>
           <Save size={18} />
-          Save Changes
+          {loading ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
