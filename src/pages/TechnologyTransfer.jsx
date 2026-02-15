@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
-import { Save } from 'lucide-react'
+import { Save, Upload } from 'lucide-react'
 import './FormPages.css'
 
 const TechnologyTransfer = () => {
   const [formData, setFormData] = useState({
     technologyInfo: '',
   })
+  const [evidenceFile, setEvidenceFile] = useState(null)
 
   const handleInputChange = (value) => {
     setFormData({ technologyInfo: value })
@@ -39,6 +40,44 @@ const TechnologyTransfer = () => {
               onChange={(e) => handleInputChange(e.target.value)}
               placeholder="Enter details of technology developed or transferred..."
             />
+          </div>
+
+          {/* Evidence File Upload */}
+          <div className="form-field-vertical">
+            <label>Upload Evidence</label>
+            <div style={{
+              border: '2px dashed #ddd',
+              borderRadius: '8px',
+              padding: '1.5rem',
+              textAlign: 'center',
+              backgroundColor: '#f9f9f9'
+            }}>
+              <input
+                type="file"
+                id="evidence-upload-tech"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={(e) => setEvidenceFile(e.target.files[0])}
+                style={{ display: 'none' }}
+              />
+              <label
+                htmlFor="evidence-upload-tech"
+                style={{
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <Upload size={32} color="#5b8fc7" />
+                <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+                  {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+                </span>
+                <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                  PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+                </span>
+              </label>
+            </div>
           </div>
         </div>
       </div>

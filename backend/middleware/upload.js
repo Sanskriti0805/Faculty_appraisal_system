@@ -14,9 +14,9 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    // Create unique filename: timestamp-originalname
+    // Create unique filename: timestamp-random-originalname
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    cb(null, uniqueSuffix + '-' + file.originalname);
   }
 });
 
@@ -34,7 +34,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configure multer
+// Configure multer for single file upload
 const upload = multer({
   storage: storage,
   limits: {
@@ -43,4 +43,20 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
-module.exports = upload;
+// Configure multer for multiple file uploads (up to 10 files)
+const uploadMultiple = multer({
+  storage: storage,
+  limits: {
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB per file
+    files: 10 // Maximum 10 files
+  },
+  fileFilter: fileFilter
+});
+
+module.exports = {
+  upload,
+  uploadMultiple,
+  uploadSingle: upload.single.bind(upload),
+  uploadArray: uploadMultiple.array.bind(uploadMultiple),
+  uploadFields: uploadMultiple.fields.bind(uploadMultiple)
+};

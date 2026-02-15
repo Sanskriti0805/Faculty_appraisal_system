@@ -1,32 +1,70 @@
 const db = require('../config/database');
 
-// Get all publications for a faculty
+// Get all publications for a faculty (optimized with JOIN to avoid N+1 queries)
 exports.getPublicationsByFaculty = async (req, res) => {
   try {
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+
+    // Get publications with pagination
     const [publications] = await db.query(
-      'SELECT * FROM research_publications WHERE faculty_id = ? ORDER BY created_at DESC',
-      [req.params.facultyId]
+      'SELECT * FROM research_publications WHERE faculty_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      [req.params.facultyId, parseInt(limit), parseInt(offset)]
     );
 
-    // Get authors for each publication
-    for (let pub of publications) {
-      const [authors] = await db.query(
-        'SELECT * FROM authors WHERE publication_id = ?',
-        [pub.id]
-      );
-      pub.authors = authors;
+    // Get total count for pagination
+    const [countResult] = await db.query(
+      'SELECT COUNT(*) as total FROM research_publications WHERE faculty_id = ?',
+      [req.params.facultyId]
+    );
+    const total = countResult[0].total;
 
-      // Get editors if it's a book chapter
-      if (pub.sub_type === 'Book Chapter') {
-        const [editors] = await db.query(
-          'SELECT * FROM editors WHERE publication_id = ?',
-          [pub.id]
-        );
-        pub.editors = editors;
-      }
+    // Get all authors for these publications in one query
+    if (publications.length > 0) {
+      const publicationIds = publications.map(p => p.id);
+      const placeholders = publicationIds.map(() => '?').join(',');
+
+      const [authors] = await db.query(
+        `SELECT * FROM authors WHERE publication_id IN (${placeholders})`,
+        publicationIds
+      );
+
+      // Get all editors for these publications in one query
+      const [editors] = await db.query(
+        `SELECT * FROM editors WHERE publication_id IN (${placeholders})`,
+        publicationIds
+      );
+
+      // Group authors and editors by publication_id
+      const authorsByPub = authors.reduce((acc, author) => {
+        if (!acc[author.publication_id]) acc[author.publication_id] = [];
+        acc[author.publication_id].push(author);
+        return acc;
+      }, {});
+
+      const editorsByPub = editors.reduce((acc, editor) => {
+        if (!acc[editor.publication_id]) acc[editor.publication_id] = [];
+        acc[editor.publication_id].push(editor);
+        return acc;
+      }, {});
+
+      // Attach authors and editors to publications
+      publications.forEach(pub => {
+        pub.authors = authorsByPub[pub.id] || [];
+        pub.editors = editorsByPub[pub.id] || [];
+      });
     }
 
-    res.json({ success: true, data: publications });
+    res.json({
+      success: true,
+      data: publications,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -35,7 +73,7 @@ exports.getPublicationsByFaculty = async (req, res) => {
 // Create publication
 exports.createPublication = async (req, res) => {
   const connection = await db.getConnection();
-  
+
   try {
     await connection.beginTransaction();
 
@@ -63,8 +101,12 @@ exports.createPublication = async (req, res) => {
       publication_id,
       details,
       authors,
-      editors
+      editors,
+      status = 'draft'
     } = req.body;
+
+    // Get uploaded file if exists
+    const evidence_file = req.file ? req.file.filename : null;
 
     // Insert publication
     const [result] = await connection.query(
@@ -72,12 +114,12 @@ exports.createPublication = async (req, res) => {
       (faculty_id, publication_type, sub_type, title, year_of_publication, journal_name, 
        conference_name, abbreviation, volume, number, pages_from, pages_to, date_from, 
        date_to, type_of_conference, city, state, country, publication_agency, title_of_book, 
-       publication_id, details) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       publication_id, details, evidence_file, status) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [faculty_id, publication_type, sub_type, title, year_of_publication, journal_name,
-       conference_name, abbreviation, volume, number, pages_from, pages_to, date_from,
-       date_to, type_of_conference, city, state, country, publication_agency, title_of_book,
-       publication_id, details]
+        conference_name, abbreviation, volume, number, pages_from, pages_to, date_from,
+        date_to, type_of_conference, city, state, country, publication_agency, title_of_book,
+        publication_id, details, evidence_file, status]
     );
 
     const publicationId = result.insertId;
@@ -121,7 +163,7 @@ exports.createPublication = async (req, res) => {
 exports.deletePublication = async (req, res) => {
   try {
     const [result] = await db.query('DELETE FROM research_publications WHERE id = ?', [req.params.id]);
-    
+
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Publication not found' });
     }

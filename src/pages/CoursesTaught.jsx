@@ -228,10 +228,19 @@ const CoursesTaught = () => {
               <td>
                 <div className="feedback-container">
                   <input
-                    type="text"
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    max="10"
                     value={course.feedback}
-                    onChange={(e) => handleInputChange(semester, index, 'feedback', e.target.value)}
-                    placeholder="Score"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow empty or valid decimal with up to 3 decimal places
+                      if (value === '' || /^\d*\.?\d{0,3}$/.test(value)) {
+                        handleInputChange(semester, index, 'feedback', value);
+                      }
+                    }}
+                    placeholder="e.g., 4.567"
                     className="feedback-input"
                   />
 

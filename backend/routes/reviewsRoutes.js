@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const reviewsController = require('../controllers/reviewsController');
+const { cacheMiddleware } = require('../middleware/cache');
 
-// Reviews routes
-router.get('/faculty/:facultyId', reviewsController.getReviewsByFaculty);
+// Paper reviews routes with caching
+router.get('/faculty/:facultyId', cacheMiddleware(180), reviewsController.getReviewsByFaculty);
 router.post('/', reviewsController.createReview);
 router.delete('/:id', reviewsController.deleteReview);
 

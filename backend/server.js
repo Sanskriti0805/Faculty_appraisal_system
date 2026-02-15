@@ -21,6 +21,7 @@ const publicationsRoutes = require('./routes/publicationsRoutes');
 const grantsRoutes = require('./routes/grantsRoutes');
 const patentsRoutes = require('./routes/patentsRoutes');
 const reviewsRoutes = require('./routes/reviewsRoutes');
+const awardsRoutes = require('./routes/awardsRoutes');
 
 // API Routes
 app.use('/api/faculty', facultyRoutes);
@@ -29,6 +30,7 @@ app.use('/api/publications', publicationsRoutes);
 app.use('/api/grants', grantsRoutes);
 app.use('/api/patents', patentsRoutes);
 app.use('/api/reviews', reviewsRoutes);
+app.use('/api/awards', awardsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -1,15 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const coursesController = require('../controllers/coursesController');
-const upload = require('../middleware/upload');
+const { uploadSingle } = require('../middleware/upload');
+const { cacheMiddleware } = require('../middleware/cache');
 
-// Courses taught routes
-router.get('/faculty/:facultyId', coursesController.getCoursesByFaculty);
+// Courses taught routes with caching
+router.get('/faculty/:facultyId', cacheMiddleware(180), coursesController.getCoursesByFaculty);
 router.post('/', coursesController.createCourse);
 router.delete('/:id', coursesController.deleteCourse);
 
-// New courses developed routes
-router.get('/new/faculty/:facultyId', coursesController.getNewCoursesByFaculty);
-router.post('/new', upload.single('cif_file'), coursesController.createNewCourse);
+// New courses developed routes with caching
+router.get('/new/faculty/:facultyId', cacheMiddleware(180), coursesController.getNewCoursesByFaculty);
+router.post('/new', uploadSingle('cif_file'), coursesController.createNewCourse);
 
 module.exports = router;

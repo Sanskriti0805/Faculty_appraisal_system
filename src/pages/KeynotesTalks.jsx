@@ -83,8 +83,8 @@ const KeynotesTalks = () => {
     <div className="keynotes-talks form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Keynotes, Seminars and Invited Talks</h1>
-          <p className="page-subtitle">Section 16: Keynotes, Seminars and Invited Talks</p>
+          <h1 className="page-title">Keynotes, Seminars and Invited Talks (outside LNMIIT)</h1>
+          <p className="page-subtitle">Section 16: Keynotes, Seminars and Invited Talks (outside LNMIIT)</p>
         </div>
       </div>
 

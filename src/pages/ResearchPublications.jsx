@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Save, Plus, X } from 'lucide-react'
+import { Save, Plus, X, Upload } from 'lucide-react'
 import './FormPages.css'
 import { publicationsService } from '../services/publicationsService'
 
@@ -9,7 +9,7 @@ const ResearchPublications = () => {
   const [authors, setAuthors] = useState([{ first: '', middle: '', last: '' }])
   const [editors, setEditors] = useState([{ first: '', middle: '', last: '' }])
   const [loading, setLoading] = useState(false)
-  
+
   const [journalData, setJournalData] = useState({
     titleOfPaper: '',
     yearOfPublication: '2026',
@@ -54,6 +54,7 @@ const ResearchPublications = () => {
   })
 
   const [otherDetails, setOtherDetails] = useState('')
+  const [evidenceFile, setEvidenceFile] = useState(null)
 
   const addAuthor = () => {
     setAuthors([...authors, { first: '', middle: '', last: '' }])
@@ -66,7 +67,7 @@ const ResearchPublications = () => {
   }
 
   const updateAuthor = (index, field, value) => {
-    const updatedAuthors = authors.map((author, i) => 
+    const updatedAuthors = authors.map((author, i) =>
       i === index ? { ...author, [field]: value } : author
     )
     setAuthors(updatedAuthors)
@@ -83,7 +84,7 @@ const ResearchPublications = () => {
   }
 
   const updateEditor = (index, field, value) => {
-    const updatedEditors = editors.map((editor, i) => 
+    const updatedEditors = editors.map((editor, i) =>
       i === index ? { ...editor, [field]: value } : editor
     )
     setEditors(updatedEditors)
@@ -93,7 +94,7 @@ const ResearchPublications = () => {
     setLoading(true)
     try {
       const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
-      
+
       let publicationData = {
         faculty_id: facultyId,
         publication_type: publicationType,
@@ -157,10 +158,10 @@ const ResearchPublications = () => {
       }
 
       await publicationsService.createPublication(publicationData)
-      
+
       alert('Publication saved successfully!')
       console.log('Saved publication to database')
-      
+
       // Reset form
       setPublicationType('')
       setBookSubType('')
@@ -205,11 +206,11 @@ const ResearchPublications = () => {
           {authors.length > 1 && (
             <button
               onClick={() => removeAuthor(index)}
-              style={{ 
-                padding: '0.5rem', 
-                backgroundColor: '#ff4444', 
-                color: 'white', 
-                border: 'none', 
+              style={{
+                padding: '0.5rem',
+                backgroundColor: '#ff4444',
+                color: 'white',
+                border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer'
               }}
@@ -273,11 +274,11 @@ const ResearchPublications = () => {
           {editors.length > 1 && (
             <button
               onClick={() => removeEditor(index)}
-              style={{ 
-                padding: '0.5rem', 
-                backgroundColor: '#ff4444', 
-                color: 'white', 
-                border: 'none', 
+              style={{
+                padding: '0.5rem',
+                backgroundColor: '#ff4444',
+                color: 'white',
+                border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer'
               }}
@@ -313,7 +314,7 @@ const ResearchPublications = () => {
   const renderJournalForm = () => (
     <>
       {renderAuthors()}
-      
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
         <div className="form-field-vertical">
           <label>Title of Paper<span style={{ color: '#d64550' }}>*</span></label>
@@ -324,7 +325,7 @@ const ResearchPublications = () => {
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
         </div>
-        
+
         <div className="form-field-vertical">
           <label>Year of Publication<span style={{ color: '#d64550' }}>*</span></label>
           <select
@@ -349,7 +350,7 @@ const ResearchPublications = () => {
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
         </div>
-        
+
         <div className="form-field-vertical">
           <label>Volume<span style={{ color: '#d64550' }}>*</span></label>
           <input
@@ -371,7 +372,7 @@ const ResearchPublications = () => {
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
         </div>
-        
+
         <div className="form-field-vertical">
           <label>Pages<span style={{ color: '#d64550' }}>*</span></label>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -392,13 +393,51 @@ const ResearchPublications = () => {
           </div>
         </div>
       </div>
+
+      {/* Evidence File Upload */}
+      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+        <label>Upload Evidence</label>
+        <div style={{
+          border: '2px dashed #ddd',
+          borderRadius: '8px',
+          padding: '1.5rem',
+          textAlign: 'center',
+          backgroundColor: '#f9f9f9'
+        }}>
+          <input
+            type="file"
+            id="evidence-upload-journal"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            onChange={(e) => setEvidenceFile(e.target.files[0])}
+            style={{ display: 'none' }}
+          />
+          <label
+            htmlFor="evidence-upload-journal"
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Upload size={32} color="#5b8fc7" />
+            <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+              {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+            </span>
+            <span style={{ fontSize: '0.85rem', color: '#666' }}>
+              PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+            </span>
+          </label>
+        </div>
+      </div>
     </>
   )
 
   const renderConferenceForm = () => (
     <>
       {renderAuthors()}
-      
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
         <div className="form-field-vertical">
           <label>Title of Paper<span style={{ color: '#d64550' }}>*</span></label>
@@ -409,7 +448,7 @@ const ResearchPublications = () => {
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
         </div>
-        
+
         <div className="form-field-vertical">
           <label>Full Name of Conference<span style={{ color: '#d64550' }}>*</span></label>
           <input
@@ -431,7 +470,7 @@ const ResearchPublications = () => {
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
         </div>
-        
+
         <div className="form-field-vertical">
           <label>Date From<span style={{ color: '#d64550' }}>*</span></label>
           <input
@@ -441,7 +480,7 @@ const ResearchPublications = () => {
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
         </div>
-        
+
         <div className="form-field-vertical">
           <label>Date To<span style={{ color: '#d64550' }}>*</span></label>
           <input
@@ -465,7 +504,7 @@ const ResearchPublications = () => {
             <option value="National">National</option>
           </select>
         </div>
-        
+
         <div className="form-field-vertical">
           <label>Pages<span style={{ color: '#d64550' }}>*</span></label>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -499,7 +538,7 @@ const ResearchPublications = () => {
               style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
             />
           </div>
-          
+
           <div className="form-field-vertical">
             <label>State<span style={{ color: '#d64550' }}>*</span></label>
             <input
@@ -509,7 +548,7 @@ const ResearchPublications = () => {
               style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
             />
           </div>
-          
+
           <div className="form-field-vertical">
             <label>Country<span style={{ color: '#d64550' }}>*</span></label>
             <input
@@ -531,13 +570,51 @@ const ResearchPublications = () => {
           style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
         />
       </div>
+
+      {/* Evidence File Upload */}
+      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+        <label>Upload Evidence</label>
+        <div style={{
+          border: '2px dashed #ddd',
+          borderRadius: '8px',
+          padding: '1.5rem',
+          textAlign: 'center',
+          backgroundColor: '#f9f9f9'
+        }}>
+          <input
+            type="file"
+            id="evidence-upload-conference"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            onChange={(e) => setEvidenceFile(e.target.files[0])}
+            style={{ display: 'none' }}
+          />
+          <label
+            htmlFor="evidence-upload-conference"
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Upload size={32} color="#5b8fc7" />
+            <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+              {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+            </span>
+            <span style={{ fontSize: '0.85rem', color: '#666' }}>
+              PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+            </span>
+          </label>
+        </div>
+      </div>
     </>
   )
 
   const renderBookChapterForm = () => (
     <>
       {renderAuthors()}
-      
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
         <div className="form-field-vertical">
           <label>Title of Paper<span style={{ color: '#d64550' }}>*</span></label>
@@ -548,7 +625,7 @@ const ResearchPublications = () => {
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
         </div>
-        
+
         <div className="form-field-vertical">
           <label>Year of Publication<span style={{ color: '#d64550' }}>*</span></label>
           <select
@@ -573,7 +650,7 @@ const ResearchPublications = () => {
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
         </div>
-        
+
         <div className="form-field-vertical">
           <label>Pages<span style={{ color: '#d64550' }}>*</span></label>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -605,6 +682,43 @@ const ResearchPublications = () => {
         />
       </div>
 
+      {/* Evidence File Upload */}
+      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+        <label>Upload Evidence</label>
+        <div style={{
+          border: '2px dashed #ddd',
+          borderRadius: '8px',
+          padding: '1.5rem',
+          textAlign: 'center',
+          backgroundColor: '#f9f9f9'
+        }}>
+          <input
+            type="file"
+            id="evidence-upload-book-chapter"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            onChange={(e) => setEvidenceFile(e.target.files[0])}
+            style={{ display: 'none' }}
+          />
+          <label
+            htmlFor="evidence-upload-book-chapter"
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Upload size={32} color="#5b8fc7" />
+            <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+              {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+            </span>
+            <span style={{ fontSize: '0.85rem', color: '#666' }}>
+              PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+            </span>
+          </label>
+        </div>
+      </div>
       {renderEditors()}
     </>
   )
@@ -612,7 +726,7 @@ const ResearchPublications = () => {
   const renderBookForm = () => (
     <>
       {renderAuthors()}
-      
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
         <div className="form-field-vertical">
           <label>Title of Book<span style={{ color: '#d64550' }}>*</span></label>
@@ -623,7 +737,7 @@ const ResearchPublications = () => {
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
         </div>
-        
+
         <div className="form-field-vertical">
           <label>Year of Publication<span style={{ color: '#d64550' }}>*</span></label>
           <select
@@ -660,7 +774,7 @@ const ResearchPublications = () => {
               style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
             />
           </div>
-          
+
           <div className="form-field-vertical">
             <label>State<span style={{ color: '#d64550' }}>*</span></label>
             <input
@@ -670,7 +784,7 @@ const ResearchPublications = () => {
               style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
             />
           </div>
-          
+
           <div className="form-field-vertical">
             <label>Country<span style={{ color: '#d64550' }}>*</span></label>
             <input
@@ -682,6 +796,46 @@ const ResearchPublications = () => {
           </div>
         </div>
       </div>
+
+      {/* Evidence File Upload */}
+      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+        <label>Upload Evidence</label>
+        <div style={{
+          border: '2px dashed #ddd',
+          borderRadius: '8px',
+          padding: '1.5rem',
+          textAlign: 'center',
+          backgroundColor: '#f9f9f9'
+        }}>
+          <input
+            type="file"
+            id="evidence-upload-book"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            onChange={(e) => setEvidenceFile(e.target.files[0])}
+            style={{ display: 'none' }}
+          />
+          <label
+            htmlFor="evidence-upload-book"
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Upload size={32} color="#5b8fc7" />
+            <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+              {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+            </span>
+            <span style={{ fontSize: '0.85rem', color: '#666' }}>
+              PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+            </span>
+          </label>
+        </div>
+      </div>
+
+      {renderAuthors()}
     </>
   )
 
@@ -693,15 +847,53 @@ const ResearchPublications = () => {
         value={otherDetails}
         onChange={(e) => setOtherDetails(e.target.value)}
         placeholder="Provide details here"
-        style={{ 
-          width: '100%', 
-          padding: '0.75rem', 
-          border: '1px solid #ddd', 
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          border: '1px solid #ddd',
           borderRadius: '4px',
           fontSize: '1rem',
           fontFamily: 'inherit'
         }}
       />
+
+      {/* Evidence File Upload */}
+      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+        <label>Upload Evidence</label>
+        <div style={{
+          border: '2px dashed #ddd',
+          borderRadius: '8px',
+          padding: '1.5rem',
+          textAlign: 'center',
+          backgroundColor: '#f9f9f9'
+        }}>
+          <input
+            type="file"
+            id="evidence-upload-other"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            onChange={(e) => setEvidenceFile(e.target.files[0])}
+            style={{ display: 'none' }}
+          />
+          <label
+            htmlFor="evidence-upload-other"
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Upload size={32} color="#5b8fc7" />
+            <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+              {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+            </span>
+            <span style={{ fontSize: '0.85rem', color: '#666' }}>
+              PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+            </span>
+          </label>
+        </div>
+      </div>
     </div>
   )
 
@@ -727,10 +919,10 @@ const ResearchPublications = () => {
             <select
               value={publicationType}
               onChange={(e) => setPublicationType(e.target.value)}
-              style={{ 
-                width: '100%', 
-                padding: '0.75rem', 
-                border: '1px solid #ddd', 
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ddd',
                 borderRadius: '4px',
                 fontSize: '1rem',
                 cursor: 'pointer'
@@ -752,10 +944,10 @@ const ResearchPublications = () => {
               <select
                 value={bookSubType}
                 onChange={(e) => setBookSubType(e.target.value)}
-                style={{ 
-                  width: '100%', 
-                  padding: '0.75rem', 
-                  border: '1px solid #ddd', 
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #ddd',
                   borderRadius: '4px',
                   fontSize: '1rem',
                   cursor: 'pointer'
