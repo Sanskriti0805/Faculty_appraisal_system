@@ -20,8 +20,8 @@ const OtherImportantActivities = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Other Important Activities</h1>
-          <p className="page-subtitle">Section 23: Any other Important Activity not covered above</p>
+          <h1 className="page-title">Any other Important Activity not covered above</h1>
+          <p className="page-subtitle">Section 22</p>
         </div>
         <button className="save-button" onClick={handleSave}>
           <Save size={18} />

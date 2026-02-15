@@ -20,8 +20,8 @@ const ResearchPlan = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Research Plan</h1>
-          <p className="page-subtitle">Section 24: Your research plan for next three years, if available</p>
+          <h1 className="page-title">Your research plan for next three years, if available</h1>
+          <p className="page-subtitle">Section 23</p>
         </div>
         <button className="save-button" onClick={handleSave}>
           <Save size={18} />

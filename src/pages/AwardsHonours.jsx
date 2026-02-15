@@ -99,8 +99,8 @@ const AwardsHonours = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Awards and Honours</h1>
-          <p className="page-subtitle">Section 19: Significant International/National Awards and Honours</p>
+          <h1 className="page-title">Significant International / National Awards and Honours</h1>
+          <p className="page-subtitle">Section 19</p>
         </div>
       </div>
 

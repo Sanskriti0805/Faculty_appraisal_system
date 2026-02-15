@@ -79,8 +79,8 @@ const ConferenceSessions = () => {
     <div className="conference-sessions form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Conference Sessions Chaired</h1>
-          <p className="page-subtitle">Section 15: Conference Sessions Chaired, if any</p>
+          <h1 className="page-title">Conference Sessions Chaired, if any</h1>
+          <p className="page-subtitle">Section 15</p>
         </div>
       </div>
 

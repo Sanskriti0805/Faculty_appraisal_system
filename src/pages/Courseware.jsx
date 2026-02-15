@@ -23,8 +23,8 @@ const Courseware = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Courseware / Course Material</h1>
-          <p className="page-subtitle">Section 7: Courseware / Course Material / Laboratory Manual Developed / Text-Books / Course Notes Published</p>
+          <h1 className="page-title">Courseware / Course Material / Laboratory Manual Developed / Text-Books / Course Notes Published</h1>
+          <p className="page-subtitle">Section 7</p>
         </div>
         <button className="save-button" onClick={handleSave}>
           <Save size={18} />

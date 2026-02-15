@@ -69,3 +69,38 @@
   border-left-color: #3B5998;
   font-weight: 600;
 }
+
+.nav-parent-item {
+  width: 100%;
+  padding-right: 1.5rem;
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nav-parent-item span {
+  text-align: left;
+  flex: 1;
+  padding-right: 10px;
+  line-height: 1.4;
+}
+
+.nav-sub-items {
+  display: flex;
+  flex-direction: column;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.nav-sub-item {
+  padding-left: 3.5rem;
+  font-size: 0.9rem;
+  border-left: 3px solid transparent;
+}
+
+.nav-sub-item:hover {
+  padding-left: 3.75rem;
+}

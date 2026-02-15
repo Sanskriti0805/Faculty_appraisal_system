@@ -6,34 +6,34 @@ import { grantsService } from '../services/grantsService'
 const ResearchGrants = () => {
   const [selectedType, setSelectedType] = useState('')
   const [loading, setLoading] = useState(false)
-  
+
   const [grants, setGrants] = useState([
-    { 
-      id: 1, 
-      projectName: '', 
-      fundingAgency: '', 
+    {
+      id: 1,
+      projectName: '',
+      fundingAgency: '',
       currency: 'INR',
-      grantAmount: '', 
+      grantAmount: '',
       amountInLakhs: '',
-      duration: '', 
-      researchers: '', 
+      duration: '',
+      researchers: '',
       role: '',
       evidenceFile: null
     },
   ])
 
   const [proposals, setProposals] = useState([
-    { 
-      id: 1, 
-      title: '', 
-      fundingAgency: '', 
+    {
+      id: 1,
+      title: '',
+      fundingAgency: '',
       currency: 'INR',
-      grantAmount: '', 
+      grantAmount: '',
       amountInLakhs: '',
-      duration: '', 
+      duration: '',
       submissionDate: '',
       status: '',
-      role: '' 
+      role: ''
     },
   ])
 
@@ -50,15 +50,15 @@ const ResearchGrants = () => {
   }
 
   const addGrant = () => {
-    const newGrant = { 
-      id: Date.now(), 
-      projectName: '', 
-      fundingAgency: '', 
+    const newGrant = {
+      id: Date.now(),
+      projectName: '',
+      fundingAgency: '',
       currency: 'INR',
-      grantAmount: '', 
+      grantAmount: '',
       amountInLakhs: '',
-      duration: '', 
-      researchers: '', 
+      duration: '',
+      researchers: '',
       role: '',
       evidenceFile: null
     }
@@ -72,17 +72,17 @@ const ResearchGrants = () => {
   }
 
   const addProposal = () => {
-    const newProposal = { 
-      id: Date.now(), 
-      title: '', 
-      fundingAgency: '', 
+    const newProposal = {
+      id: Date.now(),
+      title: '',
+      fundingAgency: '',
       currency: 'INR',
-      grantAmount: '', 
+      grantAmount: '',
       amountInLakhs: '',
-      duration: '', 
+      duration: '',
       submissionDate: '',
       status: '',
-      role: '' 
+      role: ''
     }
     setProposals([...proposals, newProposal])
   }
@@ -168,7 +168,7 @@ const ResearchGrants = () => {
     <div className="courses-taught">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Research & Development</h1>
+          <h1 className="page-title">External Sponsored Research & Development Grants received/submitted during this Academic Session</h1>
           <p className="page-subtitle">External Sponsored Research Grants & Submitted Proposals</p>
         </div>
         <button className="save-button" onClick={handleSave} disabled={loading}>
@@ -180,10 +180,10 @@ const ResearchGrants = () => {
       {/* Type Selection */}
       <div className="semester-section" style={{ marginBottom: '2rem' }}>
         <div style={{ padding: '1.5rem' }}>
-          <label style={{ 
-            display: 'block', 
-            marginBottom: '0.75rem', 
-            fontSize: '1.1rem', 
+          <label style={{
+            display: 'block',
+            marginBottom: '0.75rem',
+            fontSize: '1.1rem',
             fontWeight: '500',
             color: '#2c3e50'
           }}>
@@ -213,7 +213,7 @@ const ResearchGrants = () => {
         <div className="semester-section">
           <div className="semester-header">
             <h3>External Grants Received</h3>
-            <button 
+            <button
               className="add-course-btn"
               onClick={addGrant}
             >
@@ -221,7 +221,7 @@ const ResearchGrants = () => {
               Add Grant
             </button>
           </div>
-          
+
           <div className="table-container">
             <table className="courses-table">
               <thead>
@@ -328,9 +328,9 @@ const ResearchGrants = () => {
                       </select>
                     </td>
                     <td>
-                      <label style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
                         gap: '0.5rem',
                         cursor: 'pointer',
                         padding: '0.5rem',
@@ -373,7 +373,7 @@ const ResearchGrants = () => {
         <div className="semester-section">
           <div className="semester-header">
             <h3>Submitted Research Proposals</h3>
-            <button 
+            <button
               className="add-course-btn"
               onClick={addProposal}
             >
@@ -381,7 +381,7 @@ const ResearchGrants = () => {
               Add Proposal
             </button>
           </div>
-          
+
           <div className="table-container">
             <table className="courses-table">
               <thead>

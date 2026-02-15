@@ -8,36 +8,60 @@ const Sidebar = () => {
   const [partAOpen, setPartAOpen] = useState(true)
   const [partBOpen, setPartBOpen] = useState(false)
 
+  const [expandedSections, setExpandedSections] = useState({})
+
+  const toggleSection = (sectionName) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionName]: !prev[sectionName]
+    }))
+  }
+
   const partAItems = [
     { name: 'Faculty Information', path: '/faculty-information' },
-    { name: 'Courses Taught & Projects Guided', path: '/courses-taught' },
-    { name: 'New Courses Developed', path: '/new-courses' },
-    { name: 'Courseware / Course Material', path: '/courseware' },
-    { name: 'Teaching-Learning Innovation', path: '/teaching-innovation' },
-    { name: 'Research Publications', path: '/research-publications' },
-    { name: 'Research & Development', path: '/research-grants' },
-    { name: 'Patents', path: '/patents' },
-    { name: 'Technology Developed/Transferred', path: '/technology-transfer' },
-    { name: 'Review of Research Papers', path: '/paper-review' },
-    { name: 'Conference Sessions Chaired', path: '/conference-sessions' },
-    { name: 'Keynotes & Invited Talks', path: '/keynotes-talks' },
-    { name: 'Conferences Outside LNMIIT', path: '/conferences-outside' },
-    { name: 'Other Activities', path: '/other-activities' },
-    { name: 'Awards and Honours', path: '/awards-honours' },
-    { name: 'Consultancy', path: '/consultancy' },
-    { name: 'Continuing Education Activities', path: '/continuing-education' },
-    { name: 'Institutional Contributions', path: '/institutional-contributions' },
-    { name: 'Other Important Activities', path: '/other-important-activities' },
-    { name: 'Research Plan', path: '/research-plan' },
-    { name: 'Teaching Plan & Preferences', path: '/teaching-plan' },
+    {
+      name: 'Teaching-Learning',
+      subItems: [
+        { name: 'Courses Taught and Projects Guided', path: '/courses-taught' },
+        { name: 'New Courses Developed', path: '/new-courses' },
+        { name: 'Courseware / Course Material / Laboratory Manual Developed / Text-Books / Course Notes Published', path: '/courseware' },
+        { name: 'Any effective or successful innovation in terms of teaching-learning', path: '/teaching-innovation' }
+      ]
+    },
+    {
+      name: 'Research & Development',
+      subItems: [
+        { name: 'Research Publications', path: '/research-publications' },
+        { name: 'External Sponsored Research & Development Grants received/submitted during this Academic Session', path: '/research-grants' },
+        { name: 'Patents', path: '/patents' },
+        { name: 'Technology Developed/Transferred', path: '/technology-transfer' },
+        { name: 'Review of research papers for Tier-1/2 refereed internal research journals (please provide details in bullet points)', path: '/paper-review' },
+        { name: 'Conference Sessions Chaired, if any', path: '/conference-sessions' },
+        { name: 'Keynotes, Seminars and Invited Talks (outside LNMIIT)', path: '/keynotes-talks' },
+        { name: 'Conferences Outside LNMIIT', path: '/conferences-outside' },
+        { name: 'Other Activities', path: '/other-activities' },
+        { name: 'Significant International / National Awards and Honours', path: '/awards-honours' },
+        { name: 'Consultancy, if any (Please provide details.)', path: '/consultancy' },
+        { name: 'Continuing Education Activities', path: '/continuing-education' },
+      ]
+    },
+    {
+      name: 'Other Institutional Activities (Other than those covered above)',
+      subItems: [
+        { name: 'Contributions, towards Institutional Development or any significant Institutional Contributions not covered above', path: '/institutional-contributions' },
+        { name: 'Any other Important Activity not covered above', path: '/other-important-activities' },
+        { name: 'Your research plan for next three years, if available', path: '/research-plan' },
+        { name: 'Your teaching plan and preferences for next three years', path: '/teaching-plan' },
+      ]
+    },
   ]
 
   return (
     <aside className="sidebar">
       <div className="logo-container">
-        <img 
-          src="/lnmiit-logo.svg" 
-          alt="LNMIIT - The LNM Institute of Information Technology" 
+        <img
+          src="/lnmiit-logo.svg"
+          alt="LNMIIT - The LNM Institute of Information Technology"
           className="logo"
         />
       </div>
@@ -54,13 +78,38 @@ const Sidebar = () => {
           {partAOpen && (
             <div className="nav-section-items">
               {partAItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
-                >
-                  {item.name}
-                </Link>
+                item.subItems ? (
+                  <div key={item.name}>
+                    <button
+                      className="nav-item nav-parent-item"
+                      onClick={() => toggleSection(item.name)}
+                    >
+                      <span>{item.name}</span>
+                      {expandedSections[item.name] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </button>
+                    {expandedSections[item.name] && (
+                      <div className="nav-sub-items">
+                        {item.subItems.map((subItem) => (
+                          <Link
+                            key={subItem.path}
+                            to={subItem.path}
+                            className={`nav-item nav-sub-item ${location.pathname === subItem.path ? 'active' : ''}`}
+                          >
+                            {subItem.name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+                  >
+                    {item.name}
+                  </Link>
+                )
               ))}
             </div>
           )}

@@ -29,8 +29,8 @@ const TeachingInnovation = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Teaching-Learning Innovation</h1>
-          <p className="page-subtitle">Section 8: Any effective or successful innovation in terms of teaching-learning</p>
+          <h1 className="page-title">Any effective or successful innovation in terms of teaching-learning</h1>
+          <p className="page-subtitle">Section 8</p>
         </div>
         <button className="save-button" onClick={handleSave}>
           <Save size={18} />

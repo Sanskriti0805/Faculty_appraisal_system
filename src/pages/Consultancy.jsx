@@ -41,8 +41,8 @@ const Consultancy = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Consultancy</h1>
-          <p className="page-subtitle">Section 20: Consultancy, if any (Please provide details.)</p>
+          <h1 className="page-title">Consultancy, if any (Please provide details.)</h1>
+          <p className="page-subtitle">Section 20</p>
         </div>
         <button className="save-button" onClick={handleSave}>
           <Save size={18} />

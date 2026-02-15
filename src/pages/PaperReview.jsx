@@ -22,7 +22,7 @@ const PaperReview = () => {
     setLoading(true)
     try {
       const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
-      
+
       const reviewData = {
         faculty_id: facultyId,
         review_type: 'Journal',
@@ -36,7 +36,7 @@ const PaperReview = () => {
       }
 
       await reviewsService.createReview(reviewData)
-      
+
       alert('Data saved successfully!')
       console.log('Saved review to database')
     } catch (error) {
@@ -51,8 +51,8 @@ const PaperReview = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Review of Research Papers</h1>
-          <p className="page-subtitle">Section 14: Review of research papers for Tier-1/2 refereed internal research journals (please provide details in bullet points)</p>
+          <h1 className="page-title">Review of research papers for Tier-1/2 refereed internal research journals (please provide details in bullet points)</h1>
+          <p className="page-subtitle">Section 14</p>
         </div>
         <button className="save-button" onClick={handleSave} disabled={loading}>
           <Save size={18} />

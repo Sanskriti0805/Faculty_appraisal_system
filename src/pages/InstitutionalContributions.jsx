@@ -26,8 +26,8 @@ const InstitutionalContributions = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Institutional Contributions</h1>
-          <p className="page-subtitle">Section 22: OTHER INSTITUTIONAL CONTRIBUTIONS (Other than those covered above)</p>
+          <h1 className="page-title">Contributions, towards Institutional Development or any significant Institutional Contributions not covered above</h1>
+          <p className="page-subtitle">Section 21</p>
         </div>
         <button className="save-button" onClick={handleSave}>
           <Save size={18} />
@@ -37,7 +37,7 @@ const InstitutionalContributions = () => {
 
       <div className="form-card">
         <div className="section-header-text">OTHER INSTITUTIONAL CONTRIBUTIONS (Other than those covered above)</div>
-        
+
         <div className="form-section">
           <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#2c3e50', marginBottom: '1rem' }}>
             Contributions towards Institutional Development or any significant Institutional Contributions not covered above:
