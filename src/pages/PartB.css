@@ -1,0 +1,114 @@
+.part-b-container {
+    max-width: 100%;
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Reusing buttons and inputs from CoursesTaught for consistency */
+.add-course-btn {
+    background-color: #3B5998;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(59, 89, 152, 0.3);
+    cursor: pointer;
+}
+
+.add-course-btn:hover {
+    background-color: #2d4373;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 89, 152, 0.4);
+}
+
+.section-dropdown {
+    padding: 0.625rem 0.875rem;
+    border: 2px solid #d1d8e0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #2c3e50;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    font-weight: 500;
+}
+
+.section-dropdown:focus {
+    outline: none;
+    border-color: #3B5998;
+    box-shadow: 0 0 0 3px rgba(59, 89, 152, 0.1);
+}
+
+.section-dropdown:hover {
+    border-color: #3B5998;
+}
+
+.courses-table textarea {
+    padding: 0.625rem;
+    border: 2px solid #d1d8e0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.courses-table textarea:focus {
+    outline: none;
+    border-color: #3B5998;
+    box-shadow: 0 0 0 3px rgba(59, 89, 152, 0.1);
+}
+
+/* Ensure table input fields match */
+.courses-table input[type="text"] {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 2px solid #d1d8e0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.courses-table input[type="text"]:focus {
+    outline: none;
+    border-color: #3B5998;
+    box-shadow: 0 0 0 3px rgba(59, 89, 152, 0.1);
+}
+
+/* Table Styles */
+.courses-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.courses-table thead {
+    background-color: #f8f9fa;
+}
+
+.courses-table th {
+    padding: 1rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border: 1px solid #dee2e6;
+    font-size: 0.9rem;
+}
+
+.courses-table td {
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+.course-number {
+    font-weight: 600;
+    color: #5a6c7d;
+    text-align: center;
+    white-space: nowrap;
+}

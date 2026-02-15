@@ -85,7 +85,7 @@ const CoursesTaught = () => {
         studentName: '',
         duration: '',
         outcome: '',
-        outcome: '',
+
         remarks: '',
         certificateFile: null
       }

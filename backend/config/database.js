@@ -19,7 +19,7 @@ const promisePool = pool.promise();
 // Test connection
 pool.getConnection((err, connection) => {
   if (err) {
-    console.error('Error connecting to database:', err.message);
+    console.error('Error connecting to database:', err);
     return;
   }
   console.log('✅ Database connected successfully');
