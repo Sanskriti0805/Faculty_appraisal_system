@@ -1,4 +1,5 @@
 import React from 'react'
+import RoleSwitcher from './RoleSwitcher'
 import './Header.css'
 
 const Header = ({ onLogout }) => {
@@ -12,9 +13,12 @@ const Header = ({ onLogout }) => {
         />
       </div>
       <h1 className="header-title">Faculty Appraisal System</h1>
-      <button className="logout-button" onClick={onLogout}>
-        Logout
-      </button>
+      <div className="header-actions">
+        <RoleSwitcher />
+        <button className="logout-button" onClick={onLogout}>
+          Logout
+        </button>
+      </div>
     </header>
   )
 }

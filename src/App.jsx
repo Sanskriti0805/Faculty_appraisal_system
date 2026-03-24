@@ -27,6 +27,11 @@ const ResearchPlan = lazy(() => import('./pages/ResearchPlan'))
 const TeachingPlan = lazy(() => import('./pages/TeachingPlan'))
 const PartB = lazy(() => import('./pages/PartB'))
 
+// DOFA and DOFA Office pages
+const DOFADashboard = lazy(() => import('./pages/DOFADashboard'))
+const DOFAReview = lazy(() => import('./pages/DOFAReview'))
+const DOFAOfficeDashboard = lazy(() => import('./pages/DOFAOfficeDashboard'))
+
 // Loading component
 const LoadingFallback = () => (
   <div style={{
@@ -46,6 +51,7 @@ function App() {
     <Router>
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
+          {/* Faculty Routes */}
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="faculty-information" element={<FacultyInformation />} />
@@ -70,6 +76,17 @@ function App() {
             <Route path="research-plan" element={<ResearchPlan />} />
             <Route path="teaching-plan" element={<TeachingPlan />} />
             <Route path="part-b" element={<PartB />} />
+          </Route>
+
+          {/* DOFA Routes */}
+          <Route path="/dofa" element={<Layout />}>
+            <Route path="dashboard" element={<DOFADashboard />} />
+            <Route path="review/:id" element={<DOFAReview />} />
+          </Route>
+
+          {/* DOFA Office Routes */}
+          <Route path="/dofa-office" element={<Layout />}>
+            <Route path="dashboard" element={<DOFAOfficeDashboard />} />
           </Route>
         </Routes>
       </Suspense>
