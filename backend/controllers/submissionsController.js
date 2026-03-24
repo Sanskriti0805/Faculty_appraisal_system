@@ -4,7 +4,7 @@ const db = require('../config/database');
 exports.getAllSubmissions = async (req, res) => {
   try {
     const { status, academic_year, faculty_id } = req.query;
-    
+
     let query = `
       SELECT s.*, u.name as faculty_name, u.department, u.email,
              a.name as approved_by_name
@@ -59,21 +59,51 @@ exports.getSubmissionById = async (req, res) => {
     // Get faculty information
     const facultyId = submission[0].faculty_id;
     const [facultyInfo] = await db.query('SELECT * FROM faculty_information WHERE id = ?', [facultyId]);
-    
+
     // Get courses taught
     const [courses] = await db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [facultyId]);
-    
+
     // Get publications
     const [publications] = await db.query('SELECT * FROM research_publications WHERE faculty_id = ?', [facultyId]);
-    
+
     // Get grants
     const [grants] = await db.query('SELECT * FROM research_grants WHERE faculty_id = ?', [facultyId]);
-    
+
     // Get patents
     const [patents] = await db.query('SELECT * FROM patents WHERE faculty_id = ?', [facultyId]);
-    
+
     // Get awards
     const [awards] = await db.query('SELECT * FROM awards_honours WHERE faculty_id = ?', [facultyId]);
+
+    // Get new courses developed
+    const [newCourses] = await db.query('SELECT * FROM new_courses WHERE faculty_id = ?', [facultyId]);
+
+    // Get submitted proposals
+    const [proposals] = await db.query('SELECT * FROM submitted_proposals WHERE faculty_id = ?', [facultyId]);
+
+    // Get paper reviews
+    const [paperReviews] = await db.query('SELECT * FROM paper_reviews WHERE faculty_id = ?', [facultyId]);
+
+    // Get technology transfer
+    const [techTransfer] = await db.query('SELECT * FROM technology_transfer WHERE faculty_id = ?', [facultyId]);
+
+    // Get conference sessions
+    const [conferenceSessions] = await db.query('SELECT * FROM conference_sessions WHERE faculty_id = ?', [facultyId]);
+
+    // Get keynotes and talks
+    const [keynotesTalks] = await db.query('SELECT * FROM keynotes_talks WHERE faculty_id = ?', [facultyId]);
+
+    // Get consultancy
+    const [consultancy] = await db.query('SELECT * FROM consultancy WHERE faculty_id = ?', [facultyId]);
+
+    // Get teaching innovation
+    const [teachingInnovation] = await db.query('SELECT * FROM teaching_innovation WHERE faculty_id = ?', [facultyId]);
+
+    // Get institutional contributions
+    const [institutionalContributions] = await db.query('SELECT * FROM institutional_contributions WHERE faculty_id = ?', [facultyId]);
+
+    // Get Part B goals
+    const [goals] = await db.query('SELECT * FROM faculty_goals WHERE faculty_id = ?', [facultyId]);
 
     // Get review comments
     const [comments] = await db.query(`
@@ -94,6 +124,16 @@ exports.getSubmissionById = async (req, res) => {
         grants: grants || [],
         patents: patents || [],
         awards: awards || [],
+        newCourses: newCourses || [],
+        proposals: proposals || [],
+        paperReviews: paperReviews || [],
+        techTransfer: techTransfer || [],
+        conferenceSessions: conferenceSessions || [],
+        keynotesTalks: keynotesTalks || [],
+        consultancy: consultancy || [],
+        teachingInnovation: teachingInnovation || [],
+        institutionalContributions: institutionalContributions || [],
+        goals: goals || [],
         comments: comments || []
       }
     });
@@ -155,11 +195,39 @@ exports.updateSubmissionStatus = async (req, res) => {
   }
 };
 
+// Save consultancy
+exports.saveConsultancy = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+    const { faculty_id, consultancy } = req.body;
+
+    await connection.query('DELETE FROM consultancy WHERE faculty_id = ?', [faculty_id]);
+
+    if (consultancy && Array.isArray(consultancy)) {
+      for (const item of consultancy) {
+        await connection.query(
+          `INSERT INTO consultancy 
+          (faculty_id, organization, project_title, role, duration, amount, year) 
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [faculty_id, item.organisation, item.project, item.role, item.duration, item.amount, item.year]
+        );
+      }
+    }
+
+    await connection.commit();
+    res.json({ success: true, message: 'Consultancy saved successfully' });
+  } catch (error) {
+    await connection.rollback();
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    connection.release();
+  }
+};
 // Get submission statistics
 exports.getSubmissionStats = async (req, res) => {
   try {
     const { academic_year } = req.query;
-
     let whereClause = academic_year ? 'WHERE academic_year = ?' : '';
     const params = academic_year ? [academic_year] : [];
 

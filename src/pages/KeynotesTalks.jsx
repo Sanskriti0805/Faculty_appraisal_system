@@ -6,6 +6,7 @@ const KeynotesTalks = () => {
   const initialState = {
     category: 'Keynote',
     title: '',
+    typeOfEvent: '',
     organizer: '',
     date: '',
     certificateFile: null,
@@ -112,17 +113,17 @@ const KeynotesTalks = () => {
             </div>
           </div>
 
-          {/* Row 2: Organizer (Right side mostly in image, but standard row is safer) */}
-          {/* Image shows: Category | Title -> Next Row: (Empty) | Organizer. Let's do a full row for Organizer? Or half? */}
-          {/* To match image "exactly": 
-              Row 1: Category | Title
-              Row 2: (Empty/Spacer) | Organizer
-          */}
+          {/* Row 2: Type of Event & Organizer */}
           <div className="form-row">
-            <div className="form-group" style={{ visibility: 'hidden' }}>
-              {/* Spacer to match image layout */}
-              <label>Spacer</label>
-              <input disabled />
+            <div className="form-group">
+              <label>Type of Event<span className="required-star">*</span></label>
+              <input
+                type="text"
+                name="typeOfEvent"
+                value={formData.typeOfEvent}
+                onChange={handleInputChange}
+                placeholder="e.g. FDP"
+              />
             </div>
             <div className="form-group">
               <label>Organizer<span className="required-star">*</span></label>
@@ -213,7 +214,7 @@ const KeynotesTalks = () => {
                 {submittedTalks.map((talk, index) => (
                   <li key={index}>
                     <div className="talk-info">
-                      <strong>{talk.title}</strong> - {talk.venue.city}, {talk.venue.country} ({talk.date})
+                      <strong>{talk.title}</strong> ({talk.typeOfEvent}) - {talk.venue.city}, {talk.venue.country} ({talk.date})
                     </div>
                     <button
                       type="button"

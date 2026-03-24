@@ -12,6 +12,7 @@ const ResearchPublications = () => {
 
   const [journalData, setJournalData] = useState({
     titleOfPaper: '',
+    quartile: '',
     yearOfPublication: '2026',
     nameOfJournal: '',
     volume: '',
@@ -35,59 +36,170 @@ const ResearchPublications = () => {
     publicationAgency: ''
   })
 
-  const [bookChapterData, setBookChapterData] = useState({
-    titleOfPaper: '',
-    yearOfPublication: '2026',
-    titleOfBook: '',
-    pagesFrom: '',
-    pagesTo: '',
-    publicationAgency: ''
-  })
-
-  const [bookData, setBookData] = useState({
-    titleOfBook: '',
-    yearOfPublication: '2026',
-    publicationAgency: '',
-    city: '',
-    state: '',
-    country: ''
-  })
+  const [bookEntries, setBookEntries] = useState([
+    {
+      authors: [{ first: '', middle: '', last: '' }],
+      yearOfPublication: '2026',
+      titleOfBook: '',
+      pagesFrom: '',
+      pagesTo: '',
+      publicationAgency: '',
+      editors: [{ first: '', middle: '', last: '' }],
+      evidenceFile: null
+    }
+  ])
+  const [textbookEntries, setTextbookEntries] = useState([
+    {
+      authors: [{ first: '', middle: '', last: '' }],
+      titleOfBook: '',
+      yearOfPublication: '2026',
+      publicationAgency: '',
+      city: '',
+      state: '',
+      country: '',
+      evidenceFile: null
+    }
+  ])
 
   const [otherDetails, setOtherDetails] = useState('')
   const [evidenceFile, setEvidenceFile] = useState(null)
 
-  const addAuthor = () => {
-    setAuthors([...authors, { first: '', middle: '', last: '' }])
-  }
-
-  const removeAuthor = (index) => {
-    if (authors.length > 1) {
-      setAuthors(authors.filter((_, i) => i !== index))
+  const addAuthor = (bookIndex = null, textbookIndex = null) => {
+    if (bookIndex !== null) {
+      const updatedEntries = [...bookEntries]
+      updatedEntries[bookIndex].authors.push({ first: '', middle: '', last: '' })
+      setBookEntries(updatedEntries)
+    } else if (textbookIndex !== null) {
+      const updatedEntries = [...textbookEntries]
+      updatedEntries[textbookIndex].authors.push({ first: '', middle: '', last: '' })
+      setTextbookEntries(updatedEntries)
+    } else {
+      setAuthors([...authors, { first: '', middle: '', last: '' }])
     }
   }
 
-  const updateAuthor = (index, field, value) => {
-    const updatedAuthors = authors.map((author, i) =>
-      i === index ? { ...author, [field]: value } : author
-    )
-    setAuthors(updatedAuthors)
-  }
-
-  const addEditor = () => {
-    setEditors([...editors, { first: '', middle: '', last: '' }])
-  }
-
-  const removeEditor = (index) => {
-    if (editors.length > 1) {
-      setEditors(editors.filter((_, i) => i !== index))
+  const removeAuthor = (index, bookIndex = null, textbookIndex = null) => {
+    if (bookIndex !== null) {
+      const updatedEntries = [...bookEntries]
+      if (updatedEntries[bookIndex].authors.length > 1) {
+        updatedEntries[bookIndex].authors = updatedEntries[bookIndex].authors.filter((_, i) => i !== index)
+        setBookEntries(updatedEntries)
+      }
+    } else if (textbookIndex !== null) {
+      const updatedEntries = [...textbookEntries]
+      if (updatedEntries[textbookIndex].authors.length > 1) {
+        updatedEntries[textbookIndex].authors = updatedEntries[textbookIndex].authors.filter((_, i) => i !== index)
+        setTextbookEntries(updatedEntries)
+      }
+    } else {
+      if (authors.length > 1) {
+        setAuthors(authors.filter((_, i) => i !== index))
+      }
     }
   }
 
-  const updateEditor = (index, field, value) => {
-    const updatedEditors = editors.map((editor, i) =>
-      i === index ? { ...editor, [field]: value } : editor
-    )
-    setEditors(updatedEditors)
+  const updateAuthor = (index, field, value, bookIndex = null, textbookIndex = null) => {
+    if (bookIndex !== null) {
+      const updatedEntries = [...bookEntries]
+      updatedEntries[bookIndex].authors[index][field] = value
+      setBookEntries(updatedEntries)
+    } else if (textbookIndex !== null) {
+      const updatedEntries = [...textbookEntries]
+      updatedEntries[textbookIndex].authors[index][field] = value
+      setTextbookEntries(updatedEntries)
+    } else {
+      const updatedAuthors = authors.map((author, i) =>
+        i === index ? { ...author, [field]: value } : author
+      )
+      setAuthors(updatedAuthors)
+    }
+  }
+
+  const addEditor = (bookIndex = null) => {
+    if (bookIndex !== null) {
+      const updatedEntries = [...bookEntries]
+      updatedEntries[bookIndex].editors.push({ first: '', middle: '', last: '' })
+      setBookEntries(updatedEntries)
+    } else {
+      setEditors([...editors, { first: '', middle: '', last: '' }])
+    }
+  }
+
+  const removeEditor = (index, bookIndex = null) => {
+    if (bookIndex !== null) {
+      const updatedEntries = [...bookEntries]
+      if (updatedEntries[bookIndex].editors.length > 1) {
+        updatedEntries[bookIndex].editors = updatedEntries[bookIndex].editors.filter((_, i) => i !== index)
+        setBookEntries(updatedEntries)
+      }
+    } else {
+      if (editors.length > 1) {
+        setEditors(editors.filter((_, i) => i !== index))
+      }
+    }
+  }
+
+  const updateEditor = (index, field, value, bookIndex = null) => {
+    if (bookIndex !== null) {
+      const updatedEntries = [...bookEntries]
+      updatedEntries[bookIndex].editors[index][field] = value
+      setBookEntries(updatedEntries)
+    } else {
+      const updatedEditors = editors.map((editor, i) =>
+        i === index ? { ...editor, [field]: value } : editor
+      )
+      setEditors(updatedEditors)
+    }
+  }
+
+  const addBookEntry = () => {
+    setBookEntries([...bookEntries, {
+      authors: [{ first: '', middle: '', last: '' }],
+      yearOfPublication: '2026',
+      titleOfBook: '',
+      pagesFrom: '',
+      pagesTo: '',
+      publicationAgency: '',
+      editors: [{ first: '', middle: '', last: '' }],
+      evidenceFile: null
+    }])
+  }
+
+  const removeBookEntry = (index) => {
+    if (bookEntries.length > 1) {
+      setBookEntries(bookEntries.filter((_, i) => i !== index))
+    }
+  }
+
+  const updateBookEntryField = (index, field, value) => {
+    const updatedEntries = [...bookEntries]
+    updatedEntries[index][field] = value
+    setBookEntries(updatedEntries)
+  }
+
+  const addTextbookEntry = () => {
+    setTextbookEntries([...textbookEntries, {
+      authors: [{ first: '', middle: '', last: '' }],
+      titleOfBook: '',
+      yearOfPublication: '2026',
+      publicationAgency: '',
+      city: '',
+      state: '',
+      country: '',
+      evidenceFile: null
+    }])
+  }
+
+  const removeTextbookEntry = (index) => {
+    if (textbookEntries.length > 1) {
+      setTextbookEntries(textbookEntries.filter((_, i) => i !== index))
+    }
+  }
+
+  const updateTextbookEntryField = (index, field, value) => {
+    const updatedEntries = [...textbookEntries]
+    updatedEntries[index][field] = value
+    setTextbookEntries(updatedEntries)
   }
 
   const handleSave = async () => {
@@ -106,6 +218,7 @@ const ResearchPublications = () => {
         publicationData = {
           ...publicationData,
           title: journalData.titleOfPaper,
+          quartile: journalData.quartile,
           year_of_publication: journalData.yearOfPublication,
           journal_name: journalData.nameOfJournal,
           volume: journalData.volume,
@@ -132,26 +245,65 @@ const ResearchPublications = () => {
       } else if (publicationType === 'Monographs') {
         publicationData.sub_type = bookSubType
         if (bookSubType === 'Book Chapter') {
-          publicationData = {
-            ...publicationData,
-            title: bookChapterData.titleOfPaper,
-            year_of_publication: bookChapterData.yearOfPublication,
-            title_of_book: bookChapterData.titleOfBook,
-            pages_from: bookChapterData.pagesFrom,
-            pages_to: bookChapterData.pagesTo,
-            publication_agency: bookChapterData.publicationAgency,
-            editors: editors
+          // Save multiple books
+          for (const entry of bookEntries) {
+            const entryData = {
+              ...publicationData,
+              authors: entry.authors,
+              year_of_publication: entry.yearOfPublication,
+              title_of_book: entry.titleOfBook,
+              pages_from: entry.pagesFrom,
+              pages_to: entry.pagesTo,
+              publication_agency: entry.publicationAgency,
+              editors: entry.editors
+            }
+            await publicationsService.createPublication(entryData)
           }
+          alert('All books saved successfully!')
+          setLoading(false)
+          // Reset
+          setPublicationType('')
+          setBookEntries([{
+            authors: [{ first: '', middle: '', last: '' }],
+            yearOfPublication: '2026',
+            titleOfBook: '',
+            pagesFrom: '',
+            pagesTo: '',
+            publicationAgency: '',
+            editors: [{ first: '', middle: '', last: '' }],
+            evidenceFile: null
+          }])
+          return
         } else if (bookSubType === 'Book') {
-          publicationData = {
-            ...publicationData,
-            title_of_book: bookData.titleOfBook,
-            year_of_publication: bookData.yearOfPublication,
-            publication_agency: bookData.publicationAgency,
-            city: bookData.city,
-            state: bookData.state,
-            country: bookData.country
+          // Save multiple textbooks
+          for (const entry of textbookEntries) {
+            const entryData = {
+              ...publicationData,
+              authors: entry.authors,
+              title_of_book: entry.titleOfBook,
+              year_of_publication: entry.yearOfPublication,
+              publication_agency: entry.publicationAgency,
+              city: entry.city,
+              state: entry.state,
+              country: entry.country
+            }
+            await publicationsService.createPublication(entryData)
           }
+          alert('All textbooks saved successfully!')
+          setLoading(false)
+          // Reset
+          setPublicationType('')
+          setTextbookEntries([{
+            authors: [{ first: '', middle: '', last: '' }],
+            titleOfBook: '',
+            yearOfPublication: '2026',
+            publicationAgency: '',
+            city: '',
+            state: '',
+            country: '',
+            evidenceFile: null
+          }])
+          return
         }
       } else if (publicationType === 'Any Other') {
         publicationData.details = otherDetails
@@ -175,37 +327,37 @@ const ResearchPublications = () => {
     }
   }
 
-  const renderAuthors = () => (
+  const renderAuthors = (currentAuthors, bookIndex = null, textbookIndex = null) => (
     <div className="form-field-group" style={{ marginBottom: '1.5rem' }}>
       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#2c3e50' }}>
         Author's Name<span style={{ color: '#d64550' }}>*</span>
       </label>
-      {authors.map((author, index) => (
+      {currentAuthors.map((author, index) => (
         <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
           <input
             type="text"
             placeholder="First"
             value={author.first}
-            onChange={(e) => updateAuthor(index, 'first', e.target.value)}
+            onChange={(e) => updateAuthor(index, 'first', e.target.value, bookIndex, textbookIndex)}
             style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
           <input
             type="text"
             placeholder="Middle"
             value={author.middle}
-            onChange={(e) => updateAuthor(index, 'middle', e.target.value)}
+            onChange={(e) => updateAuthor(index, 'middle', e.target.value, bookIndex, textbookIndex)}
             style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
           <input
             type="text"
             placeholder="Last"
             value={author.last}
-            onChange={(e) => updateAuthor(index, 'last', e.target.value)}
+            onChange={(e) => updateAuthor(index, 'last', e.target.value, bookIndex, textbookIndex)}
             style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
-          {authors.length > 1 && (
+          {currentAuthors.length > 1 && (
             <button
-              onClick={() => removeAuthor(index)}
+              onClick={() => removeAuthor(index, bookIndex, textbookIndex)}
               style={{
                 padding: '0.5rem',
                 backgroundColor: '#ff4444',
@@ -221,7 +373,7 @@ const ResearchPublications = () => {
         </div>
       ))}
       <button
-        onClick={addAuthor}
+        onClick={() => addAuthor(bookIndex, textbookIndex)}
         style={{
           width: '100%',
           padding: '0.75rem',
@@ -243,37 +395,37 @@ const ResearchPublications = () => {
     </div>
   )
 
-  const renderEditors = () => (
+  const renderEditors = (currentEditors, bookIndex = null) => (
     <div className="form-field-group" style={{ marginBottom: '1.5rem' }}>
       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#2c3e50' }}>
         Editor's Name<span style={{ color: '#d64550' }}>*</span>
       </label>
-      {editors.map((editor, index) => (
+      {currentEditors.map((editor, index) => (
         <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
           <input
             type="text"
             placeholder="First"
             value={editor.first}
-            onChange={(e) => updateEditor(index, 'first', e.target.value)}
+            onChange={(e) => updateEditor(index, 'first', e.target.value, bookIndex)}
             style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
           <input
             type="text"
             placeholder="Middle"
             value={editor.middle}
-            onChange={(e) => updateEditor(index, 'middle', e.target.value)}
+            onChange={(e) => updateEditor(index, 'middle', e.target.value, bookIndex)}
             style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
           <input
             type="text"
             placeholder="Last"
             value={editor.last}
-            onChange={(e) => updateEditor(index, 'last', e.target.value)}
+            onChange={(e) => updateEditor(index, 'last', e.target.value, bookIndex)}
             style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
-          {editors.length > 1 && (
+          {currentEditors.length > 1 && (
             <button
-              onClick={() => removeEditor(index)}
+              onClick={() => removeEditor(index, bookIndex)}
               style={{
                 padding: '0.5rem',
                 backgroundColor: '#ff4444',
@@ -289,7 +441,7 @@ const ResearchPublications = () => {
         </div>
       ))}
       <button
-        onClick={addEditor}
+        onClick={() => addEditor(bookIndex)}
         style={{
           width: '100%',
           padding: '0.75rem',
@@ -313,9 +465,9 @@ const ResearchPublications = () => {
 
   const renderJournalForm = () => (
     <>
-      {renderAuthors()}
+      {renderAuthors(authors)}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
         <div className="form-field-vertical">
           <label>Title of Paper<span style={{ color: '#d64550' }}>*</span></label>
           <input
@@ -324,6 +476,21 @@ const ResearchPublications = () => {
             onChange={(e) => setJournalData({ ...journalData, titleOfPaper: e.target.value })}
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
           />
+        </div>
+
+        <div className="form-field-vertical">
+          <label>Quartile</label>
+          <select
+            value={journalData.quartile}
+            onChange={(e) => setJournalData({ ...journalData, quartile: e.target.value })}
+            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+          >
+            <option value="">Select Quartile</option>
+            <option value="Q1">Q1</option>
+            <option value="Q2">Q2</option>
+            <option value="Q3">Q3</option>
+            <option value="Q4">Q4</option>
+          </select>
         </div>
 
         <div className="form-field-vertical">
@@ -436,7 +603,7 @@ const ResearchPublications = () => {
 
   const renderConferenceForm = () => (
     <>
-      {renderAuthors()}
+      {renderAuthors(authors)}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
         <div className="form-field-vertical">
@@ -613,229 +780,276 @@ const ResearchPublications = () => {
 
   const renderBookChapterForm = () => (
     <>
-      {renderAuthors()}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="form-field-vertical">
-          <label>Title of Paper<span style={{ color: '#d64550' }}>*</span></label>
-          <input
-            type="text"
-            value={bookChapterData.titleOfPaper}
-            onChange={(e) => setBookChapterData({ ...bookChapterData, titleOfPaper: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-          />
-        </div>
-
-        <div className="form-field-vertical">
-          <label>Year of Publication<span style={{ color: '#d64550' }}>*</span></label>
-          <select
-            value={bookChapterData.yearOfPublication}
-            onChange={(e) => setBookChapterData({ ...bookChapterData, yearOfPublication: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-          >
-            {Array.from({ length: 30 }, (_, i) => 2026 - i).map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="form-field-vertical">
-          <label>Title of Book<span style={{ color: '#d64550' }}>*</span></label>
-          <input
-            type="text"
-            value={bookChapterData.titleOfBook}
-            onChange={(e) => setBookChapterData({ ...bookChapterData, titleOfBook: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-          />
-        </div>
-
-        <div className="form-field-vertical">
-          <label>Pages<span style={{ color: '#d64550' }}>*</span></label>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input
-              type="text"
-              placeholder="From"
-              value={bookChapterData.pagesFrom}
-              onChange={(e) => setBookChapterData({ ...bookChapterData, pagesFrom: e.target.value })}
-              style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-            />
-            <input
-              type="text"
-              placeholder="To"
-              value={bookChapterData.pagesTo}
-              onChange={(e) => setBookChapterData({ ...bookChapterData, pagesTo: e.target.value })}
-              style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-            />
+      {bookEntries.map((entry, index) => (
+        <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0, color: '#2c3e50' }}>Book Entry #{index + 1}</h3>
+            {bookEntries.length > 1 && (
+              <button
+                onClick={() => removeBookEntry(index)}
+                style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}
+              >
+                <X size={16} /> Remove Book
+              </button>
+            )}
           </div>
-        </div>
-      </div>
 
-      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-        <label>Publication Agency<span style={{ color: '#d64550' }}>*</span></label>
-        <input
-          type="text"
-          value={bookChapterData.publicationAgency}
-          onChange={(e) => setBookChapterData({ ...bookChapterData, publicationAgency: e.target.value })}
-          style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-        />
-      </div>
+          {renderAuthors(entry.authors, index)}
 
-      {/* Evidence File Upload */}
-      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-        <label>Upload Evidence</label>
-        <div style={{
-          border: '2px dashed #ddd',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          textAlign: 'center',
-          backgroundColor: '#f9f9f9'
-        }}>
-          <input
-            type="file"
-            id="evidence-upload-book-chapter"
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-            onChange={(e) => setEvidenceFile(e.target.files[0])}
-            style={{ display: 'none' }}
-          />
-          <label
-            htmlFor="evidence-upload-book-chapter"
-            style={{
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            <Upload size={32} color="#5b8fc7" />
-            <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-              {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
-            </span>
-            <span style={{ fontSize: '0.85rem', color: '#666' }}>
-              PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
-            </span>
-          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="form-field-vertical">
+              <label>Title of Book<span style={{ color: '#d64550' }}>*</span></label>
+              <input
+                type="text"
+                value={entry.titleOfBook}
+                onChange={(e) => updateBookEntryField(index, 'titleOfBook', e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+            </div>
+
+            <div className="form-field-vertical">
+              <label>Year of Publication<span style={{ color: '#d64550' }}>*</span></label>
+              <select
+                value={entry.yearOfPublication}
+                onChange={(e) => updateBookEntryField(index, 'yearOfPublication', e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              >
+                {Array.from({ length: 30 }, (_, i) => 2026 - i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="form-field-vertical">
+              <label>Publication Agency<span style={{ color: '#d64550' }}>*</span></label>
+              <input
+                type="text"
+                value={entry.publicationAgency}
+                onChange={(e) => updateBookEntryField(index, 'publicationAgency', e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+            </div>
+
+            <div className="form-field-vertical">
+              <label>Pages<span style={{ color: '#d64550' }}>*</span></label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="text"
+                  placeholder="From"
+                  value={entry.pagesFrom}
+                  onChange={(e) => updateBookEntryField(index, 'pagesFrom', e.target.value)}
+                  style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+                <input
+                  type="text"
+                  placeholder="To"
+                  value={entry.pagesTo}
+                  onChange={(e) => updateBookEntryField(index, 'pagesTo', e.target.value)}
+                  style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Evidence File Upload (Specific to entry) */}
+          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+            <label>Upload Evidence</label>
+            <div style={{
+              border: '2px dashed #ddd',
+              borderRadius: '8px',
+              padding: '1rem',
+              textAlign: 'center',
+              backgroundColor: '#f9f9f9'
+            }}>
+              <input
+                type="file"
+                id={`evidence-upload-book-${index}`}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={(e) => updateBookEntryField(index, 'evidenceFile', e.target.files[0])}
+                style={{ display: 'none' }}
+              />
+              <label
+                htmlFor={`evidence-upload-book-${index}`}
+                style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}
+              >
+                <Upload size={24} color="#5b8fc7" />
+                <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
+                  {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {renderEditors(entry.editors, index)}
         </div>
-      </div>
-      {renderEditors()}
+      ))}
+
+      <button
+        onClick={addBookEntry}
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          backgroundColor: '#5cb85c',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem',
+          marginTop: '1rem',
+          marginBottom: '2rem'
+        }}
+      >
+        <Plus size={18} />
+        Add Another Book
+      </button>
     </>
   )
 
   const renderBookForm = () => (
     <>
-      {renderAuthors()}
+      {textbookEntries.map((entry, index) => (
+        <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0, color: '#2c3e50' }}>Textbook Entry #{index + 1}</h3>
+            {textbookEntries.length > 1 && (
+              <button
+                onClick={() => removeTextbookEntry(index)}
+                style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}
+              >
+                <X size={16} /> Remove Textbook
+              </button>
+            )}
+          </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="form-field-vertical">
-          <label>Title of Book<span style={{ color: '#d64550' }}>*</span></label>
-          <input
-            type="text"
-            value={bookData.titleOfBook}
-            onChange={(e) => setBookData({ ...bookData, titleOfBook: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-          />
-        </div>
+          {renderAuthors(entry.authors, null, index)}
 
-        <div className="form-field-vertical">
-          <label>Year of Publication<span style={{ color: '#d64550' }}>*</span></label>
-          <select
-            value={bookData.yearOfPublication}
-            onChange={(e) => setBookData({ ...bookData, yearOfPublication: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-          >
-            {Array.from({ length: 30 }, (_, i) => 2026 - i).map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="form-field-vertical">
+              <label>Title of Textbook<span style={{ color: '#d64550' }}>*</span></label>
+              <input
+                type="text"
+                value={entry.titleOfBook}
+                onChange={(e) => updateTextbookEntryField(index, 'titleOfBook', e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+            </div>
 
-      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-        <label>Publication Agency<span style={{ color: '#d64550' }}>*</span></label>
-        <input
-          type="text"
-          value={bookData.publicationAgency}
-          onChange={(e) => setBookData({ ...bookData, publicationAgency: e.target.value })}
-          style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-        />
-      </div>
+            <div className="form-field-vertical">
+              <label>Year of Publication<span style={{ color: '#d64550' }}>*</span></label>
+              <select
+                value={entry.yearOfPublication}
+                onChange={(e) => updateTextbookEntryField(index, 'yearOfPublication', e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              >
+                {Array.from({ length: 30 }, (_, i) => 2026 - i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-      <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px' }}>
-        <h4 style={{ marginTop: 0, marginBottom: '1rem', color: '#2c3e50' }}>Address of Agency<span style={{ color: '#d64550' }}>*</span></h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-          <div className="form-field-vertical">
-            <label>City<span style={{ color: '#d64550' }}>*</span></label>
+          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+            <label>Publication Agency<span style={{ color: '#d64550' }}>*</span></label>
             <input
               type="text"
-              value={bookData.city}
-              onChange={(e) => setBookData({ ...bookData, city: e.target.value })}
+              value={entry.publicationAgency}
+              onChange={(e) => updateTextbookEntryField(index, 'publicationAgency', e.target.value)}
               style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
             />
           </div>
 
-          <div className="form-field-vertical">
-            <label>State<span style={{ color: '#d64550' }}>*</span></label>
-            <input
-              type="text"
-              value={bookData.state}
-              onChange={(e) => setBookData({ ...bookData, state: e.target.value })}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-            />
+          <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px', marginBottom: '1.5rem' }}>
+            <h4 style={{ marginTop: 0, marginBottom: '1rem', color: '#2c3e50' }}>Address of Agency<span style={{ color: '#d64550' }}>*</span></h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+              <div className="form-field-vertical">
+                <label>City<span style={{ color: '#d64550' }}>*</span></label>
+                <input
+                  type="text"
+                  value={entry.city}
+                  onChange={(e) => updateTextbookEntryField(index, 'city', e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div className="form-field-vertical">
+                <label>State<span style={{ color: '#d64550' }}>*</span></label>
+                <input
+                  type="text"
+                  value={entry.state}
+                  onChange={(e) => updateTextbookEntryField(index, 'state', e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+
+              <div className="form-field-vertical">
+                <label>Country<span style={{ color: '#d64550' }}>*</span></label>
+                <input
+                  type="text"
+                  value={entry.country}
+                  onChange={(e) => updateTextbookEntryField(index, 'country', e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+            </div>
           </div>
 
+          {/* Evidence File Upload (Specific to entry) */}
           <div className="form-field-vertical">
-            <label>Country<span style={{ color: '#d64550' }}>*</span></label>
-            <input
-              type="text"
-              value={bookData.country}
-              onChange={(e) => setBookData({ ...bookData, country: e.target.value })}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-            />
+            <label>Upload Evidence</label>
+            <div style={{
+              border: '2px dashed #ddd',
+              borderRadius: '8px',
+              padding: '1rem',
+              textAlign: 'center',
+              backgroundColor: '#f9f9f9'
+            }}>
+              <input
+                type="file"
+                id={`evidence-upload-textbook-${index}`}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={(e) => updateTextbookEntryField(index, 'evidenceFile', e.target.files[0])}
+                style={{ display: 'none' }}
+              />
+              <label
+                htmlFor={`evidence-upload-textbook-${index}`}
+                style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}
+              >
+                <Upload size={24} color="#5b8fc7" />
+                <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
+                  {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
+                </span>
+              </label>
+            </div>
           </div>
         </div>
-      </div>
+      ))}
 
-      {/* Evidence File Upload */}
-      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-        <label>Upload Evidence</label>
-        <div style={{
-          border: '2px dashed #ddd',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          textAlign: 'center',
-          backgroundColor: '#f9f9f9'
-        }}>
-          <input
-            type="file"
-            id="evidence-upload-book"
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-            onChange={(e) => setEvidenceFile(e.target.files[0])}
-            style={{ display: 'none' }}
-          />
-          <label
-            htmlFor="evidence-upload-book"
-            style={{
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            <Upload size={32} color="#5b8fc7" />
-            <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-              {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
-            </span>
-            <span style={{ fontSize: '0.85rem', color: '#666' }}>
-              PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
-            </span>
-          </label>
-        </div>
-      </div>
-
-      {renderAuthors()}
+      <button
+        onClick={addTextbookEntry}
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          backgroundColor: '#5cb85c',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem',
+          marginTop: '1rem',
+          marginBottom: '2rem'
+        }}
+      >
+        <Plus size={18} />
+        Add Another Textbook
+      </button>
     </>
   )
 
@@ -929,7 +1143,7 @@ const ResearchPublications = () => {
               }}
             >
               <option value="">-- Select Type --</option>
-              <option value="Monographs">a) Research Monographs / Books (not textbooks) and Book Chapters Published</option>
+              <option value="Monographs">a) Research Monographs / Book / Textbooks Published</option>
               <option value="Journal">b) Research Papers Published in Journals</option>
               <option value="Conference">c) Research Papers Published in Refereed Conference Proceedings</option>
               <option value="Any Other">d) Any other form of scholarly publications</option>
@@ -954,8 +1168,8 @@ const ResearchPublications = () => {
                 }}
               >
                 <option value="">-- Select Sub-Type --</option>
-                <option value="Book Chapter">Book Chapter</option>
-                <option value="Book">Book</option>
+                <option value="Book Chapter">Book</option>
+                <option value="Book">Textbook Published</option>
               </select>
             </div>
           )}

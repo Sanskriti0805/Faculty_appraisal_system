@@ -22,15 +22,15 @@ const CoursesTaught = () => {
 
   // Projects Guided data
   const [fallProjects, setFallProjects] = useState([
-    { id: 1, projectTitle: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null },
+    { id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null },
   ])
 
   const [springProjects, setSpringProjects] = useState([
-    { id: 1, projectTitle: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null },
+    { id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null },
   ])
 
   const [summerProjects, setSummerProjects] = useState([
-    { id: 1, projectTitle: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null },
+    { id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null },
   ])
 
   const handleInputChange = (semester, index, field, value) => {
@@ -82,10 +82,11 @@ const CoursesTaught = () => {
       const newProject = {
         id: Date.now(),
         projectTitle: '',
+        projectType: '',
+        role: '',
         studentName: '',
         duration: '',
         outcome: '',
-
         remarks: '',
         certificateFile: null
       }
@@ -120,21 +121,37 @@ const CoursesTaught = () => {
     }
   }
 
-  const handleSave = () => {
-    const data = {
-      courses: {
-        fallCourses,
-        springCourses,
-        summerCourses,
-      },
-      projects: {
-        fallProjects,
-        springProjects,
-        summerProjects,
+  const handleSave = async () => {
+    try {
+      // Save Courses
+      const allCourses = [
+        ...fallCourses.map(c => ({ ...c, semester: 'Fall' })),
+        ...springCourses.map(c => ({ ...c, semester: 'Spring' })),
+        ...summerCourses.map(c => ({ ...c, semester: 'Summer' }))
+      ];
+
+      for (const course of allCourses) {
+        if (course.title) {
+          await fetch('http://localhost:5001/api/courses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              faculty_id: 1,
+              course_name: course.title,
+              semester: course.semester,
+              enrollment: course.students,
+              feedback_score: course.feedback,
+              status: 'submitted'
+            })
+          });
+        }
       }
+
+      alert('Data saved successfully!');
+    } catch (error) {
+      console.error('Error saving courses:', error);
+      alert('Failed to save data.');
     }
-    console.log('Saving data:', data)
-    alert('Data saved successfully!')
   }
 
   const getCurrentItems = () => {
@@ -300,11 +317,13 @@ const CoursesTaught = () => {
       <table className="courses-table">
         <thead>
           <tr>
-            <th style={{ width: '20%' }}>Project Title</th>
-            <th style={{ width: '20%' }}>Name of the Student</th>
-            <th style={{ width: '15%' }}>Duration of Project</th>
-            <th style={{ width: '20%' }}>Major Outcome</th>
-            <th style={{ width: '15%' }}>Remarks, if any</th>
+            <th style={{ width: '12%' }}>Project Title</th>
+            <th style={{ width: '12%' }}>Project Type</th>
+            <th style={{ width: '12%' }}>Role</th>
+            <th style={{ width: '14%' }}>Name of the Student</th>
+            <th style={{ width: '10%' }}>Duration of Project</th>
+            <th style={{ width: '13%' }}>Major Outcome</th>
+            <th style={{ width: '12%' }}>Remarks, if any</th>
             <th style={{ width: '10%' }}>Upload Certificate</th>
             <th style={{ width: '5%' }}>Action</th>
           </tr>
@@ -319,6 +338,34 @@ const CoursesTaught = () => {
                   onChange={(e) => handleInputChange(semester, index, 'projectTitle', e.target.value)}
                   placeholder="Enter project title"
                 />
+              </td>
+              <td>
+                <select
+                  value={project.projectType}
+                  onChange={(e) => handleInputChange(semester, index, 'projectType', e.target.value)}
+                  className="project-type-dropdown"
+                >
+                  <option value="">Select Type</option>
+                  <option value="B.Tech">B.Tech</option>
+                  <option value="M.Tech">M.Tech</option>
+                  <option value="MS">MS</option>
+                  <option value="LUSIP">LUSIP</option>
+                  <option value="Mini Project">Mini Project</option>
+                  <option value="M.Sc.">M.Sc.</option>
+                  <option value="SLI">SLI</option>
+                  <option value="Other Projects">Other Projects</option>
+                </select>
+              </td>
+              <td>
+                <select
+                  value={project.role}
+                  onChange={(e) => handleInputChange(semester, index, 'role', e.target.value)}
+                  className="role-dropdown"
+                >
+                  <option value="">Select Role</option>
+                  <option value="Supervisor">Supervisor</option>
+                  <option value="Co-Supervisor">Co-Supervisor</option>
+                </select>
               </td>
               <td>
                 <input

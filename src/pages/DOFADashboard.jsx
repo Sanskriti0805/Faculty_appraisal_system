@@ -69,7 +69,7 @@ const DOFADashboard = () => {
       const response = await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: 'approved',
           approved_by: 1 // Mock DOFA user ID
         })
@@ -242,7 +242,7 @@ const DOFADashboard = () => {
       {/* Submissions Table */}
       <div className="submissions-card">
         <h2 className="card-title">Faculty Submissions</h2>
-        
+
         {loading ? (
           <div className="loading-state">Loading submissions...</div>
         ) : submissions.length === 0 ? (

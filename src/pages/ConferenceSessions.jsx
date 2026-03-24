@@ -9,6 +9,7 @@ const ConferenceSessions = () => {
     eventTitle: '',
     abbreviation: '',
     organizer: '',
+    role: '',
     certificateFile: null,
     venue: {
       city: '',
@@ -143,6 +144,19 @@ const ConferenceSessions = () => {
               />
             </div>
             <div className="form-group">
+              <label>Role<span className="required-star">*</span></label>
+              <input
+                type="text"
+                name="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                placeholder="e.g. Session Chair, Speaker"
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
               <label>Upload Evidence<span className="required-star">*</span></label>
               <input
                 type="file"
@@ -223,7 +237,7 @@ const ConferenceSessions = () => {
                 {submittedSessions.map((session, index) => (
                   <li key={index}>
                     <div className="session-info">
-                      <strong>{session.eventTitle}</strong> - {session.venue.city}, {session.venue.country}
+                      <strong>{session.eventTitle}</strong> ({session.role}) - {session.venue.city}, {session.venue.country}
                     </div>
                     <button
                       type="button"
