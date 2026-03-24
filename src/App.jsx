@@ -31,6 +31,8 @@ const PartB = lazy(() => import('./pages/PartB'))
 const DOFADashboard = lazy(() => import('./pages/DOFADashboard'))
 const DOFAReview = lazy(() => import('./pages/DOFAReview'))
 const DOFAOfficeDashboard = lazy(() => import('./pages/DOFAOfficeDashboard'))
+const RubricsManagement = lazy(() => import('./pages/RubricsManagement'))
+const EvaluationSheet = lazy(() => import('./pages/EvaluationSheet'))
 
 // Loading component
 const LoadingFallback = () => (
@@ -80,8 +82,14 @@ function App() {
 
           {/* DOFA Routes */}
           <Route path="/dofa" element={<Layout />}>
+            <Route index element={<DOFADashboard />} />
             <Route path="dashboard" element={<DOFADashboard />} />
+            <Route path="rubrics" element={<RubricsManagement />} />
             <Route path="review/:id" element={<DOFAReview />} />
+            <Route path="sheet1" element={<EvaluationSheet />} />
+            <Route path="evaluation" element={<EvaluationSheet />} />
+            <Route path="sheet2" element={<div style={{padding:'40px'}}><h2>Sheet 2</h2><p>Coming soon...</p></div>} />
+            <Route path="sheet3" element={<div style={{padding:'40px'}}><h2>Sheet 3</h2><p>Coming soon...</p></div>} />
           </Route>
 
           {/* DOFA Office Routes */}

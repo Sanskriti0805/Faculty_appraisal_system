@@ -7,8 +7,9 @@ const Sidebar = () => {
   const location = useLocation()
   const [partAOpen, setPartAOpen] = useState(true)
   const [partBOpen, setPartBOpen] = useState(false)
-
   const [expandedSections, setExpandedSections] = useState({})
+
+  const isDOFARoute = location.pathname.startsWith('/dofa') || location.pathname.startsWith('/dofa-office')
 
   const toggleSection = (sectionName) => {
     setExpandedSections(prev => ({
@@ -56,6 +57,48 @@ const Sidebar = () => {
     },
   ]
 
+  // DOFA-specific sidebar
+  if (isDOFARoute) {
+    const dofaNavItems = [
+      { name: 'Dashboard', path: '/dofa/dashboard' },
+      { name: 'Rubrics Management', path: '/dofa/rubrics' },
+      { name: 'Sheet 1 — Evaluation', path: '/dofa/sheet1' },
+      { name: 'Sheet 2', path: '/dofa/sheet2' },
+      { name: 'Sheet 3', path: '/dofa/sheet3' },
+    ]
+
+    return (
+      <aside className="sidebar">
+        <div className="logo-container">
+          <img
+            src="/lnmiit-logo.svg"
+            alt="LNMIIT - The LNM Institute of Information Technology"
+            className="logo"
+          />
+        </div>
+        <nav className="sidebar-nav">
+          <div className="nav-section">
+            <div className="nav-section-header" style={{ cursor: 'default' }}>
+              <span>DOFA</span>
+            </div>
+            <div className="nav-section-items">
+              {dofaNavItems.map(item => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </nav>
+      </aside>
+    )
+  }
+
+  // Faculty sidebar (default)
   return (
     <aside className="sidebar">
       <div className="logo-container">
@@ -140,4 +183,3 @@ const Sidebar = () => {
 }
 
 export default Sidebar
-

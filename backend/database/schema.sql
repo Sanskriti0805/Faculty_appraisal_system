@@ -256,3 +256,15 @@ CREATE INDEX idx_courses_faculty ON courses_taught(faculty_id);
 CREATE INDEX idx_publications_faculty ON research_publications(faculty_id);
 CREATE INDEX idx_grants_faculty ON research_grants(faculty_id);
 CREATE INDEX idx_patents_faculty ON patents(faculty_id);
+
+-- Rubrics Table
+CREATE TABLE IF NOT EXISTS dofa_rubrics (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    section_name VARCHAR(255) NOT NULL,
+    sub_section VARCHAR(1000),
+    max_marks DECIMAL(10, 2),
+    weightage DECIMAL(10, 2) DEFAULT NULL,
+    academic_year VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

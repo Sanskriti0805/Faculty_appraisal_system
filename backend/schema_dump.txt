@@ -1,0 +1,39 @@
+=== RUBRICS TABLE ===
+CREATE TABLE `rubrics` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `category` varchar(255) NOT NULL COMMENT 'Rubric category name',
+  `description` text COMMENT 'Detailed description of the rubric',
+  `weightage` decimal(5,2) NOT NULL DEFAULT '0.00' COMMENT 'Percentage weight (e.g., 25.00 for 25%)',
+  `max_points` int NOT NULL DEFAULT '100' COMMENT 'Maximum points possible',
+  `form_type` enum('A','B') NOT NULL COMMENT 'Which form this rubric applies to',
+  `is_active` tinyint(1) DEFAULT '1' COMMENT 'Active status',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_form_type` (`form_type`),
+  KEY `idx_is_active` (`is_active`),
+  CONSTRAINT `chk_max_points` CHECK ((`max_points` > 0)),
+  CONSTRAINT `chk_weightage` CHECK (((`weightage` >= 0) and (`weightage` <= 100)))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Evaluation rubrics with weightage and scoring criteria'
+
+=== SUBMISSION_SCORES TABLE ===
+CREATE TABLE `submission_scores` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `submission_id` int NOT NULL COMMENT 'Foreign key to submissions',
+  `rubric_id` int NOT NULL COMMENT 'Foreign key to rubrics',
+  `score` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'Score awarded',
+  `comments` text COMMENT 'Evaluator comments',
+  `evaluated_by` int DEFAULT NULL COMMENT 'User ID who scored (DOFA)',
+  `evaluated_at` timestamp NULL DEFAULT NULL COMMENT 'When the score was given',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_submission_rubric` (`submission_id`,`rubric_id`),
+  KEY `idx_submission_id` (`submission_id`),
+  KEY `idx_rubric_id` (`rubric_id`),
+  KEY `idx_evaluated_by` (`evaluated_by`),
+  CONSTRAINT `submission_scores_ibfk_1` FOREIGN KEY (`submission_id`) REFERENCES `submissions` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `submission_scores_ibfk_2` FOREIGN KEY (`rubric_id`) REFERENCES `rubrics` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `submission_scores_ibfk_3` FOREIGN KEY (`evaluated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_score` CHECK ((`score` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Individual rubric scores for submissions with evaluator tracking'

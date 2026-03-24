@@ -25,6 +25,8 @@ const awardsRoutes = require('./routes/awardsRoutes');
 const submissionsRoutes = require('./routes/submissionsRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const sessionsRoutes = require('./routes/sessionsRoutes');
+const rubricsRoutes = require('./routes/rubricsRoutes');
+const evaluationRoutes = require('./routes/evaluationRoutes');
 
 // API Routes
 app.use('/api/faculty', facultyRoutes);
@@ -37,6 +39,8 @@ app.use('/api/awards', awardsRoutes);
 app.use('/api/submissions', submissionsRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/sessions', sessionsRoutes);
+app.use('/api/rubrics', rubricsRoutes);
+app.use('/api/evaluation', evaluationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
