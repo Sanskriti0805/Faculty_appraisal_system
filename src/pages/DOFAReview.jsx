@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, XCircle, MessageSquare, User, BookOpen, FileText, Award, Briefcase } from 'lucide-react';
 import './DOFAReview.css';
 
+const API = `http://${window.location.hostname}:5000/api`;
+
 const DOFAReview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -18,7 +20,7 @@ const DOFAReview = () => {
   const fetchSubmissionDetails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/submissions/${id}`);
+      const response = await fetch(`${API}/submissions/${id}`);
       const data = await response.json();
       if (data.success) {
         setSubmissionData(data.data);
@@ -36,7 +38,7 @@ const DOFAReview = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/submissions/${id}/status`, {
+      const response = await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -67,7 +69,7 @@ const DOFAReview = () => {
 
     try {
       // Add comment
-      await fetch('http://localhost:5000/api/review/comment', {
+      await fetch(`${API}/review/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -79,7 +81,7 @@ const DOFAReview = () => {
       });
 
       // Update status
-      await fetch(`http://localhost:5000/api/submissions/${id}/status`, {
+      await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'sent_back' })
@@ -99,7 +101,7 @@ const DOFAReview = () => {
     }
 
     try {
-      await fetch('http://localhost:5000/api/review/comment', {
+      await fetch(`${API}/review/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

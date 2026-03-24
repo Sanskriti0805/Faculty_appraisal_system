@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, CheckCircle, XCircle, MessageSquare, FileText, Users, Clock, CheckSquare } from 'lucide-react';
 import './DOFADashboard.css';
 
+const API = `http://${window.location.hostname}:5000/api`;
+
 const DOFADashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
@@ -25,7 +27,7 @@ const DOFADashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/submissions/stats');
+      const response = await fetch(`${API}/submissions/stats`);
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -39,8 +41,8 @@ const DOFADashboard = () => {
     try {
       setLoading(true);
       const url = filter === 'all' 
-        ? 'http://localhost:5000/api/submissions'
-        : `http://localhost:5000/api/submissions?status=${filter}`;
+        ? `${API}/submissions`
+        : `${API}/submissions?status=${filter}`;
       
       const response = await fetch(url);
       const data = await response.json();
@@ -64,7 +66,7 @@ const DOFADashboard = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/submissions/${id}/status`, {
+      const response = await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -90,7 +92,7 @@ const DOFADashboard = () => {
 
     try {
       // Add comment
-      await fetch('http://localhost:5000/api/review/comment', {
+      await fetch(`${API}/review/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -102,7 +104,7 @@ const DOFADashboard = () => {
       });
 
       // Update status
-      await fetch(`http://localhost:5000/api/submissions/${id}/status`, {
+      await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'sent_back' })

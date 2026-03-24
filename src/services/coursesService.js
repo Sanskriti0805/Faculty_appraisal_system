@@ -1,7 +1,4 @@
 import apiClient from './api';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export const coursesService = {
   // Get courses taught by faculty
@@ -35,8 +32,8 @@ export const coursesService = {
       }
     });
 
-    // Use axios directly for multipart/form-data
-    return await axios.post(`${API_BASE_URL}/courses/new`, formData, {
+    // Use apiClient for consistent base URL and interceptors
+    return await apiClient.post('/courses/new', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

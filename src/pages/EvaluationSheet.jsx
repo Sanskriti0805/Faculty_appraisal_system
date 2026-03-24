@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './DOFADashboard.css';
 import './EvaluationSheet.css';
 
-const API = 'http://localhost:5000/api';
+const API = `http://${window.location.hostname}:5000/api`;
 
 const EvaluationSheet = () => {
   const [sections, setSections] = useState([]);       // unique section_name strings

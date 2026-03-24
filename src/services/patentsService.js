@@ -1,12 +1,9 @@
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import apiClient from './api';
 
 export const patentsService = {
   // Get patents by faculty
   getPatentsByFaculty: async (facultyId) => {
-    const response = await axios.get(`${API_BASE_URL}/patents/faculty/${facultyId}`);
-    return response.data;
+    return await apiClient.get(`/patents/faculty/${facultyId}`);
   },
 
   // Create patent (with file upload)
@@ -23,17 +20,15 @@ export const patentsService = {
       }
     });
 
-    const response = await axios.post(`${API_BASE_URL}/patents`, formData, {
+    return await apiClient.post('/patents', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data;
   },
 
   // Delete patent
   deletePatent: async (id) => {
-    const response = await axios.delete(`${API_BASE_URL}/patents/${id}`);
-    return response.data;
+    return await apiClient.delete(`/patents/${id}`);
   },
 };

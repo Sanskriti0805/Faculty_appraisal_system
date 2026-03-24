@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import './DOFADashboard.css';
 import './RubricsManagement.css';
 
+const API = `http://${window.location.hostname}:5000/api`;
+
 const RubricsManagement = () => {
   const [rubrics, setRubrics] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +26,7 @@ const RubricsManagement = () => {
 
   const fetchRubrics = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/rubrics');
+      const response = await fetch(`${API}/rubrics`);
       const data = await response.json();
       if (data.success) {
         setRubrics(data.data.map(r => ({ ...r, _isNew: false })));
@@ -103,7 +105,7 @@ const RubricsManagement = () => {
     try {
       // 1. Delete removed rows
       for (const id of deletedIds) {
-        await fetch(`http://localhost:5000/api/rubrics/${id}`, { method: 'DELETE' });
+        await fetch(`${API}/rubrics/${id}`, { method: 'DELETE' });
       }
       setDeletedIds([]);
 
@@ -118,13 +120,13 @@ const RubricsManagement = () => {
         };
 
         if (row._isNew) {
-          await fetch('http://localhost:5000/api/rubrics', {
+          await fetch(`${API}/rubrics`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
         } else {
-          await fetch(`http://localhost:5000/api/rubrics/${row.id}`, {
+          await fetch(`${API}/rubrics/${row.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
