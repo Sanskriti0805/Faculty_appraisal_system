@@ -25,7 +25,7 @@ const DOFADashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/submissions/stats');
+      const response = await fetch('http://localhost:5001/api/submissions/stats');
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -38,10 +38,10 @@ const DOFADashboard = () => {
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const url = filter === 'all' 
-        ? 'http://localhost:5000/api/submissions'
-        : `http://localhost:5000/api/submissions?status=${filter}`;
-      
+      const url = filter === 'all'
+        ? 'http://localhost:5001/api/submissions'
+        : `http://localhost:5001/api/submissions?status=${filter}`;
+
       const response = await fetch(url);
       const data = await response.json();
       if (data.success) {
@@ -64,10 +64,10 @@ const DOFADashboard = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/submissions/${id}/status`, {
+      const response = await fetch(`http://localhost:5001/api/submissions/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: 'approved',
           approved_by: 1 // Mock DOFA user ID
         })
@@ -90,7 +90,7 @@ const DOFADashboard = () => {
 
     try {
       // Add comment
-      await fetch('http://localhost:5000/api/review/comment', {
+      await fetch('http://localhost:5001/api/review/comment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -102,7 +102,7 @@ const DOFADashboard = () => {
       });
 
       // Update status
-      await fetch(`http://localhost:5000/api/submissions/${id}/status`, {
+      await fetch(`http://localhost:5001/api/submissions/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'sent_back' })
@@ -240,7 +240,7 @@ const DOFADashboard = () => {
       {/* Submissions Table */}
       <div className="submissions-card">
         <h2 className="card-title">Faculty Submissions</h2>
-        
+
         {loading ? (
           <div className="loading-state">Loading submissions...</div>
         ) : submissions.length === 0 ? (

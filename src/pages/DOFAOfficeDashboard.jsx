@@ -21,7 +21,7 @@ const DOFAOfficeDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/submissions/stats');
+      const response = await fetch('http://localhost:5001/api/submissions/stats');
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -35,8 +35,8 @@ const DOFAOfficeDashboard = () => {
     try {
       setLoading(true);
       const url = filter === 'all'
-        ? 'http://localhost:5000/api/submissions'
-        : `http://localhost:5000/api/submissions?status=${filter}`;
+        ? 'http://localhost:5001/api/submissions'
+        : `http://localhost:5001/api/submissions?status=${filter}`;
 
       const response = await fetch(url);
       const data = await response.json();
@@ -57,7 +57,7 @@ const DOFAOfficeDashboard = () => {
     }
 
     try {
-      await fetch(`http://localhost:5000/api/submissions/${id}/lock`, {
+      await fetch(`http://localhost:5001/api/submissions/${id}/lock`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

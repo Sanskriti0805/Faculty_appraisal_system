@@ -10,6 +10,7 @@ const ConferencesOutside = () => {
     eventTitle: '',
     eventAbbreviation: '',
     organizer: '',
+    role: '',
     city: 'City',
     state: 'State',
     country: 'Country',
@@ -134,6 +135,19 @@ const ConferencesOutside = () => {
             </div>
           </div>
 
+          <div className="form-row">
+            <div className="form-group">
+              <label>Role<span className="required-star">*</span></label>
+              <input
+                type="text"
+                name="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                placeholder="e.g. Session Chair, Speaker, Organizer"
+              />
+            </div>
+          </div>
+
           {/* Venue Section */}
           <div className="section-label">Venue</div>
           <div className="form-row">
@@ -226,7 +240,7 @@ const ConferencesOutside = () => {
                 {submittedConferences.map((conf, index) => (
                   <li key={index}>
                     <div className="conference-info">
-                      <strong>{conf.eventTitle}</strong> - {conf.city}, {conf.country} ({conf.fromDate} to {conf.toDate})
+                      <strong>{conf.eventTitle}</strong> ({conf.role}) - {conf.city}, {conf.country} ({conf.fromDate} to {conf.toDate})
                     </div>
                     <button
                       type="button"

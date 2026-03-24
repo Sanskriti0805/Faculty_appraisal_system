@@ -18,7 +18,7 @@ const DOFAReview = () => {
   const fetchSubmissionDetails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/submissions/${id}`);
+      const response = await fetch(`http://localhost:5001/api/submissions/${id}`);
       const data = await response.json();
       if (data.success) {
         setSubmissionData(data.data);
@@ -36,7 +36,7 @@ const DOFAReview = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/submissions/${id}/status`, {
+      const response = await fetch(`http://localhost:5001/api/submissions/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -67,7 +67,7 @@ const DOFAReview = () => {
 
     try {
       // Add comment
-      await fetch('http://localhost:5000/api/review/comment', {
+      await fetch('http://localhost:5001/api/review/comment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -79,7 +79,7 @@ const DOFAReview = () => {
       });
 
       // Update status
-      await fetch(`http://localhost:5000/api/submissions/${id}/status`, {
+      await fetch(`http://localhost:5001/api/submissions/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'sent_back' })
@@ -99,7 +99,7 @@ const DOFAReview = () => {
     }
 
     try {
-      await fetch('http://localhost:5000/api/review/comment', {
+      await fetch('http://localhost:5001/api/review/comment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -134,7 +134,25 @@ const DOFAReview = () => {
     );
   }
 
-  const { submission, facultyInfo, courses, publications, grants, patents, awards, comments } = submissionData;
+  const {
+    submission,
+    facultyInfo,
+    courses,
+    publications,
+    grants,
+    patents,
+    awards,
+    newCourses,
+    proposals,
+    paperReviews,
+    techTransfer,
+    conferenceSessions,
+    keynotesTalks,
+    consultancy,
+    teachingInnovation,
+    institutionalContributions,
+    comments
+  } = submissionData;
 
   return (
     <div className="dofa-review">
@@ -144,7 +162,7 @@ const DOFAReview = () => {
           <ArrowLeft size={20} />
           Back to Dashboard
         </button>
-        
+
         <div className="header-info">
           <h1 className="review-title">Review Submission</h1>
           <div className="faculty-header">
@@ -152,8 +170,8 @@ const DOFAReview = () => {
             <span className="department-badge">{submission.department || 'N/A'}</span>
           </div>
           <p className="submission-meta">
-            Academic Year: <strong>{submission.academic_year}</strong> | 
-            Status: <strong>{submission.status}</strong> | 
+            Academic Year: <strong>{submission.academic_year}</strong> |
+            Status: <strong>{submission.status}</strong> |
             Submitted: <strong>{new Date(submission.submitted_at).toLocaleDateString()}</strong>
           </p>
         </div>
@@ -183,18 +201,32 @@ const DOFAReview = () => {
           Publications ({publications?.length || 0})
         </button>
         <button
-          className={`tab-btn ${activeTab === 'grants' ? 'active' : ''}`}
-          onClick={() => setActiveTab('grants')}
+          className={`tab-btn ${activeTab === 'reviews' ? 'active' : ''}`}
+          onClick={() => setActiveTab('reviews')}
         >
           <Briefcase size={18} />
-          Grants ({grants?.length || 0})
+          Reviews/Proposals
         </button>
         <button
-          className={`tab-btn ${activeTab === 'awards' ? 'active' : ''}`}
-          onClick={() => setActiveTab('awards')}
+          className={`tab-btn ${activeTab === 'events' ? 'active' : ''}`}
+          onClick={() => setActiveTab('events')}
         >
           <Award size={18} />
-          Awards ({awards?.length || 0})
+          Events
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'consultancy' ? 'active' : ''}`}
+          onClick={() => setActiveTab('consultancy')}
+        >
+          <Briefcase size={18} />
+          Consultancy
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'partb' ? 'active' : ''}`}
+          onClick={() => setActiveTab('partb')}
+        >
+          <CheckCircle size={18} />
+          Part B (Goals)
         </button>
       </div>
 
@@ -336,22 +368,172 @@ const DOFAReview = () => {
             </div>
           )}
 
-          {activeTab === 'awards' && (
+          {activeTab === 'reviews' && (
             <div className="section-card">
-              <h3 className="section-title">Awards & Honours</h3>
-              {awards && awards.length > 0 ? (
-                <div className="awards-list">
-                  {awards.map((award, index) => (
-                    <div key={index} className="award-item">
-                      <h4>{award.award_name}</h4>
-                      <p className="award-type">{award.honor_type}</p>
-                      {award.description && <p>{award.description}</p>}
-                    </div>
+              <h3 className="section-title">Reviews & Proposals</h3>
+
+              <h4 className="sub-section-title">Paper Reviews</h4>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Journal/Conf</th>
+                    <th>Type</th>
+                    <th>Tier</th>
+                    <th>Papers</th>
+                    <th>Month</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paperReviews?.map((r, i) => (
+                    <tr key={i}>
+                      <td>{r.journal_name}</td>
+                      <td>{r.review_type}</td>
+                      <td>{r.tier || 'N/A'}</td>
+                      <td>{r.number_of_papers}</td>
+                      <td>{r.month_of_review}</td>
+                    </tr>
                   ))}
-                </div>
-              ) : (
-                <p className="no-data">No awards data available</p>
-              )}
+                </tbody>
+              </table>
+
+              <h4 className="sub-section-title" style={{ marginTop: '2rem' }}>Submitted Proposals</h4>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Agency</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {proposals?.map((p, i) => (
+                    <tr key={i}>
+                      <td>{p.title}</td>
+                      <td>{p.funding_agency}</td>
+                      <td>{p.grant_amount}</td>
+                      <td>{p.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeTab === 'events' && (
+            <div className="section-card">
+              <h3 className="section-title">Conference Sessions & Talks</h3>
+
+              <h4 className="sub-section-title">Conference Sessions Chaired</h4>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Conference</th>
+                    <th>Title</th>
+                    <th>Role</th>
+                    <th>Location</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {conferenceSessions?.map((s, i) => (
+                    <tr key={i}>
+                      <td>{s.conference_name}</td>
+                      <td>{s.session_title}</td>
+                      <td>{s.role || 'N/A'}</td>
+                      <td>{s.location}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <h4 className="sub-section-title" style={{ marginTop: '2rem' }}>Keynotes & Invited Talks</h4>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Event</th>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Audience</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {keynotesTalks?.map((k, i) => (
+                    <tr key={i}>
+                      <td>{k.event_name}</td>
+                      <td>{k.title}</td>
+                      <td>{k.event_type || 'N/A'}</td>
+                      <td>{k.audience_type}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeTab === 'consultancy' && (
+            <div className="section-card">
+              <h3 className="section-title">Consultancy Projects</h3>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Organisation</th>
+                    <th>Project</th>
+                    <th>Role</th>
+                    <th>Amount</th>
+                    <th>Year</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {consultancy?.map((c, i) => (
+                    <tr key={i}>
+                      <td>{c.organization}</td>
+                      <td>{c.project_title}</td>
+                      <td>{c.role || 'N/A'}</td>
+                      <td>{c.amount}</td>
+                      <td>{c.year}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeTab === 'partb' && (
+            <div className="section-card">
+              <h3 className="section-title">Part B: Goal Setting</h3>
+              <p style={{ marginBottom: '1.5rem', color: '#666' }}>Planned goals for the academic year 2023-2024.</p>
+
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Semester</th>
+                      <th>Teaching %</th>
+                      <th>Research %</th>
+                      <th>Contribution %</th>
+                      <th>Outreach %</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {goals?.map((g, i) => (
+                      <tr key={i}>
+                        <td>{g.semester}</td>
+                        <td>{g.teaching}%</td>
+                        <td>{g.research}%</td>
+                        <td>{g.contribution}%</td>
+                        <td>{g.outreach}%</td>
+                        <td>{g.description}</td>
+                      </tr>
+                    ))}
+                    {(!goals || goals.length === 0) && (
+                      <tr>
+                        <td colSpan="6" className="no-data">No goals defined for this session.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -364,7 +546,7 @@ const DOFAReview = () => {
               <MessageSquare size={20} />
               Review Actions
             </h3>
-            
+
             <div className="action-section">
               <label>Add Comment</label>
               <textarea

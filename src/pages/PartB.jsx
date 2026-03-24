@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Plus, Trash2, Save, Upload, FileText, X } from 'lucide-react'
+import { Plus, Trash2, Save, Upload, FileText, X, CheckCircle } from 'lucide-react'
 import './FormPages.css'
 import './PartB.css'
 
@@ -44,9 +44,65 @@ const PartB = () => {
     }
   }
 
-  const handleSave = () => {
-    console.log('Saving Part B data:', goals)
-    alert('Data saved successfully!')
+  const handleSave = async (e, showSuccess = true) => {
+    if (e && e.preventDefault) e.preventDefault();
+    try {
+      const response = await fetch('http://localhost:5001/api/goals/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          faculty_id: 1, // Mock faculty ID
+          goals: goals
+        })
+      });
+
+      const data = await response.json();
+      if (data.success && showSuccess) {
+        alert('Data saved successfully!');
+      }
+      return data.success;
+    } catch (error) {
+      console.error('Error saving goals:', error);
+      if (showSuccess) alert('Failed to save data. Error: ' + error.message);
+      return false;
+    }
+  }
+
+  const handleSubmitFinal = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+
+    if (!window.confirm('Are you sure you want to submit the complete appraisal? This will lock the form for review.')) {
+      return;
+    }
+
+    // Save current goals first
+    const saveSuccessful = await handleSave(null, false);
+    if (!saveSuccessful) {
+      alert('Failed to save goals. Please try again before submitting.');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5001/api/submissions/1/status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'submitted' })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('Appraisal submitted successfully! Redirecting in 2 seconds...');
+        // Small delay to prevent "vanishing" UI
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      } else {
+        alert('Submission failed: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error submitting appraisal:', error);
+      alert('Failed to submit appraisal. Check console for details. Error: ' + error.message);
+    }
   }
 
   const displayedGoals = goals.filter(goal => goal.semester === selectedSemester)
@@ -61,10 +117,27 @@ const PartB = () => {
             (For all full-time Faculty who have completed one year or more of service at the LNMIIT <u>excluding</u> Distinguished/Research/Industry/Visiting Professors)
           </p>
         </div>
-        <button className="save-button" onClick={handleSave}>
-          <Save size={18} />
-          Save Changes
-        </button>
+        <div className="header-actions" style={{ display: 'flex', gap: '1rem' }}>
+          <button className="save-button" onClick={handleSave}>
+            <Save size={18} />
+            Save Changes
+          </button>
+          <button className="submit-button" onClick={handleSubmitFinal} style={{
+            backgroundColor: '#28a745',
+            color: 'white',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            border: 'none',
+            fontWeight: '600',
+            cursor: 'pointer'
+          }}>
+            <CheckCircle size={18} />
+            Submit for Review
+          </button>
+        </div>
       </div>
 
       <div className="form-card">

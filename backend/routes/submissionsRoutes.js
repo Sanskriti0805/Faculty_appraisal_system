@@ -18,6 +18,7 @@ router.post('/', submissionsController.createSubmission);
 router.put('/:id/status', submissionsController.updateSubmissionStatus);
 
 // Lock/Unlock submission
+router.post('/consultancy/save', submissionsController.saveConsultancy);
 router.put('/:id/lock', submissionsController.toggleSubmissionLock);
 
 module.exports = router;

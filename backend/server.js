@@ -27,6 +27,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const sessionsRoutes = require('./routes/sessionsRoutes');
 const rubricsRoutes = require('./routes/rubricsRoutes');
 const evaluationRoutes = require('./routes/evaluationRoutes');
+const goalsRoutes = require('./routes/goalsRoutes');
 
 // API Routes
 app.use('/api/faculty', facultyRoutes);
@@ -41,6 +42,7 @@ app.use('/api/review', reviewRoutes);
 app.use('/api/sessions', sessionsRoutes);
 app.use('/api/rubrics', rubricsRoutes);
 app.use('/api/evaluation', evaluationRoutes);
+app.use('/api/goals', goalsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
