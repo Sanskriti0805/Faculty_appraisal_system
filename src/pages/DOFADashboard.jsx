@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, CheckCircle, XCircle, MessageSquare, FileText, Users, Clock, CheckSquare } from 'lucide-react';
 import './DOFADashboard.css';
 
-const API = `http://${window.location.hostname}:5000/api`;
+const API = `http://${window.location.hostname}:5001/api`;
 
 const DOFADashboard = () => {
   const navigate = useNavigate();
@@ -40,10 +40,10 @@ const DOFADashboard = () => {
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const url = filter === 'all' 
+      const url = filter === 'all'
         ? `${API}/submissions`
         : `${API}/submissions?status=${filter}`;
-      
+
       const response = await fetch(url);
       const data = await response.json();
       if (data.success) {

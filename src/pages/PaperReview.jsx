@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Save } from 'lucide-react'
+import { Save, Upload } from 'lucide-react'
 import './FormPages.css'
 import { reviewsService } from '../services/reviewsService'
 
@@ -9,6 +9,7 @@ const PaperReview = () => {
     paperType: '',
     reviewDetails: '',
   })
+  const [evidenceFile, setEvidenceFile] = useState(null)
   const [loading, setLoading] = useState(false)
 
   const handleInputChange = (field, value) => {
@@ -25,25 +26,32 @@ const PaperReview = () => {
     try {
       const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
 
-      const reviewData = {
-        faculty_id: facultyId,
-        review_type: formData.paperType || 'Journal',
-        journal_name: `Tier ${formData.tier} - ${formData.paperType} Review`,
-        abbreviation: `Tier ${formData.tier}`,
-        number_of_papers: 0,
-        first_name: '',
-        middle_name: '',
-        last_name: '',
-        month_of_review: new Date().toISOString().split('T')[0]
+      const formDataObj = new FormData()
+      formDataObj.append('faculty_id', facultyId)
+      formDataObj.append('review_type', formData.paperType || 'Journal')
+      formDataObj.append('journal_name', formData.reviewDetails.substring(0, 100)) // Use part of details as name if needed
+      formDataObj.append('tier', formData.tier)
+      formDataObj.append('number_of_papers', 1) // Default to 1 for this form
+      formDataObj.append('month_of_review', new Date().toISOString().split('T')[0])
+
+      if (evidenceFile) {
+        formDataObj.append('evidence_file', evidenceFile)
       }
 
-      await reviewsService.createReview(reviewData)
+      const response = await fetch('http://localhost:5001/api/activities/paper-reviews', {
+        method: 'POST',
+        body: formDataObj
+      })
 
-      alert('Data saved successfully!')
-      console.log('Saved review to database')
+      const data = await response.json()
+      if (data.success) {
+        alert('Data saved successfully!')
+      } else {
+        throw new Error(data.message || 'Failed to save')
+      }
     } catch (error) {
       console.error('Error saving review:', error)
-      alert('Error saving data: ' + (error.response?.data?.message || error.message))
+      alert('Error saving data: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -94,12 +102,42 @@ const PaperReview = () => {
 
           <div className="form-field-vertical">
             <label>Review of research papers for Tier-1/2 refereed internal research journals (please provide details in bullet points):</label>
-            <textarea
-              rows="10"
-              value={formData.reviewDetails}
-              onChange={(e) => handleInputChange('reviewDetails', e.target.value)}
-              placeholder="Enter details in bullet points:&#10;• Journal name, paper title&#10;• Journal name, paper title&#10;..."
-            />
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+              <textarea
+                rows="10"
+                value={formData.reviewDetails}
+                onChange={(e) => handleInputChange('reviewDetails', e.target.value)}
+                placeholder="Enter details in bullet points:&#10;• Journal name, paper title&#10;• Journal name, paper title&#10;..."
+                style={{ flex: 1 }}
+              />
+              <div style={{ width: '200px' }}>
+                <label style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '1.5rem',
+                  border: '2px dashed #ddd',
+                  borderRadius: '8px',
+                  backgroundColor: '#f9f9f9',
+                  cursor: 'pointer',
+                  gap: '0.5rem',
+                  height: '100%',
+                  minHeight: '200px'
+                }}>
+                  <Upload size={24} color={evidenceFile ? '#28a745' : '#666'} />
+                  <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
+                    {evidenceFile ? evidenceFile.name : 'Upload Evidence (PDF)'}
+                  </span>
+                  <input
+                    type="file"
+                    style={{ display: 'none' }}
+                    onChange={(e) => setEvidenceFile(e.target.files[0])}
+                    accept=".pdf"
+                  />
+                </label>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -12,9 +12,45 @@ const TechnologyTransfer = () => {
     setFormData({ technologyInfo: value })
   }
 
-  const handleSave = () => {
-    console.log('Saving data:', formData)
-    alert('Data saved successfully!')
+  const [loading, setLoading] = useState(false)
+
+  const handleSave = async () => {
+    if (!formData.technologyInfo.trim()) {
+      alert('Please enter technology details')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const facultyId = 1 // TODO: Actual faculty ID
+
+      const formDataObj = new FormData()
+      formDataObj.append('faculty_id', facultyId)
+      formDataObj.append('title', formData.technologyInfo.substring(0, 100))
+      formDataObj.append('agency', 'Internal/External')
+      formDataObj.append('date', new Date().toISOString().split('T')[0])
+
+      if (evidenceFile) {
+        formDataObj.append('evidence_file', evidenceFile)
+      }
+
+      const response = await fetch('http://localhost:5001/api/activities/tech-transfer', {
+        method: 'POST',
+        body: formDataObj
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        alert('Data saved successfully!')
+      } else {
+        throw new Error(data.message || 'Failed to save')
+      }
+    } catch (error) {
+      console.error('Error saving tech transfer:', error)
+      alert('Error saving data: ' + error.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

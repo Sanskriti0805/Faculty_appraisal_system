@@ -56,15 +56,21 @@ exports.getSubmissionById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Submission not found' });
     }
 
+    const sub = submission[0];
+    const facultyId = sub.faculty_id;
+    const academicYear = sub.academic_year;
+
+    // Helper to get year from academic_year string (e.g. "2025-26" -> 2025)
+    const yearNum = academicYear.split('-')[0];
+
     // Get faculty information
-    const facultyId = submission[0].faculty_id;
     const [facultyInfo] = await db.query('SELECT * FROM faculty_information WHERE id = ?', [facultyId]);
 
     // Get courses taught
     const [courses] = await db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [facultyId]);
 
-    // Get publications
-    const [publications] = await db.query('SELECT * FROM research_publications WHERE faculty_id = ?', [facultyId]);
+    // Get publications - Filter by year if possible, but keep all as requested for now if no specific year matching logic exists
+    const [publications] = await db.query('SELECT * FROM research_publications WHERE faculty_id = ? AND year_of_publication >= ?', [facultyId, yearNum]);
 
     // Get grants
     const [grants] = await db.query('SELECT * FROM research_grants WHERE faculty_id = ?', [facultyId]);
@@ -73,7 +79,7 @@ exports.getSubmissionById = async (req, res) => {
     const [patents] = await db.query('SELECT * FROM patents WHERE faculty_id = ?', [facultyId]);
 
     // Get awards
-    const [awards] = await db.query('SELECT * FROM awards_honours WHERE faculty_id = ?', [facultyId]);
+    const [awards] = await db.query('SELECT * FROM awards_honours WHERE faculty_id = ? AND year >= ?', [facultyId, yearNum]);
 
     // Get new courses developed
     const [newCourses] = await db.query('SELECT * FROM new_courses WHERE faculty_id = ?', [facultyId]);
@@ -94,7 +100,7 @@ exports.getSubmissionById = async (req, res) => {
     const [keynotesTalks] = await db.query('SELECT * FROM keynotes_talks WHERE faculty_id = ?', [facultyId]);
 
     // Get consultancy
-    const [consultancy] = await db.query('SELECT * FROM consultancy WHERE faculty_id = ?', [facultyId]);
+    const [consultancy] = await db.query('SELECT * FROM consultancy WHERE faculty_id = ? AND year >= ?', [facultyId, yearNum]);
 
     // Get teaching innovation
     const [teachingInnovation] = await db.query('SELECT * FROM teaching_innovation WHERE faculty_id = ?', [facultyId]);
@@ -117,7 +123,7 @@ exports.getSubmissionById = async (req, res) => {
     res.json({
       success: true,
       data: {
-        submission: submission[0],
+        submission: sub,
         facultyInfo: facultyInfo[0] || {},
         courses: courses || [],
         publications: publications || [],

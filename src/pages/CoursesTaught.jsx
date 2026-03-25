@@ -1,19 +1,17 @@
-import React, { useState } from 'react'
-import { Plus, Trash2, Save, Upload, FileText, X } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Plus, Trash2, Save, Upload, FileText, X, ExternalLink } from 'lucide-react'
 import './CoursesTaught.css'
 
-const CoursesTaught = () => {
+const CoursesTaught = ({ initialData, readOnly }) => {
   const [selectedSection, setSelectedSection] = useState('courses')
   const [selectedSemester, setSelectedSemester] = useState('fall')
 
   const [fallCourses, setFallCourses] = useState([
     { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
-    { id: 2, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
   ])
 
   const [springCourses, setSpringCourses] = useState([
     { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
-    { id: 2, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
   ])
 
   const [summerCourses, setSummerCourses] = useState([
@@ -33,7 +31,28 @@ const CoursesTaught = () => {
     { id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null },
   ])
 
+  useEffect(() => {
+    if (initialData) {
+      const { courses, projects } = initialData;
+      if (courses) {
+        setFallCourses(courses.filter(c => c.semester === 'Fall').map(c => ({
+          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
+        })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
+
+        setSpringCourses(courses.filter(c => c.semester === 'Spring').map(c => ({
+          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
+        })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
+
+        setSummerCourses(courses.filter(c => c.semester === 'Summer').map(c => ({
+          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
+        })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
+      }
+      // Add projects mapping if available in initialData
+    }
+  }, [initialData])
+
   const handleInputChange = (semester, index, field, value) => {
+    if (readOnly) return;
     const updateItems = (items) => {
       const updated = [...items]
       updated[index][field] = value
@@ -60,6 +79,7 @@ const CoursesTaught = () => {
   }
 
   const addCourse = (semester) => {
+    if (readOnly) return;
     if (selectedSection === 'courses') {
       const newCourse = {
         id: Date.now(),
@@ -102,6 +122,7 @@ const CoursesTaught = () => {
   }
 
   const removeCourse = (semester, index) => {
+    if (readOnly) return;
     if (selectedSection === 'courses') {
       if (semester === 'fall' && fallCourses.length > 1) {
         setFallCourses(fallCourses.filter((_, i) => i !== index))
@@ -122,6 +143,7 @@ const CoursesTaught = () => {
   }
 
   const handleSave = async () => {
+    if (readOnly) return;
     try {
       // Save Courses
       const allCourses = [
@@ -184,13 +206,15 @@ const CoursesTaught = () => {
       <div className="semester-section">
         <div className="semester-header">
           <h3>{semesterLabel}</h3>
-          <button
-            className="add-course-btn"
-            onClick={() => addCourse(semester)}
-          >
-            <Plus size={18} />
-            {selectedSection === 'courses' ? 'Add Course' : 'Add Project'}
-          </button>
+          {!readOnly && (
+            <button
+              className="add-course-btn"
+              onClick={() => addCourse(semester)}
+            >
+              <Plus size={18} />
+              {selectedSection === 'courses' ? 'Add Course' : 'Add Project'}
+            </button>
+          )}
         </div>
 
         <div className="table-container">
@@ -207,11 +231,11 @@ const CoursesTaught = () => {
           <tr>
             <th style={{ width: '8%' }}>Course</th>
             <th style={{ width: '25%' }}>Course Title/Name</th>
-            <th style={{ width: '20%' }}>% of Course taught / handled alone, if there were two or more co-instructors</th>
-            <th style={{ width: '15%' }}>Number of Students Taught</th>
-            <th style={{ width: '25%' }}>Student Feedback Score</th>
-            <th style={{ width: '15%' }}>Remarks, if any</th>
-            <th style={{ width: '5%' }}>Action</th>
+            <th style={{ width: '20%' }}>% of Course taught alone</th>
+            <th style={{ width: '15%' }}>Students Taught</th>
+            <th style={{ width: '20%' }}>Feedback Score</th>
+            <th style={{ width: '12%' }}>Remarks</th>
+            {!readOnly && <th style={{ width: '5%' }}>Action</th>}
           </tr>
         </thead>
         <tbody>
@@ -223,7 +247,8 @@ const CoursesTaught = () => {
                   type="text"
                   value={course.title}
                   onChange={(e) => handleInputChange(semester, index, 'title', e.target.value)}
-                  placeholder="Enter course title"
+                  disabled={readOnly}
+                  placeholder={readOnly ? '' : "Enter course title"}
                 />
               </td>
               <td>
@@ -231,7 +256,8 @@ const CoursesTaught = () => {
                   type="text"
                   value={course.percentage}
                   onChange={(e) => handleInputChange(semester, index, 'percentage', e.target.value)}
-                  placeholder="e.g., 100% or 50%"
+                  disabled={readOnly}
+                  placeholder={readOnly ? '' : "e.g., 100%"}
                 />
               </td>
               <td>
@@ -239,7 +265,7 @@ const CoursesTaught = () => {
                   type="number"
                   value={course.students}
                   onChange={(e) => handleInputChange(semester, index, 'students', e.target.value)}
-                  placeholder="Number"
+                  disabled={readOnly}
                 />
               </td>
               <td>
@@ -247,45 +273,35 @@ const CoursesTaught = () => {
                   <input
                     type="number"
                     step="0.001"
-                    min="0"
-                    max="10"
                     value={course.feedback}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Allow empty or valid decimal with up to 3 decimal places
-                      if (value === '' || /^\d*\.?\d{0,3}$/.test(value)) {
-                        handleInputChange(semester, index, 'feedback', value);
-                      }
-                    }}
-                    placeholder="e.g., 4.567"
+                    onChange={(e) => handleInputChange(semester, index, 'feedback', e.target.value)}
+                    disabled={readOnly}
                     className="feedback-input"
                   />
 
-                  <div className="compact-upload-wrapper">
-                    <input
-                      type="file"
-                      id={`file-upload-${semester}-${index}`}
-                      accept=".pdf"
-                      onChange={(e) => handleInputChange(semester, index, 'feedbackFile', e.target.files[0])}
-                      className="file-input-hidden"
-                    />
-                    <label
-                      htmlFor={`file-upload-${semester}-${index}`}
-                      className={`compact-upload-btn ${course.feedbackFile ? 'has-file' : ''}`}
-                      title={course.feedbackFile ? course.feedbackFile.name : "Upload PDF"}
-                    >
-                      {course.feedbackFile ? <FileText size={18} /> : <Upload size={18} />}
-                    </label>
-                    {course.feedbackFile && (
-                      <button
-                        className="compact-remove-btn"
-                        onClick={() => handleInputChange(semester, index, 'feedbackFile', null)}
-                        title="Remove file"
+                  {readOnly ? (
+                    course.evidence_file ? (
+                      <a href={`http://${window.location.hostname}:5001/uploads/${course.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
+                        <ExternalLink size={18} />
+                      </a>
+                    ) : null
+                  ) : (
+                    <div className="compact-upload-wrapper">
+                      <input
+                        type="file"
+                        id={`file-upload-${semester}-${index}`}
+                        accept=".pdf"
+                        onChange={(e) => handleInputChange(semester, index, 'feedbackFile', e.target.files[0])}
+                        className="file-input-hidden"
+                      />
+                      <label
+                        htmlFor={`file-upload-${semester}-${index}`}
+                        className={`compact-upload-btn ${course.feedbackFile ? 'has-file' : ''}`}
                       >
-                        <X size={14} />
-                      </button>
-                    )}
-                  </div>
+                        {course.feedbackFile ? <FileText size={18} /> : <Upload size={18} />}
+                      </label>
+                    </div>
+                  )}
                 </div>
               </td>
               <td>
@@ -293,18 +309,16 @@ const CoursesTaught = () => {
                   type="text"
                   value={course.remarks}
                   onChange={(e) => handleInputChange(semester, index, 'remarks', e.target.value)}
-                  placeholder="Any remarks"
+                  disabled={readOnly}
                 />
               </td>
-              <td>
-                <button
-                  className="delete-btn"
-                  onClick={() => removeCourse(semester, index)}
-                  disabled={courses.length === 1}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </td>
+              {!readOnly && (
+                <td>
+                  <button className="delete-btn" onClick={() => removeCourse(semester, index)} disabled={courses.length === 1}>
+                    <Trash2 size={16} />
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -317,15 +331,15 @@ const CoursesTaught = () => {
       <table className="courses-table">
         <thead>
           <tr>
-            <th style={{ width: '12%' }}>Project Title</th>
-            <th style={{ width: '12%' }}>Project Type</th>
+            <th style={{ width: '15%' }}>Project Title</th>
+            <th style={{ width: '12%' }}>Type</th>
             <th style={{ width: '12%' }}>Role</th>
-            <th style={{ width: '14%' }}>Name of the Student</th>
-            <th style={{ width: '10%' }}>Duration of Project</th>
-            <th style={{ width: '13%' }}>Major Outcome</th>
-            <th style={{ width: '12%' }}>Remarks, if any</th>
-            <th style={{ width: '10%' }}>Upload Certificate</th>
-            <th style={{ width: '5%' }}>Action</th>
+            <th style={{ width: '15%' }}>Student</th>
+            <th style={{ width: '10%' }}>Duration</th>
+            <th style={{ width: '12%' }}>Outcome</th>
+            <th style={{ width: '12%' }}>Remarks</th>
+            <th style={{ width: '7%' }}>Evidence</th>
+            {!readOnly && <th style={{ width: '5%' }}>Action</th>}
           </tr>
         </thead>
         <tbody>
@@ -336,15 +350,11 @@ const CoursesTaught = () => {
                   type="text"
                   value={project.projectTitle}
                   onChange={(e) => handleInputChange(semester, index, 'projectTitle', e.target.value)}
-                  placeholder="Enter project title"
+                  disabled={readOnly}
                 />
               </td>
               <td>
-                <select
-                  value={project.projectType}
-                  onChange={(e) => handleInputChange(semester, index, 'projectType', e.target.value)}
-                  className="project-type-dropdown"
-                >
+                <select value={project.projectType} onChange={(e) => handleInputChange(semester, index, 'projectType', e.target.value)} disabled={readOnly}>
                   <option value="">Select Type</option>
                   <option value="B.Tech">B.Tech</option>
                   <option value="M.Tech">M.Tech</option>
@@ -357,84 +367,48 @@ const CoursesTaught = () => {
                 </select>
               </td>
               <td>
-                <select
-                  value={project.role}
-                  onChange={(e) => handleInputChange(semester, index, 'role', e.target.value)}
-                  className="role-dropdown"
-                >
+                <select value={project.role} onChange={(e) => handleInputChange(semester, index, 'role', e.target.value)} disabled={readOnly}>
                   <option value="">Select Role</option>
                   <option value="Supervisor">Supervisor</option>
                   <option value="Co-Supervisor">Co-Supervisor</option>
                 </select>
               </td>
+              <td><input type="text" value={project.studentName} onChange={(e) => handleInputChange(semester, index, 'studentName', e.target.value)} disabled={readOnly} /></td>
+              <td><input type="text" value={project.duration} onChange={(e) => handleInputChange(semester, index, 'duration', e.target.value)} disabled={readOnly} /></td>
+              <td><input type="text" value={project.outcome} onChange={(e) => handleInputChange(semester, index, 'outcome', e.target.value)} disabled={readOnly} /></td>
+              <td><input type="text" value={project.remarks} onChange={(e) => handleInputChange(semester, index, 'remarks', e.target.value)} disabled={readOnly} /></td>
               <td>
-                <input
-                  type="text"
-                  value={project.studentName}
-                  onChange={(e) => handleInputChange(semester, index, 'studentName', e.target.value)}
-                  placeholder="Student name"
-                />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  value={project.duration}
-                  onChange={(e) => handleInputChange(semester, index, 'duration', e.target.value)}
-                  placeholder="e.g., 6 months"
-                />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  value={project.outcome}
-                  onChange={(e) => handleInputChange(semester, index, 'outcome', e.target.value)}
-                  placeholder="Major outcome"
-                />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  value={project.remarks}
-                  onChange={(e) => handleInputChange(semester, index, 'remarks', e.target.value)}
-                  placeholder="Any remarks"
-                />
-              </td>
-              <td>
-                <div className="compact-upload-wrapper" style={{ margin: '0 auto' }}>
-                  <input
-                    type="file"
-                    id={`cert-upload-${semester}-${index}`}
-                    accept=".pdf"
-                    onChange={(e) => handleInputChange(semester, index, 'certificateFile', e.target.files[0])}
-                    className="file-input-hidden"
-                  />
-                  <label
-                    htmlFor={`cert-upload-${semester}-${index}`}
-                    className={`compact-upload-btn ${project.certificateFile ? 'has-file' : ''}`}
-                    title={project.certificateFile ? project.certificateFile.name : "Upload PDF"}
-                  >
-                    {project.certificateFile ? <FileText size={18} /> : <Upload size={18} />}
-                  </label>
-                  {project.certificateFile && (
-                    <button
-                      className="compact-remove-btn"
-                      onClick={() => handleInputChange(semester, index, 'certificateFile', null)}
-                      title="Remove file"
+                {readOnly ? (
+                  project.evidence_file ? (
+                    <a href={`http://${window.location.hostname}:5001/uploads/${project.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
+                      <ExternalLink size={18} />
+                    </a>
+                  ) : <span style={{ color: '#ccc' }}>None</span>
+                ) : (
+                  <div className="compact-upload-wrapper">
+                    <input
+                      type="file"
+                      id={`cert-upload-${semester}-${index}`}
+                      accept=".pdf"
+                      onChange={(e) => handleInputChange(semester, index, 'certificateFile', e.target.files[0])}
+                      className="file-input-hidden"
+                    />
+                    <label
+                      htmlFor={`cert-upload-${semester}-${index}`}
+                      className={`compact-upload-btn ${project.certificateFile ? 'has-file' : ''}`}
                     >
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
+                      {project.certificateFile ? <FileText size={18} /> : <Upload size={18} />}
+                    </label>
+                  </div>
+                )}
               </td>
-              <td>
-                <button
-                  className="delete-btn"
-                  onClick={() => removeCourse(semester, index)}
-                  disabled={projects.length === 1}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </td>
+              {!readOnly && (
+                <td>
+                  <button className="delete-btn" onClick={() => removeCourse(semester, index)} disabled={projects.length === 1}>
+                    <Trash2 size={16} />
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -443,17 +417,19 @@ const CoursesTaught = () => {
   }
 
   return (
-    <div className="courses-taught">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Courses Taught & Projects Guided</h1>
-          <p className="page-subtitle">{getSectionTitle()}</p>
+    <div className={`courses-taught ${readOnly ? 'read-only-mode' : ''}`}>
+      {!readOnly && (
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Courses Taught & Projects Guided</h1>
+            <p className="page-subtitle">{getSectionTitle()}</p>
+          </div>
+          <button className="save-button" onClick={handleSave}>
+            <Save size={18} />
+            Save Changes
+          </button>
         </div>
-        <button className="save-button" onClick={handleSave}>
-          <Save size={18} />
-          Save Changes
-        </button>
-      </div>
+      )}
 
       <div className="selector-container">
         <div className="section-selector">
@@ -465,7 +441,7 @@ const CoursesTaught = () => {
             className="section-dropdown"
           >
             <option value="courses">4.1: Courses Taught</option>
-            <option value="projects">4.2: Projects Guided / Co-Advised / Mentored</option>
+            <option value="projects">4.2: Projects Guided</option>
           </select>
         </div>
 

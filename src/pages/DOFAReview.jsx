@@ -1,9 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, MessageSquare, User, BookOpen, FileText, Award, Briefcase } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, MessageSquare, User, BookOpen, FileText, Award, Briefcase, ExternalLink, Lightbulb } from 'lucide-react';
 import './DOFAReview.css';
 
-const API = `http://${window.location.hostname}:5000/api`;
+// Import Mirror Mode components
+import ResearchPublications from './ResearchPublications';
+import CoursesTaught from './CoursesTaught';
+import Consultancy from './Consultancy';
+import ResearchGrants from './ResearchGrants';
+import Patents from './Patents';
+import AwardsHonours from './AwardsHonours';
+import TeachingInnovation from './TeachingInnovation';
+import InstitutionalContributions from './InstitutionalContributions';
+import PartB from './PartB';
+
+const API = `http://${window.location.hostname}:5001/api`;
 
 const DOFAReview = () => {
   const { id } = useParams();
@@ -153,8 +164,27 @@ const DOFAReview = () => {
     consultancy,
     teachingInnovation,
     institutionalContributions,
+    goals,
     comments
   } = submissionData;
+
+  const renderFileLink = (filename) => {
+    if (!filename) return null;
+    const baseUrl = API.replace('/api', '');
+    const fileUrl = `${baseUrl}/uploads/${filename}`;
+    return (
+      <a
+        href={fileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="evidence-link"
+        title="View Supporting Document"
+      >
+        <ExternalLink size={14} />
+        <span>View Evidence</span>
+      </a>
+    );
+  };
 
   return (
     <div className="dofa-review">
@@ -224,6 +254,13 @@ const DOFAReview = () => {
           Consultancy
         </button>
         <button
+          className={`tab-btn ${activeTab === 'innovation' ? 'active' : ''}`}
+          onClick={() => setActiveTab('innovation')}
+        >
+          <Lightbulb size={18} />
+          Innovation & Contributions
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'partb' ? 'active' : ''}`}
           onClick={() => setActiveTab('partb')}
         >
@@ -277,39 +314,10 @@ const DOFAReview = () => {
 
           {activeTab === 'teaching' && (
             <div className="section-card">
-              <h3 className="section-title">Courses Taught</h3>
-              {courses && courses.length > 0 ? (
-                <div className="table-responsive">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Course Code</th>
-                        <th>Course Name</th>
-                        <th>Program</th>
-                        <th>Semester</th>
-                        <th>Credits</th>
-                        <th>Enrollment</th>
-                        <th>Feedback Score</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {courses.map((course, index) => (
-                        <tr key={index}>
-                          <td>{course.course_code}</td>
-                          <td>{course.course_name}</td>
-                          <td>{course.program}</td>
-                          <td>{course.semester}</td>
-                          <td>{course.credits}</td>
-                          <td>{course.enrollment}</td>
-                          <td>{course.feedback_score || 'N/A'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="no-data">No courses data available</p>
-              )}
+              <h3 className="section-title">Teaching & Projects</h3>
+              <div className="mirror-component-wrapper">
+                <CoursesTaught initialData={{ courses, newCourses }} readOnly={true} />
+              </div>
             </div>
           )}
 
@@ -317,16 +325,10 @@ const DOFAReview = () => {
             <div className="section-card">
               <h3 className="section-title">Research Publications</h3>
               {publications && publications.length > 0 ? (
-                <div className="publications-list">
+                <div className="mirror-mode-list" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                   {publications.map((pub, index) => (
-                    <div key={index} className="publication-item">
-                      <h4>{pub.title}</h4>
-                      <div className="pub-details">
-                        <span className="pub-type">{pub.publication_type}</span>
-                        {pub.journal_name && <span>Journal: {pub.journal_name}</span>}
-                        {pub.conference_name && <span>Conference: {pub.conference_name}</span>}
-                        <span>Year: {pub.year_of_publication}</span>
-                      </div>
+                    <div key={index} className="mirror-component-wrapper" style={{ border: '1px solid #eee', borderRadius: '8px', padding: '1rem', background: '#fafafa' }}>
+                      <ResearchPublications initialData={pub} readOnly={true} />
                     </div>
                   ))}
                 </div>
@@ -338,34 +340,34 @@ const DOFAReview = () => {
 
           {activeTab === 'grants' && (
             <div className="section-card">
-              <h3 className="section-title">Research Grants</h3>
-              {grants && grants.length > 0 ? (
-                <div className="table-responsive">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Project Name</th>
-                        <th>Funding Agency</th>
-                        <th>Grant Amount</th>
-                        <th>Duration</th>
-                        <th>Role</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {grants.map((grant, index) => (
-                        <tr key={index}>
-                          <td>{grant.project_name}</td>
-                          <td>{grant.funding_agency}</td>
-                          <td>{grant.currency} {grant.grant_amount}</td>
-                          <td>{grant.duration}</td>
-                          <td>{grant.role}</td>
+              <div className="mirror-component-wrapper">
+                <ResearchGrants initialData={{ grants, proposals }} readOnly={true} />
+              </div>
+
+              {paperReviews && paperReviews.length > 0 && (
+                <div style={{ marginTop: '2rem' }}>
+                  <h4 className="sub-section-title">Paper Reviews</h4>
+                  <div className="table-responsive">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Journal/Conference</th>
+                          <th>Number of Papers</th>
+                          <th>Evidence</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {paperReviews.map((pr, i) => (
+                          <tr key={i}>
+                            <td>{pr.journal_name}</td>
+                            <td>{pr.count}</td>
+                            <td>{renderFileLink(pr.evidence_file)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              ) : (
-                <p className="no-data">No grants data available</p>
               )}
             </div>
           )}
@@ -374,51 +376,31 @@ const DOFAReview = () => {
             <div className="section-card">
               <h3 className="section-title">Reviews & Proposals</h3>
 
-              <h4 className="sub-section-title">Paper Reviews</h4>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Journal/Conf</th>
-                    <th>Type</th>
-                    <th>Tier</th>
-                    <th>Papers</th>
-                    <th>Month</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paperReviews?.map((r, i) => (
-                    <tr key={i}>
-                      <td>{r.journal_name}</td>
-                      <td>{r.review_type}</td>
-                      <td>{r.tier || 'N/A'}</td>
-                      <td>{r.number_of_papers}</td>
-                      <td>{r.month_of_review}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
               <h4 className="sub-section-title" style={{ marginTop: '2rem' }}>Submitted Proposals</h4>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Agency</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {proposals?.map((p, i) => (
-                    <tr key={i}>
-                      <td>{p.title}</td>
-                      <td>{p.funding_agency}</td>
-                      <td>{p.grant_amount}</td>
-                      <td>{p.status}</td>
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Agency</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                      <th>Evidence</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {proposals?.map((p, i) => (
+                      <tr key={i}>
+                        <td>{p.title}</td>
+                        <td>{p.funding_agency}</td>
+                        <td>{p.grant_amount}</td>
+                        <td>{p.status}</td>
+                        <td>{renderFileLink(p.evidence_file)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -427,114 +409,143 @@ const DOFAReview = () => {
               <h3 className="section-title">Conference Sessions & Talks</h3>
 
               <h4 className="sub-section-title">Conference Sessions Chaired</h4>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Conference</th>
-                    <th>Title</th>
-                    <th>Role</th>
-                    <th>Location</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {conferenceSessions?.map((s, i) => (
-                    <tr key={i}>
-                      <td>{s.conference_name}</td>
-                      <td>{s.session_title}</td>
-                      <td>{s.role || 'N/A'}</td>
-                      <td>{s.location}</td>
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Conference</th>
+                      <th>Title</th>
+                      <th>Role</th>
+                      <th>Location</th>
+                      <th>Evidence</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {conferenceSessions?.map((s, i) => (
+                      <tr key={i}>
+                        <td>{s.conference_name}</td>
+                        <td>{s.session_title}</td>
+                        <td>{s.role || 'N/A'}</td>
+                        <td>{s.location}</td>
+                        <td>{renderFileLink(s.evidence_file)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               <h4 className="sub-section-title" style={{ marginTop: '2rem' }}>Keynotes & Invited Talks</h4>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Event</th>
-                    <th>Title</th>
-                    <th>Type</th>
-                    <th>Audience</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {keynotesTalks?.map((k, i) => (
-                    <tr key={i}>
-                      <td>{k.event_name}</td>
-                      <td>{k.title}</td>
-                      <td>{k.event_type || 'N/A'}</td>
-                      <td>{k.audience_type}</td>
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Event</th>
+                      <th>Title</th>
+                      <th>Type</th>
+                      <th>Audience</th>
+                      <th>Evidence</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {keynotesTalks?.map((k, i) => (
+                      <tr key={i}>
+                        <td>{k.event_name}</td>
+                        <td>{k.title}</td>
+                        <td>{k.event_type || 'N/A'}</td>
+                        <td>{k.audience_type}</td>
+                        <td>{renderFileLink(k.evidence_file)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ marginTop: '2rem' }}>
+                <h4 className="sub-section-title">Patents</h4>
+                <div className="mirror-component-wrapper">
+                  <Patents initialData={patents || []} readOnly={true} />
+                </div>
+              </div>
+
+              <div style={{ marginTop: '2rem' }}>
+                <h4 className="sub-section-title">Awards & Honours</h4>
+                <div className="mirror-component-wrapper">
+                  <AwardsHonours initialData={awards || []} readOnly={true} />
+                </div>
+              </div>
             </div>
           )}
 
           {activeTab === 'consultancy' && (
             <div className="section-card">
               <h3 className="section-title">Consultancy Projects</h3>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Organisation</th>
-                    <th>Project</th>
-                    <th>Role</th>
-                    <th>Amount</th>
-                    <th>Year</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {consultancy?.map((c, i) => (
-                    <tr key={i}>
-                      <td>{c.organization}</td>
-                      <td>{c.project_title}</td>
-                      <td>{c.role || 'N/A'}</td>
-                      <td>{c.amount}</td>
-                      <td>{c.year}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="mirror-component-wrapper">
+                {consultancy && consultancy.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {consultancy.map((item, index) => (
+                      <div key={index} style={{ border: '1px solid #eee', borderRadius: '8px', padding: '1rem', background: '#fafafa' }}>
+                        <Consultancy initialData={item} readOnly={true} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="no-data">No consultancy data available</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'innovation' && (
+            <div className="section-card">
+              <h3 className="section-title">Innovation & Extra-Curricular Contributions</h3>
+
+              {techTransfer && techTransfer.length > 0 && (
+                <div style={{ marginBottom: '2rem' }}>
+                  <h4 className="sub-section-title">Technology Transfer</h4>
+                  <div className="table-responsive">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Title</th>
+                          <th>Agency</th>
+                          <th>Date</th>
+                          <th>Evidence</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {techTransfer.map((tt, i) => (
+                          <tr key={i}>
+                            <td>{tt.title}</td>
+                            <td>{tt.agency}</td>
+                            <td>{tt.date ? new Date(tt.date).toLocaleDateString() : 'N/A'}</td>
+                            <td>{renderFileLink(tt.evidence_file)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div className="mirror-component-wrapper">
+                <div style={{ marginBottom: '3rem' }}>
+                  <TeachingInnovation initialData={teachingInnovation} readOnly={true} />
+                </div>
+                <div style={{ marginBottom: '3rem' }}>
+                  <InstitutionalContributions initialData={institutionalContributions} readOnly={true} />
+                </div>
+              </div>
+
+              {(!techTransfer?.length && !teachingInnovation?.length && !institutionalContributions?.length) && (
+                <p className="no-data">No innovation or contribution data available</p>
+              )}
             </div>
           )}
 
           {activeTab === 'partb' && (
             <div className="section-card">
-              <h3 className="section-title">Part B: Goal Setting</h3>
-              <p style={{ marginBottom: '1.5rem', color: '#666' }}>Planned goals for the academic year 2023-2024.</p>
-
-              <div className="table-responsive">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Semester</th>
-                      <th>Teaching %</th>
-                      <th>Research %</th>
-                      <th>Contribution %</th>
-                      <th>Outreach %</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {goals?.map((g, i) => (
-                      <tr key={i}>
-                        <td>{g.semester}</td>
-                        <td>{g.teaching}%</td>
-                        <td>{g.research}%</td>
-                        <td>{g.contribution}%</td>
-                        <td>{g.outreach}%</td>
-                        <td>{g.description}</td>
-                      </tr>
-                    ))}
-                    {(!goals || goals.length === 0) && (
-                      <tr>
-                        <td colSpan="6" className="no-data">No goals defined for this session.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+              <div className="mirror-component-wrapper">
+                <PartB initialData={goals} readOnly={true} />
               </div>
             </div>
           )}

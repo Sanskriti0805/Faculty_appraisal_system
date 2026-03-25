@@ -3,7 +3,7 @@ import { Save, Plus, Trash2, Upload, FileText } from 'lucide-react'
 import './FormPages.css'
 import { awardsService } from '../services/awardsService'
 
-const AwardsHonours = () => {
+const AwardsHonours = ({ initialData, readOnly }) => {
   const [awards, setAwards] = useState([])
   const [formData, setFormData] = useState({
     honorType: 'National',
@@ -14,8 +14,12 @@ const AwardsHonours = () => {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    loadAwards()
-  }, [])
+    if (readOnly && initialData) {
+      setAwards(initialData)
+    } else if (!readOnly) {
+      loadAwards()
+    }
+  }, [readOnly, initialData])
 
   const loadAwards = async () => {
     try {
@@ -50,7 +54,7 @@ const AwardsHonours = () => {
       data.append('award_name', formData.awardName)
       data.append('description', formData.description)
       if (formData.evidenceFile) {
-        data.append('evidence_file', formData.evidenceFile)
+        data.append('certificate_file', formData.evidenceFile)
       }
 
       await awardsService.createAward(data)
@@ -90,139 +94,141 @@ const AwardsHonours = () => {
   }
 
   const handleViewEvidence = (filename) => {
-    const apiUrl = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`
-    const baseUrl = apiUrl.replace('/api', '')
-    window.open(`${baseUrl}/uploads/${filename}`, '_blank')
+    // Force port 5001 for backend uploads
+    window.open(`http://${window.location.hostname}:5001/uploads/${filename}`, '_blank')
   }
 
   return (
-    <div className="form-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Significant International / National Awards and Honours</h1>
-          <p className="page-subtitle">Section 19</p>
+    <div className={`form-page ${readOnly ? 'read-only-mode' : ''}`}>
+      {!readOnly && (
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Significant International / National Awards and Honours</h1>
+            <p className="page-subtitle">Section 19</p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="form-card">
-        {/* Add Award Form */}
-        <div className="form-section" style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-          <h3 style={{ marginBottom: '1.5rem', color: '#2c3e50' }}>Add New Award</h3>
+        {!readOnly && (
+          <div className="form-section" style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+            <h3 style={{ marginBottom: '1.5rem', color: '#2c3e50' }}>Add New Award</h3>
 
-          <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="form-field-vertical">
-              <label>Type of Honor<span style={{ color: '#d64550' }}>*</span></label>
-              <select
-                value={formData.honorType}
-                onChange={(e) => handleInputChange('honorType', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '1rem'
-                }}
-              >
-                <option value="National">National</option>
-                <option value="International">International</option>
-              </select>
+            <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="form-field-vertical">
+                <label>Type of Honor<span style={{ color: '#d64550' }}>*</span></label>
+                <select
+                  value={formData.honorType}
+                  onChange={(e) => handleInputChange('honorType', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '1rem'
+                  }}
+                >
+                  <option value="National">National</option>
+                  <option value="International">International</option>
+                </select>
+              </div>
+
+              <div className="form-field-vertical">
+                <label>Name of Honor<span style={{ color: '#d64550' }}>*</span></label>
+                <input
+                  type="text"
+                  value={formData.awardName}
+                  onChange={(e) => handleInputChange('awardName', e.target.value)}
+                  placeholder="Enter award name..."
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="form-field-vertical">
-              <label>Name of Honor<span style={{ color: '#d64550' }}>*</span></label>
-              <input
-                type="text"
-                value={formData.awardName}
-                onChange={(e) => handleInputChange('awardName', e.target.value)}
-                placeholder="Enter award name..."
+            <div className="form-field-vertical" style={{ marginBottom: '1rem' }}>
+              <label>Details</label>
+              <textarea
+                rows="3"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Enter award details, year, awarding agency, etc..."
                 style={{
                   width: '100%',
                   padding: '0.75rem',
                   border: '1px solid #ddd',
                   borderRadius: '4px',
-                  fontSize: '1rem'
+                  fontSize: '1rem',
+                  fontFamily: 'inherit'
                 }}
               />
             </div>
-          </div>
 
-          <div className="form-field-vertical" style={{ marginBottom: '1rem' }}>
-            <label>Details</label>
-            <textarea
-              rows="3"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Enter award details, year, awarding agency, etc..."
+            <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+              <label>Upload Evidence</label>
+              <div style={{
+                border: '2px dashed #ddd',
+                borderRadius: '8px',
+                padding: '1rem',
+                textAlign: 'center',
+                backgroundColor: '#fff'
+              }}>
+                <input
+                  type="file"
+                  id="award-evidence"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+                <label
+                  htmlFor="award-evidence"
+                  style={{
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <Upload size={28} color="#5b8fc7" />
+                  <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+                    {formData.evidenceFile ? formData.evidenceFile.name : 'Click to upload evidence'}
+                  </span>
+                  <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                    PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <button
+              onClick={handleAddAward}
+              disabled={loading}
               style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #ddd',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#5b8fc7',
+                color: 'white',
+                border: 'none',
                 borderRadius: '4px',
                 fontSize: '1rem',
-                fontFamily: 'inherit'
+                fontWeight: '500',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1
               }}
-            />
+            >
+              <Plus size={18} />
+              {loading ? 'Adding...' : 'Add Award'}
+            </button>
           </div>
-
-          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Upload Evidence</label>
-            <div style={{
-              border: '2px dashed #ddd',
-              borderRadius: '8px',
-              padding: '1rem',
-              textAlign: 'center',
-              backgroundColor: '#fff'
-            }}>
-              <input
-                type="file"
-                id="award-evidence"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-              />
-              <label
-                htmlFor="award-evidence"
-                style={{
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}
-              >
-                <Upload size={28} color="#5b8fc7" />
-                <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-                  {formData.evidenceFile ? formData.evidenceFile.name : 'Click to upload evidence'}
-                </span>
-                <span style={{ fontSize: '0.85rem', color: '#666' }}>
-                  PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
-                </span>
-              </label>
-            </div>
-          </div>
-
-          <button
-            onClick={handleAddAward}
-            disabled={loading}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.5rem',
-              backgroundColor: '#5b8fc7',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '1rem',
-              fontWeight: '500',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.6 : 1
-            }}
-          >
-            <Plus size={18} />
-            {loading ? 'Adding...' : 'Add Award'}
-          </button>
-        </div>
+        )}
 
         {/* Awards List Table */}
         {awards.length > 0 && (
@@ -241,7 +247,7 @@ const AwardsHonours = () => {
                     <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Name of Honor</th>
                     <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Details</th>
                     <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Evidence</th>
-                    <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#495057' }}>Actions</th>
+                    {!readOnly && <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#495057' }}>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -264,9 +270,9 @@ const AwardsHonours = () => {
                         {award.description || '-'}
                       </td>
                       <td style={{ padding: '1rem' }}>
-                        {award.evidence_file ? (
+                        {award.certificate_file ? (
                           <button
-                            onClick={() => handleViewEvidence(award.evidence_file)}
+                            onClick={() => handleViewEvidence(award.certificate_file)}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -287,25 +293,27 @@ const AwardsHonours = () => {
                           <span style={{ color: '#6c757d', fontSize: '0.875rem' }}>No file</span>
                         )}
                       </td>
-                      <td style={{ padding: '1rem', textAlign: 'center' }}>
-                        <button
-                          onClick={() => handleDeleteAward(award.id)}
-                          style={{
-                            padding: '0.5rem',
-                            backgroundColor: '#fff',
-                            color: '#dc3545',
-                            border: '1px solid #dc3545',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                          title="Delete Award"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
+                      {!readOnly && (
+                        <td style={{ padding: '1rem', textAlign: 'center' }}>
+                          <button
+                            onClick={() => handleDeleteAward(award.id)}
+                            style={{
+                              padding: '0.5rem',
+                              backgroundColor: '#fff',
+                              color: '#dc3545',
+                              border: '1px solid #dc3545',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Delete Award"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

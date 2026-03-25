@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './DOFADashboard.css';
 import './EvaluationSheet.css';
 
-const API = `http://${window.location.hostname}:5000/api`;
+const API = `http://${window.location.hostname}:5001/api`;
 
 const EvaluationSheet = () => {
   const [sections, setSections] = useState([]);       // unique section_name strings
@@ -144,10 +144,10 @@ const EvaluationSheet = () => {
 
   const getStatusBadge = (status) => {
     const map = {
-      submitted:    { label: 'Submitted',    cls: 'status-badge status-submitted' },
+      submitted: { label: 'Submitted', cls: 'status-badge status-submitted' },
       under_review: { label: 'Under Review', cls: 'status-badge status-review' },
-      approved:     { label: 'Approved',     cls: 'status-badge status-approved' },
-      sent_back:    { label: 'Sent Back',    cls: 'status-badge status-sent-back' },
+      approved: { label: 'Approved', cls: 'status-badge status-approved' },
+      sent_back: { label: 'Sent Back', cls: 'status-badge status-sent-back' },
     };
     const s = map[status] || { label: status, cls: 'status-badge' };
     return <span className={s.cls}>{s.label}</span>;

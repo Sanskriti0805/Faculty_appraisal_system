@@ -4,11 +4,11 @@ const db = require('../config/database');
 const createAward = async (req, res) => {
     try {
         const { faculty_id, honor_type, award_name, description } = req.body;
-        const evidence_file = req.file ? req.file.filename : null;
+        const certificate_file = req.file ? req.file.filename : null;
 
         const [result] = await db.query(
-            'INSERT INTO awards_honours (faculty_id, honor_type, award_name, description, evidence_file) VALUES (?, ?, ?, ?, ?)',
-            [faculty_id, honor_type, award_name, description, evidence_file]
+            'INSERT INTO awards_honours (faculty_id, honor_type, award_name, description, certificate_file) VALUES (?, ?, ?, ?, ?)',
+            [faculty_id, honor_type, award_name, description, certificate_file]
         );
 
         res.status(201).json({

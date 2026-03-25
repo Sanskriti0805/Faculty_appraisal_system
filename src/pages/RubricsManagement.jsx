@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './DOFADashboard.css';
 import './RubricsManagement.css';
 
-const API = `http://${window.location.hostname}:5000/api`;
+const API = `http://${window.location.hostname}:5001/api`;
 
 const RubricsManagement = () => {
   const [rubrics, setRubrics] = useState([]);

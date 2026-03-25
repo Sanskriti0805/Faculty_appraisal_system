@@ -1,13 +1,23 @@
-import React, { useState } from 'react'
-import { Plus, Trash2, Save, Upload, FileText, X, CheckCircle } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Plus, Trash2, Save, Upload, FileText, X, CheckCircle, ExternalLink } from 'lucide-react'
 import './FormPages.css'
 import './PartB.css'
 
-const PartB = () => {
+const PartB = ({ initialData, readOnly }) => {
   const [selectedSemester, setSelectedSemester] = useState('Odd Semester')
   const [goals, setGoals] = useState([
     { id: 1, semester: 'Odd Semester', teaching: '', research: '', contribution: '', outreach: '', description: '', evidenceFile: null }
   ])
+
+  useEffect(() => {
+    if (initialData && Array.isArray(initialData) && initialData.length > 0) {
+      setGoals(initialData.map(g => ({
+        ...g,
+        id: g.id || Math.random(),
+        evidenceFile: g.evidence_file || null
+      })))
+    }
+  }, [initialData])
 
   const semesterOptions = [
     'Odd Semester',
@@ -108,37 +118,39 @@ const PartB = () => {
   const displayedGoals = goals.filter(goal => goal.semester === selectedSemester)
 
   return (
-    <div className="form-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">The LNMIIT, Jaipur</h1>
-          <p className="page-subtitle" style={{ fontWeight: 600, color: '#1e3a5f' }}>Annual Performance Appraisal Form</p>
-          <p className="page-subtitle" style={{ fontSize: '0.9rem' }}>
-            (For all full-time Faculty who have completed one year or more of service at the LNMIIT <u>excluding</u> Distinguished/Research/Industry/Visiting Professors)
-          </p>
+    <div className={`form-page ${readOnly ? 'read-only-mode' : ''}`}>
+      {!readOnly && (
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">The LNMIIT, Jaipur</h1>
+            <p className="page-subtitle" style={{ fontWeight: 600, color: '#1e3a5f' }}>Annual Performance Appraisal Form</p>
+            <p className="page-subtitle" style={{ fontSize: '0.9rem' }}>
+              (For all full-time Faculty who have completed one year or more of service at the LNMIIT <u>excluding</u> Distinguished/Research/Industry/Visiting Professors)
+            </p>
+          </div>
+          <div className="header-actions" style={{ display: 'flex', gap: '1rem' }}>
+            <button className="save-button" onClick={handleSave}>
+              <Save size={18} />
+              Save Changes
+            </button>
+            <button className="submit-button" onClick={handleSubmitFinal} style={{
+              backgroundColor: '#28a745',
+              color: 'white',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              border: 'none',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}>
+              <CheckCircle size={18} />
+              Submit for Review
+            </button>
+          </div>
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '1rem' }}>
-          <button className="save-button" onClick={handleSave}>
-            <Save size={18} />
-            Save Changes
-          </button>
-          <button className="submit-button" onClick={handleSubmitFinal} style={{
-            backgroundColor: '#28a745',
-            color: 'white',
-            padding: '0.75rem 1.5rem',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            border: 'none',
-            fontWeight: '600',
-            cursor: 'pointer'
-          }}>
-            <CheckCircle size={18} />
-            Submit for Review
-          </button>
-        </div>
-      </div>
+      )}
 
       <div className="form-card">
         <h2 className="section-header-text">Part-B: Goal setting for the academic year 2023-2024</h2>
@@ -179,86 +191,113 @@ const PartB = () => {
                   </select>
                 </div>
               </div>
-              <button
-                className="add-course-btn"
-                onClick={addRow}
-              >
-                <Plus size={18} />
-                Add Row
-              </button>
             </div>
+          </div>
+          {!readOnly && (
+            <button
+              className="add-course-btn"
+              onClick={addRow}
+            >
+              <Plus size={18} />
+              Add Row
+            </button>
+          )}
+        </div>
 
-            <table className="courses-table">
-              <thead>
-                <tr>
-                  <th rowSpan="2" style={{ width: '5%', verticalAlign: 'middle', textAlign: 'center' }}>S.No.</th>
-                  <th colSpan="4" style={{ textAlign: 'center', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
-                    % Of planned time and efforts as chosen by you
-                  </th>
-                  <th rowSpan="2" style={{ width: '35%', verticalAlign: 'middle' }}>
-                    Please provide brief<br />
-                    information about<br />
-                    what you intend to<br />
-                    do during this period<br />
-                    against each of the<br />
-                    identifying goals
-                  </th>
-                  <th rowSpan="2" style={{ width: '8%', verticalAlign: 'middle', textAlign: 'center' }}>Upload Evidence (if available)</th>
-                  <th rowSpan="2" style={{ width: '4%', verticalAlign: 'middle', textAlign: 'center' }}>Action</th>
-                </tr>
-                <tr>
-                  <th style={{ width: '12%', textAlign: 'center' }}>Teaching</th>
-                  <th style={{ width: '12%', textAlign: 'center' }}>Research</th>
-                  <th style={{ width: '12%', textAlign: 'center' }}>Institute contribution</th>
-                  <th style={{ width: '12%', textAlign: 'center' }}>Outreach</th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayedGoals.map((goal, index) => (
-                  <tr key={goal.id}>
-                    <td className="course-number">{index + 1}</td>
-                    <td>
-                      <input
-                        type="text"
-                        value={goal.teaching}
-                        onChange={(e) => handleInputChange(goal.id, 'teaching', e.target.value)}
-                        placeholder="%"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={goal.research}
-                        onChange={(e) => handleInputChange(goal.id, 'research', e.target.value)}
-                        placeholder="%"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={goal.contribution}
-                        onChange={(e) => handleInputChange(goal.id, 'contribution', e.target.value)}
-                        placeholder="%"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={goal.outreach}
-                        onChange={(e) => handleInputChange(goal.id, 'outreach', e.target.value)}
-                        placeholder="%"
-                      />
-                    </td>
-                    <td>
-                      <textarea
-                        value={goal.description}
-                        onChange={(e) => handleInputChange(goal.id, 'description', e.target.value)}
-                        placeholder="Description of goals..."
-                        style={{ minHeight: '60px', width: '100%', resize: 'vertical' }}
-                      />
-                    </td>
-                    <td>
-                      <div className="compact-upload-wrapper" style={{ margin: '0 auto' }}>
+        <table className="courses-table">
+          <thead>
+            <tr>
+              <th rowSpan="2" style={{ width: '5%', verticalAlign: 'middle', textAlign: 'center' }}>S.No.</th>
+              <th colSpan="4" style={{ textAlign: 'center', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
+                % Of planned time and efforts as chosen by you
+              </th>
+              <th rowSpan="2" style={{ width: '35%', verticalAlign: 'middle' }}>
+                Please provide brief<br />
+                information about<br />
+                what you intend to<br />
+                do during this period<br />
+                against each of the<br />
+                identifying goals
+              </th>
+              <th rowSpan="2" style={{ width: '8%', verticalAlign: 'middle', textAlign: 'center' }}>Upload Evidence (if available)</th>
+              {!readOnly && <th rowSpan="2" style={{ width: '4%', verticalAlign: 'middle', textAlign: 'center' }}>Action</th>}
+            </tr>
+            <tr>
+              <th style={{ width: '12%', textAlign: 'center' }}>Teaching</th>
+              <th style={{ width: '12%', textAlign: 'center' }}>Research</th>
+              <th style={{ width: '12%', textAlign: 'center' }}>Institute contribution</th>
+              <th style={{ width: '12%', textAlign: 'center' }}>Outreach</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayedGoals.map((goal, index) => (
+              <tr key={goal.id}>
+                <td className="course-number">{index + 1}</td>
+                <td>
+                  <input
+                    type="text"
+                    value={goal.teaching}
+                    onChange={(e) => handleInputChange(goal.id, 'teaching', e.target.value)}
+                    placeholder="%"
+                    disabled={readOnly}
+                    style={{ border: readOnly ? 'none' : '1px solid #ddd', background: 'transparent', textAlign: 'center' }}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={goal.research}
+                    onChange={(e) => handleInputChange(goal.id, 'research', e.target.value)}
+                    placeholder="%"
+                    disabled={readOnly}
+                    style={{ border: readOnly ? 'none' : '1px solid #ddd', background: 'transparent', textAlign: 'center' }}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={goal.contribution}
+                    onChange={(e) => handleInputChange(goal.id, 'contribution', e.target.value)}
+                    placeholder="%"
+                    disabled={readOnly}
+                    style={{ border: readOnly ? 'none' : '1px solid #ddd', background: 'transparent', textAlign: 'center' }}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={goal.outreach}
+                    onChange={(e) => handleInputChange(goal.id, 'outreach', e.target.value)}
+                    placeholder="%"
+                    disabled={readOnly}
+                    style={{ border: readOnly ? 'none' : '1px solid #ddd', background: 'transparent', textAlign: 'center' }}
+                  />
+                </td>
+                <td>
+                  <textarea
+                    value={goal.description}
+                    onChange={(e) => handleInputChange(goal.id, 'description', e.target.value)}
+                    placeholder="Description of goals..."
+                    style={{ minHeight: '60px', width: '100%', resize: 'vertical', border: readOnly ? 'none' : '1px solid #ddd', background: 'transparent' }}
+                    disabled={readOnly}
+                  />
+                </td>
+                <td>
+                  <div className="compact-upload-wrapper" style={{ margin: '0 auto' }}>
+                    {readOnly ? (
+                      goal.evidenceFile && (
+                        <a
+                          href={`http://${window.location.hostname}:5001/uploads/${goal.evidenceFile}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="evidence-link"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5b8fc7' }}
+                        >
+                          <ExternalLink size={18} />
+                        </a>
+                      )
+                    ) : (
+                      <>
                         <input
                           type="file"
                           id={`evidence-upload-${goal.id}`}
@@ -282,44 +321,46 @@ const PartB = () => {
                             <X size={14} />
                           </button>
                         )}
-                      </div>
-                    </td>
-                    <td>
-                      <button
-                        className="delete-btn"
-                        onClick={() => removeRow(goal.id)}
-                        disabled={displayedGoals.length <= 0}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {displayedGoals.length === 0 && (
-                  <tr>
-                    <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                      No goals added for {selectedSemester}. Click "Add Row" to start.
-                    </td>
-                  </tr>
+                      </>
+                    )}
+                  </div>
+                </td>
+                {!readOnly && (
+                  <td>
+                    <button
+                      className="delete-btn"
+                      onClick={() => removeRow(goal.id)}
+                      disabled={displayedGoals.length <= 0}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            ))}
+            {displayedGoals.length === 0 && (
+              <tr>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                  No goals added for {selectedSemester}. Click "Add Row" to start.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-          <div style={{ marginTop: '2rem' }}>
-            <h4 style={{ color: '#1e3a5f', marginBottom: '1rem' }}>Notes:</h4>
-            <ol style={{ margin: 0, paddingLeft: '1.5rem', color: '#2c3e50', lineHeight: '1.6' }}>
-              <li style={{ marginBottom: '0.75rem' }}>
-                In case, any faculty member is associated with more than one department, she/he needs to discuss with his primary department HoD about the goal details and that would be adequate for the purpose of the goal setting.
-              </li>
-              <li>
-                Please note that this goal setting form is to set your respective targets and try to achieve these, These are aspirational in nature.
-              </li>
-            </ol>
-            <div style={{ marginTop: '3rem', textAlign: 'right', fontWeight: 'bold', color: '#1e3a5f' }}>
-              Signature
-            </div>
-          </div>
+      <div style={{ marginTop: '2rem' }}>
+        <h4 style={{ color: '#1e3a5f', marginBottom: '1rem' }}>Notes:</h4>
+        <ol style={{ margin: 0, paddingLeft: '1.5rem', color: '#2c3e50', lineHeight: '1.6' }}>
+          <li style={{ marginBottom: '0.75rem' }}>
+            In case, any faculty member is associated with more than one department, she/he needs to discuss with his primary department HoD about the goal details and that would be adequate for the purpose of the goal setting.
+          </li>
+          <li>
+            Please note that this goal setting form is to set your respective targets and try to achieve these, These are aspirational in nature.
+          </li>
+        </ol>
+        <div style={{ marginTop: '3rem', textAlign: 'right', fontWeight: 'bold', color: '#1e3a5f' }}>
+          Signature
         </div>
       </div>
     </div>

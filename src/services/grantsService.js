@@ -9,7 +9,7 @@ export const grantsService = {
   // Create grant (with file upload)
   createGrant: async (grantData) => {
     const formData = new FormData();
-    
+
     // Append all fields to FormData
     Object.keys(grantData).forEach(key => {
       if (grantData[key] !== null && grantData[key] !== undefined) {
@@ -36,7 +36,20 @@ export const grantsService = {
 
   // Create proposal
   createProposal: async (proposalData) => {
-    return await apiClient.post('/grants/proposals', proposalData);
+    const formData = new FormData();
+
+    // Append all fields to FormData
+    Object.keys(proposalData).forEach(key => {
+      if (proposalData[key] !== null && proposalData[key] !== undefined) {
+        formData.append(key, proposalData[key]);
+      }
+    });
+
+    return await apiClient.post('/grants/proposals', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   },
 
   // Delete proposal

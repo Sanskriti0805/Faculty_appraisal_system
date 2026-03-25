@@ -48,15 +48,52 @@ const KeynotesTalks = () => {
     }))
   }
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Submit both list and current form data (if valid)
-    const allTalks = [...submittedTalks]
-    if (formData.title) {
-      allTalks.push(formData)
+
+    setLoading(true)
+    try {
+      const facultyId = 1 // TODO: Actual faculty ID
+      const allTalks = [...submittedTalks]
+      if (formData.title) {
+        allTalks.push(formData)
+      }
+
+      if (allTalks.length === 0) {
+        alert('Please add at least one talk')
+        return
+      }
+
+      const promises = allTalks.map(talk => {
+        const formDataObj = new FormData()
+        formDataObj.append('faculty_id', facultyId)
+        formDataObj.append('event_name', talk.organizer)
+        formDataObj.append('title', talk.title)
+        formDataObj.append('event_type', talk.category)
+        formDataObj.append('audience_type', `${talk.venue.city}, ${talk.venue.country}`)
+
+        if (talk.certificateFile) {
+          formDataObj.append('evidence_file', talk.certificateFile)
+        }
+
+        return fetch('http://localhost:5001/api/activities/keynotes-talks', {
+          method: 'POST',
+          body: formDataObj
+        })
+      })
+
+      await Promise.all(promises)
+      alert('Data saved successfully!')
+      setSubmittedTalks([])
+      setFormData(initialState)
+    } catch (error) {
+      console.error('Error saving talks:', error)
+      alert('Error saving data: ' + error.message)
+    } finally {
+      setLoading(false)
     }
-    console.log('All Keynotes/Talks Data:', allTalks)
-    alert('All data saved successfully!')
   }
 
   const handleAddDate = (e) => {

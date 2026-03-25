@@ -1,14 +1,82 @@
-import React, { useState } from 'react'
-import { Save, Plus, X, Upload } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Save, Plus, X, Upload, ExternalLink } from 'lucide-react'
 import './FormPages.css'
 import { publicationsService } from '../services/publicationsService'
 
-const ResearchPublications = () => {
+const ResearchPublications = ({ initialData, readOnly }) => {
   const [publicationType, setPublicationType] = useState('')
   const [bookSubType, setBookSubType] = useState('')
   const [authors, setAuthors] = useState([{ first: '', middle: '', last: '' }])
   const [editors, setEditors] = useState([{ first: '', middle: '', last: '' }])
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (initialData) {
+      setPublicationType(initialData.publication_type || '')
+      setBookSubType(initialData.sub_type || '')
+
+      if (initialData.authors) {
+        setAuthors(typeof initialData.authors === 'string' ? JSON.parse(initialData.authors) : initialData.authors)
+      }
+      if (initialData.editors) {
+        setEditors(typeof initialData.editors === 'string' ? JSON.parse(initialData.editors) : initialData.editors)
+      }
+
+      if (initialData.publication_type === 'Journal') {
+        setJournalData({
+          titleOfPaper: initialData.title || '',
+          quartile: initialData.quartile || '',
+          yearOfPublication: initialData.year_of_publication || '2026',
+          nameOfJournal: initialData.journal_name || '',
+          volume: initialData.volume || '',
+          number: initialData.number || '',
+          pagesFrom: initialData.pages_from || '',
+          pagesTo: initialData.pages_to || ''
+        })
+      } else if (initialData.publication_type === 'Conference') {
+        setConferenceData({
+          titleOfPaper: initialData.title || '',
+          fullNameOfConference: initialData.conference_name || '',
+          abbreviation: initialData.abbreviation || '',
+          dateFrom: initialData.date_from ? initialData.date_from.split('T')[0] : '',
+          dateTo: initialData.date_to ? initialData.date_to.split('T')[0] : '',
+          typeOfConference: initialData.type_of_conference || 'International',
+          pagesFrom: initialData.pages_from || '',
+          pagesTo: initialData.pages_to || '',
+          city: initialData.city || '',
+          state: initialData.state || '',
+          country: initialData.country || '',
+          publicationAgency: initialData.publication_agency || ''
+        })
+      } else if (initialData.publication_type === 'Monographs') {
+        if (initialData.sub_type === 'Book Chapter') {
+          setBookChapterEntries([{
+            authors: typeof initialData.authors === 'string' ? JSON.parse(initialData.authors) : (initialData.authors || [{ first: '', middle: '', last: '' }]),
+            editors: typeof initialData.editors === 'string' ? JSON.parse(initialData.editors) : (initialData.editors || [{ first: '', middle: '', last: '' }]),
+            titleOfBook: initialData.title || '',
+            yearOfPublication: initialData.year_of_publication || '2026',
+            publicationAgency: initialData.publication_agency || '',
+            pagesFrom: initialData.pages_from || '',
+            pagesTo: initialData.pages_to || '',
+            evidence_file: initialData.evidence_file
+          }])
+        } else if (initialData.sub_type === 'Book') {
+          setTextbookEntries([{
+            authors: typeof initialData.authors === 'string' ? JSON.parse(initialData.authors) : (initialData.authors || [{ first: '', middle: '', last: '' }]),
+            titleOfBook: initialData.title || '',
+            yearOfPublication: initialData.year_of_publication || '2026',
+            publicationAgency: initialData.publication_agency || '',
+            city: initialData.city || '',
+            state: initialData.state || '',
+            country: initialData.country || '',
+            evidence_file: initialData.evidence_file
+          }])
+        }
+      } else if (initialData.publication_type === 'Any Other') {
+        setOtherDetails(initialData.details || '')
+      }
+    }
+  }, [initialData])
 
   const [journalData, setJournalData] = useState({
     titleOfPaper: '',
@@ -224,7 +292,8 @@ const ResearchPublications = () => {
           volume: journalData.volume,
           number: journalData.number,
           pages_from: journalData.pagesFrom,
-          pages_to: journalData.pagesTo
+          pages_to: journalData.pagesTo,
+          evidence_file: evidenceFile
         }
       } else if (publicationType === 'Conference') {
         publicationData = {
@@ -240,7 +309,8 @@ const ResearchPublications = () => {
           city: conferenceData.city,
           state: conferenceData.state,
           country: conferenceData.country,
-          publication_agency: conferenceData.publicationAgency
+          publication_agency: conferenceData.publicationAgency,
+          evidence_file: evidenceFile
         }
       } else if (publicationType === 'Monographs') {
         publicationData.sub_type = bookSubType
@@ -255,7 +325,8 @@ const ResearchPublications = () => {
               pages_from: entry.pagesFrom,
               pages_to: entry.pagesTo,
               publication_agency: entry.publicationAgency,
-              editors: entry.editors
+              editors: entry.editors,
+              evidence_file: entry.evidenceFile
             }
             await publicationsService.createPublication(entryData)
           }
@@ -285,7 +356,8 @@ const ResearchPublications = () => {
               publication_agency: entry.publicationAgency,
               city: entry.city,
               state: entry.state,
-              country: entry.country
+              country: entry.country,
+              evidence_file: entry.evidenceFile
             }
             await publicationsService.createPublication(entryData)
           }
@@ -339,23 +411,26 @@ const ResearchPublications = () => {
             placeholder="First"
             value={author.first}
             onChange={(e) => updateAuthor(index, 'first', e.target.value, bookIndex, textbookIndex)}
-            style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
           <input
             type="text"
             placeholder="Middle"
             value={author.middle}
             onChange={(e) => updateAuthor(index, 'middle', e.target.value, bookIndex, textbookIndex)}
-            style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
           <input
             type="text"
             placeholder="Last"
             value={author.last}
             onChange={(e) => updateAuthor(index, 'last', e.target.value, bookIndex, textbookIndex)}
-            style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
-          {currentAuthors.length > 1 && (
+          {!readOnly && currentAuthors.length > 1 && (
             <button
               onClick={() => removeAuthor(index, bookIndex, textbookIndex)}
               style={{
@@ -372,26 +447,28 @@ const ResearchPublications = () => {
           )}
         </div>
       ))}
-      <button
-        onClick={() => addAuthor(bookIndex, textbookIndex)}
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: '#5b8fc7',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.5rem',
-          marginTop: '0.5rem'
-        }}
-      >
-        <Plus size={16} />
-        Add Author
-      </button>
+      {!readOnly && (
+        <button
+          onClick={() => addAuthor(bookIndex, textbookIndex)}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: '#5b8fc7',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            marginTop: '0.5rem'
+          }}
+        >
+          <Plus size={16} />
+          Add Author
+        </button>
+      )}
     </div>
   )
 
@@ -407,23 +484,26 @@ const ResearchPublications = () => {
             placeholder="First"
             value={editor.first}
             onChange={(e) => updateEditor(index, 'first', e.target.value, bookIndex)}
-            style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
           <input
             type="text"
             placeholder="Middle"
             value={editor.middle}
             onChange={(e) => updateEditor(index, 'middle', e.target.value, bookIndex)}
-            style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
           <input
             type="text"
             placeholder="Last"
             value={editor.last}
             onChange={(e) => updateEditor(index, 'last', e.target.value, bookIndex)}
-            style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
-          {currentEditors.length > 1 && (
+          {!readOnly && currentEditors.length > 1 && (
             <button
               onClick={() => removeEditor(index, bookIndex)}
               style={{
@@ -440,26 +520,28 @@ const ResearchPublications = () => {
           )}
         </div>
       ))}
-      <button
-        onClick={() => addEditor(bookIndex)}
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: '#5b8fc7',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.5rem',
-          marginTop: '0.5rem'
-        }}
-      >
-        <Plus size={16} />
-        Add Editor
-      </button>
+      {!readOnly && (
+        <button
+          onClick={() => addEditor(bookIndex)}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: '#5b8fc7',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            marginTop: '0.5rem'
+          }}
+        >
+          <Plus size={16} />
+          Add Editor
+        </button>
+      )}
     </div>
   )
 
@@ -474,7 +556,8 @@ const ResearchPublications = () => {
             type="text"
             value={journalData.titleOfPaper}
             onChange={(e) => setJournalData({ ...journalData, titleOfPaper: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
         </div>
 
@@ -483,7 +566,8 @@ const ResearchPublications = () => {
           <select
             value={journalData.quartile}
             onChange={(e) => setJournalData({ ...journalData, quartile: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
+            disabled={readOnly}
           >
             <option value="">Select Quartile</option>
             <option value="Q1">Q1</option>
@@ -498,7 +582,8 @@ const ResearchPublications = () => {
           <select
             value={journalData.yearOfPublication}
             onChange={(e) => setJournalData({ ...journalData, yearOfPublication: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
+            disabled={readOnly}
           >
             {Array.from({ length: 30 }, (_, i) => 2026 - i).map(year => (
               <option key={year} value={year}>{year}</option>
@@ -514,7 +599,8 @@ const ResearchPublications = () => {
             type="text"
             value={journalData.nameOfJournal}
             onChange={(e) => setJournalData({ ...journalData, nameOfJournal: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
         </div>
 
@@ -524,7 +610,8 @@ const ResearchPublications = () => {
             type="text"
             value={journalData.volume}
             onChange={(e) => setJournalData({ ...journalData, volume: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
         </div>
       </div>
@@ -536,7 +623,8 @@ const ResearchPublications = () => {
             type="text"
             value={journalData.number}
             onChange={(e) => setJournalData({ ...journalData, number: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
         </div>
 
@@ -548,56 +636,74 @@ const ResearchPublications = () => {
               placeholder="From"
               value={journalData.pagesFrom}
               onChange={(e) => setJournalData({ ...journalData, pagesFrom: e.target.value })}
-              style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+              disabled={readOnly}
             />
             <input
               type="text"
               placeholder="To"
               value={journalData.pagesTo}
               onChange={(e) => setJournalData({ ...journalData, pagesTo: e.target.value })}
-              style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+              disabled={readOnly}
             />
           </div>
         </div>
       </div>
 
-      {/* Evidence File Upload */}
-      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-        <label>Upload Evidence</label>
-        <div style={{
-          border: '2px dashed #ddd',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          textAlign: 'center',
-          backgroundColor: '#f9f9f9'
-        }}>
-          <input
-            type="file"
-            id="evidence-upload-journal"
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-            onChange={(e) => setEvidenceFile(e.target.files[0])}
-            style={{ display: 'none' }}
-          />
-          <label
-            htmlFor="evidence-upload-journal"
-            style={{
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            <Upload size={32} color="#5b8fc7" />
-            <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-              {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
-            </span>
-            <span style={{ fontSize: '0.85rem', color: '#666' }}>
-              PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
-            </span>
-          </label>
+      {readOnly ? (
+        initialData?.evidence_file && (
+          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+            <label>Evidence</label>
+            <a
+              href={`http://${window.location.hostname}:5001/uploads/${initialData.evidence_file}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="evidence-link"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
+            >
+              <ExternalLink size={18} /> View Journal Paper Evidence
+            </a>
+          </div>
+        )
+      ) : (
+        <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+          <label>Upload Evidence</label>
+          <div style={{
+            border: '2px dashed #ddd',
+            borderRadius: '8px',
+            padding: '1.5rem',
+            textAlign: 'center',
+            backgroundColor: '#f9f9f9'
+          }}>
+            <input
+              type="file"
+              id="evidence-upload-journal"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              onChange={(e) => setEvidenceFile(e.target.files[0])}
+              style={{ display: 'none' }}
+            />
+            <label
+              htmlFor="evidence-upload-journal"
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <Upload size={32} color="#5b8fc7" />
+              <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+                {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+              </span>
+              <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+              </span>
+            </label>
+          </div>
         </div>
-      </div>
+      )}
     </>
   )
 
@@ -612,7 +718,8 @@ const ResearchPublications = () => {
             type="text"
             value={conferenceData.titleOfPaper}
             onChange={(e) => setConferenceData({ ...conferenceData, titleOfPaper: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
         </div>
 
@@ -622,7 +729,8 @@ const ResearchPublications = () => {
             type="text"
             value={conferenceData.fullNameOfConference}
             onChange={(e) => setConferenceData({ ...conferenceData, fullNameOfConference: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
         </div>
       </div>
@@ -634,7 +742,8 @@ const ResearchPublications = () => {
             type="text"
             value={conferenceData.abbreviation}
             onChange={(e) => setConferenceData({ ...conferenceData, abbreviation: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
         </div>
 
@@ -644,7 +753,8 @@ const ResearchPublications = () => {
             type="date"
             value={conferenceData.dateFrom}
             onChange={(e) => setConferenceData({ ...conferenceData, dateFrom: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
         </div>
 
@@ -654,7 +764,8 @@ const ResearchPublications = () => {
             type="date"
             value={conferenceData.dateTo}
             onChange={(e) => setConferenceData({ ...conferenceData, dateTo: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+            disabled={readOnly}
           />
         </div>
       </div>
@@ -665,7 +776,8 @@ const ResearchPublications = () => {
           <select
             value={conferenceData.typeOfConference}
             onChange={(e) => setConferenceData({ ...conferenceData, typeOfConference: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
+            disabled={readOnly}
           >
             <option value="International">International</option>
             <option value="National">National</option>
@@ -680,14 +792,16 @@ const ResearchPublications = () => {
               placeholder="From"
               value={conferenceData.pagesFrom}
               onChange={(e) => setConferenceData({ ...conferenceData, pagesFrom: e.target.value })}
-              style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+              disabled={readOnly}
             />
             <input
               type="text"
               placeholder="To"
               value={conferenceData.pagesTo}
               onChange={(e) => setConferenceData({ ...conferenceData, pagesTo: e.target.value })}
-              style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+              disabled={readOnly}
             />
           </div>
         </div>
@@ -702,7 +816,8 @@ const ResearchPublications = () => {
               type="text"
               value={conferenceData.city}
               onChange={(e) => setConferenceData({ ...conferenceData, city: e.target.value })}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+              disabled={readOnly}
             />
           </div>
 
@@ -712,7 +827,8 @@ const ResearchPublications = () => {
               type="text"
               value={conferenceData.state}
               onChange={(e) => setConferenceData({ ...conferenceData, state: e.target.value })}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+              disabled={readOnly}
             />
           </div>
 
@@ -722,7 +838,8 @@ const ResearchPublications = () => {
               type="text"
               value={conferenceData.country}
               onChange={(e) => setConferenceData({ ...conferenceData, country: e.target.value })}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+              disabled={readOnly}
             />
           </div>
         </div>
@@ -734,62 +851,79 @@ const ResearchPublications = () => {
           type="text"
           value={conferenceData.publicationAgency}
           onChange={(e) => setConferenceData({ ...conferenceData, publicationAgency: e.target.value })}
-          style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+          style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+          disabled={readOnly}
         />
       </div>
 
-      {/* Evidence File Upload */}
-      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-        <label>Upload Evidence</label>
-        <div style={{
-          border: '2px dashed #ddd',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          textAlign: 'center',
-          backgroundColor: '#f9f9f9'
-        }}>
-          <input
-            type="file"
-            id="evidence-upload-conference"
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-            onChange={(e) => setEvidenceFile(e.target.files[0])}
-            style={{ display: 'none' }}
-          />
-          <label
-            htmlFor="evidence-upload-conference"
-            style={{
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            <Upload size={32} color="#5b8fc7" />
-            <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-              {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
-            </span>
-            <span style={{ fontSize: '0.85rem', color: '#666' }}>
-              PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
-            </span>
-          </label>
+      {readOnly ? (
+        initialData?.evidence_file && (
+          <div className="form-field-vertical" style={{ marginTop: '1.5rem' }}>
+            <label>Evidence</label>
+            <a
+              href={`http://${window.location.hostname}:5001/uploads/${initialData.evidence_file}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="evidence-link"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
+            >
+              <ExternalLink size={18} /> View Conference Paper Evidence
+            </a>
+          </div>
+        )
+      ) : (
+        <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+          <label>Upload Evidence</label>
+          <div style={{
+            border: '2px dashed #ddd',
+            borderRadius: '8px',
+            padding: '1.5rem',
+            textAlign: 'center',
+            backgroundColor: '#f9f9f9'
+          }}>
+            <input
+              type="file"
+              id="evidence-upload-conference"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              onChange={(e) => setEvidenceFile(e.target.files[0])}
+              style={{ display: 'none' }}
+            />
+            <label
+              htmlFor="evidence-upload-conference"
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <Upload size={32} color="#5b8fc7" />
+              <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+                {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+              </span>
+              <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+              </span>
+            </label>
+          </div>
         </div>
-      </div>
+      )}
     </>
   )
 
   const renderBookChapterForm = () => (
     <>
-      {bookEntries.map((entry, index) => (
+      {bookChapterEntries.map((entry, index) => (
         <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0, color: '#2c3e50' }}>Book Entry #{index + 1}</h3>
-            {bookEntries.length > 1 && (
+            <h3 style={{ margin: 0, color: '#2c3e50' }}>Book Chapter Entry #{index + 1}</h3>
+            {!readOnly && bookChapterEntries.length > 1 && (
               <button
-                onClick={() => removeBookEntry(index)}
+                onClick={() => removeBookChapterEntry(index)}
                 style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}
               >
-                <X size={16} /> Remove Book
+                <X size={16} /> Remove Chapter
               </button>
             )}
           </div>
@@ -803,7 +937,8 @@ const ResearchPublications = () => {
                 type="text"
                 value={entry.titleOfBook}
                 onChange={(e) => updateBookEntryField(index, 'titleOfBook', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+                disabled={readOnly}
               />
             </div>
 
@@ -812,7 +947,8 @@ const ResearchPublications = () => {
               <select
                 value={entry.yearOfPublication}
                 onChange={(e) => updateBookEntryField(index, 'yearOfPublication', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
+                disabled={readOnly}
               >
                 {Array.from({ length: 30 }, (_, i) => 2026 - i).map(year => (
                   <option key={year} value={year}>{year}</option>
@@ -828,7 +964,8 @@ const ResearchPublications = () => {
                 type="text"
                 value={entry.publicationAgency}
                 onChange={(e) => updateBookEntryField(index, 'publicationAgency', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+                disabled={readOnly}
               />
             </div>
 
@@ -840,73 +977,93 @@ const ResearchPublications = () => {
                   placeholder="From"
                   value={entry.pagesFrom}
                   onChange={(e) => updateBookEntryField(index, 'pagesFrom', e.target.value)}
-                  style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                  style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+                  disabled={readOnly}
                 />
                 <input
                   type="text"
                   placeholder="To"
                   value={entry.pagesTo}
                   onChange={(e) => updateBookEntryField(index, 'pagesTo', e.target.value)}
-                  style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                  style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+                  disabled={readOnly}
                 />
               </div>
             </div>
           </div>
 
-          {/* Evidence File Upload (Specific to entry) */}
-          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Upload Evidence</label>
-            <div style={{
-              border: '2px dashed #ddd',
-              borderRadius: '8px',
-              padding: '1rem',
-              textAlign: 'center',
-              backgroundColor: '#f9f9f9'
-            }}>
-              <input
-                type="file"
-                id={`evidence-upload-book-${index}`}
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                onChange={(e) => updateBookEntryField(index, 'evidenceFile', e.target.files[0])}
-                style={{ display: 'none' }}
-              />
-              <label
-                htmlFor={`evidence-upload-book-${index}`}
-                style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}
-              >
-                <Upload size={24} color="#5b8fc7" />
-                <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
-                  {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
-                </span>
-              </label>
+          {readOnly ? (
+            entry.evidence_file && (
+              <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+                <label>Evidence</label>
+                <a
+                  href={`http://${window.location.hostname}:5001/uploads/${entry.evidence_file}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="evidence-link"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
+                >
+                  <ExternalLink size={18} /> View Book Chapter Evidence
+                </a>
+              </div>
+            )
+          ) : (
+            <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+              <label>Upload Evidence</label>
+              <div style={{
+                border: '2px dashed #ddd',
+                borderRadius: '8px',
+                padding: '1rem',
+                textAlign: 'center',
+                backgroundColor: '#f9f9f9'
+              }}>
+                <input
+                  type="file"
+                  id={`evidence-upload-book-chapter-${index}`}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => updateBookEntryField(index, 'evidenceFile', e.target.files[0])}
+                  style={{ display: 'none' }}
+                />
+                <label
+                  htmlFor={`evidence-upload-book-chapter-${index}`}
+                  style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}
+                >
+                  <Upload size={24} color="#5b8fc7" />
+                  <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
+                    {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
+                  </span>
+                </label>
+              </div>
             </div>
-          </div>
+          )}
 
           {renderEditors(entry.editors, index)}
         </div>
       ))}
 
-      <button
-        onClick={addBookEntry}
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: '#5cb85c',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.5rem',
-          marginTop: '1rem',
-          marginBottom: '2rem'
-        }}
-      >
-        <Plus size={18} />
-        Add Another Book
-      </button>
+      {!readOnly && (
+        <button
+          onClick={addBookChapterEntry}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: '#5cb85c',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            marginTop: '1rem',
+            marginBottom: '2rem'
+          }}
+        >
+          <Plus size={18} />
+          Add Another Book Chapter
+        </button>
+      )}
     </>
   )
 
@@ -916,7 +1073,7 @@ const ResearchPublications = () => {
         <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <h3 style={{ margin: 0, color: '#2c3e50' }}>Textbook Entry #{index + 1}</h3>
-            {textbookEntries.length > 1 && (
+            {!readOnly && textbookEntries.length > 1 && (
               <button
                 onClick={() => removeTextbookEntry(index)}
                 style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}
@@ -935,7 +1092,8 @@ const ResearchPublications = () => {
                 type="text"
                 value={entry.titleOfBook}
                 onChange={(e) => updateTextbookEntryField(index, 'titleOfBook', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+                disabled={readOnly}
               />
             </div>
 
@@ -944,7 +1102,8 @@ const ResearchPublications = () => {
               <select
                 value={entry.yearOfPublication}
                 onChange={(e) => updateTextbookEntryField(index, 'yearOfPublication', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
+                disabled={readOnly}
               >
                 {Array.from({ length: 30 }, (_, i) => 2026 - i).map(year => (
                   <option key={year} value={year}>{year}</option>
@@ -959,7 +1118,8 @@ const ResearchPublications = () => {
               type="text"
               value={entry.publicationAgency}
               onChange={(e) => updateTextbookEntryField(index, 'publicationAgency', e.target.value)}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+              disabled={readOnly}
             />
           </div>
 
@@ -972,7 +1132,8 @@ const ResearchPublications = () => {
                   type="text"
                   value={entry.city}
                   onChange={(e) => updateTextbookEntryField(index, 'city', e.target.value)}
-                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                  style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+                  disabled={readOnly}
                 />
               </div>
 
@@ -982,7 +1143,8 @@ const ResearchPublications = () => {
                   type="text"
                   value={entry.state}
                   onChange={(e) => updateTextbookEntryField(index, 'state', e.target.value)}
-                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                  style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+                  disabled={readOnly}
                 />
               </div>
 
@@ -992,64 +1154,83 @@ const ResearchPublications = () => {
                   type="text"
                   value={entry.country}
                   onChange={(e) => updateTextbookEntryField(index, 'country', e.target.value)}
-                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                  style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+                  disabled={readOnly}
                 />
               </div>
             </div>
           </div>
 
-          {/* Evidence File Upload (Specific to entry) */}
-          <div className="form-field-vertical">
-            <label>Upload Evidence</label>
-            <div style={{
-              border: '2px dashed #ddd',
-              borderRadius: '8px',
-              padding: '1rem',
-              textAlign: 'center',
-              backgroundColor: '#f9f9f9'
-            }}>
-              <input
-                type="file"
-                id={`evidence-upload-textbook-${index}`}
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                onChange={(e) => updateTextbookEntryField(index, 'evidenceFile', e.target.files[0])}
-                style={{ display: 'none' }}
-              />
-              <label
-                htmlFor={`evidence-upload-textbook-${index}`}
-                style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}
-              >
-                <Upload size={24} color="#5b8fc7" />
-                <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
-                  {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
-                </span>
-              </label>
+          {readOnly ? (
+            entry.evidence_file && (
+              <div className="form-field-vertical">
+                <label>Evidence</label>
+                <a
+                  href={`http://${window.location.hostname}:5001/uploads/${entry.evidence_file}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="evidence-link"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
+                >
+                  <ExternalLink size={18} /> View Textbook Evidence
+                </a>
+              </div>
+            )
+          ) : (
+            <div className="form-field-vertical">
+              <label>Upload Evidence</label>
+              <div style={{
+                border: '2px dashed #ddd',
+                borderRadius: '8px',
+                padding: '1rem',
+                textAlign: 'center',
+                backgroundColor: '#f9f9f9'
+              }}>
+                <input
+                  type="file"
+                  id={`evidence-upload-textbook-${index}`}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => updateTextbookEntryField(index, 'evidenceFile', e.target.files[0])}
+                  style={{ display: 'none' }}
+                />
+                <label
+                  htmlFor={`evidence-upload-textbook-${index}`}
+                  style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}
+                >
+                  <Upload size={24} color="#5b8fc7" />
+                  <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
+                    {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
+                  </span>
+                </label>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       ))}
 
-      <button
-        onClick={addTextbookEntry}
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: '#5cb85c',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.5rem',
-          marginTop: '1rem',
-          marginBottom: '2rem'
-        }}
-      >
-        <Plus size={18} />
-        Add Another Textbook
-      </button>
+      {!readOnly && (
+        <button
+          onClick={addTextbookEntry}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: '#5cb85c',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            marginTop: '1rem',
+            marginBottom: '2rem'
+          }}
+        >
+          <Plus size={18} />
+          Add Another Textbook
+        </button>
+      )}
     </>
   )
 
@@ -1064,65 +1245,80 @@ const ResearchPublications = () => {
         style={{
           width: '100%',
           padding: '0.75rem',
-          border: '1px solid #ddd',
+          border: readOnly ? 'none' : '1px solid #ddd',
           borderRadius: '4px',
           fontSize: '1rem',
-          fontFamily: 'inherit'
+          fontFamily: 'inherit',
+          background: readOnly ? 'transparent' : 'white'
         }}
+        disabled={readOnly}
       />
 
-      {/* Evidence File Upload */}
-      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-        <label>Upload Evidence</label>
-        <div style={{
-          border: '2px dashed #ddd',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          textAlign: 'center',
-          backgroundColor: '#f9f9f9'
-        }}>
-          <input
-            type="file"
-            id="evidence-upload-other"
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-            onChange={(e) => setEvidenceFile(e.target.files[0])}
-            style={{ display: 'none' }}
-          />
-          <label
-            htmlFor="evidence-upload-other"
-            style={{
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            <Upload size={32} color="#5b8fc7" />
-            <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-              {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
-            </span>
-            <span style={{ fontSize: '0.85rem', color: '#666' }}>
-              PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
-            </span>
-          </label>
+      {readOnly ? (
+        initialData?.evidence_file && (
+          <div className="form-field-vertical" style={{ marginTop: '1.5rem' }}>
+            <label>Evidence</label>
+            <a
+              href={`http://${window.location.hostname}:5001/uploads/${initialData.evidence_file}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="evidence-link"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
+            >
+              <ExternalLink size={18} /> View Evidence
+            </a>
+          </div>
+        )
+      ) : (
+        <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+          <label>Upload Evidence</label>
+          <div style={{
+            border: '2px dashed #ddd',
+            borderRadius: '8px',
+            padding: '1.5rem',
+            textAlign: 'center',
+            backgroundColor: '#f9f9f9'
+          }}>
+            <input
+              type="file"
+              id="evidence-upload-other"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              onChange={(e) => setEvidenceFile(e.target.files[0])}
+              style={{ display: 'none' }}
+            />
+            <label
+              htmlFor="evidence-upload-other"
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <Upload size={32} color="#5b8fc7" />
+              <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+                {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+              </span>
+              <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+              </span>
+            </label>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
-
   return (
-    <div className="form-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Research Publications</h1>
-          <p className="page-subtitle">Section 9: Research & Development - Research Publications</p>
+    <div className={`form-page ${readOnly ? 'read-only-mode' : ''}`}>
+      {!readOnly && (
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Research Publications</h1>
+            <p className="page-subtitle">Section 5.1: Publications in Refereed Journals & Conferences</p>
+          </div>
         </div>
-        <button className="save-button" onClick={handleSave} disabled={loading}>
-          <Save size={18} />
-          {loading ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
+      )}
 
       <div className="form-card">
         <div className="form-section">
@@ -1136,11 +1332,15 @@ const ResearchPublications = () => {
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid #ddd',
+                border: readOnly ? 'none' : '1px solid #ddd',
                 borderRadius: '4px',
                 fontSize: '1rem',
-                cursor: 'pointer'
+                cursor: readOnly ? 'default' : 'pointer',
+                background: readOnly ? 'transparent' : 'white',
+                appearance: readOnly ? 'none' : 'auto',
+                fontWeight: readOnly ? '600' : 'normal'
               }}
+              disabled={readOnly}
             >
               <option value="">-- Select Type --</option>
               <option value="Monographs">a) Research Monographs / Book / Textbooks Published</option>
@@ -1161,11 +1361,15 @@ const ResearchPublications = () => {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  border: '1px solid #ddd',
+                  border: readOnly ? 'none' : '1px solid #ddd',
                   borderRadius: '4px',
                   fontSize: '1rem',
-                  cursor: 'pointer'
+                  cursor: readOnly ? 'default' : 'pointer',
+                  background: readOnly ? 'transparent' : 'white',
+                  appearance: readOnly ? 'none' : 'auto',
+                  fontWeight: readOnly ? '600' : 'normal'
                 }}
+                disabled={readOnly}
               >
                 <option value="">-- Select Sub-Type --</option>
                 <option value="Book Chapter">Book</option>
@@ -1180,7 +1384,7 @@ const ResearchPublications = () => {
           {publicationType === 'Conference' && renderConferenceForm()}
           {publicationType === 'Any Other' && renderAnyOtherForm()}
 
-          {((publicationType === 'Monographs' && bookSubType) || (publicationType && publicationType !== 'Monographs')) && (
+          {!readOnly && ((publicationType === 'Monographs' && bookSubType) || (publicationType && publicationType !== 'Monographs')) && (
             <button
               onClick={handleSave}
               style={{
@@ -1193,10 +1397,16 @@ const ResearchPublications = () => {
                 cursor: 'pointer',
                 fontSize: '1rem',
                 fontWeight: '500',
-                marginTop: '2rem'
+                marginTop: '2rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
               }}
+              disabled={loading}
             >
-              Save Publication
+              <Save size={18} />
+              {loading ? 'Saving...' : 'Save Publication'}
             </button>
           )}
         </div>
@@ -1206,4 +1416,3 @@ const ResearchPublications = () => {
 }
 
 export default ResearchPublications
-

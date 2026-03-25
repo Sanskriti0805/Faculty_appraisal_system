@@ -49,15 +49,52 @@ const ConferenceSessions = () => {
     }))
   }
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Submit both list and current form data (if filled)
-    const allSessions = [...submittedSessions]
-    if (formData.eventTitle) {
-      allSessions.push(formData)
+
+    setLoading(true)
+    try {
+      const facultyId = 1 // TODO: Actual faculty ID
+      const allSessions = [...submittedSessions]
+      if (formData.eventTitle) {
+        allSessions.push(formData)
+      }
+
+      if (allSessions.length === 0) {
+        alert('Please add at least one session')
+        return
+      }
+
+      const promises = allSessions.map(session => {
+        const formDataObj = new FormData()
+        formDataObj.append('faculty_id', facultyId)
+        formDataObj.append('conference_name', session.organizer) // Using organizer as conference name for simplicity
+        formDataObj.append('session_title', session.eventTitle)
+        formDataObj.append('role', session.role)
+        formDataObj.append('location', `${session.venue.city}, ${session.venue.country}`)
+
+        if (session.certificateFile) {
+          formDataObj.append('evidence_file', session.certificateFile)
+        }
+
+        return fetch('http://localhost:5001/api/activities/conference-sessions', {
+          method: 'POST',
+          body: formDataObj
+        })
+      })
+
+      await Promise.all(promises)
+      alert('Data saved successfully!')
+      setSubmittedSessions([])
+      setFormData(initialState)
+    } catch (error) {
+      console.error('Error saving sessions:', error)
+      alert('Error saving data: ' + error.message)
+    } finally {
+      setLoading(false)
     }
-    console.log('Form Data:', allSessions)
-    alert('Data saved successfully!')
   }
 
   const handleAddConference = (e) => {

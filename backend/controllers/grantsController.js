@@ -30,14 +30,14 @@ exports.createGrant = async (req, res) => {
     } = req.body;
 
     const evidence_file = req.file ? req.file.filename : null;
-    
+
     const [result] = await db.query(
       `INSERT INTO research_grants 
       (faculty_id, grant_type, project_name, funding_agency, currency, grant_amount, 
        amount_in_lakhs, duration, researchers, role, evidence_file) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [faculty_id, grant_type, project_name, funding_agency, currency, grant_amount,
-       amount_in_lakhs, duration, researchers, role, evidence_file]
+        amount_in_lakhs, duration, researchers, role, evidence_file]
     );
 
     res.status(201).json({
@@ -78,20 +78,22 @@ exports.createProposal = async (req, res) => {
       status,
       role
     } = req.body;
-    
+
+    const evidence_file = req.file ? req.file.filename : null;
+
     const [result] = await db.query(
       `INSERT INTO submitted_proposals 
       (faculty_id, title, funding_agency, currency, grant_amount, amount_in_lakhs, 
-       duration, submission_date, status, role) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       duration, submission_date, status, role, evidence_file) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [faculty_id, title, funding_agency, currency, grant_amount, amount_in_lakhs,
-       duration, submission_date, status, role]
+        duration, submission_date, status, role, evidence_file]
     );
 
     res.status(201).json({
       success: true,
       message: 'Proposal created successfully',
-      data: { id: result.insertId }
+      data: { id: result.insertId, file: evidence_file }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -102,7 +104,7 @@ exports.createProposal = async (req, res) => {
 exports.deleteGrant = async (req, res) => {
   try {
     const [result] = await db.query('DELETE FROM research_grants WHERE id = ?', [req.params.id]);
-    
+
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Grant not found' });
     }
@@ -117,7 +119,7 @@ exports.deleteGrant = async (req, res) => {
 exports.deleteProposal = async (req, res) => {
   try {
     const [result] = await db.query('DELETE FROM submitted_proposals WHERE id = ?', [req.params.id]);
-    
+
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Proposal not found' });
     }

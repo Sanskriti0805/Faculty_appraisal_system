@@ -11,7 +11,7 @@ router.delete('/:id', grantsController.deleteGrant);
 
 // Proposals routes with caching
 router.get('/proposals/faculty/:facultyId', cacheMiddleware(180), grantsController.getProposalsByFaculty);
-router.post('/proposals', grantsController.createProposal);
+router.post('/proposals', uploadSingle('evidence_file'), grantsController.createProposal);
 router.delete('/proposals/:id', grantsController.deleteProposal);
 
 module.exports = router;

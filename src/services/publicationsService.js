@@ -8,7 +8,21 @@ export const publicationsService = {
 
   // Create publication
   createPublication: async (publicationData) => {
-    return await apiClient.post('/publications', publicationData);
+    const formData = new FormData();
+
+    Object.keys(publicationData).forEach(key => {
+      if (key === 'authors' || key === 'editors') {
+        formData.append(key, JSON.stringify(publicationData[key]));
+      } else if (publicationData[key] !== null && publicationData[key] !== undefined) {
+        formData.append(key, publicationData[key]);
+      }
+    });
+
+    return await apiClient.post('/publications', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   },
 
   // Delete publication

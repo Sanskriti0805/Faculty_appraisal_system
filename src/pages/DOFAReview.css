@@ -4,8 +4,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Header */
@@ -493,4 +500,116 @@
   .data-table td {
     padding: 0.75rem;
   }
+}
+
+/* Evidence Link */
+.evidence-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  background: #f0f7ff;
+  color: #0066cc;
+  border: 1px solid #cce3ff;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.evidence-link:hover {
+  background: #0066cc;
+  color: white;
+  border-color: #0055aa;
+  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.2);
+  transform: translateY(-1px);
+}
+
+.evidence-link svg {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+.sub-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e3a5f;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sub-section-title::before {
+  content: "";
+  width: 4px;
+  height: 18px;
+  background: #3b5998;
+  border-radius: 2px;
+}
+
+/* Ensure table cells don't squish too much */
+.data-table th,
+.data-table td {
+  min-width: 120px;
+  vertical-align: middle;
+}
+
+.data-table th:last-child,
+.data-table td:last-child {
+  min-width: 150px;
+  text-align: center;
+}
+
+.table-responsive {
+  border-radius: 8px;
+  border: 1px solid #e0e6ed;
+  margin-bottom: 1rem;
+}
+
+/* Mirror Mode Adjustments */
+.mirror-component-wrapper {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.mirror-component-wrapper .form-page {
+  padding: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+}
+
+.mirror-component-wrapper .form-card {
+  box-shadow: none !important;
+  border: none !important;
+  padding: 1rem 0 !important;
+}
+
+.mirror-component-wrapper .page-header {
+  display: none !important;
+}
+
+.read-only-mode textarea {
+  border: none !important;
+  background: #fcfcfc !important;
+  resize: none !important;
+  padding: 0.75rem !important;
+  font-style: italic;
+  color: #4a5568 !important;
+}
+
+.read-only-mode input[type="text"] {
+  border: none !important;
+  background: transparent !important;
+  color: #4a5568 !important;
+  font-weight: 500;
 }

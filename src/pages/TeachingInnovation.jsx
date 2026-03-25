@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
-import { Save, Upload } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Save, Upload, ExternalLink } from 'lucide-react'
 import './FormPages.css'
 
-const TeachingInnovation = () => {
+const TeachingInnovation = ({ initialData, readOnly }) => {
   const [formData, setFormData] = useState({
     onCampus: '',
     onCampusFile: null,
@@ -12,6 +12,23 @@ const TeachingInnovation = () => {
     evaluationFile: null,
   })
 
+  useEffect(() => {
+    if (initialData && Array.isArray(initialData)) {
+      const onCampus = initialData.find(i => i.impact === 'onCampus')
+      const online = initialData.find(i => i.impact === 'online')
+      const evaluation = initialData.find(i => i.impact === 'evaluation')
+
+      setFormData({
+        onCampus: onCampus?.description || '',
+        onCampusFile: onCampus?.evidence_file || null,
+        online: online?.description || '',
+        onlineFile: online?.evidence_file || null,
+        evaluation: evaluation?.description || '',
+        evaluationFile: evaluation?.evidence_file || null,
+      })
+    }
+  }, [initialData])
+
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value })
   }
@@ -20,23 +37,59 @@ const TeachingInnovation = () => {
     setFormData({ ...formData, [field]: file })
   }
 
-  const handleSave = () => {
-    console.log('Saving data:', formData)
-    alert('Data saved successfully!')
+  const [loading, setLoading] = useState(false)
+
+  const handleSave = async () => {
+    setLoading(true)
+    try {
+      const facultyId = 1 // TODO: Actual faculty ID
+
+      const saveData = async (type, description, file) => {
+        if (!description) return;
+
+        const formData = new FormData()
+        formData.append('faculty_id', facultyId)
+        formData.append('description', description)
+        formData.append('impact', type) // Using impact field to store type info for now or just generic
+        if (file) {
+          formData.append('evidence_file', file)
+        }
+
+        return fetch('http://localhost:5001/api/innovation/teaching', {
+          method: 'POST',
+          body: formData
+        })
+      }
+
+      await Promise.all([
+        saveData('onCampus', formData.onCampus, formData.onCampusFile),
+        saveData('online', formData.online, formData.onlineFile),
+        saveData('evaluation', formData.evaluation, formData.evaluationFile)
+      ])
+
+      alert('Data saved successfully!')
+    } catch (error) {
+      console.error('Error saving innovation:', error)
+      alert('Failed to save data. Error: ' + error.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="form-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Any effective or successful innovation in terms of teaching-learning</h1>
-          <p className="page-subtitle">Section 8</p>
+    <div className={`form-page ${readOnly ? 'read-only-mode' : ''}`}>
+      {!readOnly && (
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Any effective or successful innovation in terms of teaching-learning</h1>
+            <p className="page-subtitle">Section 8</p>
+          </div>
+          <button className="save-button" onClick={handleSave} disabled={loading}>
+            <Save size={18} />
+            {loading ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
-        <button className="save-button" onClick={handleSave}>
-          <Save size={18} />
-          Save Changes
-        </button>
-      </div>
+      )}
 
       <div className="form-card">
         <div className="form-section">
@@ -49,34 +102,49 @@ const TeachingInnovation = () => {
                 value={formData.onCampus}
                 onChange={(e) => handleInputChange('onCampus', e.target.value)}
                 placeholder="Describe any innovations for on-campus teaching..."
-                style={{ flex: 2 }}
+                style={{ flex: 2, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                disabled={readOnly}
               />
               <div style={{ flex: 1 }}>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  cursor: 'pointer',
-                  padding: '1rem',
-                  border: '2px dashed #ddd',
-                  borderRadius: '8px',
-                  backgroundColor: '#f9f9f9',
-                  justifyContent: 'center',
-                  flexDirection: 'column',
-                  height: '100%',
-                  minHeight: '130px'
-                }}>
-                  <Upload size={24} color="#666" />
-                  <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
-                    {formData.onCampusFile ? formData.onCampusFile.name : 'Upload Supporting Document'}
-                  </span>
-                  <input
-                    type="file"
-                    onChange={(e) => handleFileUpload('onCampusFile', e.target.files[0])}
-                    style={{ display: 'none' }}
-                    accept=".pdf,.doc,.docx"
-                  />
-                </label>
+                {readOnly ? (
+                  formData.onCampusFile && (
+                    <a
+                      href={`http://${window.location.hostname}:5001/uploads/${formData.onCampusFile}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="evidence-link"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none', padding: '1rem', border: '1px solid #d1d8e0', borderRadius: '8px', backgroundColor: '#f9f9f9', justifyContent: 'center' }}
+                    >
+                      <ExternalLink size={18} /> View Document
+                    </a>
+                  )
+                ) : (
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    cursor: 'pointer',
+                    padding: '1rem',
+                    border: '2px dashed #ddd',
+                    borderRadius: '8px',
+                    backgroundColor: '#f9f9f9',
+                    justifyContent: 'center',
+                    flexDirection: 'column',
+                    height: '100%',
+                    minHeight: '130px'
+                  }}>
+                    <Upload size={24} color="#666" />
+                    <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
+                      {formData.onCampusFile && formData.onCampusFile.name ? formData.onCampusFile.name : formData.onCampusFile || 'Upload Supporting Document'}
+                    </span>
+                    <input
+                      type="file"
+                      onChange={(e) => handleFileUpload('onCampusFile', e.target.files[0])}
+                      style={{ display: 'none' }}
+                      accept=".pdf,.doc,.docx"
+                    />
+                  </label>
+                )}
               </div>
             </div>
           </div>
@@ -90,34 +158,49 @@ const TeachingInnovation = () => {
                 value={formData.online}
                 onChange={(e) => handleInputChange('online', e.target.value)}
                 placeholder="Describe any innovations for online teaching..."
-                style={{ flex: 2 }}
+                style={{ flex: 2, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                disabled={readOnly}
               />
               <div style={{ flex: 1 }}>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  cursor: 'pointer',
-                  padding: '1rem',
-                  border: '2px dashed #ddd',
-                  borderRadius: '8px',
-                  backgroundColor: '#f9f9f9',
-                  justifyContent: 'center',
-                  flexDirection: 'column',
-                  height: '100%',
-                  minHeight: '130px'
-                }}>
-                  <Upload size={24} color="#666" />
-                  <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
-                    {formData.onlineFile ? formData.onlineFile.name : 'Upload Supporting Document'}
-                  </span>
-                  <input
-                    type="file"
-                    onChange={(e) => handleFileUpload('onlineFile', e.target.files[0])}
-                    style={{ display: 'none' }}
-                    accept=".pdf,.doc,.docx"
-                  />
-                </label>
+                {readOnly ? (
+                  formData.onlineFile && (
+                    <a
+                      href={`http://${window.location.hostname}:5001/uploads/${formData.onlineFile}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="evidence-link"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none', padding: '1rem', border: '1px solid #d1d8e0', borderRadius: '8px', backgroundColor: '#f9f9f9', justifyContent: 'center' }}
+                    >
+                      <ExternalLink size={18} /> View Document
+                    </a>
+                  )
+                ) : (
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    cursor: 'pointer',
+                    padding: '1rem',
+                    border: '2px dashed #ddd',
+                    borderRadius: '8px',
+                    backgroundColor: '#f9f9f9',
+                    justifyContent: 'center',
+                    flexDirection: 'column',
+                    height: '100%',
+                    minHeight: '130px'
+                  }}>
+                    <Upload size={24} color="#666" />
+                    <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
+                      {formData.onlineFile && formData.onlineFile.name ? formData.onlineFile.name : formData.onlineFile || 'Upload Supporting Document'}
+                    </span>
+                    <input
+                      type="file"
+                      onChange={(e) => handleFileUpload('onlineFile', e.target.files[0])}
+                      style={{ display: 'none' }}
+                      accept=".pdf,.doc,.docx"
+                    />
+                  </label>
+                )}
               </div>
             </div>
           </div>
@@ -131,34 +214,49 @@ const TeachingInnovation = () => {
                 value={formData.evaluation}
                 onChange={(e) => handleInputChange('evaluation', e.target.value)}
                 placeholder="Describe any innovations in evaluation or assessment..."
-                style={{ flex: 2 }}
+                style={{ flex: 2, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                disabled={readOnly}
               />
               <div style={{ flex: 1 }}>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  cursor: 'pointer',
-                  padding: '1rem',
-                  border: '2px dashed #ddd',
-                  borderRadius: '8px',
-                  backgroundColor: '#f9f9f9',
-                  justifyContent: 'center',
-                  flexDirection: 'column',
-                  height: '100%',
-                  minHeight: '130px'
-                }}>
-                  <Upload size={24} color="#666" />
-                  <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
-                    {formData.evaluationFile ? formData.evaluationFile.name : 'Upload Supporting Document'}
-                  </span>
-                  <input
-                    type="file"
-                    onChange={(e) => handleFileUpload('evaluationFile', e.target.files[0])}
-                    style={{ display: 'none' }}
-                    accept=".pdf,.doc,.docx"
-                  />
-                </label>
+                {readOnly ? (
+                  formData.evaluationFile && (
+                    <a
+                      href={`http://${window.location.hostname}:5001/uploads/${formData.evaluationFile}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="evidence-link"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none', padding: '1rem', border: '1px solid #d1d8e0', borderRadius: '8px', backgroundColor: '#f9f9f9', justifyContent: 'center' }}
+                    >
+                      <ExternalLink size={18} /> View Document
+                    </a>
+                  )
+                ) : (
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    cursor: 'pointer',
+                    padding: '1rem',
+                    border: '2px dashed #ddd',
+                    borderRadius: '8px',
+                    backgroundColor: '#f9f9f9',
+                    justifyContent: 'center',
+                    flexDirection: 'column',
+                    height: '100%',
+                    minHeight: '130px'
+                  }}>
+                    <Upload size={24} color="#666" />
+                    <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
+                      {formData.evaluationFile && formData.evaluationFile.name ? formData.evaluationFile.name : formData.evaluationFile || 'Upload Supporting Document'}
+                    </span>
+                    <input
+                      type="file"
+                      onChange={(e) => handleFileUpload('evaluationFile', e.target.files[0])}
+                      style={{ display: 'none' }}
+                      accept=".pdf,.doc,.docx"
+                    />
+                  </label>
+                )}
               </div>
             </div>
           </div>
