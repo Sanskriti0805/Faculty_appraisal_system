@@ -89,7 +89,7 @@ const Consultancy = ({ initialData, readOnly }) => {
           formData.append('evidence_file', c.evidenceFile);
         }
 
-        return fetch('http://localhost:5001/api/consultancy', {
+        return fetch('http://localhost:5000/api/consultancy', {
           method: 'POST',
           body: formData
         });

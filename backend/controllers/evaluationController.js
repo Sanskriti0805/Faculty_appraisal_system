@@ -1,35 +1,36 @@
 const db = require('../config/database');
 
 // GET /api/evaluation
-// Returns: unique sections (cols), submissions (rows), scores, remarks
+// Returns: rubrics (granular), submissions, scores (granular), remarks
 exports.getEvaluationData = async (req, res) => {
   try {
-    // 1. Unique section names preserving first-appearance order
-    const [sectionRows] = await db.query(
-      'SELECT section_name, MIN(id) as first_id FROM dofa_rubrics GROUP BY section_name ORDER BY first_id ASC'
+    // 1. All rubrics for the evaluation structure
+    const [rubrics] = await db.query(
+      'SELECT id, section_name, sub_section, max_marks FROM dofa_rubrics ORDER BY id ASC'
     );
-    const sections = sectionRows.map(r => r.section_name);
 
-    // 2. Faculty submissions (submitted/under_review/approved/sent_back)
+    // 2. Faculty submissions
     const [submissions] = await db.query(`
       SELECT s.id as submission_id, s.status, s.academic_year,
-             u.id as faculty_id, u.name as faculty_name, u.department, u.email
+             u.id as faculty_id, u.name as faculty_name, u.department, u.email,
+             f.designation, f.date_of_joining
       FROM submissions s
       JOIN users u ON s.faculty_id = u.id
+      LEFT JOIN faculty_information f ON f.id = u.id
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
       ORDER BY u.name ASC
     `);
 
     if (submissions.length === 0) {
-      return res.json({ success: true, sections, submissions: [], scores: [], remarks: [] });
+      return res.json({ success: true, rubrics, submissions: [], scores: [], remarks: [] });
     }
 
     const submissionIds = submissions.map(s => s.submission_id);
     const placeholders = submissionIds.map(() => '?').join(',');
 
-    // 3. Scores per (submission_id, section_name)
+    // 3. Scores per (submission_id, rubric_id)
     const [scores] = await db.query(
-      `SELECT submission_id, section_name, score FROM dofa_section_scores WHERE submission_id IN (${placeholders})`,
+      `SELECT submission_id, rubric_id, score FROM dofa_evaluation_scores WHERE submission_id IN (${placeholders})`,
       submissionIds
     );
 
@@ -39,7 +40,7 @@ exports.getEvaluationData = async (req, res) => {
       submissionIds
     );
 
-    res.json({ success: true, sections, submissions, scores, remarks });
+    res.json({ success: true, rubrics, submissions, scores, remarks });
   } catch (error) {
     console.error('Evaluation fetch error:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -47,34 +48,38 @@ exports.getEvaluationData = async (req, res) => {
 };
 
 // POST /api/evaluation/scores
-// Body: { submission_id, section_name, score }
+// Body: { submission_id, rubric_id, score }
 exports.saveScore = async (req, res) => {
   try {
-    const { submission_id, section_name, score } = req.body;
+    const { submission_id, rubric_id, score } = req.body;
 
-    if (!submission_id || !section_name) {
-      return res.status(400).json({ success: false, message: 'submission_id and section_name required' });
+    if (!submission_id || !rubric_id) {
+      return res.status(400).json({ success: false, message: 'submission_id and rubric_id required' });
     }
 
-    // Get total max_marks for this section
-    const [maxRows] = await db.query(
-      'SELECT SUM(max_marks) as total_max FROM dofa_rubrics WHERE section_name = ?',
-      [section_name]
+    // Validate against max marks
+    const [rubricRows] = await db.query(
+      'SELECT max_marks FROM dofa_rubrics WHERE id = ?',
+      [rubric_id]
     );
-    const totalMax = parseFloat(maxRows[0]?.total_max) || Infinity;
+    
+    if (rubricRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Rubric not found' });
+    }
 
-    if (parseFloat(score) > totalMax) {
+    const maxMarks = parseFloat(rubricRows[0].max_marks);
+    if (parseFloat(score) > maxMarks) {
       return res.status(400).json({
         success: false,
-        message: `Score ${score} exceeds max marks of ${totalMax} for section "${section_name}"`
+        message: `Score ${score} exceeds max marks of ${maxMarks} for this item`
       });
     }
 
     await db.query(`
-      INSERT INTO dofa_section_scores (submission_id, section_name, score)
+      INSERT INTO dofa_evaluation_scores (submission_id, rubric_id, score)
       VALUES (?, ?, ?)
       ON DUPLICATE KEY UPDATE score = VALUES(score), updated_at = CURRENT_TIMESTAMP
-    `, [submission_id, section_name, parseFloat(score) || 0]);
+    `, [submission_id, rubric_id, parseFloat(score) || 0]);
 
     res.json({ success: true, message: 'Score saved' });
   } catch (error) {

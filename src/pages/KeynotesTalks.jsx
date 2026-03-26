@@ -78,7 +78,7 @@ const KeynotesTalks = () => {
           formDataObj.append('evidence_file', talk.certificateFile)
         }
 
-        return fetch('http://localhost:5001/api/activities/keynotes-talks', {
+        return fetch('http://localhost:5000/api/activities/keynotes-talks', {
           method: 'POST',
           body: formDataObj
         })

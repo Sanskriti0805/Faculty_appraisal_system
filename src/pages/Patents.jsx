@@ -137,7 +137,7 @@ const Patents = ({ initialData, readOnly }) => {
             {readOnly ? (
               certificateFiles.granted && (
                 <a
-                  href={`http://${window.location.hostname}:5001/uploads/${certificateFiles.granted}`}
+                  href={`http://${window.location.hostname}:5000/uploads/${certificateFiles.granted}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="evidence-link"
@@ -201,7 +201,7 @@ const Patents = ({ initialData, readOnly }) => {
             {readOnly ? (
               certificateFiles.published && (
                 <a
-                  href={`http://${window.location.hostname}:5001/uploads/${certificateFiles.published}`}
+                  href={`http://${window.location.hostname}:5000/uploads/${certificateFiles.published}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="evidence-link"
@@ -265,7 +265,7 @@ const Patents = ({ initialData, readOnly }) => {
             {readOnly ? (
               certificateFiles.applied && (
                 <a
-                  href={`http://${window.location.hostname}:5001/uploads/${certificateFiles.applied}`}
+                  href={`http://${window.location.hostname}:5000/uploads/${certificateFiles.applied}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="evidence-link"

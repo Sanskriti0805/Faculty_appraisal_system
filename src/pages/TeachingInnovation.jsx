@@ -55,7 +55,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
           formData.append('evidence_file', file)
         }
 
-        return fetch('http://localhost:5001/api/innovation/teaching', {
+        return fetch('http://localhost:5000/api/innovation/teaching', {
           method: 'POST',
           body: formData
         })
@@ -109,7 +109,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                 {readOnly ? (
                   formData.onCampusFile && (
                     <a
-                      href={`http://${window.location.hostname}:5001/uploads/${formData.onCampusFile}`}
+                      href={`http://${window.location.hostname}:5000/uploads/${formData.onCampusFile}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="evidence-link"
@@ -165,7 +165,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                 {readOnly ? (
                   formData.onlineFile && (
                     <a
-                      href={`http://${window.location.hostname}:5001/uploads/${formData.onlineFile}`}
+                      href={`http://${window.location.hostname}:5000/uploads/${formData.onlineFile}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="evidence-link"
@@ -221,7 +221,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                 {readOnly ? (
                   formData.evaluationFile && (
                     <a
-                      href={`http://${window.location.hostname}:5001/uploads/${formData.evaluationFile}`}
+                      href={`http://${window.location.hostname}:5000/uploads/${formData.evaluationFile}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="evidence-link"

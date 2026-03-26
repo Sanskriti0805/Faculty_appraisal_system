@@ -34,7 +34,7 @@ const TechnologyTransfer = () => {
         formDataObj.append('evidence_file', evidenceFile)
       }
 
-      const response = await fetch('http://localhost:5001/api/activities/tech-transfer', {
+      const response = await fetch('http://localhost:5000/api/activities/tech-transfer', {
         method: 'POST',
         body: formDataObj
       })

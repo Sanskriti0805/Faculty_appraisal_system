@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './DOFADashboard.css';
 import './RubricsManagement.css';
 
-const API = `http://${window.location.hostname}:5001/api`;
+import apiClient from '../services/api';
 
 const RubricsManagement = () => {
   const [rubrics, setRubrics] = useState([]);
@@ -26,10 +26,9 @@ const RubricsManagement = () => {
 
   const fetchRubrics = async () => {
     try {
-      const response = await fetch(`${API}/rubrics`);
-      const data = await response.json();
-      if (data.success) {
-        setRubrics(data.data.map(r => ({ ...r, _isNew: false })));
+      const response = await apiClient.get('/rubrics');
+      if (response.success) {
+        setRubrics(response.data.map(r => ({ ...r, _isNew: false })));
       }
     } catch (error) {
       console.error('Error fetching rubrics:', error);
@@ -105,7 +104,7 @@ const RubricsManagement = () => {
     try {
       // 1. Delete removed rows
       for (const id of deletedIds) {
-        await fetch(`${API}/rubrics/${id}`, { method: 'DELETE' });
+        await apiClient.delete(`/rubrics/${id}`);
       }
       setDeletedIds([]);
 
@@ -120,17 +119,9 @@ const RubricsManagement = () => {
         };
 
         if (row._isNew) {
-          await fetch(`${API}/rubrics`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
+          await apiClient.post('/rubrics', payload);
         } else {
-          await fetch(`${API}/rubrics/${row.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
+          await apiClient.put(`/rubrics/${row.id}`, payload);
         }
       }
 

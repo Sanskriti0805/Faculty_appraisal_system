@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Trash2, Save, Upload, FileText, X, ExternalLink } from 'lucide-react'
+import apiClient from '../services/api';
 import './CoursesTaught.css'
 
 const CoursesTaught = ({ initialData, readOnly }) => {
@@ -47,7 +48,6 @@ const CoursesTaught = ({ initialData, readOnly }) => {
           id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
         })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
       }
-      // Add projects mapping if available in initialData
     }
   }, [initialData])
 
@@ -154,17 +154,13 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
       for (const course of allCourses) {
         if (course.title) {
-          await fetch('http://localhost:5001/api/courses', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              faculty_id: 1,
-              course_name: course.title,
-              semester: course.semester,
-              enrollment: course.students,
-              feedback_score: course.feedback,
-              status: 'submitted'
-            })
+          await apiClient.post('/courses', {
+            faculty_id: 1,
+            course_name: course.title,
+            semester: course.semester,
+            enrollment: course.students === '' ? null : parseInt(course.students),
+            feedback_score: course.feedback === '' ? null : parseFloat(course.feedback),
+            status: 'submitted'
           });
         }
       }
@@ -172,7 +168,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
       alert('Data saved successfully!');
     } catch (error) {
       console.error('Error saving courses:', error);
-      alert('Failed to save data.');
+      alert('Failed to save data. Please check if all numeric fields are valid.');
     }
   }
 
@@ -281,7 +277,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
                   {readOnly ? (
                     course.evidence_file ? (
-                      <a href={`http://${window.location.hostname}:5001/uploads/${course.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
+                      <a href={`http://${window.location.hostname}:5000/uploads/${course.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
                         <ExternalLink size={18} />
                       </a>
                     ) : null
@@ -380,7 +376,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
               <td>
                 {readOnly ? (
                   project.evidence_file ? (
-                    <a href={`http://${window.location.hostname}:5001/uploads/${project.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
+                    <a href={`http://${window.location.hostname}:5000/uploads/${project.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
                       <ExternalLink size={18} />
                     </a>
                   ) : <span style={{ color: '#ccc' }}>None</span>
@@ -466,4 +462,3 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 }
 
 export default CoursesTaught
-

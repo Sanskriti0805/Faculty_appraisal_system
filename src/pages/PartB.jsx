@@ -57,7 +57,7 @@ const PartB = ({ initialData, readOnly }) => {
   const handleSave = async (e, showSuccess = true) => {
     if (e && e.preventDefault) e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5001/api/goals/save', {
+      const response = await fetch('http://localhost:5000/api/goals/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -93,7 +93,7 @@ const PartB = ({ initialData, readOnly }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:5001/api/submissions/1/status', {
+      const response = await fetch('http://localhost:5000/api/submissions/1/status', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'submitted' })
@@ -287,7 +287,7 @@ const PartB = ({ initialData, readOnly }) => {
                     {readOnly ? (
                       goal.evidenceFile && (
                         <a
-                          href={`http://${window.location.hostname}:5001/uploads/${goal.evidenceFile}`}
+                          href={`http://${window.location.hostname}:5000/uploads/${goal.evidenceFile}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="evidence-link"

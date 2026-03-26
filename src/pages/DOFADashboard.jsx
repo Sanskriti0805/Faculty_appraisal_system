@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, CheckCircle, XCircle, MessageSquare, FileText, Users, Clock, CheckSquare } from 'lucide-react';
 import './DOFADashboard.css';
 
-const API = `http://${window.location.hostname}:5001/api`;
+const API = `http://${window.location.hostname}:5000/api`;
 
 const DOFADashboard = () => {
   const navigate = useNavigate();

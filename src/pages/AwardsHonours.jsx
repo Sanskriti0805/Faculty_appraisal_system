@@ -95,7 +95,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
 
   const handleViewEvidence = (filename) => {
     // Force port 5001 for backend uploads
-    window.open(`http://${window.location.hostname}:5001/uploads/${filename}`, '_blank')
+    window.open(`http://${window.location.hostname}:5000/uploads/${filename}`, '_blank')
   }
 
   return (

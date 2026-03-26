@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Lock, Unlock, Mail, Download, Users, FileText, Clock, CheckSquare } from 'lucide-react';
 import './DOFAOfficeDashboard.css';
 
-const API = `http://${window.location.hostname}:5001/api`;
+const API = `http://${window.location.hostname}:5000/api`;
 
 const DOFAOfficeDashboard = () => {
   const [stats, setStats] = useState({

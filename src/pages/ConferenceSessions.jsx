@@ -79,7 +79,7 @@ const ConferenceSessions = () => {
           formDataObj.append('evidence_file', session.certificateFile)
         }
 
-        return fetch('http://localhost:5001/api/activities/conference-sessions', {
+        return fetch('http://localhost:5000/api/activities/conference-sessions', {
           method: 'POST',
           body: formDataObj
         })
