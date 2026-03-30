@@ -12,10 +12,12 @@ const Sidebar = () => {
   const isDOFARoute = location.pathname.startsWith('/dofa') || location.pathname.startsWith('/dofa-office')
 
   const toggleSection = (sectionName) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [sectionName]: !prev[sectionName]
-    }))
+    setExpandedSections(prev => {
+      if (prev[sectionName]) {
+        return { [sectionName]: false }
+      }
+      return { [sectionName]: true }
+    })
   }
 
   const partAItems = [
@@ -113,7 +115,10 @@ const Sidebar = () => {
         <div className="nav-section">
           <button
             className="nav-section-header"
-            onClick={() => setPartAOpen(!partAOpen)}
+            onClick={() => {
+              setPartAOpen(!partAOpen)
+              if (!partAOpen) setPartBOpen(false)
+            }}
           >
             <span>Part A</span>
             {partAOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
@@ -161,7 +166,10 @@ const Sidebar = () => {
         <div className="nav-section">
           <button
             className="nav-section-header"
-            onClick={() => setPartBOpen(!partBOpen)}
+            onClick={() => {
+              setPartBOpen(!partBOpen)
+              if (!partBOpen) setPartAOpen(false)
+            }}
           >
             <span>Part B</span>
             {partBOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} />}

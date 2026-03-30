@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, CheckCircle, XCircle, MessageSquare, FileText, Users, Clock, CheckSquare } from 'lucide-react';
 import './DOFADashboard.css';
 
-const API = `http://${window.location.hostname}:5000/api`;
+const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5001/api`;
 
 const DOFADashboard = () => {
   const navigate = useNavigate();
@@ -18,16 +18,19 @@ const DOFADashboard = () => {
   });
   const [submissions, setSubmissions] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStats();
     fetchSubmissions();
-  }, [filter]);
+  }, [filter, yearFilter]);
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${API}/submissions/stats`);
+      const url = new URL(`${API}/submissions/stats`);
+      if (yearFilter !== 'all') url.searchParams.append('academic_year', yearFilter);
+      const response = await fetch(url.toString());
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -40,11 +43,11 @@ const DOFADashboard = () => {
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const url = filter === 'all'
-        ? `${API}/submissions`
-        : `${API}/submissions?status=${filter}`;
+      const url = new URL(`${API}/submissions`);
+      if (filter !== 'all') url.searchParams.append('status', filter);
+      if (yearFilter !== 'all') url.searchParams.append('academic_year', yearFilter);
 
-      const response = await fetch(url);
+      const response = await fetch(url.toString());
       const data = await response.json();
       if (data.success) {
         setSubmissions(data.data);
@@ -204,7 +207,7 @@ const DOFADashboard = () => {
       </div>
 
       {/* Filters */}
-      <div className="filters-section">
+      <div className="filters-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="filter-buttons">
           <button
             className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
@@ -236,6 +239,19 @@ const DOFADashboard = () => {
           >
             Sent Back
           </button>
+        </div>
+        <div className="year-filter">
+          <select 
+            value={yearFilter} 
+            onChange={(e) => setYearFilter(e.target.value)}
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#fff', fontSize: '0.95rem', outline: 'none', cursor: 'pointer', minWidth: '150px' }}
+          >
+            <option value="all">All Academic Years</option>
+            <option value="2022-23">2022-23</option>
+            <option value="2023-24">2023-24</option>
+            <option value="2024-25">2024-25</option>
+            <option value="2025-26">2025-26</option>
+          </select>
         </div>
       </div>
 

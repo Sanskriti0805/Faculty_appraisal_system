@@ -8,7 +8,7 @@ const EvaluationSheet2 = () => {
   const [gradingParams, setGradingParams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
-  const [stats, setStats] = useState({ mean: null, median: null, mode: null });
+  const [stats, setStats] = useState({ mean: null, median: null, mode: null, stdDev: null });
   const saveTimers = useRef({});
 
   useEffect(() => {
@@ -57,7 +57,8 @@ const EvaluationSheet2 = () => {
 
   const calculateStats = () => {
     if (data.length === 0) return;
-    const scores = data.map(d => d.total_score).sort((a, b) => a - b);
+    // Explicitly cast to Number to prevent string concatenation during reduce
+    const scores = data.map(d => Number(d.total_score) || 0).sort((a, b) => a - b);
     
     // Mean
     const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
@@ -68,20 +69,31 @@ const EvaluationSheet2 = () => {
     
     // Mode
     const counts = {};
-    scores.forEach(s => counts[s] = (counts[s] || 0) + 1);
+    scores.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
+    
     let maxCount = 0;
-    let modeValue = null;
+    let modes = [];
     for (const val in counts) {
       if (counts[val] > maxCount) {
         maxCount = counts[val];
-        modeValue = val;
+        modes = [val];
+      } else if (counts[val] === maxCount) {
+        modes.push(val);
       }
     }
+    
+    // If every score appears exactly once and there's more than one score, there is no real mode.
+    const modeValue = (maxCount === 1 && scores.length > 1) ? 'None' : modes.join(', ');
+
+    // Standard Deviation
+    const variance = scores.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / scores.length;
+    const stdDev = Math.sqrt(variance);
 
     setStats({
       mean: mean.toFixed(2),
       median: median.toFixed(2),
-      mode: modeValue
+      mode: modeValue,
+      stdDev: stdDev.toFixed(2)
     });
   };
 
@@ -155,10 +167,27 @@ const EvaluationSheet2 = () => {
           <span className="stat-label">Mode</span>
           <span className="stat-value">{stats.mode || '—'}</span>
         </div>
+        <div className="stat-item">
+          <span className="stat-label">Std Dev</span>
+          <span className="stat-value">{stats.stdDev || '—'}</span>
+        </div>
       </div>
 
-      <div className="eval2-grading-config">
-        <h2>Grading Parameters Configuration</h2>
+      <div 
+        className="eval2-grading-config"
+        style={{ 
+          opacity: stats.mean !== null ? 1 : 0.5, 
+          pointerEvents: stats.mean !== null ? 'auto' : 'none' 
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2>Grading Parameters Configuration</h2>
+          {stats.mean === null && (
+            <span style={{ color: '#d32f2f', fontSize: '0.9rem', fontWeight: 500 }}>
+              *Please calculate statistics first to enable
+            </span>
+          )}
+        </div>
         <div className="grading-rules-list">
           {gradingParams.map((param, idx) => (
             <div key={idx} className="grading-rule-row">

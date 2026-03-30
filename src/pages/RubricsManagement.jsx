@@ -10,9 +10,13 @@ const RubricsManagement = () => {
   const [saving, setSaving] = useState(false);
   const [editCell, setEditCell] = useState(null); // { rowIndex, field }
   const [editValue, setEditValue] = useState('');
+  const [editingSection, setEditingSection] = useState(null);
+  const [editSectionValue, setEditSectionValue] = useState('');
+  const [expandedSections, setExpandedSections] = useState({});
   const [deletedIds, setDeletedIds] = useState([]);
   const [toast, setToast] = useState(null);
   const inputRef = useRef(null);
+  const sectionInputRef = useRef(null);
 
   useEffect(() => {
     fetchRubrics();
@@ -23,6 +27,28 @@ const RubricsManagement = () => {
       inputRef.current.focus();
     }
   }, [editCell]);
+
+  useEffect(() => {
+    if (editingSection && sectionInputRef.current) {
+      sectionInputRef.current.focus();
+    }
+  }, [editingSection]);
+
+  const handleSectionBlur = () => {
+    if (editingSection) {
+      if (editSectionValue.trim() !== '') {
+        setRubrics(prev => prev.map(r => 
+          r.section_name === editingSection ? { ...r, section_name: editSectionValue.trim() } : r
+        ));
+      }
+      setEditingSection(null);
+    }
+  };
+
+  const handleSectionKeyDown = (e) => {
+    if (e.key === 'Enter') handleSectionBlur();
+    if (e.key === 'Escape') setEditingSection(null);
+  };
 
   const fetchRubrics = async () => {
     try {
@@ -63,6 +89,20 @@ const RubricsManagement = () => {
     }
     setRubrics(prev => prev.filter((_, i) => i !== index));
     if (editCell?.rowIndex === index) setEditCell(null);
+  };
+
+  const handleDeleteSection = (sectionName) => {
+    if (!window.confirm(`Are you sure you want to delete the entire section "${sectionName}"?`)) return;
+
+    const rowsToDelete = rubrics.filter(r => r.section_name === sectionName);
+    const idsToDelete = rowsToDelete.filter(r => !r._isNew).map(r => r.id);
+
+    setDeletedIds(prev => [...prev, ...idsToDelete]);
+    setRubrics(prev => prev.filter(r => r.section_name !== sectionName));
+
+    if (editingSection === sectionName) {
+      setEditingSection(null);
+    }
   };
 
   const handleCellClick = (rowIndex, field) => {
@@ -204,38 +244,92 @@ const RubricsManagement = () => {
           <table className="submissions-table rubrics-table">
             <thead>
               <tr>
-                <th style={{ width: '22%' }}>Section Name</th>
-                <th style={{ width: '42%' }}>Sub Section</th>
-                <th style={{ width: '10%' }}>Max Marks</th>
-                <th style={{ width: '12%' }}>Weightage</th>
-                <th style={{ width: '10%', textAlign: 'center' }}>Actions</th>
+                <th style={{ width: '55%' }}>Sub Section</th>
+                <th style={{ width: '15%' }}>Max Marks</th>
+                <th style={{ width: '15%' }}>Weightage</th>
+                <th style={{ width: '15%', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {rubrics.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
                     No rubrics defined. Click "Add Section" to create one.
                   </td>
                 </tr>
               ) : (
-                rubrics.map((row, index) => (
-                  <tr key={row.id} className={row._isNew ? 'rubric-row-new' : ''}>
-                    <td>{renderCell(row, index, 'section_name')}</td>
-                    <td>{renderCell(row, index, 'sub_section')}</td>
-                    <td>{renderCell(row, index, 'max_marks')}</td>
-                    <td>{renderCell(row, index, 'weightage')}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button
-                        className="action-btn btn-reject"
-                        onClick={() => handleDeleteRow(index)}
-                        title="Delete row"
-                      >
-                        🗑
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                (() => {
+                  const grouped = {};
+                  rubrics.forEach((r, idx) => {
+                    if (!grouped[r.section_name]) grouped[r.section_name] = [];
+                    grouped[r.section_name].push({ ...r, originalIndex: idx });
+                  });
+
+                  return Object.entries(grouped).map(([sectionName, items]) => (
+                    <React.Fragment key={sectionName}>
+                      <tr style={{ backgroundColor: '#e2e8f0' }}>
+                        <td colSpan={4} style={{ fontWeight: 'bold', fontSize: '1.05rem', padding: '12px 16px' }}>
+                          {editingSection === sectionName ? (
+                            <input
+                              ref={sectionInputRef}
+                              className="rubric-inline-input"
+                              style={{ fontWeight: 'bold', fontSize: '1.05rem', padding: '4px', width: '100%', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                              value={editSectionValue}
+                              onChange={e => setEditSectionValue(e.target.value)}
+                              onBlur={handleSectionBlur}
+                              onKeyDown={handleSectionKeyDown}
+                            />
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <div 
+                                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', flex: 1 }} 
+                                onClick={() => setExpandedSections(prev => prev[sectionName] ? { [sectionName]: false } : { [sectionName]: true })}
+                                title="Click to expand/collapse"
+                              >
+                                <span style={{ marginRight: '10px', color: '#64748b', fontSize: '0.8rem', userSelect: 'none' }}>
+                                  {expandedSections[sectionName] ? '▼' : '▶'}
+                                </span> 
+                                {sectionName}
+                              </div>
+                              <div style={{ display: 'flex', gap: '15px' }}>
+                                <button 
+                                  onClick={() => { setEditingSection(sectionName); setEditSectionValue(sectionName); }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: '0.85rem', fontWeight: 600 }}
+                                  title="Edit Section Name"
+                                >
+                                  ✎ Edit
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteSection(sectionName)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.85rem', fontWeight: 600 }}
+                                  title="Delete Entire Section"
+                                >
+                                  🗑 Delete
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                      {expandedSections[sectionName] && items.map(row => (
+                        <tr key={row.id} className={row._isNew ? 'rubric-row-new' : ''}>
+                          <td style={{ paddingLeft: '32px' }}>{renderCell(row, row.originalIndex, 'sub_section')}</td>
+                          <td>{renderCell(row, row.originalIndex, 'max_marks')}</td>
+                          <td>{renderCell(row, row.originalIndex, 'weightage')}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              className="action-btn btn-reject"
+                              onClick={() => handleDeleteRow(row.originalIndex)}
+                              title="Delete row"
+                            >
+                              🗑
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  ));
+                })()
               )}
             </tbody>
           </table>
