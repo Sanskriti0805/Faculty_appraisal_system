@@ -1,0 +1,161 @@
+.eval3-container {
+  padding: 30px;
+  background-color: #f0f7ff;
+  min-height: calc(100vh - 80px);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.eval3-header {
+  margin-bottom: 30px;
+}
+
+.eval3-header h1 {
+  font-size: 2rem;
+  color: #1e3a8a;
+  margin-bottom: 8px;
+}
+
+.eval3-header p {
+  color: #4b5563;
+  font-size: 1.1rem;
+}
+
+/* Increment Config Section */
+.eval3-inc-config {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  border-left: 5px solid #3b82f6;
+}
+
+.eval3-inc-config h2 {
+  font-size: 1.25rem;
+  margin-bottom: 20px;
+  color: #1e40af;
+}
+
+.inc-rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.inc-rule-card {
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inc-rule-card label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.inc-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.inc-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.apply-inc-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.apply-inc-btn:hover {
+  background: #1d4ed8;
+}
+
+/* Table Styling */
+.eval3-table-wrapper {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  overflow-x: auto;
+}
+
+.eval3-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.eval3-table th, .eval3-table td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.eval3-table th {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.eval3-grade {
+  font-weight: 700;
+  color: #dc2626;
+  text-align: center;
+}
+
+.eval3-increment {
+  font-weight: 700;
+  color: #059669;
+  font-size: 1.1rem;
+}
+
+.eval3-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 1.2rem;
+  color: #64748b;
+}
+
+.eval3-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 25px;
+  border-radius: 8px;
+  color: white;
+  z-index: 1000;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.eval3-toast--success { background-color: #10b981; }
+.eval3-toast--error { background-color: #ef4444; }
+
+.back-btn {
+  text-decoration: none;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}

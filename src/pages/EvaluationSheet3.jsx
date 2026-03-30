@@ -1,0 +1,148 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import apiClient from '../services/api';
+import './EvaluationSheet3.css';
+
+const EvaluationSheet3 = () => {
+  const [data, setData] = useState([]);
+  const [gradeIncrements, setGradeIncrements] = useState({});
+  const [availableGrades, setAvailableGrades] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient.get('/evaluation/sheet3');
+      if (res.success) {
+        setData(res.data || []);
+        setAvailableGrades(res.availableGrades || []);
+        
+        // Convert array to object mapping
+        const incMap = {};
+        (res.gradeIncrements || []).forEach(item => {
+          incMap[item.grade] = item.increment_percentage;
+        });
+        setGradeIncrements(incMap);
+      }
+    } catch (err) {
+      showToast('Error loading Sheet 3 data', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleIncChange = (grade, value) => {
+    setGradeIncrements(prev => ({ ...prev, [grade]: value }));
+  };
+
+  const applyIncrements = async () => {
+    try {
+      setLoading(true);
+      // 1. Save mappings
+      const incArray = Object.entries(gradeIncrements).map(([grade, percentage]) => ({
+        grade,
+        increment_percentage: percentage
+      }));
+      await apiClient.post('/evaluation/grade-increments', { increments: incArray });
+      
+      // 2. Apply to all
+      const res = await apiClient.post('/evaluation/apply-increments');
+      if (res.success) {
+        showToast('Increments applied successfully');
+        fetchData();
+      }
+    } catch {
+      showToast('Error applying increments', 'error');
+      setLoading(false);
+    }
+  };
+
+  if (loading) return <div className="eval3-loading">Loading Sheet 3...</div>;
+
+  return (
+    <div className="eval3-container">
+      {toast && <div className={`eval3-toast eval3-toast--${toast.type}`}>{toast.message}</div>}
+
+      <div className="eval3-header">
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+          <div>
+            <h1>Evaluation — Sheet 3</h1>
+            <p>Grade-based Salary Increments Summary</p>
+          </div>
+          <Link to="/dofa/sheet2" className="back-btn">
+            &larr; Back to Sheet 2
+          </Link>
+        </div>
+      </div>
+
+      <div className="eval3-inc-config">
+        <h2>Set Increment Percentage by Grade</h2>
+        {availableGrades.length === 0 ? (
+          <p style={{color: '#ef4444'}}>No grades found in Sheet 2. Please finalize grades in Sheet 2 first.</p>
+        ) : (
+          <>
+            <div className="inc-rules-grid">
+              {availableGrades.map(grade => (
+                <div key={grade} className="inc-rule-card">
+                  <label>Grade {grade}</label>
+                  <div className="inc-input-wrapper">
+                    <input 
+                      type="number" 
+                      className="inc-input"
+                      placeholder="%"
+                      value={gradeIncrements[grade] || ''}
+                      onChange={(e) => handleIncChange(grade, e.target.value)}
+                    />
+                    <span>%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="apply-inc-btn" onClick={applyIncrements}>Apply Increments to All Faculty</button>
+          </>
+        )}
+      </div>
+
+      <div className="eval3-table-wrapper">
+        <table className="eval3-table">
+          <thead>
+            <tr>
+              <th>S.No</th>
+              <th>Faculty Name</th>
+              <th>Department</th>
+              <th>Total Score</th>
+              <th>Grade</th>
+              <th>Increment %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item, idx) => (
+              <tr key={item.submission_id}>
+                <td>{idx + 1}</td>
+                <td style={{fontWeight: 600}}>{item.faculty_name}</td>
+                <td>{item.department}</td>
+                <td style={{textAlign: 'center'}}>{item.total_score || 0}</td>
+                <td className="eval3-grade">{item.final_grade || '—'}</td>
+                <td className="eval3-increment">
+                  {item.increment_percentage ? `${item.increment_percentage}%` : '0%'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default EvaluationSheet3;
