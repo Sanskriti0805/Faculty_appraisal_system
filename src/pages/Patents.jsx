@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Save, Upload, ExternalLink } from 'lucide-react'
+import { Upload, ExternalLink } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import { patentsService } from '../services/patentsService'
+import FormActions from '../components/FormActions'
 
 const Patents = ({ initialData, readOnly }) => {
   const [formData, setFormData] = useState({
@@ -87,16 +89,17 @@ const Patents = ({ initialData, readOnly }) => {
 
       if (promises.length === 0) {
         alert('Please fill at least one patent field')
-        return
+        return false
       }
 
       await Promise.all(promises)
 
       alert('Data saved successfully!')
-      console.log('Saved patents to database')
+      return true
     } catch (error) {
       console.error('Error saving patents:', error)
       alert('Error saving data: ' + (error.response?.data?.message || error.message))
+      return false
     } finally {
       setLoading(false)
     }
@@ -110,10 +113,6 @@ const Patents = ({ initialData, readOnly }) => {
             <h1 className="page-title">Patents</h1>
             <p className="page-subtitle">Section 12: Patents Information</p>
           </div>
-          <button className="save-button" onClick={handleSave} disabled={loading}>
-            <Save size={18} />
-            {loading ? 'Saving...' : 'Save Changes'}
-          </button>
         </div>
       )}
 
@@ -312,9 +311,11 @@ const Patents = ({ initialData, readOnly }) => {
           </div>
         </div>
       </div>
+      {!readOnly && (
+        <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
+      )}
     </div>
   )
 }
-
 
 export default Patents

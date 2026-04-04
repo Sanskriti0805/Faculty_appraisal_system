@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { Trash2, Plus } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import './ConferencesOutside.css'
+import FormActions from '../components/FormActions'
 
 const ConferencesOutside = () => {
   const initialState = {
@@ -39,16 +41,22 @@ const ConferencesOutside = () => {
     }))
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  const handleSave = async (e) => {
+    if (e && e.preventDefault) e.preventDefault()
     // Submit both the previously added conferences and the current one (if filled)
     const allConferences = [...submittedConferences]
     if (formData.eventTitle) {
       allConferences.push(formData)
     }
 
+    if (allConferences.length === 0) {
+      alert('Please add at least one conference')
+      return false
+    }
+
     console.log('All Conferences Data:', allConferences)
     alert('All data saved successfully!')
+    return true
   }
 
   const handleAddConference = (e) => {
@@ -77,7 +85,7 @@ const ConferencesOutside = () => {
       </div>
 
       <div className="form-card">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSave}>
           {/* Row 1 */}
           <div className="form-row">
             <div className="form-group">
@@ -225,7 +233,6 @@ const ConferencesOutside = () => {
           </div>
 
           <div className="form-actions">
-            <button type="submit" className="btn-submit">Submit</button>
             <button type="button" className="btn-secondary" onClick={handleAddConference}>
               <Plus size={18} />
               Add Conference
@@ -258,6 +265,7 @@ const ConferencesOutside = () => {
 
         </form>
       </div>
+      <FormActions onSave={handleSave} currentPath={window.location.pathname} />
     </div>
   )
 }

@@ -8,6 +8,22 @@ const Sidebar = () => {
   const [partAOpen, setPartAOpen] = useState(true)
   const [partBOpen, setPartBOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState({})
+  const [dynamicSections, setDynamicSections] = useState([])
+
+  React.useEffect(() => {
+    const fetchDynamicSections = async () => {
+      try {
+        const response = await fetch(`http://${window.location.hostname}:5000/api/form-builder/schema`);
+        const data = await response.json();
+        if (data.success) {
+          setDynamicSections(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching dynamic sections:', error);
+      }
+    };
+    fetchDynamicSections();
+  }, []);
 
   const isDOFARoute = location.pathname.startsWith('/dofa') || location.pathname.startsWith('/dofa-office')
 
@@ -57,6 +73,9 @@ const Sidebar = () => {
         { name: 'Your teaching plan and preferences for next three years', path: '/teaching-plan' },
       ]
     },
+    ...dynamicSections
+      .filter(s => s.form_type === 'A' && s.is_active)
+      .map(s => ({ name: s.title, path: `/faculty/dynamic/${s.id}` }))
   ]
 
   // DOFA-specific sidebar
@@ -67,6 +86,7 @@ const Sidebar = () => {
       { name: 'Sheet 1 — Evaluation', path: '/dofa/sheet1' },
       { name: 'Sheet 2', path: '/dofa/sheet2' },
       { name: 'Sheet 3', path: '/dofa/sheet3' },
+      { name: 'Form Builder', path: '/dofa-office/form-builder' },
     ]
 
     return (
@@ -81,7 +101,7 @@ const Sidebar = () => {
         <nav className="sidebar-nav">
           <div className="nav-section">
             <div className="nav-section-header" style={{ cursor: 'default' }}>
-              <span>DOFA</span>
+              <span>{location.pathname.startsWith('/dofa-office') ? 'DOFA OFFICE' : 'DOFA'}</span>
             </div>
             <div className="nav-section-items">
               {dofaNavItems.map(item => (
@@ -182,6 +202,17 @@ const Sidebar = () => {
               >
                 Part B Content
               </Link>
+              {dynamicSections
+                .filter(s => s.form_type === 'B' && s.is_active)
+                .map(s => (
+                  <Link
+                    key={s.id}
+                    to={`/faculty/dynamic/${s.id}`}
+                    className={`nav-item ${location.pathname === `/faculty/dynamic/${s.id}` ? 'active' : ''}`}
+                  >
+                    {s.title}
+                  </Link>
+                ))}
             </div>
           )}
         </div>

@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { autoAllocateMarks } = require('../services/rubricMapper');
 
 // Get all submissions with filters
 exports.getAllSubmissions = async (req, res) => {
@@ -193,6 +194,20 @@ exports.updateSubmissionStatus = async (req, res) => {
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+
+    // Trigger auto-allocation if status is 'submitted'
+    if (status === 'submitted') {
+      try {
+        // Get faculty_id and academic_year for the submission
+        const [subDetails] = await db.query('SELECT faculty_id, academic_year FROM submissions WHERE id = ?', [id]);
+        if (subDetails.length > 0) {
+          const { faculty_id, academic_year } = subDetails[0];
+          await autoAllocateMarks(id, faculty_id, academic_year);
+        }
+      } catch (err) {
+        console.error('Failed to trigger auto-allocation:', err);
+      }
     }
 
     res.json({ success: true, message: 'Submission status updated successfully' });

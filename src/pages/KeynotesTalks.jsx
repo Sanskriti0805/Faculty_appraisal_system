@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { Calendar, Plus, Trash2 } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './KeynotesTalks.css'
+import FormActions from '../components/FormActions'
 
 const KeynotesTalks = () => {
   const initialState = {
@@ -50,8 +52,8 @@ const KeynotesTalks = () => {
 
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSave = async (e) => {
+    if (e && e.preventDefault) e.preventDefault()
 
     setLoading(true)
     try {
@@ -63,7 +65,7 @@ const KeynotesTalks = () => {
 
       if (allTalks.length === 0) {
         alert('Please add at least one talk')
-        return
+        return false
       }
 
       const promises = allTalks.map(talk => {
@@ -88,9 +90,11 @@ const KeynotesTalks = () => {
       alert('Data saved successfully!')
       setSubmittedTalks([])
       setFormData(initialState)
+      return true
     } catch (error) {
       console.error('Error saving talks:', error)
       alert('Error saving data: ' + error.message)
+      return false
     } finally {
       setLoading(false)
     }
@@ -127,7 +131,7 @@ const KeynotesTalks = () => {
       </div>
 
       <div className="form-card">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSave}>
 
           {/* Row 1: Category & Title */}
           <div className="form-row">
@@ -236,7 +240,6 @@ const KeynotesTalks = () => {
           </div>
 
           <div className="form-actions">
-            <button type="submit" className="btn-submit">Submit</button>
             <button type="button" className="btn-add-talk" onClick={handleAddTalk}>
               <Plus size={18} />
               Add Talk
@@ -269,6 +272,7 @@ const KeynotesTalks = () => {
 
         </form>
       </div>
+      <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
     </div>
   )
 }

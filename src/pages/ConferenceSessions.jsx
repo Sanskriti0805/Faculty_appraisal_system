@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { Trash2, Plus } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './ConferenceSessions.css'
+import FormActions from '../components/FormActions'
 
 const ConferenceSessions = () => {
   const initialState = {
@@ -51,8 +53,8 @@ const ConferenceSessions = () => {
 
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSave = async (e) => {
+    if (e && e.preventDefault) e.preventDefault()
 
     setLoading(true)
     try {
@@ -64,7 +66,7 @@ const ConferenceSessions = () => {
 
       if (allSessions.length === 0) {
         alert('Please add at least one session')
-        return
+        return false
       }
 
       const promises = allSessions.map(session => {
@@ -89,9 +91,11 @@ const ConferenceSessions = () => {
       alert('Data saved successfully!')
       setSubmittedSessions([])
       setFormData(initialState)
+      return true
     } catch (error) {
       console.error('Error saving sessions:', error)
       alert('Error saving data: ' + error.message)
+      return false
     } finally {
       setLoading(false)
     }
@@ -123,7 +127,7 @@ const ConferenceSessions = () => {
       </div>
 
       <div className="form-card">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSave}>
           {/* Row 1 */}
           <div className="form-row">
             <div className="form-group">
@@ -259,7 +263,6 @@ const ConferenceSessions = () => {
           </div>
 
           <div className="form-actions">
-            <button type="submit" className="btn-submit">Submit</button>
             <button type="button" className="btn-add-conference" onClick={handleAddConference}>
               <Plus size={18} />
               Add Conference
@@ -292,6 +295,7 @@ const ConferenceSessions = () => {
 
         </form>
       </div>
+      <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
     </div>
   )
 }

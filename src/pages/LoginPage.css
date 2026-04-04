@@ -1,0 +1,247 @@
+/* Login Page Styles - LNMIIT Faculty Appraisal System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f4f6f9;
+  font-family: 'Inter', sans-serif;
+  padding: 24px;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 440px;
+}
+
+/* Logo section */
+.login-logo-section {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-logo {
+  height: 72px;
+  width: auto;
+  margin-bottom: 4px;
+}
+
+.login-logo-fallback {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.login-logo-text {
+  font-size: 36px;
+  font-weight: 800;
+  color: #1e3a5f;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.login-logo-text span {
+  color: #c05621;
+}
+
+.login-logo-subtitle {
+  font-size: 11px;
+  color: #718096;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 16px 0 4px;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: #718096;
+  margin: 0;
+}
+
+/* Card */
+.login-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 36px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e8ecf0;
+}
+
+/* Form groups */
+.login-field {
+  margin-bottom: 20px;
+}
+
+.login-field-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4a5568;
+  margin-bottom: 8px;
+}
+
+.login-field-label svg {
+  color: #a0aec0;
+}
+
+.login-input,
+.login-select {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #2d3748;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.login-input:focus,
+.login-select:focus {
+  border-color: #2c5282;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(44, 82, 130, 0.1);
+}
+
+.login-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a0aec0' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+/* Password field */
+.login-password-wrapper {
+  position: relative;
+}
+
+.login-password-wrapper .login-input {
+  padding-right: 44px;
+}
+
+.login-password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #a0aec0;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.login-password-toggle:hover {
+  color: #4a5568;
+}
+
+/* Error */
+.login-error {
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #c53030;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Submit button */
+.login-submit-btn {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+  margin-top: 4px;
+}
+
+.login-submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2c5282 0%, #2b6cb0 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(44, 82, 130, 0.3);
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Forgot password */
+.login-forgot {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.login-forgot a {
+  font-size: 13px;
+  color: #c05621;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.login-forgot a:hover {
+  color: #9c4221;
+  text-decoration: underline;
+}
+
+/* Footer */
+.login-footer {
+  text-align: center;
+  margin-top: 28px;
+  font-size: 12px;
+  color: #a0aec0;
+  line-height: 1.6;
+}
+
+/* Divider */
+.login-divider {
+  height: 1px;
+  background: #edf2f7;
+  margin: 20px 0;
+}
+
+/* Loading spinner inside button */
+.btn-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

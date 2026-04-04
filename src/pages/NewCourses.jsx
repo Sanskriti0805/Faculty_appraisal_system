@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
-import { Save, Plus, Trash2, Upload } from 'lucide-react'
+import { Plus, Trash2, Upload } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import { coursesService } from '../services/coursesService'
+import FormActions from '../components/FormActions'
 
 const NewCourses = () => {
   const [ugProgram, setUgProgram] = useState('')
@@ -122,9 +124,11 @@ const NewCourses = () => {
       
       alert('Data saved successfully!')
       console.log('Saved courses to database')
+      return true
     } catch (error) {
       console.error('Error saving courses:', error)
       alert('Error saving data: ' + (error.response?.data?.message || error.message))
+      return false
     } finally {
       setLoading(false)
     }
@@ -282,10 +286,6 @@ const NewCourses = () => {
           <h1 className="page-title">New Courses Developed</h1>
           <p className="page-subtitle">Section 6: New Courses Developed</p>
         </div>
-        <button className="save-button" onClick={handleSave} disabled={loading}>
-          <Save size={18} />
-          {loading ? 'Saving...' : 'Save Changes'}
-        </button>
       </div>
 
       <div className="form-card">
@@ -299,6 +299,8 @@ const NewCourses = () => {
       <div className="form-card">
         {renderCourseTable('doctoral', doctoralCourses, false, [], '', null, doctoralLevelOptions)}
       </div>
+
+      <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
     </div>
   )
 }

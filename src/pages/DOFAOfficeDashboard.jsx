@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Unlock, Mail, Download, Users, FileText, Clock, CheckSquare } from 'lucide-react';
+import { Lock, Unlock, Mail, Download, Users, FileText, Clock, CheckSquare, Layout } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import './DOFAOfficeDashboard.css';
 
 const API = `http://${window.location.hostname}:5000/api`;
@@ -150,10 +151,16 @@ const DOFAOfficeDashboard = () => {
           <h1 className="dashboard-title">DOFA Office Dashboard</h1>
           <p className="dashboard-subtitle">Administrative management and support</p>
         </div>
-        <button className="export-btn" onClick={handleExportCSV}>
-          <Download size={18} />
-          Export CSV
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <Link to="/dofa-office/form-builder" className="export-btn" style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}>
+            <Layout size={18} />
+            Form Builder
+          </Link>
+          <button className="export-btn" onClick={handleExportCSV}>
+            <Download size={18} />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Statistics Cards */}

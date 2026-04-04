@@ -1,8 +1,11 @@
 import React, { useState } from 'react'
-import { Edit2, Save } from 'lucide-react'
+import { Edit2 } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FacultyInformation.css'
+import FormActions from '../components/FormActions'
 
 const FacultyInformation = () => {
+  const location = useLocation()
   const [isEditing, setIsEditing] = useState(false)
   const [facultyData, setFacultyData] = useState({
     name: 'Dr. John Smith',
@@ -15,25 +18,26 @@ const FacultyInformation = () => {
     setFacultyData({ ...facultyData, [field]: value })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsEditing(false)
     console.log('Saving data:', facultyData)
-    alert('Data saved successfully!')
+    // simulate delay
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        alert('Data saved successfully!')
+        resolve(true)
+      }, 500)
+    })
   }
 
   return (
     <div className="faculty-information">
       <div className="page-header">
         <h1 className="page-title">Faculty Information</h1>
-        {!isEditing ? (
+        {!isEditing && (
           <button className="edit-profile-button" onClick={() => setIsEditing(true)}>
             <Edit2 size={18} />
             Edit Profile
-          </button>
-        ) : (
-          <button className="edit-profile-button" onClick={handleSave}>
-            <Save size={18} />
-            Save Changes
           </button>
         )}
       </div>
@@ -95,6 +99,22 @@ const FacultyInformation = () => {
           </div>
         </div>
       </div>
+
+      {isEditing && (
+        <FormActions 
+          onSave={handleSave} 
+          currentPath={location.pathname} 
+          showPrevious={false}
+        />
+      )}
+      
+      {!isEditing && (
+        <FormActions 
+          onSave={() => Promise.resolve(true)} 
+          currentPath={location.pathname} 
+          showPrevious={false}
+        />
+      )}
     </div>
   )
 }

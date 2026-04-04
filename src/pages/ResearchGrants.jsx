@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react'
+import { Plus, Trash2, ExternalLink, Upload } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './CoursesTaught.css'
 import { grantsService } from '../services/grantsService'
+import FormActions from '../components/FormActions'
 
 const ResearchGrants = ({ initialData, readOnly }) => {
   const [selectedType, setSelectedType] = useState('')
@@ -137,7 +140,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
   const handleSave = async () => {
     if (!selectedType) {
       alert('Please select a type first')
-      return
+      return false
     }
 
     setLoading(true)
@@ -191,10 +194,11 @@ const ResearchGrants = ({ initialData, readOnly }) => {
       }
 
       alert('Data saved successfully!')
-      console.log(`Saved ${selectedType} to database`)
+      return true
     } catch (error) {
       console.error(`Error saving ${selectedType}:`, error)
       alert('Error saving data: ' + (error.response?.data?.message || error.message))
+      return false
     } finally {
       setLoading(false)
     }
@@ -208,10 +212,6 @@ const ResearchGrants = ({ initialData, readOnly }) => {
             <h1 className="page-title">External Sponsored Research & Development Grants received/submitted during this Academic Session</h1>
             <p className="page-subtitle">External Sponsored Research Grants & Submitted Proposals</p>
           </div>
-          <button className="save-button" onClick={handleSave} disabled={loading}>
-            <Save size={18} />
-            {loading ? 'Saving...' : 'Save Changes'}
-          </button>
         </div>
       )}
 
@@ -452,13 +452,15 @@ const ResearchGrants = ({ initialData, readOnly }) => {
           <div className="semester-section">
             <div className="semester-header">
               <h3>Submitted Research Proposals</h3>
-              <button
-                className="add-course-btn"
-                onClick={addProposal}
-              >
-                <Plus size={18} />
-                Add Proposal
-              </button>
+              {!readOnly && (
+                <button
+                  className="add-course-btn"
+                  onClick={addProposal}
+                >
+                  <Plus size={18} />
+                  Add Proposal
+                </button>
+              )}
             </div>
 
             <div className="table-container">
@@ -643,7 +645,15 @@ const ResearchGrants = ({ initialData, readOnly }) => {
           </div>
         )
       }
-    </div >
+
+      {selectedType && !readOnly && (
+        <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
+      )}
+
+      {!selectedType && !readOnly && (
+        <FormActions onSave={() => Promise.resolve(true)} currentPath={window.location.pathname} />
+      )}
+    </div>
   )
 }
 

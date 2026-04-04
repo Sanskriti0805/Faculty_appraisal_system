@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
-import { Save, Upload } from 'lucide-react'
+import { Upload } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
+import FormActions from '../components/FormActions'
 
 const TechnologyTransfer = () => {
   const [formData, setFormData] = useState({
@@ -17,7 +19,7 @@ const TechnologyTransfer = () => {
   const handleSave = async () => {
     if (!formData.technologyInfo.trim()) {
       alert('Please enter technology details')
-      return
+      return false
     }
 
     setLoading(true)
@@ -42,12 +44,14 @@ const TechnologyTransfer = () => {
       const data = await response.json()
       if (data.success) {
         alert('Data saved successfully!')
+        return true
       } else {
         throw new Error(data.message || 'Failed to save')
       }
     } catch (error) {
       console.error('Error saving tech transfer:', error)
       alert('Error saving data: ' + error.message)
+      return false
     } finally {
       setLoading(false)
     }
@@ -60,10 +64,6 @@ const TechnologyTransfer = () => {
           <h1 className="page-title">Technology Developed/Transferred</h1>
           <p className="page-subtitle">Section 13: Technology Developed/Transferred, if any</p>
         </div>
-        <button className="save-button" onClick={handleSave}>
-          <Save size={18} />
-          Save Changes
-        </button>
       </div>
 
       <div className="form-card">
@@ -116,7 +116,8 @@ const TechnologyTransfer = () => {
             </div>
           </div>
         </div>
-      </div>
+        <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
+    </div>
     </div>
   )
 }

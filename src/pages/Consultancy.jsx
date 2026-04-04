@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Save, Upload, Plus, Trash2, ExternalLink } from 'lucide-react'
+import { Upload, Plus, Trash2, ExternalLink } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
+import FormActions from '../components/FormActions'
 
 const Consultancy = ({ initialData, readOnly }) => {
   const [loading, setLoading] = useState(false)
@@ -71,7 +73,7 @@ const Consultancy = ({ initialData, readOnly }) => {
   }
 
   const handleSave = async () => {
-    if (readOnly) return;
+    if (readOnly) return true;
     setLoading(true);
     try {
       const facultyId = 1; // TODO: Actual faculty ID
@@ -89,7 +91,7 @@ const Consultancy = ({ initialData, readOnly }) => {
           formData.append('evidence_file', c.evidenceFile);
         }
 
-        return fetch('http://localhost:5000/api/consultancy', {
+        return fetch(`http://${window.location.hostname}:5000/api/consultancy`, {
           method: 'POST',
           body: formData
         });
@@ -97,9 +99,11 @@ const Consultancy = ({ initialData, readOnly }) => {
 
       await Promise.all(promises);
       alert('Data saved successfully!');
+      return true
     } catch (error) {
       console.error('Error saving consultancy:', error);
       alert('Failed to save data. Error: ' + error.message);
+      return false
     } finally {
       setLoading(false);
     }
@@ -108,7 +112,7 @@ const Consultancy = ({ initialData, readOnly }) => {
   const renderEvidenceCell = (consultancy) => {
     if (readOnly) {
       if (consultancy.evidence_file) {
-        const baseUrl = `http://${window.location.hostname}:5001`;
+        const baseUrl = `http://${window.location.hostname}:5000`;
         return (
           <a
             href={`${baseUrl}/uploads/${consultancy.evidence_file}`}
@@ -147,10 +151,6 @@ const Consultancy = ({ initialData, readOnly }) => {
             <h1 className="page-title">Consultancy, if any (Please provide details.)</h1>
             <p className="page-subtitle">Section 20</p>
           </div>
-          <button className="save-button" onClick={handleSave} disabled={loading}>
-            <Save size={18} />
-            {loading ? 'Saving...' : 'Save Changes'}
-          </button>
         </div>
       )}
 
@@ -277,7 +277,10 @@ const Consultancy = ({ initialData, readOnly }) => {
             Add Row
           </button>
         )}
-      </div>
+        {!readOnly && (
+        <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
+      )}
+    </div>
     </div>
   )
 }

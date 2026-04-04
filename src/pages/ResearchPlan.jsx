@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { Save } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
+import FormActions from '../components/FormActions'
 
 const ResearchPlan = () => {
   const [formData, setFormData] = useState({
@@ -11,9 +12,10 @@ const ResearchPlan = () => {
     setFormData({ researchPlan: value })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     console.log('Saving data:', formData)
     alert('Data saved successfully!')
+    return true
   }
 
   return (
@@ -23,10 +25,6 @@ const ResearchPlan = () => {
           <h1 className="page-title">Your research plan for next three years, if available</h1>
           <p className="page-subtitle">Section 23</p>
         </div>
-        <button className="save-button" onClick={handleSave}>
-          <Save size={18} />
-          Save Changes
-        </button>
       </div>
 
       <div className="form-card">
@@ -41,7 +39,8 @@ const ResearchPlan = () => {
             />
           </div>
         </div>
-      </div>
+        <FormActions onSave={handleSave} currentPath={window.location.pathname} />
+    </div>
     </div>
   )
 }

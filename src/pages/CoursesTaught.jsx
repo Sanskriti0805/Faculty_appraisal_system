@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Save, Upload, FileText, X, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, Upload, FileText, X, ExternalLink } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import apiClient from '../services/api';
 import './CoursesTaught.css'
+import FormActions from '../components/FormActions'
 
 const CoursesTaught = ({ initialData, readOnly }) => {
   const [selectedSection, setSelectedSection] = useState('courses')
@@ -143,7 +145,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
   }
 
   const handleSave = async () => {
-    if (readOnly) return;
+    if (readOnly) return false;
     try {
       // Save Courses
       const allCourses = [
@@ -166,9 +168,11 @@ const CoursesTaught = ({ initialData, readOnly }) => {
       }
 
       alert('Data saved successfully!');
+      return true;
     } catch (error) {
       console.error('Error saving courses:', error);
       alert('Failed to save data. Please check if all numeric fields are valid.');
+      return false;
     }
   }
 
@@ -420,10 +424,6 @@ const CoursesTaught = ({ initialData, readOnly }) => {
             <h1 className="page-title">Courses Taught & Projects Guided</h1>
             <p className="page-subtitle">{getSectionTitle()}</p>
           </div>
-          <button className="save-button" onClick={handleSave}>
-            <Save size={18} />
-            Save Changes
-          </button>
         </div>
       )}
 
@@ -457,6 +457,13 @@ const CoursesTaught = ({ initialData, readOnly }) => {
       </div>
 
       {renderTable(selectedSemester, getCurrentItems(), getSemesterLabel())}
+      
+      {!readOnly && (
+        <FormActions 
+          onSave={handleSave} 
+          currentPath={window.location.pathname} 
+        />
+      )}
     </div>
   )
 }

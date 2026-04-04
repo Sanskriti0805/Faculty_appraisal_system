@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Save, Upload, ExternalLink } from 'lucide-react'
+import { Upload, ExternalLink } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
+import FormActions from '../components/FormActions'
 
 const TeachingInnovation = ({ initialData, readOnly }) => {
   const [formData, setFormData] = useState({
@@ -68,9 +70,11 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
       ])
 
       alert('Data saved successfully!')
+      return true
     } catch (error) {
       console.error('Error saving innovation:', error)
       alert('Failed to save data. Error: ' + error.message)
+      return false
     } finally {
       setLoading(false)
     }
@@ -84,10 +88,6 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
             <h1 className="page-title">Any effective or successful innovation in terms of teaching-learning</h1>
             <p className="page-subtitle">Section 8</p>
           </div>
-          <button className="save-button" onClick={handleSave} disabled={loading}>
-            <Save size={18} />
-            {loading ? 'Saving...' : 'Save Changes'}
-          </button>
         </div>
       )}
 
@@ -262,6 +262,13 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
           </div>
         </div>
       </div>
+      {!readOnly && (
+        <FormActions 
+          onSave={handleSave} 
+          currentPath={window.location.pathname} 
+          loading={loading}
+        />
+      )}
     </div>
   )
 }

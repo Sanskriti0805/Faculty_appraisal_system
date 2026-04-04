@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { Save } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
+import FormActions from '../components/FormActions'
 
 const TeachingPlan = () => {
   const [formData, setFormData] = useState({
@@ -14,9 +15,10 @@ const TeachingPlan = () => {
     setFormData({ ...formData, [field]: value })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     console.log('Saving data:', formData)
     alert('Data saved successfully!')
+    return true
   }
 
   return (
@@ -26,10 +28,6 @@ const TeachingPlan = () => {
           <h1 className="page-title">Your teaching plan and preferences for next three years</h1>
           <p className="page-subtitle">Section 24</p>
         </div>
-        <button className="save-button" onClick={handleSave}>
-          <Save size={18} />
-          Save Changes
-        </button>
       </div>
 
       <div className="form-card">
@@ -114,7 +112,7 @@ const TeachingPlan = () => {
             <div className="form-field-vertical" style={{ gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <label style={{ minWidth: '180px', fontWeight: 500 }}>Employee No.</label>
-                <input type="text" style={{ flex: 1, padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '4px', borderBottom: '1px solid #000', borderTop: 'none', borderLeft: 'none', borderRight: 'none', borderRadius: 0 }} />
+                <input type="text" style={{ flex: 1, padding: '0.5rem', border: '1px solid #e2e8f0', borderBottom: '1px solid #000', borderTop: 'none', borderLeft: 'none', borderRight: 'none', borderRadius: 0 }} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <label style={{ minWidth: '180px', fontWeight: 500 }}>LNMIIT Email:</label>
@@ -146,7 +144,8 @@ const TeachingPlan = () => {
             <p>The last date for submitting the filled application form is August 31, 2023.</p>
           </div>
         </div>
-      </div>
+        <FormActions onSave={handleSave} currentPath={window.location.pathname} />
+    </div>
     </div>
   )
 }

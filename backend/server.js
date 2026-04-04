@@ -31,6 +31,9 @@ const goalsRoutes = require('./routes/goalsRoutes');
 const innovationRoutes = require('./routes/innovationRoutes');
 const consultancyRoutes = require('./routes/consultancyRoutes');
 const activityRoutes = require('./routes/activityRoutes');
+const formBuilderRoutes = require('./routes/formBuilderRoutes');
+const authRoutes = require('./routes/authRoutes');
+const registrationRoutes = require('./routes/registrationRoutes');
 
 // API Routes
 app.use('/api/faculty', facultyRoutes);
@@ -49,6 +52,9 @@ app.use('/api/goals', goalsRoutes);
 app.use('/api/innovation', innovationRoutes);
 app.use('/api/consultancy', consultancyRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api/form-builder', formBuilderRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/register', registrationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

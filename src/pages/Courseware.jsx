@@ -1,8 +1,11 @@
 import React, { useState } from 'react'
-import { Save, Upload, FileText, X } from 'lucide-react'
+import { Upload, FileText, X } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
+import FormActions from '../components/FormActions'
 
 const Courseware = () => {
+  const location = useLocation()
   const [formData, setFormData] = useState({
     type: '',
     courseware: '',
@@ -14,9 +17,15 @@ const Courseware = () => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     console.log('Saving data:', formData)
-    alert('Data saved successfully!')
+    // simulate delay
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        alert('Data saved successfully!')
+        resolve(true)
+      }, 500)
+    })
   }
 
   return (
@@ -26,10 +35,6 @@ const Courseware = () => {
           <h1 className="page-title">Courseware / Course Material / Laboratory Manual Developed / Text-Books / Course Notes Published</h1>
           <p className="page-subtitle">Section 7</p>
         </div>
-        <button className="save-button" onClick={handleSave}>
-          <Save size={18} />
-          Save Changes
-        </button>
       </div>
 
       <div className="form-card">
@@ -110,6 +115,8 @@ const Courseware = () => {
           )}
         </div>
       </div>
+
+      <FormActions onSave={handleSave} currentPath={location.pathname} />
     </div>
   )
 }

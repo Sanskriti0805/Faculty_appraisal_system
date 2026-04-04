@@ -1,16 +1,17 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import Header from './Header'
 import Sidebar from './Sidebar'
+import { useAuth } from '../context/AuthContext'
 import './Layout.css'
 
 const Layout = () => {
   const navigate = useNavigate()
+  const { logout } = useAuth()
 
   const handleLogout = () => {
-    // Add logout logic here
-    alert('Logging out...')
-    // navigate('/login')
+    logout()
+    navigate('/login')
   }
 
   return (
@@ -27,4 +28,3 @@ const Layout = () => {
 }
 
 export default Layout
-

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Save, Plus, Trash2, Upload, FileText } from 'lucide-react'
+import { Plus, Trash2, Upload, FileText } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
+import FormActions from '../components/FormActions'
 import { awardsService } from '../services/awardsService'
 
 const AwardsHonours = ({ initialData, readOnly }) => {
@@ -94,8 +96,8 @@ const AwardsHonours = ({ initialData, readOnly }) => {
   }
 
   const handleViewEvidence = (filename) => {
-    // Force port 5001 for backend uploads
-    window.open(`http://${window.location.hostname}:5000/uploads/${filename}`, '_blank')
+    const baseUrl = `http://${window.location.hostname}:5000`;
+    window.open(`${baseUrl}/uploads/${filename}`, '_blank')
   }
 
   return (
@@ -334,6 +336,9 @@ const AwardsHonours = ({ initialData, readOnly }) => {
           </div>
         )}
       </div>
+      {!readOnly && (
+        <FormActions onSave={async () => true} currentPath={window.location.pathname} />
+      )}
     </div>
   )
 }

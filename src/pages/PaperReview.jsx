@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
-import { Save, Upload } from 'lucide-react'
+import { Upload } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
+import FormActions from '../components/FormActions'
 import { reviewsService } from '../services/reviewsService'
 
 const PaperReview = () => {
@@ -19,7 +21,7 @@ const PaperReview = () => {
   const handleSave = async () => {
     if (!formData.reviewDetails.trim()) {
       alert('Please enter review details')
-      return
+      return false
     }
 
     setLoading(true)
@@ -46,12 +48,14 @@ const PaperReview = () => {
       const data = await response.json()
       if (data.success) {
         alert('Data saved successfully!')
+        return true
       } else {
         throw new Error(data.message || 'Failed to save')
       }
     } catch (error) {
       console.error('Error saving review:', error)
       alert('Error saving data: ' + error.message)
+      return false
     } finally {
       setLoading(false)
     }
@@ -64,10 +68,6 @@ const PaperReview = () => {
           <h1 className="page-title">Review of research papers for Tier-1/2 refereed internal research journals (please provide details in bullet points)</h1>
           <p className="page-subtitle">Section 14</p>
         </div>
-        <button className="save-button" onClick={handleSave} disabled={loading}>
-          <Save size={18} />
-          {loading ? 'Saving...' : 'Save Changes'}
-        </button>
       </div>
 
       <div className="form-card">
@@ -140,7 +140,8 @@ const PaperReview = () => {
             </div>
           </div>
         </div>
-      </div>
+        <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
+    </div>
     </div>
   )
 }

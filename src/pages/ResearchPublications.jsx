@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Save, Plus, X, Upload, ExternalLink } from 'lucide-react'
+import { Plus, X, Upload, ExternalLink } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import { publicationsService } from '../services/publicationsService'
+import FormActions from '../components/FormActions'
 
 const ResearchPublications = ({ initialData, readOnly }) => {
   const [publicationType, setPublicationType] = useState('')
@@ -104,7 +106,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     publicationAgency: ''
   })
 
-  const [bookEntries, setBookEntries] = useState([
+  const [bookChapterEntries, setBookChapterEntries] = useState([
     {
       authors: [{ first: '', middle: '', last: '' }],
       yearOfPublication: '2026',
@@ -134,9 +136,9 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
   const addAuthor = (bookIndex = null, textbookIndex = null) => {
     if (bookIndex !== null) {
-      const updatedEntries = [...bookEntries]
+      const updatedEntries = [...bookChapterEntries]
       updatedEntries[bookIndex].authors.push({ first: '', middle: '', last: '' })
-      setBookEntries(updatedEntries)
+      setBookChapterEntries(updatedEntries)
     } else if (textbookIndex !== null) {
       const updatedEntries = [...textbookEntries]
       updatedEntries[textbookIndex].authors.push({ first: '', middle: '', last: '' })
@@ -148,10 +150,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
   const removeAuthor = (index, bookIndex = null, textbookIndex = null) => {
     if (bookIndex !== null) {
-      const updatedEntries = [...bookEntries]
+      const updatedEntries = [...bookChapterEntries]
       if (updatedEntries[bookIndex].authors.length > 1) {
         updatedEntries[bookIndex].authors = updatedEntries[bookIndex].authors.filter((_, i) => i !== index)
-        setBookEntries(updatedEntries)
+        setBookChapterEntries(updatedEntries)
       }
     } else if (textbookIndex !== null) {
       const updatedEntries = [...textbookEntries]
@@ -168,9 +170,9 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
   const updateAuthor = (index, field, value, bookIndex = null, textbookIndex = null) => {
     if (bookIndex !== null) {
-      const updatedEntries = [...bookEntries]
+      const updatedEntries = [...bookChapterEntries]
       updatedEntries[bookIndex].authors[index][field] = value
-      setBookEntries(updatedEntries)
+      setBookChapterEntries(updatedEntries)
     } else if (textbookIndex !== null) {
       const updatedEntries = [...textbookEntries]
       updatedEntries[textbookIndex].authors[index][field] = value
@@ -185,9 +187,9 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
   const addEditor = (bookIndex = null) => {
     if (bookIndex !== null) {
-      const updatedEntries = [...bookEntries]
+      const updatedEntries = [...bookChapterEntries]
       updatedEntries[bookIndex].editors.push({ first: '', middle: '', last: '' })
-      setBookEntries(updatedEntries)
+      setBookChapterEntries(updatedEntries)
     } else {
       setEditors([...editors, { first: '', middle: '', last: '' }])
     }
@@ -195,10 +197,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
   const removeEditor = (index, bookIndex = null) => {
     if (bookIndex !== null) {
-      const updatedEntries = [...bookEntries]
+      const updatedEntries = [...bookChapterEntries]
       if (updatedEntries[bookIndex].editors.length > 1) {
         updatedEntries[bookIndex].editors = updatedEntries[bookIndex].editors.filter((_, i) => i !== index)
-        setBookEntries(updatedEntries)
+        setBookChapterEntries(updatedEntries)
       }
     } else {
       if (editors.length > 1) {
@@ -209,9 +211,9 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
   const updateEditor = (index, field, value, bookIndex = null) => {
     if (bookIndex !== null) {
-      const updatedEntries = [...bookEntries]
+      const updatedEntries = [...bookChapterEntries]
       updatedEntries[bookIndex].editors[index][field] = value
-      setBookEntries(updatedEntries)
+      setBookChapterEntries(updatedEntries)
     } else {
       const updatedEditors = editors.map((editor, i) =>
         i === index ? { ...editor, [field]: value } : editor
@@ -220,8 +222,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     }
   }
 
-  const addBookEntry = () => {
-    setBookEntries([...bookEntries, {
+  const addBookChapterEntry = () => {
+    setBookChapterEntries([...bookChapterEntries, {
       authors: [{ first: '', middle: '', last: '' }],
       yearOfPublication: '2026',
       titleOfBook: '',
@@ -233,16 +235,16 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     }])
   }
 
-  const removeBookEntry = (index) => {
-    if (bookEntries.length > 1) {
-      setBookEntries(bookEntries.filter((_, i) => i !== index))
+  const removeBookChapterEntry = (index) => {
+    if (bookChapterEntries.length > 1) {
+      setBookChapterEntries(bookChapterEntries.filter((_, i) => i !== index))
     }
   }
 
   const updateBookEntryField = (index, field, value) => {
-    const updatedEntries = [...bookEntries]
+    const updatedEntries = [...bookChapterEntries]
     updatedEntries[index][field] = value
-    setBookEntries(updatedEntries)
+    setBookChapterEntries(updatedEntries)
   }
 
   const addTextbookEntry = () => {
@@ -270,58 +272,65 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     setTextbookEntries(updatedEntries)
   }
 
-  const handleSave = async () => {
+  const handleSave = async (e) => {
+    if (e && e.preventDefault) e.preventDefault()
     setLoading(true)
     try {
-      const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
-
-      let publicationData = {
+      const facultyId = 1 // Replace with actual login ID
+      const publicationData = {
         faculty_id: facultyId,
         publication_type: publicationType,
-        authors: authors
+        status: 'submitted'
       }
 
-      // Add type-specific data
       if (publicationType === 'Journal') {
-        publicationData = {
-          ...publicationData,
-          title: journalData.titleOfPaper,
-          quartile: journalData.quartile,
-          year_of_publication: journalData.yearOfPublication,
-          journal_name: journalData.nameOfJournal,
-          volume: journalData.volume,
-          number: journalData.number,
-          pages_from: journalData.pagesFrom,
-          pages_to: journalData.pagesTo,
-          evidence_file: evidenceFile
-        }
+        publicationData.sub_type = 'Journal'
+        publicationData.title = journalData.titleOfPaper
+        publicationData.journal_name = journalData.nameOfJournal
+        publicationData.volume = journalData.volume
+        publicationData.number = journalData.number
+        publicationData.pages_from = journalData.pagesFrom
+        publicationData.pages_to = journalData.pagesTo
+        publicationData.year_of_publication = journalData.yearOfPublication
+        publicationData.quartile = journalData.quartile
+        publicationData.authors = authors
+
+        await publicationsService.createPublication(publicationData)
+        alert('Journal publication saved successfully!')
+        setLoading(false)
+        setPublicationType('') // Reset
+        return true
       } else if (publicationType === 'Conference') {
-        publicationData = {
-          ...publicationData,
-          title: conferenceData.titleOfPaper,
-          conference_name: conferenceData.fullNameOfConference,
-          abbreviation: conferenceData.abbreviation,
-          date_from: conferenceData.dateFrom,
-          date_to: conferenceData.dateTo,
-          type_of_conference: conferenceData.typeOfConference,
-          pages_from: conferenceData.pagesFrom,
-          pages_to: conferenceData.pagesTo,
-          city: conferenceData.city,
-          state: conferenceData.state,
-          country: conferenceData.country,
-          publication_agency: conferenceData.publicationAgency,
-          evidence_file: evidenceFile
-        }
+        publicationData.sub_type = 'Conference'
+        publicationData.title = conferenceData.titleOfPaper
+        publicationData.conference_name = conferenceData.fullNameOfConference
+        publicationData.abbreviation = conferenceData.abbreviation
+        publicationData.date_from = conferenceData.dateFrom
+        publicationData.date_to = conferenceData.dateTo
+        publicationData.type_of_conference = conferenceData.typeOfConference
+        publicationData.pages_from = conferenceData.pagesFrom
+        publicationData.pages_to = conferenceData.pagesTo
+        publicationData.city = conferenceData.city
+        publicationData.state = conferenceData.state
+        publicationData.country = conferenceData.country
+        publicationData.publication_agency = conferenceData.publicationAgency
+        publicationData.authors = authors
+
+        await publicationsService.createPublication(publicationData)
+        alert('Conference publication saved successfully!')
+        setLoading(false)
+        setPublicationType('') // Reset
+        return true
       } else if (publicationType === 'Monographs') {
         publicationData.sub_type = bookSubType
         if (bookSubType === 'Book Chapter') {
           // Save multiple books
-          for (const entry of bookEntries) {
+          for (const entry of bookChapterEntries) {
             const entryData = {
               ...publicationData,
               authors: entry.authors,
               year_of_publication: entry.yearOfPublication,
-              title_of_book: entry.titleOfBook,
+              title: entry.titleOfBook,
               pages_from: entry.pagesFrom,
               pages_to: entry.pagesTo,
               publication_agency: entry.publicationAgency,
@@ -334,7 +343,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           setLoading(false)
           // Reset
           setPublicationType('')
-          setBookEntries([{
+          setBookChapterEntries([{
             authors: [{ first: '', middle: '', last: '' }],
             yearOfPublication: '2026',
             titleOfBook: '',
@@ -342,17 +351,17 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             pagesTo: '',
             publicationAgency: '',
             editors: [{ first: '', middle: '', last: '' }],
-            evidenceFile: null
+            evidence_file: null
           }])
-          return
+          return true
         } else if (bookSubType === 'Book') {
-          // Save multiple textbooks
+          // Save multiple text books
           for (const entry of textbookEntries) {
             const entryData = {
               ...publicationData,
               authors: entry.authors,
-              title_of_book: entry.titleOfBook,
               year_of_publication: entry.yearOfPublication,
+              title: entry.titleOfBook,
               publication_agency: entry.publicationAgency,
               city: entry.city,
               state: entry.state,
@@ -367,33 +376,30 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           setPublicationType('')
           setTextbookEntries([{
             authors: [{ first: '', middle: '', last: '' }],
-            titleOfBook: '',
             yearOfPublication: '2026',
+            titleOfBook: '',
             publicationAgency: '',
             city: '',
             state: '',
             country: '',
             evidenceFile: null
           }])
-          return
+          return true
         }
       } else if (publicationType === 'Any Other') {
+        publicationData.sub_type = 'Other'
         publicationData.details = otherDetails
+
+        await publicationsService.createPublication(publicationData)
+        alert('Other details saved successfully!')
+        setLoading(false)
+        setPublicationType('') // Reset
+        return true
       }
-
-      await publicationsService.createPublication(publicationData)
-
-      alert('Publication saved successfully!')
-      console.log('Saved publication to database')
-
-      // Reset form
-      setPublicationType('')
-      setBookSubType('')
-      setAuthors([{ first: '', middle: '', last: '' }])
-      setEditors([{ first: '', middle: '', last: '' }])
     } catch (error) {
       console.error('Error saving publication:', error)
-      alert('Error saving publication: ' + (error.response?.data?.message || error.message))
+      alert('Failed to save publication. Error: ' + error.message)
+      return false
     } finally {
       setLoading(false)
     }
@@ -1372,8 +1378,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 disabled={readOnly}
               >
                 <option value="">-- Select Sub-Type --</option>
-                <option value="Book Chapter">Book</option>
-                <option value="Book">Textbook Published</option>
+                <option value="Book Chapter">Book Published</option>
+                <option value="Book">Research Monographs / Textbook Published</option>
               </select>
             </div>
           )}
@@ -1384,30 +1390,12 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           {publicationType === 'Conference' && renderConferenceForm()}
           {publicationType === 'Any Other' && renderAnyOtherForm()}
 
-          {!readOnly && ((publicationType === 'Monographs' && bookSubType) || (publicationType && publicationType !== 'Monographs')) && (
-            <button
-              onClick={handleSave}
-              style={{
-                width: '100%',
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#5cb85c',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '500',
-                marginTop: '2rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem'
-              }}
-              disabled={loading}
-            >
-              <Save size={18} />
-              {loading ? 'Saving...' : 'Save Publication'}
-            </button>
+          {publicationType && !readOnly && (
+            <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
+          )}
+
+          {!publicationType && !readOnly && (
+            <FormActions onSave={() => Promise.resolve(true)} currentPath={window.location.pathname} />
           )}
         </div>
       </div>

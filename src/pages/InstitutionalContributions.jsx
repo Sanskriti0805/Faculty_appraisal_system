@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Save, Upload, ExternalLink } from 'lucide-react'
+import { Upload, ExternalLink } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
+import FormActions from '../components/FormActions'
 
 const InstitutionalContributions = ({ initialData, readOnly }) => {
   const [formData, setFormData] = useState({
@@ -100,9 +102,11 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
       ])
 
       alert('Data saved successfully!')
+      return true
     } catch (error) {
       console.error('Error saving contributions:', error)
       alert('Failed to save data. Error: ' + error.message)
+      return false
     } finally {
       setLoading(false)
     }
@@ -116,10 +120,6 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
             <h1 className="page-title">Contributions, towards Institutional Development or any significant Institutional Contributions not covered above</h1>
             <p className="page-subtitle">Section 21</p>
           </div>
-          <button className="save-button" onClick={handleSave} disabled={loading}>
-            <Save size={18} />
-            {loading ? 'Saving...' : 'Save Changes'}
-          </button>
         </div>
       )}
 
@@ -369,7 +369,10 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
             </div>
           </div>
         </div>
-      </div>
+        {!readOnly && (
+        <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
+      )}
+    </div>
     </div>
   )
 }

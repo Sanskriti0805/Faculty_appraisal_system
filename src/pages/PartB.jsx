@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Save, Upload, FileText, X, CheckCircle, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, Upload, FileText, X, CheckCircle, ExternalLink } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import './PartB.css'
+import FormActions from '../components/FormActions'
 
 const PartB = ({ initialData, readOnly }) => {
   const [selectedSemester, setSelectedSemester] = useState('Odd Semester')
@@ -127,27 +129,6 @@ const PartB = ({ initialData, readOnly }) => {
             <p className="page-subtitle" style={{ fontSize: '0.9rem' }}>
               (For all full-time Faculty who have completed one year or more of service at the LNMIIT <u>excluding</u> Distinguished/Research/Industry/Visiting Professors)
             </p>
-          </div>
-          <div className="header-actions" style={{ display: 'flex', gap: '1rem' }}>
-            <button className="save-button" onClick={handleSave}>
-              <Save size={18} />
-              Save Changes
-            </button>
-            <button className="submit-button" onClick={handleSubmitFinal} style={{
-              backgroundColor: '#28a745',
-              color: 'white',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              border: 'none',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}>
-              <CheckCircle size={18} />
-              Submit for Review
-            </button>
           </div>
         </div>
       )}
@@ -363,6 +344,14 @@ const PartB = ({ initialData, readOnly }) => {
           Signature
         </div>
       </div>
+      {!readOnly && (
+        <FormActions 
+          onSave={() => handleSave(null)} 
+          onSubmit={handleSubmitFinal}
+          currentPath={window.location.pathname} 
+          nextLabel="Submit for Review"
+        />
+      )}
     </div>
   )
 }
