@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Building2, Users, Plus, X, CheckCircle, AlertCircle,
-  RefreshCw, Mail, Hash, Briefcase, Calendar, Copy
+  RefreshCw, Mail, Hash, Briefcase, Calendar
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './DOFARegistration.css';
@@ -29,14 +29,6 @@ const DOFARegistration = () => {
   // Modal state
   const [deptModal, setDeptModal] = useState(false);
   const [facultyModal, setFacultyModal] = useState(false);
-  const [generatedPassword, setGeneratedPassword] = useState(null);
-
-  const handleCopyPassword = () => {
-    if (generatedPassword) {
-      navigator.clipboard.writeText(generatedPassword.password);
-      showToast('Password copied to clipboard!', 'success');
-    }
-  };
 
   // Forms
   const [deptForm, setDeptForm] = useState({ name: '', code: '', hod_email: '', hod_name: '' });
@@ -90,9 +82,6 @@ const DOFARegistration = () => {
       const data = await res.json();
       if (data.success) {
         setDeptModal(false);
-        if (data.tempPassword) {
-          setGeneratedPassword({ email: deptForm.hod_email, name: deptForm.hod_name || 'HOD', password: data.tempPassword, role: 'HOD' });
-        }
         setDeptForm({ name: '', code: '', hod_email: '', hod_name: '' });
         showToast('Department registered! Password setup email sent to HOD. ✅');
         loadData();
@@ -117,9 +106,6 @@ const DOFARegistration = () => {
       const data = await res.json();
       if (data.success) {
         setFacultyModal(false);
-        if (data.tempPassword) {
-          setGeneratedPassword({ email: facultyForm.email, name: facultyForm.name, password: data.tempPassword, role: 'Faculty' });
-        }
         setFacultyForm({ salutation: 'Dr', name: '', designation: '', email: '', employee_id: '', employment_type: 'fixed', date_of_joining: '', department_id: '' });
         showToast('Faculty registered! Password setup email sent. ✅');
         loadData();
@@ -286,53 +272,6 @@ const DOFARegistration = () => {
           </div>
         </div>
       </main>
-
-      {/* Generated Temp Password Modal */}
-      {generatedPassword && (
-        <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setGeneratedPassword(null); }}>
-          <div className="admin-modal" style={{ maxWidth: '450px' }}>
-            <div className="admin-modal-header" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ background: '#e6f4ea', color: '#137333', padding: '8px', borderRadius: '50%' }}>
-                  <CheckCircle size={24} />
-                </div>
-                <h2 className="admin-modal-title" style={{ margin: 0, fontSize: '1.25rem', color: '#202124' }}>Registration Successful</h2>
-              </div>
-              <button className="admin-modal-close" onClick={() => setGeneratedPassword(null)}><X size={20} /></button>
-            </div>
-            <div className="admin-modal-body" style={{ padding: '0 20px 20px' }}>
-              <p style={{ fontSize: '14px', color: '#5f6368', marginBottom: '20px', lineHeight: '1.5' }}>
-                <strong>{generatedPassword.name}</strong> has been registered as {generatedPassword.role}. A temporary password has been generated for their first login.
-              </p>
-              
-              <div style={{ background: '#f8f9fa', border: '1px solid #dadce0', borderRadius: '8px', padding: '16px' }}>
-                <div style={{ fontSize: '12px', color: '#5f6368', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>
-                  Temporary Password
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', border: '1px solid #e8eaed', padding: '10px 14px', borderRadius: '6px' }}>
-                  <code style={{ fontSize: '18px', fontWeight: 'bold', color: '#1a73e8', letterSpacing: '1px' }}>
-                    {generatedPassword.password}
-                  </code>
-                  <button 
-                    onClick={handleCopyPassword}
-                    style={{ background: '#f1f3f4', border: 'none', color: '#5f6368', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', transition: 'all 0.2s' }}
-                    onMouseOver={(e) => {e.currentTarget.style.background = '#e8eaed'; e.currentTarget.style.color = '#202124';}}
-                    onMouseOut={(e) => {e.currentTarget.style.background = '#f1f3f4'; e.currentTarget.style.color = '#5f6368';}}
-                  >
-                    <Copy size={16} /> Copy
-                  </button>
-                </div>
-                <p style={{ fontSize: '12px', color: '#80868b', marginTop: '12px', marginBottom: 0 }}>
-                  Please securely share this password to {generatedPassword.email} if the automated email fails to deliver.
-                </p>
-              </div>
-            </div>
-            <div className="admin-modal-footer" style={{ padding: '16px 20px', borderTop: '1px solid #f1f3f4', display: 'flex', justifyContent: 'flex-end' }}>
-              <button className="admin-btn-submit" onClick={() => setGeneratedPassword(null)}>Done</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Department Registration Modal */}
       {deptModal && (

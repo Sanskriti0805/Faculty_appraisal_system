@@ -87,8 +87,7 @@ exports.registerDepartment = async (req, res) => {
     res.json({
       success: true,
       message: 'Department registered successfully. Temporary password email sent to HOD.',
-      department: { id: departmentId, name, code, hod_email, hod_name },
-      tempPassword: existingHod.length === 0 ? tempPassword : null
+      department: { id: departmentId, name, code, hod_email, hod_name }
     });
   } catch (error) {
     console.error('Register department error:', error);
@@ -157,8 +156,7 @@ exports.registerFaculty = async (req, res) => {
     res.json({
       success: true,
       message: 'Faculty registered successfully. Temporary password email sent.',
-      faculty: { id: result.insertId, name, email, designation, department: deptName },
-      tempPassword
+      faculty: { id: result.insertId, name, email, designation, department: deptName }
     });
   } catch (error) {
     console.error('Register faculty error:', error);
