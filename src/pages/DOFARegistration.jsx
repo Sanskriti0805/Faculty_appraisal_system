@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Building2, Users, Plus, X, CheckCircle, AlertCircle,
-  RefreshCw, Mail, Hash, Briefcase, Calendar, Send, Loader
+  RefreshCw, Mail, Hash, Briefcase, Calendar, Send, Loader, Archive, RotateCcw, Eye, Download
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './DOFARegistration.css';
@@ -18,6 +18,9 @@ const DOFARegistration = () => {
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [archiveLoading, setArchiveLoading] = useState(true);
+  const [archiveData, setArchiveData] = useState({ faculty: [], departments: [] });
+  const [historyModal, setHistoryModal] = useState({ open: false, faculty: null, submissions: [], loading: false });
 
   // Toast notification
   const [toast, setToast] = useState(null);
@@ -54,18 +57,22 @@ const DOFARegistration = () => {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setArchiveLoading(true);
     try {
-      const [deptsRes, usersRes] = await Promise.all([
+      const [deptsRes, usersRes, archiveRes] = await Promise.all([
         fetch(`${API_BASE}/register/departments`, { headers }),
-        fetch(`${API_BASE}/register/users`, { headers })
+        fetch(`${API_BASE}/register/users`, { headers }),
+        fetch(`${API_BASE}/register/archive`, { headers })
       ]);
-      const [deptsData, usersData] = await Promise.all([deptsRes.json(), usersRes.json()]);
+      const [deptsData, usersData, archiveApiData] = await Promise.all([deptsRes.json(), usersRes.json(), archiveRes.json()]);
       if (deptsData.success) setDepartments(deptsData.data);
       if (usersData.success) setUsers(usersData.data);
+      if (archiveApiData.success) setArchiveData(archiveApiData.data);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+      setArchiveLoading(false);
     }
   }, [token]);
 
@@ -155,6 +162,105 @@ const DOFARegistration = () => {
   };
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  const withConfirm = (message) => window.confirm(message);
+
+  const runAction = async (url, method = 'PUT', body = null) => {
+    const options = { method, headers };
+    if (body) options.body = JSON.stringify(body);
+    const response = await fetch(url, options);
+    return response.json();
+  };
+
+  const handleArchiveFaculty = async (faculty) => {
+    if (!withConfirm('Are you sure you want to delete this faculty?')) return;
+    try {
+      const data = await runAction(`${API_BASE}/register/faculty/${faculty.id}/archive`, 'PUT', { reason: 'Archived from Manage Users' });
+      if (data.success) {
+        showToast('Faculty moved to archive.');
+        loadData();
+      } else {
+        showToast(data.message || 'Failed to archive faculty', 'error');
+      }
+    } catch {
+      showToast('Failed to archive faculty', 'error');
+    }
+  };
+
+  const handleRestoreFaculty = async (faculty) => {
+    if (!withConfirm('Are you sure you want to add this faculty back into the appraisal system?')) return;
+    try {
+      const data = await runAction(`${API_BASE}/register/faculty/${faculty.id}/restore`);
+      if (data.success) {
+        showToast('Faculty restored successfully.');
+        loadData();
+      } else {
+        showToast(data.message || 'Failed to restore faculty', 'error');
+      }
+    } catch {
+      showToast('Failed to restore faculty', 'error');
+    }
+  };
+
+  const handleArchiveDepartment = async (department) => {
+    if (!withConfirm('Are you sure you want to delete this department?')) return;
+    try {
+      const data = await runAction(`${API_BASE}/register/departments/${department.id}/archive`, 'PUT', { reason: 'Archived from Manage Users' });
+      if (data.success) {
+        showToast('Department moved to archive.');
+        loadData();
+      } else {
+        showToast(data.message || 'Failed to archive department', 'error');
+      }
+    } catch {
+      showToast('Failed to archive department', 'error');
+    }
+  };
+
+  const handleRestoreDepartment = async (department) => {
+    if (!withConfirm('Are you sure you want to restore this department to the appraisal system?')) return;
+    try {
+      const data = await runAction(`${API_BASE}/register/departments/${department.id}/restore`);
+      if (data.success) {
+        showToast('Department restored successfully.');
+        loadData();
+      } else {
+        showToast(data.message || 'Failed to restore department', 'error');
+      }
+    } catch {
+      showToast('Failed to restore department', 'error');
+    }
+  };
+
+  const handleArchiveExport = async (type, format) => {
+    try {
+      const response = await fetch(`${API_BASE}/register/archive/export?type=${type}&format=${format}`, { headers });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ext = format === 'xlsx' ? 'xlsx' : 'csv';
+      a.href = url;
+      a.download = `${type}_archive.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      showToast('Failed to export archive data', 'error');
+    }
+  };
+
+  const openSubmissionHistory = async (faculty) => {
+    setHistoryModal({ open: true, faculty, submissions: [], loading: true });
+    try {
+      const res = await fetch(`${API_BASE}/register/faculty/${faculty.id}/submissions`, { headers });
+      const data = await res.json();
+      setHistoryModal({ open: true, faculty, submissions: data.success ? data.data : [], loading: false });
+    } catch {
+      setHistoryModal({ open: true, faculty, submissions: [], loading: false });
+    }
+  };
 
   const statusColor = (status) => {
     if (status === 'sent') return '#276749';
@@ -273,6 +379,7 @@ const DOFARegistration = () => {
                     <th>HOD Email</th>
                     <th>Faculty Count</th>
                     <th>Registered On</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,6 +391,11 @@ const DOFARegistration = () => {
                       <td>{d.hod_email}</td>
                       <td>{d.faculty_count || 0}</td>
                       <td>{formatDate(d.created_at)}</td>
+                      <td>
+                        <button className="admin-btn-cancel" onClick={() => handleArchiveDepartment(d)} style={{ padding: '6px 10px', fontSize: '12px' }}>
+                          <Archive size={12} /> Archive
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -312,6 +424,7 @@ const DOFARegistration = () => {
                     <th>Employment</th>
                     <th>Date of Joining</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -337,10 +450,112 @@ const DOFARegistration = () => {
                           <span className="admin-badge" style={{ background: '#fff5f5', color: '#c53030' }}>Pending</span>
                         )}
                       </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <button className="admin-btn-cancel" onClick={() => openSubmissionHistory(u)} style={{ padding: '6px 10px', fontSize: '12px', marginRight: '6px' }}>
+                          <Eye size={12} /> View
+                        </button>
+                        <button className="admin-btn-cancel" onClick={() => handleArchiveFaculty(u)} style={{ padding: '6px 10px', fontSize: '12px' }}>
+                          <Archive size={12} /> Archive
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="admin-section-title"><Archive size={20} /> Archive</h2>
+          <div className="admin-table-card archive-card" style={{ marginBottom: '18px' }}>
+            <div className="archive-actions-row">
+              <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('faculty', 'csv')} style={{ padding: '8px 12px', fontSize: '12px' }}>
+                <Download size={14} /> Faculty CSV
+              </button>
+              <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('faculty', 'xlsx')} style={{ padding: '8px 12px', fontSize: '12px' }}>
+                <Download size={14} /> Faculty Excel
+              </button>
+              {(user?.role === 'dofa' || user?.role === 'dofa_office' || user?.role === 'admin') && (
+                <>
+                  <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('department', 'csv')} style={{ padding: '8px 12px', fontSize: '12px' }}>
+                    <Download size={14} /> Department CSV
+                  </button>
+                  <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('department', 'xlsx')} style={{ padding: '8px 12px', fontSize: '12px' }}>
+                    <Download size={14} /> Department Excel
+                  </button>
+                </>
+              )}
+            </div>
+
+            {archiveLoading ? (
+              <div className="admin-empty">Loading archive...</div>
+            ) : (
+              <>
+                <h3 className="archive-group-title">Archived Faculty</h3>
+                {archiveData.faculty?.length ? (
+                  <table className="admin-table archive-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Department</th>
+                        <th>Archived At</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {archiveData.faculty.map(f => (
+                        <tr key={`arch-f-${f.id}`}>
+                          <td>{f.name}</td>
+                          <td>{f.email}</td>
+                          <td>{f.department_name || f.department || '—'}</td>
+                          <td>{formatDate(f.archived_at)}</td>
+                          <td>
+                            <button className="admin-btn-submit" onClick={() => handleRestoreFaculty(f)} style={{ padding: '6px 10px', fontSize: '12px' }}>
+                              <RotateCcw size={12} /> Restore
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : <div className="admin-empty" style={{ marginBottom: '14px' }}>No faculty in archive.</div>}
+
+                {(user?.role === 'dofa' || user?.role === 'dofa_office' || user?.role === 'admin') && (
+                  <>
+                    <h3 className="archive-group-title">Archived Departments</h3>
+                    {archiveData.departments?.length ? (
+                      <table className="admin-table archive-table">
+                        <thead>
+                          <tr>
+                            <th>Department</th>
+                            <th>Code</th>
+                            <th>Faculty Count</th>
+                            <th>Archived At</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {archiveData.departments.map(d => (
+                            <tr key={`arch-d-${d.id}`}>
+                              <td>{d.name}</td>
+                              <td>{d.code}</td>
+                              <td>{d.faculty_count || 0}</td>
+                              <td>{formatDate(d.archived_at)}</td>
+                              <td>
+                                <button className="admin-btn-submit" onClick={() => handleRestoreDepartment(d)} style={{ padding: '6px 10px', fontSize: '12px' }}>
+                                  <RotateCcw size={12} /> Restore
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : <div className="admin-empty">No departments in archive.</div>}
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -598,6 +813,54 @@ const DOFARegistration = () => {
                   Send More
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historyModal.open && (
+        <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setHistoryModal({ open: false, faculty: null, submissions: [], loading: false }); }}>
+          <div className="admin-modal" style={{ maxWidth: '760px' }}>
+            <div className="admin-modal-header">
+              <h2 className="admin-modal-title">Submission History: {historyModal.faculty?.name}</h2>
+              <button className="admin-modal-close" onClick={() => setHistoryModal({ open: false, faculty: null, submissions: [], loading: false })}><X size={16} /></button>
+            </div>
+            <div className="admin-modal-body">
+              {historyModal.loading ? (
+                <div className="admin-empty">Loading submission history...</div>
+              ) : historyModal.submissions.length === 0 ? (
+                <div className="admin-empty">No submissions found for this faculty member.</div>
+              ) : (
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Academic Year</th>
+                      <th>Calendar Year</th>
+                      <th>Form</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyModal.submissions.map(s => (
+                      <tr key={s.id}>
+                        <td>{s.academic_year}</td>
+                        <td>{s.calendar_year || '—'}</td>
+                        <td>{s.form_type}</td>
+                        <td>{s.status}</td>
+                        <td>
+                          <a className="admin-btn-submit" style={{ padding: '6px 10px', fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }} href={`${API_BASE}/submissions/${s.id}`} target="_blank" rel="noreferrer">
+                            <Eye size={12} /> View Saved Form
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="admin-modal-footer">
+              <button type="button" className="admin-btn-cancel" onClick={() => setHistoryModal({ open: false, faculty: null, submissions: [], loading: false })}>Close</button>
             </div>
           </div>
         </div>

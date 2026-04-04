@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import { publicationsService } from '../services/publicationsService'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const ResearchPublications = ({ initialData, readOnly }) => {
   const [publicationType, setPublicationType] = useState('')
@@ -706,6 +707,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               <span style={{ fontSize: '0.85rem', color: '#666' }}>
                 PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
               </span>
+              <FilePreviewButton file={evidenceFile} style={{ width: '32px', height: '32px' }} />
             </label>
           </div>
         </div>
@@ -911,6 +913,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               <span style={{ fontSize: '0.85rem', color: '#666' }}>
                 PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
               </span>
+              <FilePreviewButton file={evidenceFile} style={{ width: '32px', height: '32px' }} />
             </label>
           </div>
         </div>
@@ -1038,6 +1041,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                   <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
                     {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
                   </span>
+                  <FilePreviewButton file={entry.evidenceFile} style={{ width: '32px', height: '32px' }} />
                 </label>
               </div>
             </div>
@@ -1207,6 +1211,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                   <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
                     {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
                   </span>
+                  <FilePreviewButton file={entry.evidenceFile} style={{ width: '32px', height: '32px' }} />
                 </label>
               </div>
             </div>
@@ -1309,6 +1314,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               <span style={{ fontSize: '0.85rem', color: '#666' }}>
                 PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
               </span>
+              <FilePreviewButton file={evidenceFile} style={{ width: '32px', height: '32px' }} />
             </label>
           </div>
         </div>

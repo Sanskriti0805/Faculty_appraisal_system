@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom'
 import './CoursesTaught.css'
 import { grantsService } from '../services/grantsService'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const ResearchGrants = ({ initialData, readOnly }) => {
   const [selectedType, setSelectedType] = useState('')
@@ -417,6 +418,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                             <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {grant.evidenceFile ? grant.evidenceFile.name : 'Choose file'}
                             </span>
+                            <FilePreviewButton file={grant.evidenceFile || grant.evidence_file} style={{ width: '28px', height: '28px' }} />
                             <input
                               type="file"
                               onChange={(e) => handleFileUpload(index, e.target.files[0])}
@@ -613,6 +615,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                             <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {proposal.evidenceFile ? proposal.evidenceFile.name : 'Choose file'}
                             </span>
+                            <FilePreviewButton file={proposal.evidenceFile || proposal.evidence_file} style={{ width: '28px', height: '28px' }} />
                             <input
                               type="file"
                               onChange={(e) => {

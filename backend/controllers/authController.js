@@ -28,6 +28,10 @@ exports.login = async (req, res) => {
 
     const user = users[0];
 
+    if (Number(user.is_archived) === 1) {
+      return res.status(403).json({ success: false, message: 'Account is archived. Contact DOFA office.' });
+    }
+
     if (!user.password) {
       return res.status(401).json({ success: false, message: 'Password not set. Please check your email for the temporary password.' });
     }
@@ -98,6 +102,9 @@ exports.forgotPassword = async (req, res) => {
     }
 
     const user = users[0];
+    if (Number(user.is_archived) === 1) {
+      return res.json({ success: true, message: 'If that email is registered with the selected role, a reset link has been sent.' });
+    }
     const resetToken = crypto.randomBytes(32).toString('hex');
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour

@@ -49,11 +49,13 @@ const Onboarding = () => {
 
   useEffect(() => {
     // Load departments for faculty selection
-    fetch(`${API_BASE}/register/departments`)
+    fetch(`${API_BASE}/register/departments`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .then(r => r.json())
       .then(d => { if (d.success) setDepartments(d.data); })
       .catch(() => {});
-  }, []);
+  }, [token]);
 
   const redirectToDashboard = () => {
     const map = {

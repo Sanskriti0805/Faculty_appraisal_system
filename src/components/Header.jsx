@@ -65,7 +65,7 @@ const Header = ({ onLogout }) => {
       <header className="header">
         <div className="header-logo-container">
           <img
-            src="/lnmiit-logo.svg"
+            src="/lnmiit-logo.png"
             alt="LNMIIT"
             className="header-logo"
           />
