@@ -29,8 +29,8 @@ class SchedulerService {
       );
     });
 
-    // Job 2: Check every day at 8:00 AM for deadline reminders
-    cron.schedule('0 8 * * *', () => {
+    // Job 2: Check every minute for deadline reminders (configurable time)
+    cron.schedule('* * * * *', () => {
       this.checkDeadlineReminders().catch(err =>
         console.error('Scheduler error (reminders):', err.message)
       );
@@ -98,23 +98,29 @@ class SchedulerService {
   }
 
   /**
-   * Job 2: Send reminder emails 2 days before the deadline
+   * Job 2: Send reminder emails before the deadline based on configured reminder_days and reminder_time
    */
   async checkDeadlineReminders() {
     const now = new Date();
-    const twoDaysFromNow = new Date(now);
-    twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
-    const targetDate = twoDaysFromNow.toISOString().split('T')[0]; // YYYY-MM-DD
 
     const [sessions] = await db.query(`
       SELECT * FROM appraisal_sessions
       WHERE status = 'open'
         AND is_released = 1
         AND reminder_sent = 0
-        AND deadline = ?
-    `, [targetDate]);
+        AND deadline IS NOT NULL
+    `);
 
     for (const session of sessions) {
+      const reminderDays = session.reminder_days !== null ? session.reminder_days : 2;
+      const reminderTime = session.reminder_time || '08:00:00';
+      const [hours, minutes, seconds] = reminderTime.split(':').map(Number);
+      
+      const reminderDate = new Date(session.deadline);
+      reminderDate.setDate(reminderDate.getDate() - reminderDays);
+      reminderDate.setHours(hours, minutes, seconds || 0, 0);
+
+      if (now >= reminderDate) {
       console.log(`⏰ Sending deadline reminder for session: ${session.academic_year}`);
 
       const [faculty] = await db.query("SELECT id, name, email FROM users WHERE role = 'faculty'");
@@ -138,6 +144,7 @@ class SchedulerService {
       // Mark reminder as sent
       await db.query('UPDATE appraisal_sessions SET reminder_sent = 1 WHERE id = ?', [session.id]);
       console.log('📧 Deadline reminder emails sent.');
+      }
     }
   }
 

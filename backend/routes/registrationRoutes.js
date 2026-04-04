@@ -9,6 +9,12 @@ router.post('/department', authenticate, requireRole('admin', 'dofa', 'dofa_offi
 // Faculty registration (admin, dofa, or dofa_office)
 router.post('/faculty', authenticate, requireRole('admin', 'dofa', 'dofa_office'), registrationController.registerFaculty);
 
+// Bulk email invite — faculty or hod (dofa / dofa_office only)
+router.post('/bulk-invite', authenticate, requireRole('admin', 'dofa', 'dofa_office'), registrationController.bulkInvite);
+
+// Complete onboarding — any authenticated user (faculty or hod)
+router.put('/onboarding', authenticate, registrationController.completeOnboarding);
+
 // List all departments (any authenticated user)
 router.get('/departments', registrationController.getDepartments);
 

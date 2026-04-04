@@ -17,8 +17,15 @@ const FormRelease = () => {
     academic_year: '',
     start_date: '',
     end_date: '',
-    deadline: ''
+    deadline: '',
+    reminder_days: 2,
+    reminder_time: '08:00'
   });
+
+  // Reminder settings form state
+  const [showReminderForm, setShowReminderForm] = useState(false);
+  const [editReminderDays, setEditReminderDays] = useState(2);
+  const [editReminderTime, setEditReminderTime] = useState('08:00');
 
   // Schedule form state
   const [showScheduleForm, setShowScheduleForm] = useState(false);
@@ -41,7 +48,13 @@ const FormRelease = () => {
       const activeData = await activeRes.json();
       
       if (sessionsData.success) setSessions(sessionsData.data);
-      if (activeData.success) setActiveSession(activeData.data);
+      if (activeData.success) {
+        setActiveSession(activeData.data);
+        if (activeData.data) {
+          setEditReminderDays(activeData.data.reminder_days !== null ? activeData.data.reminder_days : 2);
+          setEditReminderTime((activeData.data.reminder_time || '08:00:00').substring(0, 5));
+        }
+      }
     } catch (error) {
       console.error('Error fetching sessions:', error);
       showToast('Failed to load sessions', 'error');
@@ -68,7 +81,7 @@ const FormRelease = () => {
       if (data.success) {
         showToast('Appraisal session created successfully!');
         setShowCreateForm(false);
-        setNewSession({ academic_year: '', start_date: '', end_date: '', deadline: '' });
+        setNewSession({ academic_year: '', start_date: '', end_date: '', deadline: '', reminder_days: 2, reminder_time: '08:00' });
         fetchData();
       } else {
         showToast(data.message || 'Failed to create session', 'error');
@@ -153,6 +166,36 @@ const FormRelease = () => {
       }
     } catch (error) {
       showToast('Failed to cancel schedule', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateReminder = async (e) => {
+    e.preventDefault();
+    if (!activeSession) return;
+    
+    setActionLoading(true);
+    try {
+      const response = await fetch(`${API}/sessions/${activeSession.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          ...activeSession, 
+          reminder_days: editReminderDays, 
+          reminder_time: editReminderTime 
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        showToast('Reminder settings updated successfully.');
+        setShowReminderForm(false);
+        fetchData();
+      } else {
+        showToast(data.message || 'Failed to update reminder settings', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to update reminder settings', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -324,7 +367,53 @@ const FormRelease = () => {
             Session: <strong>{activeSession.academic_year}</strong> • 
             {activeSession.release_date && ` Released on: ${formatDateTime(activeSession.release_date)} • `}
             Deadline: <strong>{formatDate(activeSession.deadline)}</strong>
+            <br />
+            Reminder setting: <strong>{activeSession.reminder_days !== null ? activeSession.reminder_days : 2} days before at {(activeSession.reminder_time || '08:00:00').substring(0, 5)}</strong>
+            <button 
+              className="fr-btn fr-btn-ghost" 
+              style={{ marginLeft: '12px', padding: '4px 10px', fontSize: '0.8rem' }}
+              onClick={() => setShowReminderForm(!showReminderForm)}
+            >
+              Edit Reminder
+            </button>
           </p>
+
+          {showReminderForm && (
+            <div className="fr-schedule-form-wrapper" style={{ borderLeft: '4px solid #3b82f6' }}>
+              <form className="fr-schedule-form" onSubmit={handleUpdateReminder}>
+                <h3><Clock size={20} /> Update Reminder Settings</h3>
+                <div className="fr-form-row">
+                  <div className="fr-form-group">
+                    <label>Days before deadline</label>
+                    <input 
+                      type="number" min="1" max="90" 
+                      value={editReminderDays} 
+                      onChange={e => setEditReminderDays(e.target.value)} 
+                      required 
+                    />
+                  </div>
+                  <div className="fr-form-group">
+                    <label>Time to send</label>
+                    <input 
+                      type="time" 
+                      value={editReminderTime} 
+                      onChange={e => setEditReminderTime(e.target.value)} 
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="fr-form-actions">
+                  <button type="submit" className="fr-btn fr-btn-primary" disabled={actionLoading}>
+                    {actionLoading ? <Loader2 className="spin" size={18} /> : <CheckCircle2 size={18} />}
+                    Save Reminder Settings
+                  </button>
+                  <button type="button" className="fr-btn fr-btn-ghost" onClick={() => setShowReminderForm(false)}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
           {/* If not released and no schedule */}
           {!activeSession.is_released && !activeSession.scheduled_release && (
@@ -512,6 +601,27 @@ const FormRelease = () => {
                   required
                 />
                 <span className="fr-form-hint">Faculty must submit their forms before this date</span>
+              </div>
+              <div className="fr-form-row">
+                <div className="fr-form-group">
+                  <label>Reminder Days</label>
+                  <input 
+                    type="number" min="1" max="90"
+                    value={newSession.reminder_days}
+                    onChange={(e) => setNewSession({...newSession, reminder_days: e.target.value})}
+                    required
+                  />
+                  <span className="fr-form-hint">Days before deadline to send warning email</span>
+                </div>
+                <div className="fr-form-group">
+                  <label>Reminder Time</label>
+                  <input 
+                    type="time" 
+                    value={newSession.reminder_time}
+                    onChange={(e) => setNewSession({...newSession, reminder_time: e.target.value})}
+                    required
+                  />
+                </div>
               </div>
               <div className="fr-form-actions">
                 <button type="submit" className="fr-btn fr-btn-primary" disabled={actionLoading}>

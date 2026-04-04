@@ -8,6 +8,7 @@ import Layout from './components/Layout'
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
 
 // DOFA Registration (migrated from Admin)
 const DOFARegistration = lazy(() => import('./pages/DOFARegistration'))
@@ -78,6 +79,13 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+            {/* ── Onboarding (first-login profile completion) ── */}
+            <Route path="/onboarding" element={
+              <ProtectedRoute>
+                <Onboarding />
+              </ProtectedRoute>
+            } />
 
 
 

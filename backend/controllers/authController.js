@@ -63,7 +63,8 @@ exports.login = async (req, res) => {
         departmentInfo,
         designation: user.designation,
         salutation: user.salutation,
-        employee_id: user.employee_id
+        employee_id: user.employee_id,
+        onboarding_complete: user.onboarding_complete
       }
     });
   } catch (error) {
@@ -181,11 +182,16 @@ exports.getMe = async (req, res) => {
       if (depts.length > 0) departmentInfo = depts[0];
     }
 
+    // Re-fetch to get latest onboarding_complete
+    const [freshUsers] = await db.query('SELECT onboarding_complete FROM users WHERE id = ?', [req.user.id]);
+    const onboarding_complete = freshUsers.length > 0 ? freshUsers[0].onboarding_complete : 1;
+
     res.json({
       success: true,
       user: {
         ...req.user,
-        departmentInfo
+        departmentInfo,
+        onboarding_complete
       }
     });
   } catch (error) {

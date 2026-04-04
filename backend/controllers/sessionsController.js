@@ -96,7 +96,7 @@ exports.getActiveSession = async (req, res) => {
 // Create new session
 exports.createSession = async (req, res) => {
   try {
-    const { academic_year, start_date, end_date, deadline, status, created_by } = req.body;
+    const { academic_year, start_date, end_date, deadline, status, created_by, reminder_days, reminder_time } = req.body;
 
     // Check for existing open session
     const [existing] = await db.query(
@@ -111,8 +111,8 @@ exports.createSession = async (req, res) => {
     }
 
     const [result] = await db.query(
-      'INSERT INTO appraisal_sessions (academic_year, start_date, end_date, deadline, status, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-      [academic_year, start_date, end_date, deadline || end_date, status || 'open', created_by]
+      'INSERT INTO appraisal_sessions (academic_year, start_date, end_date, deadline, status, created_by, reminder_days, reminder_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [academic_year, start_date, end_date, deadline || end_date, status || 'open', created_by, reminder_days || 2, reminder_time || '08:00:00']
     );
 
     res.status(201).json({
@@ -129,11 +129,11 @@ exports.createSession = async (req, res) => {
 exports.updateSession = async (req, res) => {
   try {
     const { id } = req.params;
-    const { academic_year, start_date, end_date, deadline, status } = req.body;
+    const { academic_year, start_date, end_date, deadline, status, reminder_days, reminder_time } = req.body;
 
     const [result] = await db.query(
-      'UPDATE appraisal_sessions SET academic_year = ?, start_date = ?, end_date = ?, deadline = ?, status = ? WHERE id = ?',
-      [academic_year, start_date, end_date, deadline || end_date, status, id]
+      'UPDATE appraisal_sessions SET academic_year = ?, start_date = ?, end_date = ?, deadline = ?, status = ?, reminder_days = ?, reminder_time = ? WHERE id = ?',
+      [academic_year, start_date, end_date, deadline || end_date, status, reminder_days || 2, reminder_time || '08:00:00', id]
     );
 
     if (result.affectedRows === 0) {

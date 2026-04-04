@@ -70,6 +70,10 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Run DB migrations (safe — adds columns if missing)
+const registrationController = require('./controllers/registrationController');
+registrationController.runMigrations().catch(err => console.error('Migration error:', err));
+
 // Initialize scheduler for automatic form releases and reminders
 const schedulerService = require('./services/schedulerService');
 schedulerService.start();
