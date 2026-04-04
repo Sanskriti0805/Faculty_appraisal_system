@@ -50,6 +50,7 @@ const EvaluationSheet = lazy(() => import('./pages/EvaluationSheet'))
 const EvaluationSheet2 = lazy(() => import('./pages/EvaluationSheet2'))
 const EvaluationSheet3 = lazy(() => import('./pages/EvaluationSheet3'))
 const FormBuilder = lazy(() => import('./pages/FormBuilder'))
+const FormRelease = lazy(() => import('./pages/FormRelease'))
 
 const LoadingFallback = () => (
   <div style={{
@@ -135,6 +136,7 @@ function App() {
               <Route path="sheet3" element={<EvaluationSheet3 />} />
               <Route path="registration" element={<DOFARegistration />} />
               <Route path="manage-users" element={<DOFARegistration />} />
+              <Route path="form-release" element={<FormRelease />} />
             </Route>
 
             {/* ── DOFA Office Routes ── */}
@@ -152,6 +154,7 @@ function App() {
               <Route path="form-builder" element={<FormBuilder />} />
               <Route path="registration" element={<DOFARegistration />} />
               <Route path="manage-users" element={<DOFARegistration />} />
+              <Route path="form-release" element={<FormRelease />} />
             </Route>
 
             {/* ── Catch-all → login ── */}

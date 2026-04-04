@@ -70,6 +70,10 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Initialize scheduler for automatic form releases and reminders
+const schedulerService = require('./services/schedulerService');
+schedulerService.start();
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);

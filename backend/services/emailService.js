@@ -170,6 +170,106 @@ class EmailService {
     });
   }
 
+  // ─── Form Release Notification Email ─────────────────────────────────
+
+  /**
+   * Send notification that appraisal forms have been released
+   */
+  async sendFormReleaseNotification({ to, name, academicYear, deadline }) {
+    const siteUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    const bodyHtml = `
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p>Dear <b>${name}</b>,</p>
+                    <p>We are pleased to inform you that the <b>Faculty Appraisal Forms</b> for the academic year <b>${academicYear}</b> have been released and are now available for you to fill out.</p>
+                    
+                    <div style="background: linear-gradient(135deg, #034da2 0%, #0466d6 100%); color: #fff; padding: 20px 24px; border-radius: 10px; margin: 20px 0; text-align: center;">
+                      <p style="margin: 0 0 8px 0; font-size: 13px; opacity: 0.9;">SUBMISSION DEADLINE</p>
+                      <h2 style="margin: 0; font-size: 22px; letter-spacing: 1px;">${deadline}</h2>
+                    </div>
+
+                    <p>Please ensure that you complete and submit both <b>Form A</b> and <b>Form B</b> before the deadline mentioned above.</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p><b>Steps to fill out the forms:</b></p>
+                    <ol>
+                      <li>Log in to the Faculty Appraisal Portal at <a href="${siteUrl}/login">${siteUrl}/login</a></li>
+                      <li>Navigate through Part A and Part B sections using the sidebar</li>
+                      <li>Fill in all required information accurately</li>
+                      <li>Submit your forms before the deadline</li>
+                    </ol>
+                    <div style="text-align:center;margin:24px 0;">
+                      <a href="${siteUrl}/login" style="display:inline-block;padding:14px 40px;background-color:#034da2;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600;">
+                        Go to Appraisal Portal
+                      </a>
+                    </div>
+                    <p style="font-size:13px;color:#718096;">If you have any questions or face any issues, please contact the DOFA office or write to webmaster@lnmiit.ac.in.</p>
+                    <br/>
+                    <p>Best regards,</p>
+                    <p><b>Webmaster LNMIIT</b></p>
+                    <p>webmaster@lnmiit.ac.in</p>
+                  </td>
+                </tr>`;
+
+    const html = this.buildLNMIITTemplate({ recipientName: name, bodyHtml });
+
+    await this._send({
+      to,
+      subject: `LNMIIT Faculty Appraisal ${academicYear} — Forms Released | Deadline: ${deadline}`,
+      html
+    });
+  }
+
+  // ─── Deadline Reminder Email ────────────────────────────────────────
+
+  /**
+   * Send a deadline reminder email (2 days before deadline)
+   */
+  async sendDeadlineReminder({ to, name, academicYear, deadline }) {
+    const siteUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    const bodyHtml = `
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p>Dear <b>${name}</b>,</p>
+                    <p>This is a gentle reminder that the deadline for submitting your <b>Faculty Appraisal Forms</b> for the academic year <b>${academicYear}</b> is approaching soon.</p>
+                    
+                    <div style="background: linear-gradient(135deg, #c53030 0%, #e53e3e 100%); color: #fff; padding: 20px 24px; border-radius: 10px; margin: 20px 0; text-align: center;">
+                      <p style="margin: 0 0 8px 0; font-size: 13px; opacity: 0.9;">⚠️ DEADLINE APPROACHING</p>
+                      <h2 style="margin: 0; font-size: 22px; letter-spacing: 1px;">${deadline}</h2>
+                      <p style="margin: 8px 0 0 0; font-size: 13px; opacity: 0.9;">(Only 2 days remaining!)</p>
+                    </div>
+
+                    <p>If you have already submitted your forms, please disregard this email. If you have not yet completed your submission, please do so at your earliest convenience.</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <div style="text-align:center;margin:24px 0;">
+                      <a href="${siteUrl}/login" style="display:inline-block;padding:14px 40px;background-color:#c53030;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600;">
+                        Complete Your Submission Now
+                      </a>
+                    </div>
+                    <p style="font-size:13px;color:#718096;">After the deadline, you will not be able to submit or modify your appraisal forms.</p>
+                    <br/>
+                    <p>Best regards,</p>
+                    <p><b>Webmaster LNMIIT</b></p>
+                    <p>webmaster@lnmiit.ac.in</p>
+                  </td>
+                </tr>`;
+
+    const html = this.buildLNMIITTemplate({ recipientName: name, bodyHtml });
+
+    await this._send({
+      to,
+      subject: `⚠️ REMINDER: Faculty Appraisal ${academicYear} — Deadline in 2 Days!`,
+      html
+    });
+  }
+
   // ─── Legacy: Password Setup Email (reset link for registration) ────────
   // Kept for backward compatibility but no longer used by registration flow
 
