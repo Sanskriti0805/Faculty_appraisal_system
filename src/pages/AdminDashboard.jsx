@@ -21,6 +21,13 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Toast notification
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   // Modal state
   const [deptModal, setDeptModal] = useState(false);
   const [facultyModal, setFacultyModal] = useState(false);
@@ -76,8 +83,9 @@ const AdminDashboard = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setDeptSuccess('Department registered! Password setup email sent to HOD.');
+        setDeptModal(false);
         setDeptForm({ name: '', code: '', hod_email: '', hod_name: '' });
+        showToast('Department registered! Password setup email sent to HOD. ✅');
         loadData();
       } else {
         setDeptError(data.message);
@@ -99,8 +107,9 @@ const AdminDashboard = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setFacSuccess('Faculty registered! Password setup email sent.');
+        setFacultyModal(false);
         setFacultyForm({ salutation: 'Dr', name: '', designation: '', email: '', employee_id: '', employment_type: 'fixed', date_of_joining: '', department_id: '' });
+        showToast('Faculty registered! Password setup email sent. ✅');
         loadData();
       } else {
         setFacError(data.message);
@@ -115,6 +124,24 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-page">
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: '24px', right: '24px', zIndex: 9999,
+          background: toast.type === 'success' ? '#276749' : '#c53030',
+          color: '#fff', padding: '14px 22px', borderRadius: '10px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.2)', fontSize: '14px', fontWeight: '500',
+          display: 'flex', alignItems: 'center', gap: '10px',
+          animation: 'slideIn 0.3s ease'
+        }}>
+          {toast.message}
+          <button onClick={() => setToast(null)} style={{
+            background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff',
+            borderRadius: '4px', padding: '2px 8px', cursor: 'pointer', fontSize: '16px'
+          }}>×</button>
+        </div>
+      )}
+      <style>{`@keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
       {/* Top Nav */}
       <nav className="admin-topnav">
         <div className="admin-topnav-brand">

@@ -44,10 +44,13 @@ exports.registerDepartment = async (req, res) => {
       const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
       const expires = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
+      // Generate a random placeholder password — user must reset via email link
+      const randomPlaceholder = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 8);
+
       await db.query(
-        `INSERT INTO users (name, email, role, department, department_id, password_reset_token, password_reset_expires) 
-         VALUES (?, ?, 'hod', ?, ?, ?, ?)`,
-        [hod_name || 'HOD', hod_email, name, departmentId, hashedToken, expires]
+        `INSERT INTO users (name, email, password, role, department, department_id, password_reset_token, password_reset_expires) 
+         VALUES (?, ?, ?, 'hod', ?, ?, ?, ?)`,
+        [hod_name || 'HOD', hod_email, randomPlaceholder, name, departmentId, hashedToken, expires]
       );
 
       // Send password setup email
@@ -110,11 +113,14 @@ exports.registerFaculty = async (req, res) => {
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     const expires = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
+    // Generate a random placeholder password — user must reset via email link
+    const randomPlaceholder = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 8);
+
     // Create user
     const [result] = await db.query(
-      `INSERT INTO users (name, email, role, department, department_id, designation, salutation, employee_id, employment_type, date_of_joining, password_reset_token, password_reset_expires)
-       VALUES (?, ?, 'faculty', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, email, deptName, department_id, designation, salutation, employee_id, employment_type, date_of_joining, hashedToken, expires]
+      `INSERT INTO users (name, email, password, role, department, department_id, designation, salutation, employee_id, employment_type, date_of_joining, password_reset_token, password_reset_expires)
+       VALUES (?, ?, ?, 'faculty', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, email, randomPlaceholder, deptName, department_id, designation, salutation, employee_id, employment_type, date_of_joining, hashedToken, expires]
     );
 
     // Also create a record in faculty_information table if it doesn't exist
