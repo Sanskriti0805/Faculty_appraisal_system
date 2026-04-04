@@ -25,7 +25,8 @@ const Sidebar = () => {
     fetchDynamicSections();
   }, []);
 
-  const isDOFARoute = location.pathname.startsWith('/dofa') || location.pathname.startsWith('/dofa-office')
+  const isDOFAOfficeRoute = location.pathname.startsWith('/dofa-office')
+  const isDOFARoute = location.pathname.startsWith('/dofa') && !isDOFAOfficeRoute
 
   const toggleSection = (sectionName) => {
     setExpandedSections(prev => {
@@ -79,7 +80,7 @@ const Sidebar = () => {
   ]
 
   // DOFA-specific sidebar
-  if (isDOFARoute) {
+  if (isDOFARoute || isDOFAOfficeRoute) {
     const dofaNavItems = [
       { name: 'Dashboard', path: '/dofa/dashboard' },
       { name: 'Rubrics Management', path: '/dofa/rubrics' },
@@ -87,7 +88,20 @@ const Sidebar = () => {
       { name: 'Sheet 2', path: '/dofa/sheet2' },
       { name: 'Sheet 3', path: '/dofa/sheet3' },
       { name: 'Form Builder', path: '/dofa-office/form-builder' },
+      { name: 'Manage Users', path: '/dofa/manage-users' },
     ]
+
+    const dofaOfficeNavItems = [
+      { name: 'Dashboard', path: '/dofa-office/dashboard' },
+      { name: 'Rubrics Management', path: '/dofa-office/rubrics' },
+      { name: 'Sheet 1 — Evaluation', path: '/dofa-office/sheet1' },
+      { name: 'Sheet 2', path: '/dofa-office/sheet2' },
+      { name: 'Sheet 3', path: '/dofa-office/sheet3' },
+      { name: 'Form Builder', path: '/dofa-office/form-builder' },
+      { name: 'Manage Users', path: '/dofa-office/manage-users' },
+    ]
+
+    const navItems = isDOFAOfficeRoute ? dofaOfficeNavItems : dofaNavItems
 
     return (
       <aside className="sidebar">
@@ -101,10 +115,10 @@ const Sidebar = () => {
         <nav className="sidebar-nav">
           <div className="nav-section">
             <div className="nav-section-header" style={{ cursor: 'default' }}>
-              <span>{location.pathname.startsWith('/dofa-office') ? 'DOFA OFFICE' : 'DOFA'}</span>
+              <span>{isDOFAOfficeRoute ? 'DOFA OFFICE' : 'DOFA'}</span>
             </div>
             <div className="nav-section-items">
-              {dofaNavItems.map(item => (
+              {navItems.map(item => (
                 <Link
                   key={item.path}
                   to={item.path}

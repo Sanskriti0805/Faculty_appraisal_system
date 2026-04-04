@@ -29,7 +29,7 @@ exports.login = async (req, res) => {
     const user = users[0];
 
     if (!user.password) {
-      return res.status(401).json({ success: false, message: 'Password not set. Please check your email for the password setup link.' });
+      return res.status(401).json({ success: false, message: 'Password not set. Please check your email for the temporary password.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -74,20 +74,26 @@ exports.login = async (req, res) => {
 
 /**
  * POST /api/auth/forgot-password
- * Body: { email }
+ * Body: { email, role }
+ * Role is required to identify the correct user account
  */
 exports.forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, role } = req.body;
 
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
-    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    if (!role) {
+      return res.status(400).json({ success: false, message: 'Please select your role' });
+    }
+
+    // Look up user by email AND role
+    const [users] = await db.query('SELECT * FROM users WHERE email = ? AND role = ?', [email, role]);
     if (users.length === 0) {
-      // Don't reveal whether email exists
-      return res.json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
+      // Don't reveal whether email exists — always return success
+      return res.json({ success: true, message: 'If that email is registered with the selected role, a reset link has been sent.' });
     }
 
     const user = users[0];
@@ -100,22 +106,24 @@ exports.forgotPassword = async (req, res) => {
       [hashedToken, expires, user.id]
     );
 
-    const resetUrl = `${FRONTEND_URL}/reset-password/${resetToken}`;
+    // Include role in reset URL so frontend knows which role is resetting
+    const resetUrl = `${FRONTEND_URL}/reset-password/${resetToken}?role=${encodeURIComponent(role)}`;
 
     try {
       await emailService.sendForgotPassword({
         to: user.email,
         name: user.name,
-        resetUrl
+        resetUrl,
+        role: role.toUpperCase()
       });
     } catch (emailErr) {
       console.error('Email send error:', emailErr);
       // Still return success — don't reveal email status
     }
 
-    console.log(`🔗 Password reset URL for ${user.email}: ${resetUrl}`);
+    console.log(`🔗 Password reset URL for ${user.email} (${role}): ${resetUrl}`);
 
-    res.json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
+    res.json({ success: true, message: 'If that email is registered with the selected role, a reset link has been sent.' });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -154,7 +162,7 @@ exports.resetPassword = async (req, res) => {
       [hashedPassword, user.id]
     );
 
-    res.json({ success: true, message: 'Password reset successful. You can now log in.' });
+    res.json({ success: true, message: 'Password reset successful. You can now log in.', role: user.role });
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -182,6 +190,43 @@ exports.getMe = async (req, res) => {
     });
   } catch (error) {
     console.error('Get me error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+/**
+ * POST /api/auth/change-password
+ * Body: { currentPassword, newPassword }
+ */
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+    }
+
+    const [users] = await db.query('SELECT * FROM users WHERE id = ?', [req.user.id]);
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const user = users[0];
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Incorrect current password' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, user.id]);
+
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

@@ -31,7 +31,6 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     // Redirect to their own dashboard
     const redirectMap = {
-      admin: '/admin/dashboard',
       hod: '/hod/dashboard',
       faculty: '/',
       dofa: '/dofa/dashboard',

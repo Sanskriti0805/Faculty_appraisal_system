@@ -1,5 +1,6 @@
 /**
- * Registration Controller — Department and Faculty registration by Admin
+ * Registration Controller — Department and Faculty registration by DOFA
+ * Sends temp password via email (LNMIIT template)
  */
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -9,8 +10,21 @@ const emailService = require('../services/emailService');
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 /**
+ * Generate a readable temporary password
+ * Format: LNMIIT-XXXXXX (6 random alphanumeric chars)
+ */
+function generateTempPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let result = 'LNMIIT-';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+/**
  * POST /api/register/department
- * Admin registers a new department
+ * DOFA registers a new department + HOD
  * Body: { name, code, hod_email, hod_name }
  */
 exports.registerDepartment = async (req, res) => {
@@ -39,33 +53,29 @@ exports.registerDepartment = async (req, res) => {
     const [existingHod] = await db.query('SELECT id FROM users WHERE email = ?', [hod_email]);
 
     if (existingHod.length === 0) {
-      // Create HOD user account
-      const resetToken = crypto.randomBytes(32).toString('hex');
-      const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-      const expires = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
-
-      // Generate a random placeholder password — user must reset via email link
-      const randomPlaceholder = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 8);
+      // Generate temp password
+      const tempPassword = generateTempPassword();
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
       await db.query(
-        `INSERT INTO users (name, email, password, role, department, department_id, password_reset_token, password_reset_expires) 
-         VALUES (?, ?, ?, 'hod', ?, ?, ?, ?)`,
-        [hod_name || 'HOD', hod_email, randomPlaceholder, name, departmentId, hashedToken, expires]
+        `INSERT INTO users (name, email, password, role, department, department_id) 
+         VALUES (?, ?, ?, 'hod', ?, ?)`,
+        [hod_name || 'HOD', hod_email, hashedPassword, name, departmentId]
       );
 
-      // Send password setup email
-      const resetUrl = `${FRONTEND_URL}/reset-password/${resetToken}`;
+      // Send temp password email
       try {
-        await emailService.sendPasswordReset({
+        await emailService.sendTempPasswordEmail({
           to: hod_email,
           name: hod_name || 'HOD',
-          resetUrl,
-          role: 'HOD'
+          tempPassword,
+          role: 'HOD',
+          loginUrl: FRONTEND_URL
         });
       } catch (emailErr) {
         console.error('Email error:', emailErr);
       }
-      console.log(`🔗 HOD password reset URL for ${hod_email}: ${resetUrl}`);
+      console.log(`🔑 HOD temp password for ${hod_email}: ${tempPassword}`);
     } else {
       // Update existing user to have HOD role and link to department
       await db.query(
@@ -76,8 +86,9 @@ exports.registerDepartment = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Department registered successfully. Password setup email sent to HOD.',
-      department: { id: departmentId, name, code, hod_email, hod_name }
+      message: 'Department registered successfully. Temporary password email sent to HOD.',
+      department: { id: departmentId, name, code, hod_email, hod_name },
+      tempPassword: existingHod.length === 0 ? tempPassword : null
     });
   } catch (error) {
     console.error('Register department error:', error);
@@ -87,7 +98,7 @@ exports.registerDepartment = async (req, res) => {
 
 /**
  * POST /api/register/faculty
- * Admin registers a new faculty member
+ * DOFA registers a new faculty member
  * Body: { salutation, name, designation, email, employee_id, employment_type, date_of_joining, department_id }
  */
 exports.registerFaculty = async (req, res) => {
@@ -108,19 +119,15 @@ exports.registerFaculty = async (req, res) => {
     const [depts] = await db.query('SELECT name FROM departments WHERE id = ?', [department_id]);
     const deptName = depts.length > 0 ? depts[0].name : null;
 
-    // Create reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    const expires = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
+    // Generate temp password
+    const tempPassword = generateTempPassword();
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-    // Generate a random placeholder password — user must reset via email link
-    const randomPlaceholder = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 8);
-
-    // Create user
+    // Create user with temp password (no reset token needed)
     const [result] = await db.query(
-      `INSERT INTO users (name, email, password, role, department, department_id, designation, salutation, employee_id, employment_type, date_of_joining, password_reset_token, password_reset_expires)
-       VALUES (?, ?, ?, 'faculty', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, email, randomPlaceholder, deptName, department_id, designation, salutation, employee_id, employment_type, date_of_joining, hashedToken, expires]
+      `INSERT INTO users (name, email, password, role, department, department_id, designation, salutation, employee_id, employment_type, date_of_joining)
+       VALUES (?, ?, ?, 'faculty', ?, ?, ?, ?, ?, ?, ?)`,
+      [name, email, hashedPassword, deptName, department_id, designation, salutation, employee_id, employment_type, date_of_joining]
     );
 
     // Also create a record in faculty_information table if it doesn't exist
@@ -133,24 +140,25 @@ exports.registerFaculty = async (req, res) => {
       );
     }
 
-    // Send password setup email
-    const resetUrl = `${FRONTEND_URL}/reset-password/${resetToken}`;
+    // Send temp password email
     try {
-      await emailService.sendPasswordReset({
+      await emailService.sendTempPasswordEmail({
         to: email,
         name: name,
-        resetUrl,
-        role: 'Faculty'
+        tempPassword,
+        role: 'Faculty',
+        loginUrl: FRONTEND_URL
       });
     } catch (emailErr) {
       console.error('Email error:', emailErr);
     }
-    console.log(`🔗 Faculty password reset URL for ${email}: ${resetUrl}`);
+    console.log(`🔑 Faculty temp password for ${email}: ${tempPassword}`);
 
     res.json({
       success: true,
-      message: 'Faculty registered successfully. Password setup email sent.',
-      faculty: { id: result.insertId, name, email, designation, department: deptName }
+      message: 'Faculty registered successfully. Temporary password email sent.',
+      faculty: { id: result.insertId, name, email, designation, department: deptName },
+      tempPassword
     });
   } catch (error) {
     console.error('Register faculty error:', error);
@@ -201,7 +209,7 @@ exports.getDepartmentFaculty = async (req, res) => {
 
 /**
  * GET /api/register/users
- * Admin: list all registered users
+ * DOFA: list all registered users
  */
 exports.getAllUsers = async (req, res) => {
   try {

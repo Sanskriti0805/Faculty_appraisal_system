@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { Mail, User, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import './LoginPage.css';
 
 const API_BASE = `http://${window.location.hostname}:5000/api`;
 
+const ROLES = [
+  { value: 'faculty', label: 'Faculty' },
+  { value: 'hod', label: 'Head of Department (HOD)' },
+  { value: 'dofa', label: 'DOFA' },
+  { value: 'dofa_office', label: 'DOFA Office' },
+];
+
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
+  const [role, setRole] = useState('faculty');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
@@ -14,13 +22,14 @@ const ForgotPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) { setError('Please enter your email address'); return; }
+    if (!role) { setError('Please select your role'); return; }
     setLoading(true);
     setError('');
     try {
       const res = await fetch(`${API_BASE}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email, role })
       });
       const data = await res.json();
       if (data.success) {
@@ -44,7 +53,7 @@ const ForgotPassword = () => {
             <div className="login-logo-subtitle">The LNM Institute of Information Technology</div>
           </div>
           <h1 className="login-title">Reset Your Password</h1>
-          <p className="login-subtitle">Enter your email to receive a reset link</p>
+          <p className="login-subtitle">Select your role and enter your email to receive a reset link</p>
         </div>
 
         <div className="login-card">
@@ -55,7 +64,7 @@ const ForgotPassword = () => {
                 Check your inbox!
               </h3>
               <p style={{ fontSize: '14px', color: '#718096', marginBottom: '24px' }}>
-                If <strong>{email}</strong> is registered, you'll receive a password reset link shortly.
+                If <strong>{email}</strong> is registered as <strong>{ROLES.find(r => r.value === role)?.label}</strong>, you'll receive a password reset link shortly.
               </p>
               <Link to="/login" style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -66,6 +75,24 @@ const ForgotPassword = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit}>
+              {/* Role Selector */}
+              <div className="login-field">
+                <label className="login-field-label">
+                  <User size={15} />
+                  Select Your Role
+                </label>
+                <select
+                  className="login-select"
+                  value={role}
+                  onChange={e => { setRole(e.target.value); setError(''); }}
+                >
+                  {ROLES.map(r => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Email */}
               <div className="login-field">
                 <label className="login-field-label">
                   <Mail size={15} />

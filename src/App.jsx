@@ -9,8 +9,8 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 
-// Admin
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+// DOFA Registration (migrated from Admin)
+const DOFARegistration = lazy(() => import('./pages/DOFARegistration'))
 
 // HOD
 const HODDashboard = lazy(() => import('./pages/HODDashboard'))
@@ -78,12 +78,7 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-            {/* ── Admin Routes ── */}
-            <Route path="/admin/dashboard" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
+
 
             {/* ── HOD Routes ── */}
             <Route path="/hod/dashboard" element={
@@ -138,6 +133,8 @@ function App() {
               <Route path="evaluation" element={<EvaluationSheet />} />
               <Route path="sheet2" element={<EvaluationSheet2 />} />
               <Route path="sheet3" element={<EvaluationSheet3 />} />
+              <Route path="registration" element={<DOFARegistration />} />
+              <Route path="manage-users" element={<DOFARegistration />} />
             </Route>
 
             {/* ── DOFA Office Routes ── */}
@@ -147,7 +144,14 @@ function App() {
               </ProtectedRoute>
             }>
               <Route path="dashboard" element={<DOFAOfficeDashboard />} />
+              <Route path="rubrics" element={<RubricsManagement />} />
+              <Route path="sheet1" element={<EvaluationSheet />} />
+              <Route path="evaluation" element={<EvaluationSheet />} />
+              <Route path="sheet2" element={<EvaluationSheet2 />} />
+              <Route path="sheet3" element={<EvaluationSheet3 />} />
               <Route path="form-builder" element={<FormBuilder />} />
+              <Route path="registration" element={<DOFARegistration />} />
+              <Route path="manage-users" element={<DOFARegistration />} />
             </Route>
 
             {/* ── Catch-all → login ── */}

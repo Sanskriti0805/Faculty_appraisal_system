@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import './AdminDashboard.css';
+import './HODDashboard.css';
 
 const API_BASE = `http://${window.location.hostname}:5000/api`;
 

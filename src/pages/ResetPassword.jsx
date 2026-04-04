@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import './LoginPage.css';
 
@@ -7,6 +7,8 @@ const API_BASE = `http://${window.location.hostname}:5000/api`;
 
 const ResetPassword = () => {
   const { token } = useParams();
+  const [searchParams] = useSearchParams();
+  const role = searchParams.get('role') || '';
   const navigate = useNavigate();
   const [form, setForm] = useState({ password: '', confirm: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -63,7 +65,10 @@ const ResetPassword = () => {
             <div className="login-logo-subtitle">The LNM Institute of Information Technology</div>
           </div>
           <h1 className="login-title">Set New Password</h1>
-          <p className="login-subtitle">Create a strong password for your account</p>
+          <p className="login-subtitle">
+            Create a strong password for your account
+            {role && <> (<strong>{role.toUpperCase()}</strong>)</>}
+          </p>
         </div>
 
         <div className="login-card">
@@ -76,6 +81,11 @@ const ResetPassword = () => {
               <p style={{ fontSize: '14px', color: '#718096', marginBottom: '8px' }}>
                 Redirecting to login page...
               </p>
+              {role && (
+                <p style={{ fontSize: '13px', color: '#4a5568', marginBottom: '12px' }}>
+                  Remember to select <strong>{role.toUpperCase()}</strong> as your role when logging in.
+                </p>
+              )}
               <Link to="/login" style={{ fontSize: '14px', color: '#2c5282', fontWeight: '500' }}>
                 Go to Login →
               </Link>

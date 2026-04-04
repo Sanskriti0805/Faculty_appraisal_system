@@ -1,6 +1,8 @@
 /**
  * Email Service using Nodemailer
- * Sends styled HTML emails for password reset and registration
+ * Sends styled HTML emails for:
+ *  - Registration (temp password)
+ *  - Forgot-password (reset link)
  */
 const nodemailer = require('nodemailer');
 
@@ -33,134 +35,133 @@ class EmailService {
     console.log('✅ Email service configured');
   }
 
+  // ─── LNMIIT Branded Template (from email_fix.md) ──────────────────────
+
   /**
-   * Build the HTML email template (styled like LNMIIT Lab Management System)
+   * Build the LNMIIT-branded HTML email (matching the official template)
    */
-  buildTemplate({ recipientName, bodyHtml, footerText }) {
-    return `
-<!DOCTYPE html>
+  buildLNMIITTemplate({ recipientName, bodyHtml }) {
+    const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    return `<!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0;padding:0;background-color:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8;padding:40px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);padding:24px 40px;text-align:center;">
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">
-                LNMIIT Faculty Appraisal System
-              </h1>
-            </td>
-          </tr>
-          <!-- Body -->
-          <tr>
-            <td style="padding:40px;">
-              <p style="margin:0 0 20px;font-size:16px;color:#2d3748;">Dear <strong>${recipientName}</strong>,</p>
-              ${bodyHtml}
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding:20px 40px;background-color:#f8f9fa;border-top:1px solid #e2e8f0;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#718096;">
-                ${footerText || 'If you have any questions, please contact our support team.'}
-              </p>
-              <p style="margin:8px 0 0;font-size:12px;color:#a0aec0;">
-                Thank you for using the LNMIIT Faculty Appraisal System.
-              </p>
-              <p style="margin:8px 0 0;font-size:11px;color:#cbd5e0;">
-                Best regards,<br>The LNMIIT Administration
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
+  <head>
+    <title>The LNM Institute of Information Technology, Jaipur</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto" rel="stylesheet">
+  </head>
+  <body>
+    <table style="background:#eee;padding:40px;border:1px solid #ddd;margin:0 auto; font-family: 'Roboto', sans-serif;">
+      <tbody>
+        <tr>
+          <td>
+            <table style="background:#fff;width:100%;border:1px solid #ccc;padding:0;margin:0;border-collapse:collapse;max-width:100%;width:550px;border-radius:10px">
+              <tbody style="border: solid 1px #034da2;">
+                <tr style="background: #EEEEEE;">
+                  <td>
+                    <center>
+                      <a href="https://lnmiit.ac.in">
+                        <img src="https://lnmiit.ac.in/wp-content/uploads/2023/07/cropped-LNMIIT-Logo-Transperant-Background-e1699342125845.png" style="width:200px; margin:auto;display:block; padding: 10px;" alt="LNMIIT Logo">
+                      </a>
+                    </center>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 30px;text-align:center;margin:0"></td>
+                </tr>
+                ${bodyHtml}
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
 </html>`;
   }
 
-  /**
-   * Send a password reset email
-   */
-  async sendPasswordReset({ to, name, resetUrl, role }) {
-    const bodyHtml = `
-      <p style="margin:0 0 16px;font-size:15px;color:#4a5568;line-height:1.6;">
-        Welcome to the <strong>LNMIIT Faculty Appraisal System</strong>!
-      </p>
-      <p style="margin:0 0 16px;font-size:15px;color:#4a5568;line-height:1.6;">
-        An account has been created for you with the role of <strong>${role}</strong>. To get started, please set up your password using the button below:
-      </p>
-      <div style="text-align:center;margin:30px 0;">
-        <a href="${resetUrl}" style="display:inline-block;padding:14px 32px;background-color:#2c5282;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600;letter-spacing:0.3px;">
-          Set Up Password
-        </a>
-      </div>
-      <p style="margin:0 0 12px;font-size:13px;color:#718096;">
-        If the button doesn't work, copy and paste this link into your browser:
-      </p>
-      <p style="margin:0 0 20px;">
-        <a href="${resetUrl}" style="font-size:13px;color:#2c5282;word-break:break-all;">${resetUrl}</a>
-      </p>
-      <p style="margin:0 0 8px;font-size:13px;color:#718096;">This link will expire in 48 hours.</p>
-      <div style="margin:20px 0;padding:16px;background-color:#f7fafc;border-radius:6px;border-left:4px solid #2c5282;">
-        <p style="margin:0 0 4px;font-size:14px;color:#4a5568;"><strong>Your account details:</strong></p>
-        <ul style="margin:8px 0 0;padding-left:20px;color:#4a5568;font-size:14px;">
-          <li><strong>Email:</strong> ${to}</li>
-          <li><strong>Role:</strong> ${role}</li>
-        </ul>
-      </div>
-    `;
+  // ─── Registration Email (Temp Password) ────────────────────────────────
 
-    const html = this.buildTemplate({
-      recipientName: name,
-      bodyHtml,
-      footerText: 'If you did not request this account, please ignore this email.'
-    });
+  /**
+   * Send a registration email with temporary password
+   * Used when DOFA registers a department (HOD) or faculty member
+   */
+  async sendTempPasswordEmail({ to, name, tempPassword, role, loginUrl }) {
+    const siteUrl = loginUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    const bodyHtml = `
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p>Dear <b>${name}</b>,</p>
+                    <p>I hope this email finds you well. As part of our routine security measures, we have generated a temporary password for your account with <b>The LNM Institute of Information Technology</b>. This temporary password will allow you to access your account and set a new, personalized password of your choice.</p>
+                    
+                    <p>Your Temporary Password:</p>
+                    <h3 style="color: #034da2; background: #f0f4ff; padding: 12px 20px; border-radius: 6px; letter-spacing: 2px; text-align: center;">${tempPassword}</h3>
+
+                    <p><b>Your Role:</b> ${role}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p>To ensure the security of your account, please follow these steps:</p>
+                    <ol>
+                      <li>Use the provided temporary password to log in to your account at <a href="${siteUrl}/login">${siteUrl}/login</a>.</li>
+                      <li>Select your role as <b>${role}</b> on the login page.</li>
+                      <li>Once logged in, navigate to your account settings.</li>
+                      <li>Choose the option to change your password.</li>
+                      <li>Enter a new, secure password and save the changes.</li>
+                    </ol>
+                    <p>If you did not request this account or have any concerns about the security of your account, please contact our support team immediately at webmaster@lnmiit.ac.in.</p>
+                    <p>Thank you for your cooperation in maintaining the security of your account.</p>
+                    <br/><br/>
+                    <p>Best regards,</p>
+                    <p><b>Webmaster LNMIIT</b></p>
+                    <p>webmaster@lnmiit.ac.in</p>
+                  </td>
+                </tr>`;
+
+    const html = this.buildLNMIITTemplate({ recipientName: name, bodyHtml });
 
     await this._send({
       to,
-      subject: 'LNMIIT Faculty Appraisal — Set Up Your Password',
+      subject: `LNMIIT Faculty Appraisal — Your Temporary Password (${role})`,
       html
     });
   }
 
-  /**
-   * Send a forgot-password email
-   */
-  async sendForgotPassword({ to, name, resetUrl }) {
-    const bodyHtml = `
-      <p style="margin:0 0 16px;font-size:15px;color:#4a5568;line-height:1.6;">
-        We received a request to reset your password for the <strong>LNMIIT Faculty Appraisal System</strong>.
-      </p>
-      <p style="margin:0 0 16px;font-size:15px;color:#4a5568;line-height:1.6;">
-        Click the button below to set a new password:
-      </p>
-      <div style="text-align:center;margin:30px 0;">
-        <a href="${resetUrl}" style="display:inline-block;padding:14px 32px;background-color:#c53030;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600;">
-          Reset Password
-        </a>
-      </div>
-      <p style="margin:0 0 12px;font-size:13px;color:#718096;">
-        If the button doesn't work, copy and paste this link into your browser:
-      </p>
-      <p style="margin:0 0 20px;">
-        <a href="${resetUrl}" style="font-size:13px;color:#2c5282;word-break:break-all;">${resetUrl}</a>
-      </p>
-      <p style="margin:0;font-size:13px;color:#718096;">This link will expire in 1 hour.</p>
-    `;
+  // ─── Forgot Password Email (Reset Link) ────────────────────────────────
 
-    const html = this.buildTemplate({
-      recipientName: name,
-      bodyHtml,
-      footerText: 'If you did not request a password reset, please ignore this email. Your password will remain unchanged.'
-    });
+  /**
+   * Send a forgot-password email with reset link
+   */
+  async sendForgotPassword({ to, name, resetUrl, role }) {
+    const bodyHtml = `
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p>Dear <b>${name}</b>,</p>
+                    <p>We received a request to reset your password for the <b>LNMIIT Faculty Appraisal System</b>.</p>
+                    ${role ? `<p>This request was made for your <b>${role}</b> account.</p>` : ''}
+                    <p>Click the button below to set a new password:</p>
+                    <div style="text-align:center;margin:20px 0;">
+                      <a href="${resetUrl}" style="display:inline-block;padding:14px 32px;background-color:#034da2;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600;">
+                        Reset Password
+                      </a>
+                    </div>
+                    <p style="font-size:13px;color:#718096;">If the button doesn't work, copy and paste this link into your browser:</p>
+                    <p><a href="${resetUrl}" style="font-size:13px;color:#034da2;word-break:break-all;">${resetUrl}</a></p>
+                    <p style="font-size:13px;color:#718096;">This link will expire in 1 hour.</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p>If you did not request a password reset, please ignore this email. Your password will remain unchanged.</p>
+                    <br/>
+                    <p>Best regards,</p>
+                    <p><b>Webmaster LNMIIT</b></p>
+                    <p>webmaster@lnmiit.ac.in</p>
+                  </td>
+                </tr>`;
+
+    const html = this.buildLNMIITTemplate({ recipientName: name, bodyHtml });
 
     await this._send({
       to,
@@ -168,6 +169,19 @@ class EmailService {
       html
     });
   }
+
+  // ─── Legacy: Password Setup Email (reset link for registration) ────────
+  // Kept for backward compatibility but no longer used by registration flow
+
+  /**
+   * Send a password reset/setup email (legacy — kept for compatibility)
+   */
+  async sendPasswordReset({ to, name, resetUrl, role }) {
+    // Redirect to the new forgot-password style email
+    return this.sendForgotPassword({ to, name, resetUrl, role });
+  }
+
+  // ─── Internal Send Method ──────────────────────────────────────────────
 
   /**
    * Internal send method — falls back to console logging if not configured

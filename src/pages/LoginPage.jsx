@@ -7,7 +7,6 @@ import './LoginPage.css';
 const ROLES = [
   { value: 'faculty', label: 'Faculty' },
   { value: 'hod', label: 'Head of Department (HOD)' },
-  { value: 'admin', label: 'Admin' },
   { value: 'dofa', label: 'DOFA' },
   { value: 'dofa_office', label: 'DOFA Office' },
 ];
@@ -39,7 +38,6 @@ const LoginPage = () => {
       const result = await login(form.email, form.password, form.role);
       if (result.success) {
         const redirectMap = {
-          admin: '/admin/dashboard',
           hod: '/hod/dashboard',
           faculty: '/',
           dofa: '/dofa/dashboard',
