@@ -44,13 +44,14 @@ exports.createCourse = async (req, res) => {
       program,
       credits,
       enrollment,
+      percentage,
       feedback_score,
       status = 'draft'
     } = req.body;
 
     const [result] = await db.query(
-      'INSERT INTO courses_taught (faculty_id, section, semester, course_code, course_name, program, credits, enrollment, feedback_score, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [faculty_id, section, semester, course_code, course_name, program, credits, enrollment, feedback_score, status]
+      'INSERT INTO courses_taught (faculty_id, section, semester, course_code, course_name, program, credits, enrollment, percentage, feedback_score, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [faculty_id, section, semester, course_code, course_name, program, credits, enrollment, percentage || null, feedback_score || null, status]
     );
 
     res.status(201).json({

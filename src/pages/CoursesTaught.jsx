@@ -162,6 +162,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
             course_name: course.title,
             semester: course.semester,
             enrollment: course.students === '' ? null : parseInt(course.students),
+            percentage: course.percentage === '' ? null : course.percentage,
             feedback_score: course.feedback === '' ? null : parseFloat(course.feedback),
             status: 'submitted'
           });

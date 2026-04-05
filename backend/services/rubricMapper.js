@@ -3,8 +3,20 @@ const db = require('../config/database');
 /**
  * Auto-allocates marks per rubric for a submitted faculty appraisal.
  * Logic: granular mapping of each rubric to specific DB data.
- * Teaching Feedback & Research Guidance → 0 (no supporting data in DB).
+ * Teaching Feedback  → computed from courses_taught (enrollment + feedback_score).
+ * Research Guidance  → 0 (no guidance table in DB yet).
  * All unmatched rubrics → 0 (inserted explicitly for complete record).
+ *
+ * Teaching Feedback rubric categories (Form A, Part A, Section 4.1):
+ *   Rubric IDs 1-3  (≥50 students category, scale 5-4-3):
+ *     ID 1: enrollment≥50 AND feedback≥4   → 5 pts
+ *     ID 2: enrollment≥50 AND 3.5≤fb<4    → 4 pts
+ *     ID 3: enrollment≥50 AND 3≤fb<3.5    → 3 pts
+ *   Rubric IDs 4-6  (<50 students category, scale 4-3-2):
+ *     ID 4: enrollment<50  AND feedback≥4  → 4 pts
+ *     ID 5: enrollment<50  AND 3.5≤fb<4   → 3 pts
+ *     ID 6: enrollment<50  AND 3≤fb<3.5   → 2 pts
+ *   Only ONE category applies per faculty (based on best course). The other → 0.
  */
 const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
   try {
@@ -37,6 +49,83 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
     // ── Build score map: rubricId → score ──────────────────────────────────
     const scoreMap = {};
 
+    // ── Pre-compute Teaching Feedback scores (IDs 1-6) ────────────────────
+    // Get the 6 Teaching Feedback rubrics sorted by ID.
+    const tfRubrics = rubrics
+      .filter(r => r.section_name.toLowerCase().includes('teaching feedback'))
+      .sort((a, b) => a.id - b.id); // IDs 1→6 in order
+
+    if (tfRubrics.length === 6) {
+      // rubric indices: [0]=ID1, [1]=ID2, [2]=ID3, [3]=ID4, [4]=ID5, [5]=ID6
+      // Initialise all 6 to 0
+      tfRubrics.forEach(r => { scoreMap[r.id] = 0; });
+
+      // Track the best score found for each category
+      // category_ge50  → rubric indices 0,1,2  (IDs 1,2,3)
+      // category_lt50  → rubric indices 3,4,5  (IDs 4,5,6)
+      let bestGe50Score = -1; // best score for courses with enrollment >= 50
+      let bestGe50RubricIdx = -1; // which rubric index (0-2) won
+      let bestLt50Score = -1;  // best score for courses with enrollment < 50
+      let bestLt50RubricIdx = -1;
+
+      for (const course of courses) {
+        const enrollment = parseInt(course.enrollment) || 0;
+        const fb = parseFloat(course.feedback_score);
+
+        // Skip courses with no feedback score recorded
+        if (course.feedback_score === null || course.feedback_score === undefined || isNaN(fb)) continue;
+
+        if (enrollment >= 50) {
+          // Category  5-4-3  (rubric IDs 1,2,3  → indices 0,1,2)
+          let rubricIdx = -1;
+          let pts = 0;
+          if (fb >= 4)           { rubricIdx = 0; pts = f(tfRubrics[0].max_marks); }
+          else if (fb >= 3.5)    { rubricIdx = 1; pts = f(tfRubrics[1].max_marks); }
+          else if (fb >= 3)      { rubricIdx = 2; pts = f(tfRubrics[2].max_marks); }
+          // fb < 3 → no points (rubricIdx stays -1)
+
+          if (rubricIdx >= 0 && pts > bestGe50Score) {
+            bestGe50Score = pts;
+            bestGe50RubricIdx = rubricIdx;
+          }
+        } else {
+          // Category  4-3-2  (rubric IDs 4,5,6  → indices 3,4,5)
+          let rubricIdx = -1;
+          let pts = 0;
+          if (fb >= 4)           { rubricIdx = 3; pts = f(tfRubrics[3].max_marks); }
+          else if (fb >= 3.5)    { rubricIdx = 4; pts = f(tfRubrics[4].max_marks); }
+          else if (fb >= 3)      { rubricIdx = 5; pts = f(tfRubrics[5].max_marks); }
+          // fb < 3 → no points
+
+          if (rubricIdx >= 0 && pts > bestLt50Score) {
+            bestLt50Score = pts;
+            bestLt50RubricIdx = rubricIdx;
+          }
+        }
+      }
+
+      // Determine which category wins (higher point value takes priority).
+      // Only ONE category can be active; the other must stay 0.
+      const ge50Wins = bestGe50Score >= bestLt50Score && bestGe50Score >= 0;
+      const lt50Wins = bestLt50Score > bestGe50Score && bestLt50Score >= 0;
+
+      if (ge50Wins && bestGe50RubricIdx >= 0) {
+        // Apply the single winning rubric from the ≥50 category
+        scoreMap[tfRubrics[bestGe50RubricIdx].id] = bestGe50Score;
+        // Rubric IDs 4,5,6 stay 0 (already set)
+        console.log(`  Teaching Feedback (≥50 students): rubric ID ${tfRubrics[bestGe50RubricIdx].id} → ${bestGe50Score} pts`);
+      } else if (lt50Wins && bestLt50RubricIdx >= 0) {
+        // Apply the single winning rubric from the <50 category
+        scoreMap[tfRubrics[bestLt50RubricIdx].id] = bestLt50Score;
+        // Rubric IDs 1,2,3 stay 0 (already set)
+        console.log(`  Teaching Feedback (<50 students): rubric ID ${tfRubrics[bestLt50RubricIdx].id} → ${bestLt50Score} pts`);
+      } else {
+        console.log(`  Teaching Feedback: no qualifying courses found → all 0`);
+      }
+    } else {
+      console.log(`  Warning: Expected 6 Teaching Feedback rubrics, found ${tfRubrics.length}`);
+    }
+
     for (const rubric of rubrics) {
       const sec = rubric.section_name.toLowerCase();
       const sub = (rubric.sub_section || '').toLowerCase();
@@ -44,9 +133,10 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       let score = 0;
 
       // ── 1. Teaching Feedback (IDs 1-6) ────────────────────────────────
-      // No feedback_score column in DB → award 0
+      // Scores already computed and injected into scoreMap above.
+      // Skip loop processing for these rubrics.
       if (sec.includes('teaching feedback')) {
-        score = 0;
+        score = scoreMap[rubric.id] ?? 0;
       }
 
       // ── 2. Research Guidance (IDs 7-10) ───────────────────────────────
