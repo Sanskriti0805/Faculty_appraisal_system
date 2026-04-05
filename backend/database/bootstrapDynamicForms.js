@@ -256,6 +256,21 @@ async function bootstrapDatabaseTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     `);
 
+    // 12. Legacy section JSON storage (for sections without dedicated relational tables)
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS legacy_section_entries (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        faculty_id INT NOT NULL,
+        academic_year VARCHAR(20) NOT NULL,
+        section_key VARCHAR(100) NOT NULL,
+        content_json JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_legacy_section_year (faculty_id, academic_year, section_key),
+        FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+    `);
+
     // Create useful indexes (safely skip if already exist)
     const indexQueries = [
       `CREATE INDEX idx_users_email ON users(email)`,

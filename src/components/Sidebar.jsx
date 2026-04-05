@@ -1,15 +1,20 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronRight, ChevronDown } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import './Sidebar.css'
 
 const Sidebar = () => {
   const location = useLocation()
+  const { user, token } = useAuth()
   const [partAOpen, setPartAOpen] = useState(true)
   const [partBOpen, setPartBOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState({})
   const [dynamicSections, setDynamicSections] = useState([])
   const [formsReleased, setFormsReleased] = useState(true) // default true for non-faculty
+  const [submissionStatus, setSubmissionStatus] = useState(null)
+  const [approvedSections, setApprovedSections] = useState([])
+  const [hasSectionRestrictions, setHasSectionRestrictions] = useState(false)
 
   React.useEffect(() => {
     const fetchDynamicSections = async () => {
@@ -44,6 +49,127 @@ const Sidebar = () => {
     };
     checkReleaseStatus();
   }, [location.pathname]);
+
+  // Fetch submission/edit access status for faculty to disable locked sections in UI.
+  React.useEffect(() => {
+    const isDOFA = location.pathname.startsWith('/dofa')
+    if (isDOFA || !token || user?.role !== 'faculty') return
+
+    const run = async () => {
+      try {
+        const subRes = await fetch(`http://${window.location.hostname}:5000/api/submissions/my`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const subData = await subRes.json()
+        if (!subData.success || !subData.data) {
+          setSubmissionStatus(null)
+          setApprovedSections([])
+          setHasSectionRestrictions(false)
+          return
+        }
+
+        const submission = subData.data
+        setSubmissionStatus(submission.status)
+
+        if (submission.status !== 'sent_back') {
+          setApprovedSections([])
+          setHasSectionRestrictions(false)
+          return
+        }
+
+        const reqRes = await fetch(`http://${window.location.hostname}:5000/api/edit-requests/my-submission/${submission.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const reqData = await reqRes.json()
+
+        if (!reqData.success) {
+          setApprovedSections([])
+          setHasSectionRestrictions(false)
+          return
+        }
+
+        const unlockedSections = Array.isArray(reqData.unlockedSections) ? reqData.unlockedSections : []
+        setApprovedSections(unlockedSections)
+        setHasSectionRestrictions(unlockedSections.length > 0)
+      } catch (error) {
+        console.error('Error fetching sidebar edit access:', error)
+      }
+    }
+
+    run()
+  }, [location.pathname, token, user])
+
+  const pathToSectionKey = {
+    '/faculty-information': 'faculty_info',
+    '/courses-taught': 'courses_taught',
+    '/new-courses': 'new_courses',
+    '/courseware': 'courseware',
+    '/teaching-innovation': 'teaching_innovation',
+    '/research-publications': 'research_publications',
+    '/research-grants': 'research_grants',
+    '/patents': 'patents',
+    '/technology-transfer': 'technology_transfer',
+    '/paper-review': 'paper_review',
+    '/conference-sessions': 'conference_sessions',
+    '/keynotes-talks': 'keynotes_talks',
+    '/conferences-outside': 'conference_sessions',
+    '/other-activities': 'other_activities',
+    '/awards-honours': 'awards_honours',
+    '/consultancy': 'consultancy',
+    '/continuing-education': 'continuing_education',
+    '/institutional-contributions': 'institutional_contributions',
+    '/other-important-activities': 'other_activities',
+    '/research-plan': 'research_plan',
+    '/teaching-plan': 'teaching_plan',
+    '/part-b': 'part_b',
+  }
+
+  const isPathEditable = (path) => {
+    const isFacultyRoute = !location.pathname.startsWith('/dofa')
+    if (!isFacultyRoute) return true
+
+    if (!submissionStatus || submissionStatus === 'draft') return true
+    if (['submitted', 'under_review', 'approved'].includes(submissionStatus)) return false
+
+    if (submissionStatus === 'sent_back') {
+      if (!hasSectionRestrictions) return true
+
+      // Part B contains the final submit action and must remain reachable for re-submission.
+      if (path === '/part-b') return true
+
+      if (path.startsWith('/faculty/dynamic/')) return false
+      const sectionKey = pathToSectionKey[path]
+      return !!sectionKey && approvedSections.includes(sectionKey)
+    }
+
+    return true
+  }
+
+  const renderNavLink = (path, label, className = 'nav-item') => {
+    const editable = isPathEditable(path)
+    const active = location.pathname === path
+    if (!editable) {
+      return (
+        <span
+          key={path}
+          className={`${className} nav-item-locked ${active ? 'active' : ''}`}
+          title="Locked until edit access is granted"
+        >
+          {label}
+        </span>
+      )
+    }
+
+    return (
+      <Link
+        key={path}
+        to={path}
+        className={`${className} ${active ? 'active' : ''}`}
+      >
+        {label}
+      </Link>
+    )
+  }
 
   const isDOFAOfficeRoute = location.pathname.startsWith('/dofa-office')
   const isDOFARoute = location.pathname.startsWith('/dofa') && !isDOFAOfficeRoute
@@ -170,6 +296,16 @@ const Sidebar = () => {
       <nav className="sidebar-nav">
         {formsReleased ? (
           <>
+        {['submitted', 'under_review', 'approved'].includes(submissionStatus) && (
+          <div className="sidebar-lock-note">
+            Form is submitted. Sections are locked until DOFA sends back or approves requested edits.
+          </div>
+        )}
+        {submissionStatus === 'sent_back' && hasSectionRestrictions && (
+          <div className="sidebar-lock-note sidebar-lock-note-warning">
+            Only approved sections are editable right now.
+          </div>
+        )}
         <div className="nav-section">
           <button
             className="nav-section-header"
@@ -196,25 +332,13 @@ const Sidebar = () => {
                     {expandedSections[item.name] && (
                       <div className="nav-sub-items">
                         {item.subItems.map((subItem) => (
-                          <Link
-                            key={subItem.path}
-                            to={subItem.path}
-                            className={`nav-item nav-sub-item ${location.pathname === subItem.path ? 'active' : ''}`}
-                          >
-                            {subItem.name}
-                          </Link>
+                          renderNavLink(subItem.path, subItem.name, 'nav-item nav-sub-item')
                         ))}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
-                  >
-                    {item.name}
-                  </Link>
+                  renderNavLink(item.path, item.name, 'nav-item')
                 )
               ))}
             </div>
@@ -234,23 +358,10 @@ const Sidebar = () => {
           </button>
           {partBOpen && (
             <div className="nav-section-items">
-              <Link
-                to="/part-b"
-                className={`nav-item ${location.pathname === '/part-b' ? 'active' : ''}`}
-              >
-                Part B Content
-              </Link>
+              {renderNavLink('/part-b', 'Part B Content', 'nav-item')}
               {dynamicSections
                 .filter(s => s.form_type === 'B' && s.is_active)
-                .map(s => (
-                  <Link
-                    key={s.id}
-                    to={`/faculty/dynamic/${s.id}`}
-                    className={`nav-item ${location.pathname === `/faculty/dynamic/${s.id}` ? 'active' : ''}`}
-                  >
-                    {s.title}
-                  </Link>
-                ))}
+                .map(s => renderNavLink(`/faculty/dynamic/${s.id}`, s.title, 'nav-item'))}
             </div>
           )}
         </div>

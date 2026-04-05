@@ -1,9 +1,13 @@
 import React, { useState } from 'react'
+import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
+import { useAuth } from '../context/AuthContext'
+import { legacySectionsService } from '../services/legacySectionsService'
 
 const ContinuingEducation = () => {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     coursesOrganized: '',
     workshopsOrganized: '',
@@ -19,9 +23,36 @@ const ContinuingEducation = () => {
     setFormData({ ...formData, [field]: value })
   }
 
+  useEffect(() => {
+    if (!user?.id) return
+
+    const hydrate = async () => {
+      try {
+        const res = await legacySectionsService.getMySection('continuing_education')
+        if (res?.data) setFormData(res.data)
+      } catch (error) {
+        console.error('Failed to load continuing education data:', error)
+      }
+    }
+
+    hydrate()
+  }, [user])
+
   const handleSave = async () => {
-    console.log('Saving data:', formData)
-    return true
+    if (!user?.id) {
+      alert('Unable to identify logged-in faculty. Please login again.')
+      return false
+    }
+
+    try {
+      await legacySectionsService.saveSection('continuing_education', formData)
+      alert('Data saved successfully!')
+      return true
+    } catch (error) {
+      console.error('Failed to save continuing education data:', error)
+      alert('Failed to save data. Please try again.')
+      return false
+    }
   }
 
   return (

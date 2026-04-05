@@ -1,12 +1,33 @@
 import React, { useState, useEffect } from 'react'
 import { Upload, Plus, Trash2, ExternalLink } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
+import apiClient from '../services/api'
+import { useAuth } from '../context/AuthContext'
+
+const deleteIgnoringNotFound = async (deleteUrlBuilder, ids, token) => {
+  const validIds = (ids || []).filter(id => Number.isFinite(Number(id)))
+  const results = await Promise.allSettled(
+    validIds.map(id => fetch(deleteUrlBuilder(id), {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    }))
+  )
+
+  const firstRealError = results.find(
+    result => result.status === 'rejected'
+  )
+
+  if (firstRealError) {
+    throw firstRealError.reason
+  }
+}
 
 const Consultancy = ({ initialData, readOnly }) => {
+  const { user, token } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [persistedConsultancyIds, setPersistedConsultancyIds] = useState([])
   const [consultancies, setConsultancies] = useState([
     {
       id: 1,
@@ -22,6 +43,7 @@ const Consultancy = ({ initialData, readOnly }) => {
 
   useEffect(() => {
     if (initialData && initialData.length > 0) {
+      setPersistedConsultancyIds(initialData.map(c => c.id).filter(Boolean))
       setConsultancies(initialData.map((c, index) => ({
         id: c.id || index + 1,
         organisation: c.organization || '',
@@ -34,6 +56,37 @@ const Consultancy = ({ initialData, readOnly }) => {
       })))
     }
   }, [initialData])
+
+  useEffect(() => {
+    if (readOnly || (initialData && initialData.length > 0) || !user?.id) return
+
+    const hydrateExisting = async () => {
+      try {
+        const mySub = await apiClient.get('/submissions/my')
+        if (!mySub?.success || !mySub?.data?.id) return
+        const details = await apiClient.get(`/submissions/${mySub.data.id}`)
+        const rows = Array.isArray(details?.data?.consultancy) ? details.data.consultancy : []
+        if (rows.length === 0) return
+
+        setPersistedConsultancyIds(rows.map(c => c.id).filter(Boolean))
+        setConsultancies(rows.map((c, index) => ({
+          id: c.id || index + 1,
+          organisation: c.organization || '',
+          project: c.project_title || '',
+          role: c.role || '',
+          duration: c.duration || '',
+          amount: c.amount || '',
+          year: c.year || '2026',
+          evidence_file: c.evidence_file || null,
+          evidenceFile: null
+        })))
+      } catch (error) {
+        console.error('Failed to prefill consultancy:', error)
+      }
+    }
+
+    hydrateExisting()
+  }, [initialData, readOnly, user])
 
   const handleAddConsultancy = () => {
     if (readOnly) return;
@@ -77,29 +130,53 @@ const Consultancy = ({ initialData, readOnly }) => {
     if (readOnly) return true;
     setLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
-      const facultyId = user?.id || 1;; // TODO: Actual faculty ID
+      const facultyId = user?.id;
+      if (!facultyId || !token) {
+        alert('Unable to identify logged-in faculty. Please login again.');
+        return false;
+      }
 
-      const promises = consultancies.map(c => {
-        const formData = new FormData();
-        formData.append('faculty_id', facultyId);
-        formData.append('organization', c.organisation);
-        formData.append('project_title', c.project);
-        formData.append('role', c.role);
-        formData.append('duration', c.duration);
-        formData.append('amount', c.amount);
-        formData.append('year', c.year);
-        if (c.evidenceFile) {
-          formData.append('evidence_file', c.evidenceFile);
-        }
+      await deleteIgnoringNotFound(
+        (id) => `http://${window.location.hostname}:5000/api/consultancy/${id}`,
+        persistedConsultancyIds,
+        token
+      )
 
-        return fetch(`http://${window.location.hostname}:5000/api/consultancy`, {
-          method: 'POST',
-          body: formData
+      const promises = consultancies
+        .filter(c => c.organisation && c.project)
+        .map(c => {
+          const formData = new FormData();
+          formData.append('faculty_id', facultyId);
+          formData.append('organization', c.organisation);
+          formData.append('project_title', c.project);
+          formData.append('role', c.role);
+          formData.append('duration', c.duration);
+          formData.append('amount', c.amount);
+          formData.append('year', c.year);
+          if (c.evidenceFile) {
+            formData.append('evidence_file', c.evidenceFile);
+          }
+
+          return fetch(`http://${window.location.hostname}:5000/api/consultancy`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData
+          });
         });
-      });
 
-      await Promise.all(promises);
+      const createdResponses = await Promise.all(promises);
+      const createdIds = []
+
+      for (const response of createdResponses) {
+        if (!response.ok) continue
+        const payload = await response.json()
+        const id = payload?.data?.id
+        if (Number.isFinite(Number(id))) {
+          createdIds.push(id)
+        }
+      }
+
+      setPersistedConsultancyIds(createdIds)
       alert('Data saved successfully!');
       return true
     } catch (error) {

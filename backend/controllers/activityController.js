@@ -16,6 +16,20 @@ exports.createPaperReview = async (req, res) => {
     }
 };
 
+exports.deletePaperReview = async (req, res) => {
+    try {
+        const [result] = await db.query('DELETE FROM paper_reviews WHERE id = ?', [req.params.id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Paper review not found' });
+        }
+
+        res.json({ success: true, message: 'Paper review deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // --- Technology Transfer ---
 exports.createTechTransfer = async (req, res) => {
     try {
@@ -48,6 +62,20 @@ exports.createConferenceSession = async (req, res) => {
     }
 };
 
+exports.deleteConferenceSession = async (req, res) => {
+    try {
+        const [result] = await db.query('DELETE FROM conference_sessions WHERE id = ?', [req.params.id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Conference session not found' });
+        }
+
+        res.json({ success: true, message: 'Conference session deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // --- Keynotes & Talks ---
 exports.createKeynoteTalk = async (req, res) => {
     try {
@@ -59,6 +87,34 @@ exports.createKeynoteTalk = async (req, res) => {
             [faculty_id, event_name, title, event_type, audience_type, evidence_file]
         );
         res.status(201).json({ success: true, id: result.insertId });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.deleteKeynoteTalk = async (req, res) => {
+    try {
+        const [result] = await db.query('DELETE FROM keynotes_talks WHERE id = ?', [req.params.id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Keynote/talk not found' });
+        }
+
+        res.json({ success: true, message: 'Keynote/talk deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.deleteTechTransfer = async (req, res) => {
+    try {
+        const [result] = await db.query('DELETE FROM technology_transfer WHERE id = ?', [req.params.id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Technology transfer entry not found' });
+        }
+
+        res.json({ success: true, message: 'Technology transfer deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

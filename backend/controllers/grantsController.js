@@ -1,11 +1,49 @@
 const db = require('../config/database');
 
+const toNumberOrNull = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
+const resolveFacultyInfoId = async ({ facultyId, email }) => {
+  const numericFacultyId = toNumberOrNull(facultyId);
+
+  if (email) {
+    const [fiByEmail] = await db.query('SELECT id FROM faculty_information WHERE email = ? LIMIT 1', [email]);
+    if (fiByEmail.length > 0) {
+      return fiByEmail[0].id;
+    }
+  }
+
+  if (numericFacultyId !== null) {
+    const [fiById] = await db.query('SELECT id FROM faculty_information WHERE id = ? LIMIT 1', [numericFacultyId]);
+    if (fiById.length > 0) {
+      return fiById[0].id;
+    }
+
+    const [usersById] = await db.query('SELECT email FROM users WHERE id = ? LIMIT 1', [numericFacultyId]);
+    if (usersById.length > 0) {
+      const [fiByUserEmail] = await db.query('SELECT id FROM faculty_information WHERE email = ? LIMIT 1', [usersById[0].email]);
+      if (fiByUserEmail.length > 0) {
+        return fiByUserEmail[0].id;
+      }
+    }
+  }
+
+  return null;
+};
+
 // Get all grants for a faculty
 exports.getGrantsByFaculty = async (req, res) => {
   try {
+    const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+    if (!facultyInfoId) {
+      return res.json({ success: true, data: [] });
+    }
+
     const [rows] = await db.query(
       'SELECT * FROM research_grants WHERE faculty_id = ? ORDER BY created_at DESC',
-      [req.params.facultyId]
+      [facultyInfoId]
     );
     res.json({ success: true, data: rows });
   } catch (error) {
@@ -29,6 +67,15 @@ exports.createGrant = async (req, res) => {
       role
     } = req.body;
 
+    const facultyInfoId = await resolveFacultyInfoId({
+      facultyId: faculty_id || req.user?.id,
+      email: req.user?.email
+    });
+
+    if (!facultyInfoId) {
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+    }
+
     const evidence_file = req.file ? req.file.filename : null;
 
     const [result] = await db.query(
@@ -36,7 +83,7 @@ exports.createGrant = async (req, res) => {
       (faculty_id, grant_type, project_name, funding_agency, currency, grant_amount, 
        amount_in_lakhs, duration, researchers, role, evidence_file) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [faculty_id, grant_type, project_name, funding_agency, currency, grant_amount,
+      [facultyInfoId, grant_type, project_name, funding_agency, currency, grant_amount,
         amount_in_lakhs, duration, researchers, role, evidence_file]
     );
 
@@ -53,9 +100,14 @@ exports.createGrant = async (req, res) => {
 // Get all proposals for a faculty
 exports.getProposalsByFaculty = async (req, res) => {
   try {
+    const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+    if (!facultyInfoId) {
+      return res.json({ success: true, data: [] });
+    }
+
     const [rows] = await db.query(
       'SELECT * FROM submitted_proposals WHERE faculty_id = ? ORDER BY created_at DESC',
-      [req.params.facultyId]
+      [facultyInfoId]
     );
     res.json({ success: true, data: rows });
   } catch (error) {
@@ -79,6 +131,15 @@ exports.createProposal = async (req, res) => {
       role
     } = req.body;
 
+    const facultyInfoId = await resolveFacultyInfoId({
+      facultyId: faculty_id || req.user?.id,
+      email: req.user?.email
+    });
+
+    if (!facultyInfoId) {
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+    }
+
     const evidence_file = req.file ? req.file.filename : null;
 
     const [result] = await db.query(
@@ -86,7 +147,7 @@ exports.createProposal = async (req, res) => {
       (faculty_id, title, funding_agency, currency, grant_amount, amount_in_lakhs, 
        duration, submission_date, status, role, evidence_file) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [faculty_id, title, funding_agency, currency, grant_amount, amount_in_lakhs,
+      [facultyInfoId, title, funding_agency, currency, grant_amount, amount_in_lakhs,
         duration, submission_date, status, role, evidence_file]
     );
 
@@ -103,12 +164,13 @@ exports.createProposal = async (req, res) => {
 // Delete grant
 exports.deleteGrant = async (req, res) => {
   try {
-    const [result] = await db.query('DELETE FROM research_grants WHERE id = ?', [req.params.id]);
+    const facultyInfoId = await resolveFacultyInfoId({ email: req.user?.email, facultyId: req.user?.id });
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: 'Grant not found' });
+    if (!facultyInfoId) {
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
     }
 
+    await db.query('DELETE FROM research_grants WHERE id = ? AND faculty_id = ?', [req.params.id, facultyInfoId]);
     res.json({ success: true, message: 'Grant deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -118,12 +180,13 @@ exports.deleteGrant = async (req, res) => {
 // Delete proposal
 exports.deleteProposal = async (req, res) => {
   try {
-    const [result] = await db.query('DELETE FROM submitted_proposals WHERE id = ?', [req.params.id]);
+    const facultyInfoId = await resolveFacultyInfoId({ email: req.user?.email, facultyId: req.user?.id });
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: 'Proposal not found' });
+    if (!facultyInfoId) {
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
     }
 
+    await db.query('DELETE FROM submitted_proposals WHERE id = ? AND faculty_id = ?', [req.params.id, facultyInfoId]);
     res.json({ success: true, message: 'Proposal deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

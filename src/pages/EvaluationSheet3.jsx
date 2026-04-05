@@ -20,12 +20,15 @@ const EvaluationSheet3 = () => {
       const res = await apiClient.get('/evaluation/sheet3');
       if (res.success) {
         setData(res.data || []);
-        setAvailableGrades(res.availableGrades || []);
+        const activeGrades = res.availableGrades || [];
+        setAvailableGrades(activeGrades);
         
         // Convert array to object mapping
         const incMap = {};
         (res.gradeIncrements || []).forEach(item => {
-          incMap[item.grade] = item.increment_percentage;
+          if (activeGrades.includes(item.grade)) {
+            incMap[item.grade] = item.increment_percentage;
+          }
         });
         setGradeIncrements(incMap);
       }
@@ -49,9 +52,9 @@ const EvaluationSheet3 = () => {
     try {
       setLoading(true);
       // 1. Save mappings
-      const incArray = Object.entries(gradeIncrements).map(([grade, percentage]) => ({
+      const incArray = availableGrades.map((grade) => ({
         grade,
-        increment_percentage: percentage
+        increment_percentage: gradeIncrements[grade] || 0
       }));
       await apiClient.post('/evaluation/grade-increments', { increments: incArray });
       

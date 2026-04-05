@@ -1,15 +1,46 @@
 import React, { useState } from 'react'
+import { useEffect } from 'react'
 import { Upload } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
+import apiClient from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const TechnologyTransfer = () => {
+  const { user, token } = useAuth()
+  const [technologyTransferId, setTechnologyTransferId] = useState(null)
   const [formData, setFormData] = useState({
     technologyInfo: '',
   })
   const [evidenceFile, setEvidenceFile] = useState(null)
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const hydrateExisting = async () => {
+      try {
+        const mySub = await apiClient.get('/submissions/my')
+        if (!mySub?.success || !mySub?.data?.id) return
+
+        const details = await apiClient.get(`/submissions/${mySub.data.id}`)
+        const rows = Array.isArray(details?.data?.techTransfer) ? details.data.techTransfer : []
+        if (rows.length === 0) return
+
+        setTechnologyTransferId(rows[0].id || null)
+
+        const summary = rows
+          .map((r) => `${r.title || ''}${r.agency ? ` - ${r.agency}` : ''}`.trim())
+          .filter(Boolean)
+          .join('\n')
+        setFormData({ technologyInfo: summary })
+      } catch (error) {
+        console.error('Failed to prefill technology transfer:', error)
+      }
+    }
+
+    hydrateExisting()
+  }, [user])
 
   const handleInputChange = (value) => {
     setFormData({ technologyInfo: value })
@@ -18,15 +49,25 @@ const TechnologyTransfer = () => {
   const [loading, setLoading] = useState(false)
 
   const handleSave = async () => {
-    if (!formData.technologyInfo.trim()) {
-      alert('Please enter technology details')
-      return false
-    }
-
     setLoading(true)
     try {
-      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
-      const facultyId = user?.id || 1;
+      const facultyId = user?.id
+      if (!facultyId || !token) {
+        alert('Unable to identify logged-in faculty. Please login again.')
+        return false
+      }
+
+      if (technologyTransferId) {
+        await fetch(`http://localhost:5000/api/activities/tech-transfer/${technologyTransferId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      }
+
+      if (!formData.technologyInfo.trim()) {
+        alert('Data saved successfully!')
+        return true
+      }
 
       const formDataObj = new FormData()
       formDataObj.append('faculty_id', facultyId)
@@ -40,6 +81,7 @@ const TechnologyTransfer = () => {
 
       const response = await fetch('http://localhost:5000/api/activities/tech-transfer', {
         method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
         body: formDataObj
       })
 

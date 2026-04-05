@@ -73,6 +73,8 @@ CREATE TABLE IF NOT EXISTS research_publications (
     title_of_book VARCHAR(255),
     publication_id VARCHAR(100),
     details TEXT,
+    evidence_file VARCHAR(255) COMMENT 'Path to uploaded evidence file',
+    status ENUM('draft', 'submitted') DEFAULT 'draft',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (faculty_id) REFERENCES faculty_information(id) ON DELETE CASCADE
 );

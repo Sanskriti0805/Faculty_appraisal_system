@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const submissionsController = require('../controllers/submissionsController');
 const { authenticate } = require('../middleware/authMiddleware');
+const { requireSectionEditAccess } = require('../middleware/submissionEditGuard');
 
 // Get current faculty's submission (or create draft) — MUST be before /:id
 router.get('/my', authenticate, submissionsController.getMySubmission);
@@ -16,7 +17,7 @@ router.get('/stats', submissionsController.getSubmissionStats);
 router.get('/export/excel/:academic_year', authenticate, submissionsController.exportComprehensiveExcel);
 
 // Get submission by ID
-router.get('/:id', submissionsController.getSubmissionById);
+router.get('/:id', authenticate, submissionsController.getSubmissionById);
 
 // Create new submission
 router.post('/', submissionsController.createSubmission);
@@ -25,7 +26,7 @@ router.post('/', submissionsController.createSubmission);
 router.put('/:id/status', authenticate, submissionsController.updateSubmissionStatus);
 
 // Consultancy save + Lock/Unlock
-router.post('/consultancy/save', submissionsController.saveConsultancy);
+router.post('/consultancy/save', authenticate, requireSectionEditAccess('consultancy'), submissionsController.saveConsultancy);
 router.put('/:id/lock', submissionsController.toggleSubmissionLock);
 
 // Send manual reminder email to faculty

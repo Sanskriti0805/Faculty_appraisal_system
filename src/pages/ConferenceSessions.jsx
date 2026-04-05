@@ -1,11 +1,15 @@
 import React, { useState } from 'react'
 import { Trash2, Plus } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import './ConferenceSessions.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
+import apiClient from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const ConferenceSessions = () => {
+  const { user, token } = useAuth()
+  const [persistedSessionIds, setPersistedSessionIds] = useState([])
   const initialState = {
     eventType: 'Conference',
     sponsoringAgency: '',
@@ -25,6 +29,47 @@ const ConferenceSessions = () => {
 
   const [submittedSessions, setSubmittedSessions] = useState([])
   const [formData, setFormData] = useState(initialState)
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const hydrateExisting = async () => {
+      try {
+        const mySub = await apiClient.get('/submissions/my')
+        if (!mySub?.success || !mySub?.data?.id) return
+
+        const details = await apiClient.get(`/submissions/${mySub.data.id}`)
+        const rows = Array.isArray(details?.data?.conferenceSessions) ? details.data.conferenceSessions : []
+        if (rows.length === 0) return
+
+        setPersistedSessionIds(rows.map((row) => row.id).filter(Boolean))
+
+        const mapped = rows.map((row) => ({
+          id: row.id,
+          eventType: 'Conference',
+          sponsoringAgency: '',
+          eventTitle: row.session_title || '',
+          abbreviation: '',
+          organizer: row.conference_name || '',
+          role: row.role || '',
+          certificateFile: null,
+          evidence_file: row.evidence_file || null,
+          venue: {
+            city: row.location || '',
+            state: '',
+            country: ''
+          },
+          fromDate: '',
+          toDate: ''
+        }))
+        setSubmittedSessions(mapped)
+      } catch (error) {
+        console.error('Failed to prefill conference sessions:', error)
+      }
+    }
+
+    hydrateExisting()
+  }, [user])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -59,9 +104,18 @@ const ConferenceSessions = () => {
 
     setLoading(true)
     try {
-      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
-      const facultyId = user?.id || 1;
+      const facultyId = user?.id
+      if (!facultyId || !token) {
+        alert('Unable to identify logged-in faculty. Please login again.')
+        return false
+      }
+      
+      await Promise.all(persistedSessionIds.map(id => fetch(`http://localhost:5000/api/activities/conference-sessions/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      })))
       const allSessions = [...submittedSessions]
+      
       if (formData.eventTitle) {
         allSessions.push(formData)
       }
@@ -85,11 +139,24 @@ const ConferenceSessions = () => {
 
         return fetch('http://localhost:5000/api/activities/conference-sessions', {
           method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
           body: formDataObj
         })
       })
 
-      await Promise.all(promises)
+      const responses = await Promise.all(promises)
+      const createdIds = []
+
+      for (const response of responses) {
+        if (!response.ok) continue
+        const payload = await response.json()
+        const id = payload?.data?.id
+        if (Number.isFinite(Number(id))) {
+          createdIds.push(id)
+        }
+      }
+
+      setPersistedSessionIds(createdIds)
       alert('Data saved successfully!')
       setSubmittedSessions([])
       setFormData(initialState)

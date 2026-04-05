@@ -1,12 +1,16 @@
 import React, { useState } from 'react'
+import { useEffect } from 'react'
 import { Upload, FileText, X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
+import { useAuth } from '../context/AuthContext'
+import { legacySectionsService } from '../services/legacySectionsService'
 
 const Courseware = () => {
   const location = useLocation()
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     type: '',
     courseware: '',
@@ -14,19 +18,52 @@ const Courseware = () => {
     labManualFile: null,
   })
 
+  useEffect(() => {
+    if (!user?.id) return
+
+    const hydrate = async () => {
+      try {
+        const res = await legacySectionsService.getMySection('courseware')
+        const parsed = res?.data
+        if (!parsed) return
+        setFormData({
+          type: parsed.type || '',
+          courseware: parsed.courseware || '',
+          link: parsed.link || '',
+          labManualFile: parsed.labManualFile || null,
+        })
+      } catch (error) {
+        console.error('Failed to load courseware data:', error)
+      }
+    }
+
+    hydrate()
+  }, [user])
+
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   const handleSave = async () => {
-    console.log('Saving data:', formData)
-    // simulate delay
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        alert('Data saved successfully!')
-        resolve(true)
-      }, 500)
-    })
+    if (!user?.id) {
+      alert('Unable to identify logged-in faculty. Please login again.')
+      return false
+    }
+
+    try {
+      await legacySectionsService.saveSection('courseware', {
+        type: formData.type,
+        courseware: formData.courseware,
+        link: formData.link,
+        labManualFile: formData.labManualFile?.name || null,
+      })
+      alert('Data saved successfully!')
+      return true
+    } catch (error) {
+      console.error('Failed to save courseware data:', error)
+      alert('Failed to save data. Please try again.')
+      return false
+    }
   }
 
   return (

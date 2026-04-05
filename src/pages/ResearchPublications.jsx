@@ -5,84 +5,110 @@ import './FormPages.css'
 import { publicationsService } from '../services/publicationsService'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
-import { useSubmission } from '../context/SubmissionContext'
+import { useAuth } from '../context/AuthContext'
 
 const ResearchPublications = ({ initialData, readOnly }) => {
-  const { submissionData, refetchSubmission } = useSubmission()
-  const savedPublications = !initialData && !readOnly && submissionData ? (submissionData.publications || []) : []
+  const { user } = useAuth()
+  const [publicationId, setPublicationId] = useState(null) // Track if editing existing publication
   const [publicationType, setPublicationType] = useState('')
   const [bookSubType, setBookSubType] = useState('')
   const [authors, setAuthors] = useState([{ first: '', middle: '', last: '' }])
   const [editors, setEditors] = useState([{ first: '', middle: '', last: '' }])
   const [loading, setLoading] = useState(false)
 
+  const hydrateFromPublication = (data) => {
+    if (!data) return
+
+    setPublicationId(data.id || null) // Store ID to prevent duplicate creation
+    setPublicationType(data.publication_type || '')
+    setBookSubType(data.sub_type || '')
+
+    if (data.authors) {
+      setAuthors(typeof data.authors === 'string' ? JSON.parse(data.authors) : data.authors)
+    }
+    if (data.editors) {
+      setEditors(typeof data.editors === 'string' ? JSON.parse(data.editors) : data.editors)
+    }
+
+    if (data.publication_type === 'Journal') {
+      setJournalData({
+        titleOfPaper: data.title || '',
+        quartile: data.quartile || '',
+        yearOfPublication: data.year_of_publication || '2026',
+        nameOfJournal: data.journal_name || '',
+        volume: data.volume || '',
+        number: data.number || '',
+        pagesFrom: data.pages_from || '',
+        pagesTo: data.pages_to || ''
+      })
+    } else if (data.publication_type === 'Conference') {
+      setConferenceData({
+        titleOfPaper: data.title || '',
+        fullNameOfConference: data.conference_name || '',
+        abbreviation: data.abbreviation || '',
+        dateFrom: data.date_from ? data.date_from.split('T')[0] : '',
+        dateTo: data.date_to ? data.date_to.split('T')[0] : '',
+        typeOfConference: data.type_of_conference || 'International',
+        pagesFrom: data.pages_from || '',
+        pagesTo: data.pages_to || '',
+        city: data.city || '',
+        state: data.state || '',
+        country: data.country || '',
+        publicationAgency: data.publication_agency || ''
+      })
+    } else if (data.publication_type === 'Monographs') {
+      if (data.sub_type === 'Book Chapter') {
+        setBookChapterEntries([{
+          authors: typeof data.authors === 'string' ? JSON.parse(data.authors) : (data.authors || [{ first: '', middle: '', last: '' }]),
+          editors: typeof data.editors === 'string' ? JSON.parse(data.editors) : (data.editors || [{ first: '', middle: '', last: '' }]),
+          titleOfBook: data.title || '',
+          yearOfPublication: data.year_of_publication || '2026',
+          publicationAgency: data.publication_agency || '',
+          pagesFrom: data.pages_from || '',
+          pagesTo: data.pages_to || '',
+          evidence_file: data.evidence_file
+        }])
+      } else if (data.sub_type === 'Book') {
+        setTextbookEntries([{
+          authors: typeof data.authors === 'string' ? JSON.parse(data.authors) : (data.authors || [{ first: '', middle: '', last: '' }]),
+          titleOfBook: data.title || '',
+          yearOfPublication: data.year_of_publication || '2026',
+          publicationAgency: data.publication_agency || '',
+          city: data.city || '',
+          state: data.state || '',
+          country: data.country || '',
+          evidence_file: data.evidence_file
+        }])
+      }
+    } else if (data.publication_type === 'Any Other') {
+      setOtherDetails(data.details || '')
+    }
+  }
+
   useEffect(() => {
     if (initialData) {
-      setPublicationType(initialData.publication_type || '')
-      setBookSubType(initialData.sub_type || '')
-
-      if (initialData.authors) {
-        setAuthors(typeof initialData.authors === 'string' ? JSON.parse(initialData.authors) : initialData.authors)
-      }
-      if (initialData.editors) {
-        setEditors(typeof initialData.editors === 'string' ? JSON.parse(initialData.editors) : initialData.editors)
-      }
-
-      if (initialData.publication_type === 'Journal') {
-        setJournalData({
-          titleOfPaper: initialData.title || '',
-          quartile: initialData.quartile || '',
-          yearOfPublication: initialData.year_of_publication || '2026',
-          nameOfJournal: initialData.journal_name || '',
-          volume: initialData.volume || '',
-          number: initialData.number || '',
-          pagesFrom: initialData.pages_from || '',
-          pagesTo: initialData.pages_to || ''
-        })
-      } else if (initialData.publication_type === 'Conference') {
-        setConferenceData({
-          titleOfPaper: initialData.title || '',
-          fullNameOfConference: initialData.conference_name || '',
-          abbreviation: initialData.abbreviation || '',
-          dateFrom: initialData.date_from ? initialData.date_from.split('T')[0] : '',
-          dateTo: initialData.date_to ? initialData.date_to.split('T')[0] : '',
-          typeOfConference: initialData.type_of_conference || 'International',
-          pagesFrom: initialData.pages_from || '',
-          pagesTo: initialData.pages_to || '',
-          city: initialData.city || '',
-          state: initialData.state || '',
-          country: initialData.country || '',
-          publicationAgency: initialData.publication_agency || ''
-        })
-      } else if (initialData.publication_type === 'Monographs') {
-        if (initialData.sub_type === 'Book Chapter') {
-          setBookChapterEntries([{
-            authors: typeof initialData.authors === 'string' ? JSON.parse(initialData.authors) : (initialData.authors || [{ first: '', middle: '', last: '' }]),
-            editors: typeof initialData.editors === 'string' ? JSON.parse(initialData.editors) : (initialData.editors || [{ first: '', middle: '', last: '' }]),
-            titleOfBook: initialData.title || '',
-            yearOfPublication: initialData.year_of_publication || '2026',
-            publicationAgency: initialData.publication_agency || '',
-            pagesFrom: initialData.pages_from || '',
-            pagesTo: initialData.pages_to || '',
-            evidence_file: initialData.evidence_file
-          }])
-        } else if (initialData.sub_type === 'Book') {
-          setTextbookEntries([{
-            authors: typeof initialData.authors === 'string' ? JSON.parse(initialData.authors) : (initialData.authors || [{ first: '', middle: '', last: '' }]),
-            titleOfBook: initialData.title || '',
-            yearOfPublication: initialData.year_of_publication || '2026',
-            publicationAgency: initialData.publication_agency || '',
-            city: initialData.city || '',
-            state: initialData.state || '',
-            country: initialData.country || '',
-            evidence_file: initialData.evidence_file
-          }])
-        }
-      } else if (initialData.publication_type === 'Any Other') {
-        setOtherDetails(initialData.details || '')
-      }
+      hydrateFromPublication(initialData)
     }
   }, [initialData])
+
+  useEffect(() => {
+    // For editable mode, show latest saved publication to avoid blank form after sent_back unlock.
+    if (readOnly || initialData || !user?.id) return
+
+    const loadLatestPublication = async () => {
+      try {
+        const res = await publicationsService.getPublicationsByFaculty(user.id)
+        const publications = Array.isArray(res?.data) ? res.data : []
+        if (publications.length > 0) {
+          hydrateFromPublication(publications[0])
+        }
+      } catch (error) {
+        console.error('Failed to load existing publications:', error)
+      }
+    }
+
+    loadLatestPublication()
+  }, [initialData, readOnly, user])
 
   const [journalData, setJournalData] = useState({
     titleOfPaper: '',
@@ -278,10 +304,19 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
   const handleSave = async (e) => {
     if (e && e.preventDefault) e.preventDefault()
+
     setLoading(true)
     try {
-      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
-      const facultyId = user?.id || 1;
+      const facultyId = user?.id
+      if (!facultyId) {
+        alert('Unable to identify logged-in faculty. Please login again.')
+        return false
+      }
+
+      if (publicationId) {
+        await publicationsService.deletePublication(publicationId)
+      }
+
       const publicationData = {
         faculty_id: facultyId,
         publication_type: publicationType,
@@ -300,9 +335,9 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         publicationData.quartile = journalData.quartile
         publicationData.authors = authors
 
-        await publicationsService.createPublication(publicationData)
-        if (refetchSubmission) await refetchSubmission()
+        const response = await publicationsService.createPublication(publicationData)
         alert('Journal publication saved successfully!')
+        setPublicationId(response?.data?.id || null)
         setLoading(false)
         setPublicationType('') // Reset
         return true
@@ -322,9 +357,9 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         publicationData.publication_agency = conferenceData.publicationAgency
         publicationData.authors = authors
 
-        await publicationsService.createPublication(publicationData)
-        if (refetchSubmission) await refetchSubmission()
+        const response = await publicationsService.createPublication(publicationData)
         alert('Conference publication saved successfully!')
+        setPublicationId(response?.data?.id || null)
         setLoading(false)
         setPublicationType('') // Reset
         return true
@@ -347,8 +382,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             await publicationsService.createPublication(entryData)
           }
           alert('All books saved successfully!')
+          setPublicationId(null)
           setLoading(false)
-          if (refetchSubmission) await refetchSubmission()
           // Reset
           setPublicationType('')
           setBookChapterEntries([{
@@ -379,8 +414,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             await publicationsService.createPublication(entryData)
           }
           alert('All textbooks saved successfully!')
+          setPublicationId(null)
           setLoading(false)
-          if (refetchSubmission) await refetchSubmission()
           // Reset
           setPublicationType('')
           setTextbookEntries([{
@@ -399,9 +434,9 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         publicationData.sub_type = 'Other'
         publicationData.details = otherDetails
 
-        await publicationsService.createPublication(publicationData)
-        if (refetchSubmission) await refetchSubmission()
+        const response = await publicationsService.createPublication(publicationData)
         alert('Other details saved successfully!')
+        setPublicationId(response?.data?.id || null)
         setLoading(false)
         setPublicationType('') // Reset
         return true
@@ -1414,22 +1449,6 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           )}
         </div>
       </div>
-
-      {/* Render previously saved publications if not in readOnly mode */}
-      {!readOnly && savedPublications.length > 0 && (
-        <div style={{ marginTop: '3rem' }}>
-          <h2 style={{ color: '#1e3a5f', marginBottom: '1.5rem', borderBottom: '2px solid #eee', paddingBottom: '0.5rem' }}>
-            Previously Saved Publications
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            {savedPublications.map(pub => (
-              <div key={pub.id} className="mirror-component-wrapper" style={{ border: '1px solid #ddd', borderRadius: 8, padding: '1rem', background: '#fafafa' }}>
-                <ResearchPublications initialData={pub} readOnly={true} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

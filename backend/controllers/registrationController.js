@@ -50,6 +50,16 @@ exports.runMigrations = async () => {
     await ensureColumn('departments', 'archived_by', 'archived_by INT NULL DEFAULT NULL');
     await ensureColumn('departments', 'archive_reason', 'archive_reason VARCHAR(255) NULL DEFAULT NULL');
 
+    // Ensure legacy appraisal tables have workflow columns expected by controllers.
+    await ensureColumn('courses_taught', 'percentage', 'percentage VARCHAR(20) NULL');
+    await ensureColumn('courses_taught', 'status', "status ENUM('draft','submitted') DEFAULT 'draft'");
+    await ensureColumn('courses_taught', 'feedback_score', 'feedback_score DECIMAL(5,3) NULL');
+    await ensureColumn('new_courses', 'status', "status ENUM('draft','submitted') DEFAULT 'draft'");
+
+    // Ensure research_publications has evidence_file and status columns
+    await ensureColumn('research_publications', 'evidence_file', "evidence_file VARCHAR(255) NULL COMMENT 'Path to uploaded evidence file'");
+    await ensureColumn('research_publications', 'status', "status ENUM('draft','submitted') DEFAULT 'draft'");
+
     console.log('✅ Migration: archive columns ensured');
   } catch (err) {
     console.log('ℹ️  Migration note:', err.message);

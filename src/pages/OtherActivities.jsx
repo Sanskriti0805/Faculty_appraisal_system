@@ -1,14 +1,40 @@
 import React, { useState } from 'react'
+import { useEffect } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
+import { useAuth } from '../context/AuthContext'
+import { legacySectionsService } from '../services/legacySectionsService'
 
 const OtherActivities = () => {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     softwareDeveloped: '',
     institutionalVisits: [''],
   })
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const hydrate = async () => {
+      try {
+        const res = await legacySectionsService.getMySection('other_activities')
+        const parsed = res?.data
+        if (!parsed) return
+        setFormData({
+          softwareDeveloped: parsed.softwareDeveloped || '',
+          institutionalVisits: Array.isArray(parsed.institutionalVisits) && parsed.institutionalVisits.length > 0
+            ? parsed.institutionalVisits
+            : [''],
+        })
+      } catch (error) {
+        console.error('Failed to load other activities data:', error)
+      }
+    }
+
+    hydrate()
+  }, [user])
 
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value })
@@ -32,54 +58,18 @@ const OtherActivities = () => {
   }
 
   const handleSave = async () => {
+    if (!user?.id) {
+      alert('Unable to identify logged-in faculty. Please login again.')
+      return false
+    }
+
     try {
-      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
-      const facultyId = user?.id || 1;
-      const requests = []
-
-      if (formData.softwareDeveloped.trim()) {
-        const innovationPayload = new FormData()
-        innovationPayload.append('faculty_id', facultyId)
-        innovationPayload.append('description', formData.softwareDeveloped)
-        innovationPayload.append('impact', 'Submitted from Other Activities form')
-
-        requests.push(
-          fetch('http://localhost:5000/api/innovation/teaching', {
-            method: 'POST',
-            body: innovationPayload,
-          })
-        )
-      }
-
-      formData.institutionalVisits
-        .map(v => v.trim())
-        .filter(Boolean)
-        .forEach(visit => {
-          const visitPayload = new FormData()
-          visitPayload.append('faculty_id', facultyId)
-          visitPayload.append('contribution_type', 'Visit')
-          visitPayload.append('description', visit)
-          visitPayload.append('year', new Date().getFullYear())
-
-          requests.push(
-            fetch('http://localhost:5000/api/innovation/institutional', {
-              method: 'POST',
-              body: visitPayload,
-            })
-          )
-        })
-
-      if (requests.length === 0) {
-        alert('Please add at least one activity before saving.')
-        return false
-      }
-
-      await Promise.all(requests)
+      await legacySectionsService.saveSection('other_activities', formData)
       alert('Data saved successfully!')
       return true
     } catch (error) {
-      console.error('Error saving other activities:', error)
-      alert('Error saving data: ' + error.message)
+      console.error('Failed to save other activities data:', error)
+      alert('Failed to save data. Please try again.')
       return false
     }
   }

@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react'
 import { Upload, ExternalLink } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import { patentsService } from '../services/patentsService'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
+import { useAuth } from '../context/AuthContext'
 
 const Patents = ({ initialData, readOnly }) => {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     patentsGranted: '',
     patentsPublished: '',
     patentsApplied: '',
+  })
+  const [patentIds, setPatentIds] = useState({
+    granted: null,
+    published: null,
+    applied: null
   })
   const [certificateFiles, setCertificateFiles] = useState({
     granted: null,
@@ -31,7 +37,13 @@ const Patents = ({ initialData, readOnly }) => {
         patentsApplied: applied?.title || ''
       })
 
-      // Store evidence filenames for read-only view
+      // Store IDs and evidence filenames to prevent duplicates
+      setPatentIds({
+        granted: granted?.id || null,
+        published: published?.id || null,
+        applied: applied?.id || null
+      })
+
       setCertificateFiles({
         granted: granted?.certificate_file || null,
         published: published?.certificate_file || null,
@@ -40,6 +52,44 @@ const Patents = ({ initialData, readOnly }) => {
     }
   }, [initialData])
 
+  useEffect(() => {
+    if (readOnly || (initialData && Array.isArray(initialData) && initialData.length > 0) || !user?.id) return
+
+    const loadExisting = async () => {
+      try {
+        const res = await patentsService.getPatentsByFaculty(user.id)
+        const data = Array.isArray(res?.data) ? res.data : []
+        if (data.length === 0) return
+
+        const granted = data.find(p => p.patent_type === 'Patents granted')
+        const published = data.find(p => p.patent_type === 'Patents published')
+        const applied = data.find(p => p.patent_type === 'Patents applied for')
+
+        setFormData({
+          patentsGranted: granted?.title || '',
+          patentsPublished: published?.title || '',
+          patentsApplied: applied?.title || ''
+        })
+
+        setPatentIds({
+          granted: granted?.id || null,
+          published: published?.id || null,
+          applied: applied?.id || null
+        })
+
+        setCertificateFiles({
+          granted: granted?.certificate_file || null,
+          published: published?.certificate_file || null,
+          applied: applied?.certificate_file || null
+        })
+      } catch (error) {
+        console.error('Failed to prefill patents:', error)
+      }
+    }
+
+    loadExisting()
+  }, [initialData, readOnly, user])
+
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value })
   }
@@ -47,14 +97,31 @@ const Patents = ({ initialData, readOnly }) => {
   const handleSave = async () => {
     setLoading(true)
     try {
-      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
-      const facultyId = user?.id || 1;
+      const facultyId = user?.id
+      if (!facultyId) {
+        alert('Unable to identify logged-in faculty. Please login again.')
+        return false
+      }
 
-      // Save each patent type if it has content
+      // Save each patent type if it has content AND doesn't already exist in database
       const promises = []
 
+      if (patentIds.granted) {
+        promises.push(patentsService.deletePatent(patentIds.granted))
+      }
+      if (patentIds.published) {
+        promises.push(patentsService.deletePatent(patentIds.published))
+      }
+      if (patentIds.applied) {
+        promises.push(patentsService.deletePatent(patentIds.applied))
+      }
+
+      await Promise.all(promises)
+
+      const createPromises = []
+
       if (formData.patentsGranted.trim()) {
-        promises.push(patentsService.createPatent({
+        createPromises.push(patentsService.createPatent({
           faculty_id: facultyId,
           patent_type: 'Patents granted',
           title: formData.patentsGranted,
@@ -66,7 +133,7 @@ const Patents = ({ initialData, readOnly }) => {
       }
 
       if (formData.patentsPublished.trim()) {
-        promises.push(patentsService.createPatent({
+        createPromises.push(patentsService.createPatent({
           faculty_id: facultyId,
           patent_type: 'Patents published',
           title: formData.patentsPublished,
@@ -78,7 +145,7 @@ const Patents = ({ initialData, readOnly }) => {
       }
 
       if (formData.patentsApplied.trim()) {
-        promises.push(patentsService.createPatent({
+        createPromises.push(patentsService.createPatent({
           faculty_id: facultyId,
           patent_type: 'Patents applied for',
           title: formData.patentsApplied,
@@ -89,12 +156,12 @@ const Patents = ({ initialData, readOnly }) => {
         }))
       }
 
-      if (promises.length === 0) {
-        alert('Please fill at least one patent field')
-        return false
+      if (createPromises.length === 0) {
+        alert('Data saved successfully!')
+        return true
       }
 
-      await Promise.all(promises)
+      await Promise.all(createPromises)
 
       alert('Data saved successfully!')
       return true

@@ -1,78 +1,123 @@
-/* ─── My Submission View ────────────────────────────────────────── */
+/* ─── My Submission View ─────────────────────────────────────────── */
 
 .my-submission-view {
-  padding: 32px;
-  max-width: 1100px;
+  padding: 1.5rem;
+  max-width: 1400px;
   margin: 0 auto;
+  background: #f0f2f7;
+  min-height: 100vh;
+  animation: msvFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes msvFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ─── Header ─────────────────────────────────────────────────────── */
 
 .msv-header {
+  background: linear-gradient(135deg, #0f2a5c 0%, #1a4080 60%, #0e3272 100%);
+  padding: 1.75rem 2rem;
+  border-radius: 18px;
+  margin-bottom: 1.25rem;
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 28px;
+  gap: 1rem;
   flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(15, 42, 92, 0.25);
+}
+
+.msv-header::before {
+  content: '';
+  position: absolute;
+  top: -50px; right: -30px;
+  width: 200px; height: 200px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .msv-back-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.85);
   cursor: pointer;
-  color: #475569;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .msv-back-btn:hover {
-  background: #f8fafc;
-  border-color: #034da2;
-  color: #034da2;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border-color: rgba(255,255,255,0.5);
 }
 
 .msv-title-block {
   flex: 1;
+  min-width: 0;
 }
 
 .msv-title {
   font-size: 1.6rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0 0 4px 0;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.2rem 0;
+  letter-spacing: -0.01em;
 }
 
 .msv-subtitle {
-  font-size: 0.9rem;
-  color: #64748b;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.55);
   margin: 0;
 }
+
+/* ─── Status Badge (in header) ───────────────────────────────────── */
+
+.msv-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.35rem 0.875rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.badge-submitted    { background: rgba(209,250,229,0.2); color: #6ee7b7; border: 1px solid rgba(110,231,183,0.3); }
+.badge-approved     { background: rgba(209,250,229,0.2); color: #6ee7b7; border: 1px solid rgba(110,231,183,0.3); }
+.badge-sent_back    { background: rgba(254,215,170,0.2); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+.badge-draft        { background: rgba(241,245,249,0.15); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.15); }
+.badge-under_review { background: rgba(219,234,254,0.2); color: #93c5fd; border: 1px solid rgba(147,197,253,0.3); }
 
 /* ─── Status Banner ──────────────────────────────────────────────── */
 
 .msv-status-bar {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 20px 24px;
+  gap: 1.25rem;
+  padding: 1.1rem 1.5rem;
   border-radius: 14px;
-  margin-bottom: 24px;
-  background: linear-gradient(135deg, #f0f4ff, #dbeafe);
-  border: 1px solid #93c5fd;
+  margin-bottom: 1.25rem;
   flex-wrap: wrap;
+  border: 1px solid #93c5fd;
+  background: linear-gradient(135deg, #f0f4ff, #dbeafe);
 }
 
-.msv-status-bar.status-submitted {
-  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-  border-color: #6ee7b7;
-}
-
+.msv-status-bar.status-submitted,
 .msv-status-bar.status-approved {
   background: linear-gradient(135deg, #ecfdf5, #d1fae5);
   border-color: #6ee7b7;
@@ -88,10 +133,15 @@
   border-color: #cbd5e1;
 }
 
+.msv-status-bar.status-under_review {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-color: #93c5fd;
+}
+
 .msv-status-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -111,37 +161,21 @@
 
 .msv-status-info {
   flex: 1;
+  min-width: 0;
 }
 
 .msv-status-info h3 {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 4px 0;
+  margin: 0 0 0.2rem 0;
 }
 
 .msv-status-info p {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #475569;
   margin: 0;
 }
-
-.msv-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-}
-
-.badge-submitted   { background: #d1fae5; color: #065f46; }
-.badge-approved    { background: #d1fae5; color: #065f46; }
-.badge-sent_back   { background: #fed7aa; color: #92400e; }
-.badge-draft       { background: #f1f5f9; color: #475569; }
-.badge-under_review { background: #dbeafe; color: #1e40af; }
 
 /* ─── Edit Request Panel ─────────────────────────────────────────── */
 
@@ -149,49 +183,48 @@
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  margin-bottom: 28px;
+  margin-bottom: 1.25rem;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
 .msv-edit-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  background: #fafafa;
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s;
+  user-select: none;
 }
 
-.msv-edit-panel-header:hover {
-  background: #f0f4ff;
-}
+.msv-edit-panel-header:hover { background: #f0f4ff; }
 
 .msv-edit-panel-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.875rem;
 }
 
 .msv-edit-panel-header-left h3 {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #0f172a;
   margin: 0 0 2px 0;
 }
 
 .msv-edit-panel-header-left p {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #64748b;
   margin: 0;
 }
 
 .msv-panel-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
   background: linear-gradient(135deg, #3b82f6, #60a5fa);
   display: flex;
   align-items: center;
@@ -201,53 +234,66 @@
 }
 
 .msv-edit-panel-body {
-  padding: 24px;
+  padding: 1.25rem 1.5rem;
 }
 
-/* ─── Pending Request Notice ─────────────────────────────────────── */
+/* ─── Notices ────────────────────────────────────────────────────── */
+
+.msv-deadline-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  color: #dc2626;
+  margin-bottom: 1rem;
+}
 
 .msv-pending-notice {
   display: flex;
-  gap: 14px;
+  gap: 0.875rem;
   align-items: flex-start;
-  padding: 16px 20px;
+  padding: 0.875rem 1rem;
   background: #fef3c7;
   border: 1px solid #f59e0b;
   border-radius: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 }
 
 .msv-pending-notice p {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   color: #78350f;
   line-height: 1.5;
 }
 
 .msv-approved-notice {
   display: flex;
-  gap: 14px;
+  gap: 0.875rem;
   align-items: flex-start;
-  padding: 16px 20px;
+  padding: 0.875rem 1rem;
   background: #ecfdf5;
   border: 1px solid #6ee7b7;
   border-radius: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 }
 
 .msv-approved-notice p {
-  margin: 0 0 4px 0;
-  font-size: 0.9rem;
+  margin: 0 0 0.25rem 0;
+  font-size: 0.84rem;
   color: #065f46;
 }
 
 .msv-approved-notice ul {
-  margin: 6px 0 0 0;
-  padding-left: 20px;
+  margin: 4px 0 0 0;
+  padding-left: 18px;
 }
 
 .msv-approved-notice li {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #047857;
   line-height: 1.8;
 }
@@ -255,28 +301,28 @@
 /* ─── Section Checkbox Grid ──────────────────────────────────────── */
 
 .msv-sections-label {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: #334155;
-  margin: 0 0 12px 0;
+  margin: 0 0 0.75rem 0;
 }
 
 .msv-sections-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 8px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .msv-section-checkbox {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border: 1px solid #e2e8f0;
+  gap: 0.625rem;
+  padding: 0.6rem 0.875rem;
+  border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   background: #fff;
 }
 
@@ -291,14 +337,15 @@
 }
 
 .msv-section-checkbox input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   accent-color: #034da2;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .msv-section-checkbox span {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #334155;
   font-weight: 500;
 }
@@ -306,112 +353,110 @@
 /* ─── Request Message ────────────────────────────────────────────── */
 
 .msv-request-message {
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 }
 
 .msv-request-message label {
   display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #334155;
-  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .msv-request-message textarea {
   width: 100%;
-  min-height: 80px;
-  padding: 10px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  min-height: 72px;
+  padding: 0.65rem 0.875rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 9px;
+  font-size: 0.85rem;
   color: #0f172a;
   resize: vertical;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
   font-family: inherit;
   box-sizing: border-box;
+  background: #fafbfc;
 }
 
 .msv-request-message textarea:focus {
   outline: none;
   border-color: #034da2;
   box-shadow: 0 0 0 3px rgba(3, 77, 162, 0.08);
+  background: #fff;
 }
 
 /* ─── Submit Request Button ──────────────────────────────────────── */
 
 .msv-submit-request-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
+  gap: 0.5rem;
+  padding: 0.7rem 1.5rem;
   background: linear-gradient(135deg, #034da2, #0466d6);
   color: #fff;
   border: none;
-  border-radius: 10px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(3, 77, 162, 0.2);
+  transition: all 0.18s ease;
+  box-shadow: 0 3px 10px rgba(3, 77, 162, 0.2);
+  letter-spacing: 0.02em;
 }
 
-.msv-submit-request-btn:hover {
+.msv-submit-request-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(3, 77, 162, 0.3);
+  box-shadow: 0 5px 16px rgba(3, 77, 162, 0.3);
 }
 
 .msv-submit-request-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
   transform: none;
-}
-
-.msv-deadline-warning {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  font-size: 0.88rem;
-  color: #dc2626;
 }
 
 /* ─── Past Requests ──────────────────────────────────────────────── */
 
 .msv-past-requests {
-  margin-top: 20px;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #f0f2f7;
 }
 
 .msv-past-requests h4 {
-  font-size: 0.88rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: #475569;
+  color: #94a3b8;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 12px 0;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.75rem 0;
 }
 
 .msv-request-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  border: 1px solid #e8ecf4;
+  border-radius: 10px;
+  border-left: 3px solid #3b82f6;
+  margin-bottom: 0.5rem;
 }
 
 .msv-request-item-status {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 0.2rem 0.55rem;
   border-radius: 20px;
   white-space: nowrap;
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 1px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .msv-request-item-content {
@@ -420,56 +465,58 @@
 }
 
 .msv-request-item-content p {
-  font-size: 0.83rem;
+  font-size: 0.8rem;
   color: #475569;
-  margin: 0 0 4px 0;
+  margin: 0 0 0.2rem 0;
+  line-height: 1.5;
 }
 
-.msv-request-item-content p strong {
-  color: #0f172a;
-}
+.msv-request-item-content p strong { color: #0f172a; }
 
 /* ─── Tabs ───────────────────────────────────────────────────────── */
 
 .msv-tabs {
   display: flex;
-  gap: 4px;
+  gap: 0.3rem;
   overflow-x: auto;
-  padding: 4px;
-  background: #f1f5f9;
+  padding: 0.4rem;
+  background: #fff;
   border-radius: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 1.25rem;
   flex-wrap: nowrap;
   scrollbar-width: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid #e8ecf4;
 }
 
 .msv-tabs::-webkit-scrollbar { display: none; }
 
 .msv-tab-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 16px;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
   border: none;
   border-radius: 9px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 500;
   cursor: pointer;
   background: transparent;
   color: #64748b;
   white-space: nowrap;
-  transition: all 0.2s;
+  transition: all 0.15s;
+  flex-shrink: 0;
 }
 
 .msv-tab-btn:hover {
   color: #334155;
-  background: rgba(255,255,255,0.5);
+  background: #f1f5f9;
 }
 
 .msv-tab-btn.active {
-  background: #fff;
-  color: #034da2;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  background: #0f2a5c;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(15, 42, 92, 0.22);
 }
 
 /* ─── Content Card ───────────────────────────────────────────────── */
@@ -479,91 +526,238 @@
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  animation: msvCardIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.msv-section-card {
-  padding: 28px;
+@keyframes msvCardIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
+
+.msv-section-card { padding: 1.75rem; }
 
 .msv-section-title {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 20px 0;
-  padding-bottom: 14px;
-  border-bottom: 2px solid #f1f5f9;
+  margin: 0 0 1.25rem 0;
+  padding-bottom: 0.875rem;
+  border-bottom: 2px solid #f0f2f7;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
-/* ─── Info Grid ──────────────────────────────────────────────────── */
+/* ─── Info Grid (Faculty etc.) ───────────────────────────────────── */
 
 .msv-info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.875rem;
+}
+
+.msv-info-item {
+  background: #f8fafc;
+  border: 1px solid #e8ecf4;
+  border-radius: 10px;
+  padding: 0.75rem 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
 }
 
 .msv-info-item label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.65rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: #94a3b8;
-  margin-bottom: 4px;
 }
 
 .msv-info-item p {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   color: #0f172a;
   font-weight: 500;
   margin: 0;
+  word-break: break-word;
 }
 
 .msv-full-width { grid-column: 1 / -1; }
 
+/* ─── Data Section ───────────────────────────────────────────────── */
+
+.msv-data-section {
+  margin-bottom: 1.5rem;
+}
+
+.msv-data-section:last-child { margin-bottom: 0; }
+
+.msv-subsection-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin: 0 0 0.625rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.msv-subsection-title::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  background: linear-gradient(180deg, #034da2, #60a5fa);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ─── Table Wrapper ──────────────────────────────────────────────── */
+
+.msv-table-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+  /* Subtle shadow to hint scrollability */
+  box-shadow: inset -8px 0 12px -8px rgba(0,0,0,0.04);
+}
+
+/* ─── Table ──────────────────────────────────────────────────────── */
+
+.msv-table {
+  width: 100%;
+  border-collapse: collapse;
+  /* Let browser decide column widths — no forced min-width */
+  table-layout: auto;
+}
+
+.msv-table th {
+  padding: 0.65rem 0.875rem;
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #64748b;
+  background: #f0f2f7;
+  border-bottom: 2px solid #e2e8f0;
+  /* Wrap header text instead of overflow */
+  white-space: normal;
+  word-break: normal;
+  min-width: 80px;
+}
+
+.msv-table td {
+  padding: 0.6rem 0.875rem;
+  border-bottom: 1px solid #f0f2f7;
+  font-size: 0.82rem;
+  color: #334155;
+  vertical-align: middle;
+  /* Wrap long values gracefully */
+  word-break: break-word;
+  white-space: normal;
+}
+
+.msv-table tbody tr:last-child td { border-bottom: none; }
+
+.msv-table tbody tr:nth-child(even) td { background: #fafbfc; }
+
+.msv-table tbody tr:hover td { background: #f0f4ff; }
+
+/* Evidence / file link cells */
+.msv-link-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  background: #f0f7ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.msv-link-cell:hover {
+  background: #1d4ed8;
+  color: #fff;
+  border-color: #1d4ed8;
+}
+
+/* ─── Empty / No-data states ─────────────────────────────────────── */
+
+.msv-no-data-inline {
+  margin: 0;
+  padding: 0.875rem 1rem;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 0.82rem;
+  background: #fafbfc;
+}
+
+.msv-no-data {
+  padding: 2rem;
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
 /* ─── Loading / Empty States ─────────────────────────────────────── */
 
-.msv-loading, .msv-empty {
+.msv-loading,
+.msv-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 24px;
+  padding: 5rem 1.5rem;
   text-align: center;
-  gap: 16px;
+  gap: 1rem;
   color: #64748b;
+  font-size: 0.9rem;
 }
 
 .msv-spinner {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border: 3px solid #e2e8f0;
   border-top-color: #034da2;
   border-radius: 50%;
-  animation: msvspin 0.8s linear infinite;
+  animation: msvspin 0.75s linear infinite;
 }
 
 @keyframes msvspin { to { transform: rotate(360deg); } }
 
-/* ─── No Data ────────────────────────────────────────────────────── */
-
-.msv-no-data {
-  padding: 32px;
-  text-align: center;
-  color: #94a3b8;
-  font-style: italic;
-  font-size: 0.9rem;
-}
-
 /* ─── Responsive ─────────────────────────────────────────────────── */
 
+@media (max-width: 1024px) {
+  .msv-info-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 768px) {
-  .my-submission-view { padding: 16px; }
+  .my-submission-view { padding: 0.875rem; }
+  .msv-header { padding: 1.25rem; }
+  .msv-title { font-size: 1.25rem; }
   .msv-sections-grid { grid-template-columns: 1fr; }
   .msv-info-grid { grid-template-columns: 1fr; }
-  .msv-status-bar { flex-direction: column; gap: 12px; }
+  .msv-status-bar { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  .msv-section-card { padding: 1.25rem; }
+  .msv-table th,
+  .msv-table td { padding: 0.5rem 0.65rem; font-size: 0.76rem; }
+}
+
+@media (max-width: 480px) {
+  .msv-header { flex-direction: column; align-items: flex-start; }
+  .msv-tabs { gap: 0.25rem; padding: 0.3rem; }
+  .msv-tab-btn { padding: 0.45rem 0.75rem; font-size: 0.75rem; }
 }

@@ -13,31 +13,34 @@ const getCoursesTaughtColumns = async () => {
   return coursesTaughtColumnsCache;
 };
 
-const resolveFacultyInformationId = async (candidateFacultyId) => {
-  if (candidateFacultyId === undefined || candidateFacultyId === null || candidateFacultyId === '') {
-    return null;
+const toNumberOrNull = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
+const resolveFacultyInfoId = async ({ facultyId, email }) => {
+  const numericFacultyId = toNumberOrNull(facultyId);
+
+  if (email) {
+    const [fiByEmail] = await db.query('SELECT id FROM faculty_information WHERE email = ? LIMIT 1', [email]);
+    if (fiByEmail.length > 0) {
+      return fiByEmail[0].id;
+    }
   }
 
-  const [facultyRows] = await db.query(
-    'SELECT id FROM faculty_information WHERE id = ? LIMIT 1',
-    [candidateFacultyId]
-  );
+  if (numericFacultyId !== null) {
+    const [fiById] = await db.query('SELECT id FROM faculty_information WHERE id = ? LIMIT 1', [numericFacultyId]);
+    if (fiById.length > 0) {
+      return fiById[0].id;
+    }
 
-  if (facultyRows.length > 0) {
-    return candidateFacultyId;
-  }
-
-  const [mappedRows] = await db.query(
-    `SELECT fi.id
-     FROM users u
-     INNER JOIN faculty_information fi ON fi.email = u.email
-     WHERE u.id = ?
-     LIMIT 1`,
-    [candidateFacultyId]
-  );
-
-  if (mappedRows.length > 0) {
-    return mappedRows[0].id;
+    const [usersById] = await db.query('SELECT email FROM users WHERE id = ? LIMIT 1', [numericFacultyId]);
+    if (usersById.length > 0) {
+      const [fiByUserEmail] = await db.query('SELECT id FROM faculty_information WHERE email = ? LIMIT 1', [usersById[0].email]);
+      if (fiByUserEmail.length > 0) {
+        return fiByUserEmail[0].id;
+      }
+    }
   }
 
   return null;
@@ -48,15 +51,29 @@ exports.getCoursesByFaculty = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
+    const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+
+    if (!facultyInfoId) {
+      return res.json({
+        success: true,
+        data: [],
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: 0,
+          totalPages: 0
+        }
+      });
+    }
 
     const [rows] = await db.query(
       'SELECT * FROM courses_taught WHERE faculty_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-      [req.params.facultyId, parseInt(limit), parseInt(offset)]
+      [facultyInfoId, parseInt(limit), parseInt(offset)]
     );
 
     const [countResult] = await db.query(
       'SELECT COUNT(*) as total FROM courses_taught WHERE faculty_id = ?',
-      [req.params.facultyId]
+      [facultyInfoId]
     );
 
     res.json({
@@ -91,12 +108,13 @@ exports.createCourse = async (req, res) => {
       status = 'draft'
     } = req.body;
 
-    const resolvedFacultyId = await resolveFacultyInformationId(faculty_id);
-    if (!resolvedFacultyId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Faculty profile not found. Please complete profile onboarding or contact admin.'
-      });
+    const facultyInfoId = await resolveFacultyInfoId({
+      facultyId: faculty_id || req.user?.id,
+      email: req.user?.email
+    });
+
+    if (!facultyInfoId) {
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
     }
 
     const availableColumns = await getCoursesTaughtColumns();
@@ -112,7 +130,7 @@ exports.createCourse = async (req, res) => {
     ];
 
     const insertValues = [
-      resolvedFacultyId,
+      facultyInfoId,
       section ?? null,
       semester ?? null,
       course_code ?? null,
@@ -201,17 +219,18 @@ exports.createNewCourse = async (req, res) => {
     const { faculty_id, level_type, program, course_name, course_code, level, remarks, status = 'draft' } = req.body;
     const cif_file = req.file ? req.file.filename : null;
 
-    const resolvedFacultyId = await resolveFacultyInformationId(faculty_id);
-    if (!resolvedFacultyId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Faculty profile not found. Please complete profile onboarding or contact admin.'
-      });
+    const facultyInfoId = await resolveFacultyInfoId({
+      facultyId: faculty_id || req.user?.id,
+      email: req.user?.email
+    });
+
+    if (!facultyInfoId) {
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
     }
 
     const [result] = await db.query(
       'INSERT INTO new_courses (faculty_id, level_type, program, course_name, course_code, level, remarks, cif_file, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [resolvedFacultyId, level_type, program, course_name, course_code, level, remarks, cif_file, status]
+      [facultyInfoId, level_type, program, course_name, course_code, level, remarks, cif_file, status]
     );
 
     res.status(201).json({
@@ -224,20 +243,54 @@ exports.createNewCourse = async (req, res) => {
   }
 };
 
+exports.deleteNewCourse = async (req, res) => {
+  try {
+    const facultyInfoId = await resolveFacultyInfoId({ email: req.user?.email, facultyId: req.user?.id });
+
+    if (!facultyInfoId) {
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+    }
+
+    const [result] = await db.query('DELETE FROM new_courses WHERE id = ? AND faculty_id = ?', [req.params.id, facultyInfoId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'New course not found' });
+    }
+
+    res.json({ success: true, message: 'New course deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // Get new courses by faculty with pagination
 exports.getNewCoursesByFaculty = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
+    const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+
+    if (!facultyInfoId) {
+      return res.json({
+        success: true,
+        data: [],
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: 0,
+          totalPages: 0
+        }
+      });
+    }
 
     const [rows] = await db.query(
       'SELECT * FROM new_courses WHERE faculty_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-      [req.params.facultyId, parseInt(limit), parseInt(offset)]
+      [facultyInfoId, parseInt(limit), parseInt(offset)]
     );
 
     const [countResult] = await db.query(
       'SELECT COUNT(*) as total FROM new_courses WHERE faculty_id = ?',
-      [req.params.facultyId]
+      [facultyInfoId]
     );
 
     res.json({
@@ -258,7 +311,13 @@ exports.getNewCoursesByFaculty = async (req, res) => {
 // Delete course
 exports.deleteCourse = async (req, res) => {
   try {
-    const [result] = await db.query('DELETE FROM courses_taught WHERE id = ?', [req.params.id]);
+    const facultyInfoId = await resolveFacultyInfoId({ email: req.user?.email, facultyId: req.user?.id });
+
+    if (!facultyInfoId) {
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+    }
+
+    const [result] = await db.query('DELETE FROM courses_taught WHERE id = ? AND faculty_id = ?', [req.params.id, facultyInfoId]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Course not found' });

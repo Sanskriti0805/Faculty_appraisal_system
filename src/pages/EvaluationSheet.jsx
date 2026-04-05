@@ -115,7 +115,7 @@ const EvaluationSheet = () => {
       const data = await apiClient.post(`/evaluation/rerun-allocation/${sub.submission_id}`);
       if (data.success) {
         showToast(`Re-allocated! Total: ${data.total}`);
-        fetchData(); // refresh all scores
+        await fetchData(); // refresh all scores before enabling UI
       } else {
         showToast(data.message || 'Re-run failed', 'error');
       }
