@@ -438,7 +438,7 @@ const DOFAReview = () => {
   /* ── Tab definitions ── */
   const tabs = [
     { id: 'faculty',     label: 'Faculty',      icon: <User size={14} /> },
-    { id: 'teaching',    label: 'Teaching',      icon: <BookOpen size={14} />, count: courses?.length },
+    { id: 'teaching',    label: 'Teaching',      icon: <BookOpen size={14} />, count: (courses?.length || 0) + (newCourses?.length || 0) },
     { id: 'publications',label: 'Publications',  icon: <FileText size={14} />, count: publications?.length },
     { id: 'research',    label: 'Research',      icon: <Briefcase size={14} /> },
     { id: 'events',      label: 'Events',        icon: <Award size={14} /> },
@@ -526,6 +526,41 @@ const DOFAReview = () => {
                 <CoursesTaught initialData={{ courses, newCourses }} readOnly={true} />
               </div>
 
+              <CollapsibleSection title="New Courses Developed" count={newCourses?.length || 0} defaultOpen={false}>
+                {(newCourses && newCourses.length > 0) ? (
+                  <div className="table-responsive">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Course Name</th>
+                          <th>Course Code</th>
+                          <th>Level Type</th>
+                          <th>Program</th>
+                          <th>Level</th>
+                          <th>Remarks</th>
+                          <th style={{ textAlign: 'center' }}>CIF</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {newCourses.map((course, index) => (
+                          <tr key={course.id || index}>
+                            <td className="cell-title">{course.course_name || '—'}</td>
+                            <td>{course.course_code || '—'}</td>
+                            <td>{course.level_type || '—'}</td>
+                            <td>{course.program || '—'}</td>
+                            <td>{course.level || '—'}</td>
+                            <td>{course.remarks || '—'}</td>
+                            <td className="cell-center">{renderFileLink(course.cif_file) || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="no-data" style={{ padding: '0.75rem 1rem' }}>No new courses data available.</p>
+                )}
+              </CollapsibleSection>
+
               <CollapsibleSection title="Courseware &amp; Course Material" defaultOpen={false}>
                 <div style={{ padding: '0.75rem 1rem' }}>
                   {renderInfoGrid(courseware, ['type', 'courseware', 'link', 'labManualFile'])}
@@ -608,12 +643,12 @@ const DOFAReview = () => {
                 <ResearchGrants initialData={{ grants, proposals }} readOnly={true} />
               </div>
 
-              {paperReviews && paperReviews.length > 0 && (
-                <CollapsibleSection
-                  title="Paper Reviews"
-                  count={paperReviews.length}
-                  defaultOpen={true}
-                >
+              <CollapsibleSection
+                title="Paper Reviews"
+                count={paperReviews?.length || 0}
+                defaultOpen={true}
+              >
+                {(paperReviews && paperReviews.length > 0) ? (
                   <div className="table-responsive">
                     <table className="data-table">
                       <thead>
@@ -634,8 +669,10 @@ const DOFAReview = () => {
                       </tbody>
                     </table>
                   </div>
-                </CollapsibleSection>
-              )}
+                ) : (
+                  <p className="no-data" style={{ padding: '0.75rem 1rem' }}>No paper reviews data available.</p>
+                )}
+              </CollapsibleSection>
             </div>
           )}
 
@@ -644,8 +681,8 @@ const DOFAReview = () => {
             <div className="section-card">
               <h3 className="section-title">Events, Patents &amp; Awards</h3>
 
-              {conferenceSessions && conferenceSessions.length > 0 && (
-                <CollapsibleSection title="Conference Sessions Chaired" count={conferenceSessions.length} defaultOpen>
+              <CollapsibleSection title="Conference Sessions Chaired" count={conferenceSessions?.length || 0} defaultOpen>
+                {(conferenceSessions && conferenceSessions.length > 0) ? (
                   <div className="table-responsive">
                     <table className="data-table">
                       <thead>
@@ -663,18 +700,20 @@ const DOFAReview = () => {
                             <td className="cell-title">{s.conference_name}</td>
                             <td className="cell-title">{s.session_title}</td>
                             <td>{s.role || '—'}</td>
-                            <td>{s.location}</td>
+                            <td>{s.location || '—'}</td>
                             <td className="cell-center">{renderFileLink(s.evidence_file) || '—'}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                </CollapsibleSection>
-              )}
+                ) : (
+                  <p className="no-data" style={{ padding: '0.75rem 1rem' }}>No conference sessions data available.</p>
+                )}
+              </CollapsibleSection>
 
-              {keynotesTalks && keynotesTalks.length > 0 && (
-                <CollapsibleSection title="Keynotes &amp; Invited Talks" count={keynotesTalks.length} defaultOpen>
+              <CollapsibleSection title="Keynotes &amp; Invited Talks" count={keynotesTalks?.length || 0} defaultOpen>
+                {(keynotesTalks && keynotesTalks.length > 0) ? (
                   <div className="table-responsive">
                     <table className="data-table">
                       <thead>
@@ -692,15 +731,17 @@ const DOFAReview = () => {
                             <td className="cell-title">{k.event_name}</td>
                             <td className="cell-title">{k.title}</td>
                             <td>{k.event_type || '—'}</td>
-                            <td>{k.audience_type}</td>
+                            <td>{k.audience_type || '—'}</td>
                             <td className="cell-center">{renderFileLink(k.evidence_file) || '—'}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                </CollapsibleSection>
-              )}
+                ) : (
+                  <p className="no-data" style={{ padding: '0.75rem 1rem' }}>No keynotes or invited talks data available.</p>
+                )}
+              </CollapsibleSection>
 
               <CollapsibleSection title="Patents" count={patents?.length || 0} defaultOpen={false}>
                 <div style={{ padding: '0.75rem 1rem' }}>
@@ -747,8 +788,8 @@ const DOFAReview = () => {
             <div className="section-card">
               <h3 className="section-title">Innovation &amp; Contributions</h3>
 
-              {techTransfer && techTransfer.length > 0 && (
-                <CollapsibleSection title="Technology Transfer" count={techTransfer.length} defaultOpen>
+              <CollapsibleSection title="Technology Transfer" count={techTransfer?.length || 0} defaultOpen>
+                {(techTransfer && techTransfer.length > 0) ? (
                   <div className="table-responsive">
                     <table className="data-table">
                       <thead>
@@ -763,7 +804,7 @@ const DOFAReview = () => {
                         {techTransfer.map((tt, i) => (
                           <tr key={i}>
                             <td className="cell-title">{tt.title}</td>
-                            <td>{tt.agency}</td>
+                            <td>{tt.agency || '—'}</td>
                             <td>{tt.date ? new Date(tt.date).toLocaleDateString() : '—'}</td>
                             <td className="cell-center">{renderFileLink(tt.evidence_file) || '—'}</td>
                           </tr>
@@ -771,8 +812,10 @@ const DOFAReview = () => {
                       </tbody>
                     </table>
                   </div>
-                </CollapsibleSection>
-              )}
+                ) : (
+                  <p className="no-data" style={{ padding: '0.75rem 1rem' }}>No technology transfer data available.</p>
+                )}
+              </CollapsibleSection>
 
               <CollapsibleSection title="Teaching Innovation" defaultOpen>
                 <div style={{ padding: '0.75rem 1rem' }}>

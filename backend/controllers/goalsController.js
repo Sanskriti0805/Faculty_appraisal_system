@@ -25,6 +25,16 @@ exports.saveGoals = async (req, res) => {
         await connection.beginTransaction();
         const { faculty_id, goals } = req.body;
 
+        const toText = (value) => (value === null || value === undefined ? '' : String(value));
+        const isMeaningfulGoal = (goal = {}) => {
+            const teaching = toText(goal.teaching).trim();
+            const research = toText(goal.research).trim();
+            const contribution = toText(goal.contribution).trim();
+            const outreach = toText(goal.outreach).trim();
+            const description = toText(goal.description).trim();
+            return !!(teaching || research || contribution || outreach || description);
+        };
+
         const facultyInfoId = await resolveFacultyInfoId({
             facultyId: faculty_id || req.user?.id,
             email: req.user?.email
@@ -39,12 +49,21 @@ exports.saveGoals = async (req, res) => {
 
         // Insert new goals
         if (goals && Array.isArray(goals)) {
-            for (const goal of goals) {
+            const cleanedGoals = goals.filter(isMeaningfulGoal);
+            for (const goal of cleanedGoals) {
                 await connection.query(
                     `INSERT INTO faculty_goals 
           (faculty_id, semester, teaching, research, contribution, outreach, description) 
           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    [facultyInfoId, goal.semester, goal.teaching, goal.research, goal.contribution, goal.outreach, goal.description]
+                    [
+                        facultyInfoId,
+                        goal.semester || null,
+                        toText(goal.teaching).trim() || null,
+                        toText(goal.research).trim() || null,
+                        toText(goal.contribution).trim() || null,
+                        toText(goal.outreach).trim() || null,
+                        toText(goal.description).trim() || null
+                    ]
                 );
             }
         }

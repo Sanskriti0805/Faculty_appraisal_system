@@ -582,30 +582,33 @@ exports.updateSubmissionStatus = async (req, res) => {
           const [commentsRows] = await db.query(
             `SELECT section_name, section_key, comment, created_at
              FROM review_comments
-             WHERE submission_id = ?
+             WHERE submission_id = ? AND COALESCE(is_resolved, 0) = 0
              ORDER BY created_at DESC`,
             [id]
           );
 
-          const latestBySection = new Map();
+          const latestPendingBySection = new Map();
           commentsRows.forEach((item) => {
-            const keys = normalizeCommentSectionKey(item);
-            keys.forEach((key) => {
-              if (!latestBySection.has(key)) {
-                latestBySection.set(key, {
-                  section_name: item.section_name || 'General',
-                  section_key: key,
-                  comment: item.comment || ''
-                });
-              }
-            });
+            const sectionName = String(item.section_name || 'General').trim() || 'General';
+            const sectionKey = sectionName.toLowerCase();
+            const text = String(item.comment || '').trim();
+            if (!text) return;
+
+            if (!latestPendingBySection.has(sectionKey)) {
+              latestPendingBySection.set(sectionKey, {
+                section_name: sectionName,
+                comment: text
+              });
+            }
           });
+
+          const commentsForEmail = Array.from(latestPendingBySection.values());
 
           await emailService.sendSubmissionSentBackToFaculty({
             to: faculty.email,
             facultyName: faculty.faculty_name,
             academicYear: faculty.academic_year,
-            comments: Array.from(latestBySection.values())
+            comments: commentsForEmail
           });
         }
       } catch (emailError) {

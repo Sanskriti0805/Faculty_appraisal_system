@@ -412,26 +412,70 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
       // ── 13. Institutional Contributions ───────────────────────────────
       else if (sec.includes('institutional contributions')) {
-        const matchedCount = contribs.filter(c => {
-          const hay = `${norm(c.contribution_type)} ${norm(c.title)} ${norm(c.description)}`;
+        const hasPosition = (entry, expected) => {
+          const selected = norm(entry.title);
+          const legacy = `${norm(entry.contribution_type)} ${norm(entry.description)}`;
 
-          if (sub.includes('associate dean')) return hay.includes('associate dean');
-          if (sub.includes('assistant dean')) return hay.includes('assistant dean');
-          if (sub.includes('dean')) return hay.includes(' dean');
-          if (sub.includes('hod')) return hay.includes('hod') || hay.includes('head of department');
-          if (sub.includes('chief warden')) return hay.includes('chief warden');
-          if (sub.includes('associate chief warden')) return hay.includes('associate chief warden');
-          if (sub.includes('assistant warden')) return hay.includes('assistant warden');
-          if (sub.includes('warden')) return hay.includes(' warden');
-          if (sub.includes('centre co-lead')) return hay.includes('centre co-lead') || hay.includes('center co-lead');
-          if (sub.includes('centre lead')) return hay.includes('centre lead') || hay.includes('center lead');
-          if (sub.includes('chairperson')) return hay.includes('chairperson');
-          if (sub.includes('convenor')) return hay.includes('convenor') || hay.includes('convener');
-          if (sub.includes('committee member')) return hay.includes('committee member') || hay.includes('member');
-          if (sub.includes('faculty mentor')) return hay.includes('faculty mentor') || hay.includes('mentor');
-          if (sub.includes('major responsibilities')) return hay.includes('major responsibilities') || hay.includes('admissions') || hay.includes('accreditation');
-          if (sub.includes('certificate programme')) return hay.includes('certificate programme') || hay.includes('certificate program');
-          if (sub.includes('scholarly')) return hay.includes('scholarly') || hay.includes('newspaper') || hay.includes('magazine');
+          if (selected) {
+            if (expected === 'dean') return selected === 'dean';
+            if (expected === 'associate dean') return selected === 'associate dean';
+            if (expected === 'assistant dean') return selected === 'assistant dean';
+            if (expected === 'hod') return selected === 'hod';
+            if (expected === 'chief warden') return selected === 'chief warden';
+            if (expected === 'associate chief warden') return selected === 'associate chief warden';
+            if (expected === 'assistant warden') return selected === 'assistant warden';
+            if (expected === 'warden') return selected === 'warden';
+            if (expected === 'centre lead') return selected === 'centre lead' || selected === 'center lead';
+            if (expected === 'centre co-lead') return selected === 'centre co-lead' || selected === 'center co-lead';
+            if (expected === 'chairperson') return selected === 'chairperson';
+            if (expected === 'convenor') return selected === 'convenor' || selected === 'convener';
+            if (expected === 'committee member') return selected === 'committee member';
+            if (expected === 'faculty mentor') return selected === 'faculty mentor';
+            if (expected === 'major responsibilities') return selected === 'major responsibilities';
+            if (expected === 'certificate programme') return selected === 'certificate programme' || selected === 'certificate program';
+            if (expected === 'scholarly') return selected === 'scholarly contribution' || selected === 'scholarly';
+            return false;
+          }
+
+          // Backward compatibility for existing rows that do not have selected position in title.
+          if (expected === 'associate dean') return legacy.includes('associate dean');
+          if (expected === 'assistant dean') return legacy.includes('assistant dean');
+          if (expected === 'dean') return legacy.includes(' dean') && !legacy.includes('associate dean') && !legacy.includes('assistant dean');
+          if (expected === 'hod') return legacy.includes('hod') || legacy.includes('head of department');
+          if (expected === 'chief warden') return legacy.includes('chief warden');
+          if (expected === 'associate chief warden') return legacy.includes('associate chief warden');
+          if (expected === 'assistant warden') return legacy.includes('assistant warden');
+          if (expected === 'warden') return legacy.includes(' warden') && !legacy.includes('chief warden') && !legacy.includes('associate chief warden') && !legacy.includes('assistant warden');
+          if (expected === 'centre co-lead') return legacy.includes('centre co-lead') || legacy.includes('center co-lead');
+          if (expected === 'centre lead') return legacy.includes('centre lead') || legacy.includes('center lead');
+          if (expected === 'chairperson') return legacy.includes('chairperson');
+          if (expected === 'convenor') return legacy.includes('convenor') || legacy.includes('convener');
+          if (expected === 'committee member') return legacy.includes('committee member');
+          if (expected === 'faculty mentor') return legacy.includes('faculty mentor') || legacy.includes('mentor');
+          if (expected === 'major responsibilities') return legacy.includes('major responsibilities') || legacy.includes('admissions') || legacy.includes('accreditation');
+          if (expected === 'certificate programme') return legacy.includes('certificate programme') || legacy.includes('certificate program');
+          if (expected === 'scholarly') return legacy.includes('scholarly') || legacy.includes('newspaper') || legacy.includes('magazine');
+          return false;
+        };
+
+        const matchedCount = contribs.filter(c => {
+          if (sub.includes('associate dean')) return hasPosition(c, 'associate dean');
+          if (sub.includes('assistant dean')) return hasPosition(c, 'assistant dean');
+          if (sub.includes('dean')) return hasPosition(c, 'dean');
+          if (sub.includes('hod')) return hasPosition(c, 'hod');
+          if (sub.includes('chief warden')) return hasPosition(c, 'chief warden');
+          if (sub.includes('associate chief warden')) return hasPosition(c, 'associate chief warden');
+          if (sub.includes('assistant warden')) return hasPosition(c, 'assistant warden');
+          if (sub.includes('warden')) return hasPosition(c, 'warden');
+          if (sub.includes('centre co-lead')) return hasPosition(c, 'centre co-lead');
+          if (sub.includes('centre lead')) return hasPosition(c, 'centre lead');
+          if (sub.includes('chairperson')) return hasPosition(c, 'chairperson');
+          if (sub.includes('convenor')) return hasPosition(c, 'convenor');
+          if (sub.includes('committee member')) return hasPosition(c, 'committee member');
+          if (sub.includes('faculty mentor')) return hasPosition(c, 'faculty mentor');
+          if (sub.includes('major responsibilities')) return hasPosition(c, 'major responsibilities');
+          if (sub.includes('certificate programme')) return hasPosition(c, 'certificate programme');
+          if (sub.includes('scholarly')) return hasPosition(c, 'scholarly');
           return false;
         }).length;
 

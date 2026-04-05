@@ -304,7 +304,7 @@ class EmailService {
     const commentItems = comments.length > 0
       ? comments.map((item) => {
           const section = this.escapeHtml(item.section_name || 'General');
-          const text = this.escapeHtml(item.comment || '');
+          const text = this.escapeHtml(item.comment || '').replace(/\n/g, '<br/>');
           return `
             <li style="margin-bottom:10px;">
               <p style="margin:0 0 4px 0;"><b>Section:</b> ${section}</p>

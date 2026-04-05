@@ -1,10 +1,35 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Plus, Trash2, Upload, FileText, X, CheckCircle, ExternalLink } from 'lucide-react'
 import './FormPages.css'
 import './PartB.css'
 import FormActions from '../components/FormActions'
 import { useAuth } from '../context/AuthContext'
 import FilePreviewButton from '../components/FilePreviewButton'
+
+const API_BASE = `http://${window.location.hostname}:5000/api`
+
+const toText = (value) => (value === null || value === undefined ? '' : String(value))
+
+const toGoalViewModel = (goal = {}) => ({
+  id: goal.id || Math.random(),
+  semester: goal.semester || 'Odd Semester',
+  teaching: toText(goal.teaching),
+  research: toText(goal.research),
+  contribution: toText(goal.contribution ?? goal.institute_contribution),
+  outreach: toText(goal.outreach),
+  description: toText(goal.description ?? goal.details),
+  evidenceFile: goal.evidence_file || goal.evidenceFile || null
+})
+
+const isMeaningfulGoal = (goal = {}) => {
+  const teaching = toText(goal.teaching).trim()
+  const research = toText(goal.research).trim()
+  const contribution = toText(goal.contribution).trim()
+  const outreach = toText(goal.outreach).trim()
+  const description = toText(goal.description).trim()
+  const hasEvidence = !!goal.evidenceFile
+  return !!(teaching || research || contribution || outreach || description || hasEvidence)
+}
 
 // ── Submission Success Popup ──────────────────────────────────────────────
 const SubmissionSuccessPopup = ({ academicYear, deadline, onClose }) => (
@@ -74,6 +99,9 @@ const PartB = ({ initialData, readOnly }) => {
   const [sessionDeadline, setSessionDeadline] = useState(null)
   const [selectedSemester, setSelectedSemester] = useState('Odd Semester')
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
+  const draftStorageKey = useMemo(() => (
+    user?.id ? `partb_draft_${user.id}` : 'partb_draft_anonymous'
+  ), [user?.id])
   const [goals, setGoals] = useState([
     { id: 1, semester: 'Odd Semester', teaching: '', research: '', contribution: '', outreach: '', description: '', evidenceFile: null }
   ])
@@ -83,7 +111,7 @@ const PartB = ({ initialData, readOnly }) => {
     if (!user || !token) return
     const fetchSubmission = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/submissions/my', {
+        const res = await fetch(`${API_BASE}/submissions/my`, {
           headers: { Authorization: `Bearer ${token}` }
         })
         const data = await res.json()
@@ -93,7 +121,7 @@ const PartB = ({ initialData, readOnly }) => {
         }
 
         // Also fetch active session deadline for popup
-        const sessionRes = await fetch('http://localhost:5000/api/sessions/active')
+        const sessionRes = await fetch(`${API_BASE}/sessions/active`)
         const sessionData = await sessionRes.json()
         if (sessionData.success && sessionData.data?.deadline) {
           setSessionDeadline(
@@ -111,17 +139,24 @@ const PartB = ({ initialData, readOnly }) => {
 
   useEffect(() => {
     if (initialData && Array.isArray(initialData) && initialData.length > 0) {
-      const normalizedGoals = initialData.map(g => ({
-        ...g,
-        id: g.id || Math.random(),
-        evidenceFile: g.evidence_file || null
-      }))
+      const normalizedGoals = initialData.map(toGoalViewModel)
       setGoals(normalizedGoals)
       if (normalizedGoals[0]?.semester) {
         setSelectedSemester(normalizedGoals[0].semester)
       }
+
+      if (!readOnly) {
+        try {
+          sessionStorage.setItem(draftStorageKey, JSON.stringify({
+            goals: normalizedGoals,
+            selectedSemester: normalizedGoals[0]?.semester || 'Odd Semester'
+          }))
+        } catch (err) {
+          console.error('Failed to persist Part B draft from initial data:', err)
+        }
+      }
     }
-  }, [initialData])
+  }, [draftStorageKey, initialData, readOnly])
 
   useEffect(() => {
     // In editable mode, prefill with saved Part B data so sent_back edits never open as blank.
@@ -131,28 +166,45 @@ const PartB = ({ initialData, readOnly }) => {
 
     const fetchGoals = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/goals/${user.id}`, {
+        const res = await fetch(`${API_BASE}/goals/${user.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
         const data = await res.json()
         if (!data.success || !Array.isArray(data.data) || data.data.length === 0) {
+          // If server has no saved rows yet, recover in-progress draft from this browser session.
+          try {
+            const rawDraft = sessionStorage.getItem(draftStorageKey)
+            if (rawDraft) {
+              const parsed = JSON.parse(rawDraft)
+              const draftGoals = Array.isArray(parsed?.goals)
+                ? parsed.goals.map(toGoalViewModel)
+                : []
+
+              if (draftGoals.length > 0) {
+                setGoals(draftGoals)
+                setSelectedSemester(parsed?.selectedSemester || draftGoals[0]?.semester || 'Odd Semester')
+              }
+            }
+          } catch (err) {
+            console.error('Failed to restore Part B draft:', err)
+          }
           return
         }
 
-        const normalizedGoals = data.data.map(g => ({
-          id: g.id || Math.random(),
-          semester: g.semester || 'Odd Semester',
-          teaching: g.teaching || '',
-          research: g.research || '',
-          contribution: g.contribution || '',
-          outreach: g.outreach || '',
-          description: g.description || '',
-          evidenceFile: g.evidence_file || null
-        }))
+        const normalizedGoals = data.data.map(toGoalViewModel)
 
         setGoals(normalizedGoals)
         if (normalizedGoals[0]?.semester) {
           setSelectedSemester(normalizedGoals[0].semester)
+        }
+
+        try {
+          sessionStorage.setItem(draftStorageKey, JSON.stringify({
+            goals: normalizedGoals,
+            selectedSemester: normalizedGoals[0]?.semester || 'Odd Semester'
+          }))
+        } catch (err) {
+          console.error('Failed to persist Part B draft from server data:', err)
         }
       } catch (err) {
         console.error('Failed to fetch existing goals:', err)
@@ -160,7 +212,19 @@ const PartB = ({ initialData, readOnly }) => {
     }
 
     fetchGoals()
-  }, [initialData, readOnly, token, user])
+  }, [draftStorageKey, initialData, readOnly, token, user])
+
+  useEffect(() => {
+    if (readOnly) return
+    try {
+      sessionStorage.setItem(draftStorageKey, JSON.stringify({
+        goals,
+        selectedSemester
+      }))
+    } catch (err) {
+      console.error('Failed to persist Part B draft:', err)
+    }
+  }, [draftStorageKey, goals, readOnly, selectedSemester])
 
   const semesterOptions = [
     'Odd Semester',
@@ -200,12 +264,24 @@ const PartB = ({ initialData, readOnly }) => {
   const handleSave = async (e, showSuccess = true, returnMeta = false) => {
     if (e && e.preventDefault) e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/goals/save', {
+      const goalsToSave = goals
+        .filter(isMeaningfulGoal)
+        .map((goal) => ({
+          semester: goal.semester,
+          teaching: toText(goal.teaching).trim(),
+          research: toText(goal.research).trim(),
+          contribution: toText(goal.contribution).trim(),
+          outreach: toText(goal.outreach).trim(),
+          description: toText(goal.description).trim(),
+          evidence_file: typeof goal.evidenceFile === 'string' ? goal.evidenceFile : null
+        }))
+
+      const response = await fetch(`${API_BASE}/goals/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           faculty_id: user?.id,
-          goals: goals
+          goals: goalsToSave
         })
       });
 
@@ -218,6 +294,11 @@ const PartB = ({ initialData, readOnly }) => {
       };
 
       if (result.success && showSuccess) {
+        try {
+          sessionStorage.setItem(draftStorageKey, JSON.stringify({ goals, selectedSemester }))
+        } catch (err) {
+          console.error('Failed to update Part B draft after save:', err)
+        }
         alert('Data saved successfully!');
       }
 
@@ -269,7 +350,7 @@ const PartB = ({ initialData, readOnly }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/submissions/${submissionId}/status`, {
+      const response = await fetch(`${API_BASE}/submissions/${submissionId}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: 'submitted' })
@@ -277,6 +358,11 @@ const PartB = ({ initialData, readOnly }) => {
 
       const data = await response.json();
       if (data.success) {
+        try {
+          sessionStorage.removeItem(draftStorageKey)
+        } catch (err) {
+          console.error('Failed to clear Part B draft after submit:', err)
+        }
         if (isResubmitting) {
           alert('✅ Appraisal re-submitted successfully! Your updated form has been sent for review.');
           window.location.href = '/';

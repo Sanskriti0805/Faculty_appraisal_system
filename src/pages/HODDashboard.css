@@ -100,6 +100,21 @@
   gap: 6px;
 }
 
+.admin-settings-btn {
+  background: #1e3a5f;
+  border: 1px solid #1a3151;
+  color: #fff;
+  padding: 7px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .admin-logout-btn:hover {
   background: #b83c3c;
 }
@@ -129,6 +144,10 @@
     min-width: 0;
     margin-left: 0;
   }
+}
+
+.admin-settings-btn:hover {
+  background: #2c5282;
 }
 
 /* Main content */
@@ -384,7 +403,7 @@
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
 
@@ -421,6 +440,30 @@
 
 .admin-modal-body {
   padding: 24px 28px;
+  overflow-y: auto;
+}
+
+.history-modal {
+  max-width: min(960px, 96vw) !important;
+}
+
+.history-modal .admin-modal-title {
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.history-modal .admin-modal-body {
+  overflow-x: auto;
+}
+
+.history-modal .admin-table-history {
+  min-width: 0;
+  width: 100%;
+}
+
+.history-modal .admin-table-history th:last-child,
+.history-modal .admin-table-history td:last-child {
+  min-width: 210px;
 }
 
 .admin-form-field {
@@ -538,5 +581,17 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .history-modal .admin-table-history th,
+  .history-modal .admin-table-history td {
+    padding: 10px 12px;
+  }
+
+  .history-modal .admin-table-history th:last-child,
+  .history-modal .admin-table-history td:last-child {
+    min-width: 170px;
+  }
 }
 
