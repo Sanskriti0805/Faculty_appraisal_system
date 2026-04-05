@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 
 /**
  * Auto-allocates marks per rubric for a submitted faculty appraisal.
@@ -29,33 +30,47 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       'SELECT id, section_name, sub_section, max_marks FROM dofa_rubrics ORDER BY id ASC'
     );
 
+    // Resolve all possible faculty identifiers used across legacy/current tables.
+    const [userRows] = await db.query('SELECT email FROM users WHERE id = ? LIMIT 1', [facultyId]);
+    const resolvedFacultyInfoId = await resolveFacultyInfoId({
+      facultyId,
+      email: userRows.length > 0 ? userRows[0].email : null
+    });
+    const facultyIds = Array.from(new Set([Number(facultyId), Number(resolvedFacultyInfoId)].filter(Number.isFinite)));
+    const placeholders = facultyIds.map(() => '?').join(',');
+
+    const byFacultyIds = async (tableName) => {
+      const [rows] = await db.query(`SELECT * FROM ${tableName} WHERE faculty_id IN (${placeholders})`, facultyIds);
+      return rows;
+    };
+
     // ── Fetch all faculty submission data ──────────────────────────────────
-    const [publications]    = await db.query('SELECT * FROM research_publications WHERE faculty_id = ?', [facultyId]);
-    const [courses]         = await db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [facultyId]);
-    const [newCourses]      = await db.query('SELECT * FROM new_courses WHERE faculty_id = ?', [facultyId]);
-    const [grants]          = await db.query('SELECT * FROM research_grants WHERE faculty_id = ?', [facultyId]);
-    const [patents]         = await db.query('SELECT * FROM patents WHERE faculty_id = ?', [facultyId]);
-    const [consultancy]     = await db.query('SELECT * FROM consultancy WHERE faculty_id = ?', [facultyId]);
-    const [awards]          = await db.query('SELECT * FROM awards_honours WHERE faculty_id = ?', [facultyId]);
-    const [proposals]       = await db.query('SELECT * FROM submitted_proposals WHERE faculty_id = ?', [facultyId]);
-    const [techTransfer]    = await db.query('SELECT * FROM technology_transfer WHERE faculty_id = ?', [facultyId]);
-    const [reviews]         = await db.query('SELECT * FROM paper_reviews WHERE faculty_id = ?', [facultyId]);
-    const [talks]           = await db.query('SELECT * FROM keynotes_talks WHERE faculty_id = ?', [facultyId]);
-    const [sessions]        = await db.query('SELECT * FROM conference_sessions WHERE faculty_id = ?', [facultyId]);
-    const [contribs]        = await db.query('SELECT * FROM institutional_contributions WHERE faculty_id = ?', [facultyId]);
-    const [teachingInnovation] = await db.query('SELECT * FROM teaching_innovation WHERE faculty_id = ?', [facultyId]);
+    const publications = await byFacultyIds('research_publications');
+    const courses = await byFacultyIds('courses_taught');
+    const newCourses = await byFacultyIds('new_courses');
+    const grants = await byFacultyIds('research_grants');
+    const patents = await byFacultyIds('patents');
+    const consultancy = await byFacultyIds('consultancy');
+    const awards = await byFacultyIds('awards_honours');
+    const proposals = await byFacultyIds('submitted_proposals');
+    const techTransfer = await byFacultyIds('technology_transfer');
+    const reviews = await byFacultyIds('paper_reviews');
+    const talks = await byFacultyIds('keynotes_talks');
+    const sessions = await byFacultyIds('conference_sessions');
+    const contribs = await byFacultyIds('institutional_contributions');
+    const teachingInnovation = await byFacultyIds('teaching_innovation');
 
     // Optional data sources: keep scoring resilient if these tables are not present yet.
     let guidance = [];
     try {
-      [guidance] = await db.query('SELECT * FROM research_guidance WHERE faculty_id = ?', [facultyId]);
+      guidance = await byFacultyIds('research_guidance');
     } catch (_) {
       guidance = [];
     }
 
     let otherActivities = [];
     try {
-      [otherActivities] = await db.query('SELECT * FROM other_activities WHERE faculty_id = ?', [facultyId]);
+      otherActivities = await byFacultyIds('other_activities');
     } catch (_) {
       otherActivities = [];
     }
