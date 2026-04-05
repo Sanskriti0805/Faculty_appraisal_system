@@ -9,6 +9,42 @@ import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
 import { legacySectionsService } from '../services/legacySectionsService'
 
+const normalizeVenueField = (value) => {
+  const text = (value || '').trim()
+  const token = text.toLowerCase()
+  if (token === 'city' || token === 'state' || token === 'country') {
+    return ''
+  }
+  return value || ''
+}
+
+const sanitizeConferenceFormData = (data, fallback) => ({
+  ...fallback,
+  ...data,
+  city: normalizeVenueField(data?.city),
+  state: normalizeVenueField(data?.state),
+  country: normalizeVenueField(data?.country)
+})
+
+const formatDateForDisplay = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString('en-GB')
+}
+
+const formatStoredFileName = (name) => {
+  if (!name) return ''
+  return String(name).replace(/^\d+(?:-\d+)+-/, '')
+}
+
+const formatVenue = (conf) => {
+  const parts = [conf?.city, conf?.state, conf?.country]
+    .map((p) => (p || '').trim())
+    .filter(Boolean)
+  return parts.join(', ')
+}
+
 const ConferencesOutside = () => {
   const { user } = useAuth()
   const initialState = {
@@ -18,9 +54,9 @@ const ConferencesOutside = () => {
     eventAbbreviation: '',
     organizer: '',
     role: '',
-    city: 'City',
-    state: 'State',
-    country: 'Country',
+    city: '',
+    state: '',
+    country: '',
     fromDate: '',
     toDate: '',
     photoLink: '',
@@ -39,7 +75,7 @@ const ConferencesOutside = () => {
         const parsed = res?.data
         if (!parsed) return
         setSubmittedConferences(Array.isArray(parsed.submittedConferences) ? parsed.submittedConferences : [])
-        setFormData(parsed.formData || initialState)
+        setFormData(sanitizeConferenceFormData(parsed.formData || initialState, initialState))
       } catch (error) {
         console.error('Failed to load conferences outside data:', error)
       }
@@ -50,9 +86,12 @@ const ConferencesOutside = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
+    const nextValue = (name === 'city' || name === 'state' || name === 'country')
+      ? normalizeVenueField(value)
+      : value
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: nextValue
     }))
   }
 
@@ -254,7 +293,7 @@ const ConferencesOutside = () => {
 
           <div className="form-row">
             <div className="form-group">
-              <label>Link for Photos<span className="required-star">*</span></label>
+              <label>Link for Photos</label>
               <input
                 type="text"
                 name="photoLink"
@@ -293,7 +332,34 @@ const ConferencesOutside = () => {
                 {submittedConferences.map((conf, index) => (
                   <li key={index}>
                     <div className="conference-info">
-                      <strong>{conf.eventTitle}</strong> ({conf.role}) - {conf.city}, {conf.country} ({conf.fromDate} to {conf.toDate})
+                      <strong>{conf.eventTitle || 'Untitled Conference'}</strong>
+                      <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>
+                        Organizer: {conf.organizer || 'N/A'} | Role: {conf.role || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>
+                        Mode: {conf.eventMode || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>
+                        Venue: {formatVenue(conf) || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>
+                        Date: {conf.fromDate && conf.toDate
+                          ? `${formatDateForDisplay(conf.fromDate)} to ${formatDateForDisplay(conf.toDate)}`
+                          : (formatDateForDisplay(conf.fromDate || conf.toDate) || 'N/A')}
+                      </div>
+                      {conf.photoLink && (
+                        <div style={{ fontSize: '0.9rem', color: '#4b5563', wordBreak: 'break-all' }}>
+                          Photos: {conf.photoLink}
+                        </div>
+                      )}
+                      {conf.posterFile && (
+                        <span style={{ marginTop: '0.35rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.85rem', color: '#4b5563' }}>
+                            File: {typeof conf.posterFile === 'string' ? formatStoredFileName(conf.posterFile) : conf.posterFile?.name}
+                          </span>
+                          <FilePreviewButton file={conf.posterFile} style={{ width: '28px', height: '28px' }} />
+                        </span>
+                      )}
                     </div>
                     <button
                       type="button"

@@ -2,6 +2,7 @@ const db = require('../config/database');
 const { autoAllocateMarks } = require('../services/rubricMapper');
 const emailService = require('../services/emailService');
 const xlsx = require('xlsx');
+const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 
 // GET /api/submissions/my — get or create draft submission for logged-in faculty
 exports.getMySubmission = async (req, res) => {
@@ -143,12 +144,13 @@ exports.getSubmissionById = async (req, res) => {
     const user_id = sub.faculty_id;
     const academicYear = sub.academic_year;
 
-    // IMPORTANT: Map User ID to Faculty Information ID via email (some tables use one, some the other)
-    const [facInfoRow] = await db.query('SELECT id FROM faculty_information WHERE email = ?', [sub.email]);
-    const faculty_info_id = facInfoRow.length > 0 ? facInfoRow[0].id : null;
-    
-    // Choose appropriate ID for sub-queries (most reference faculty_information.id)
-    const fid = faculty_info_id; 
+    // Map to faculty_information.id for section tables that use that FK.
+    // Fallback to submissions.faculty_id for backward compatibility with legacy rows.
+    const resolvedFacultyInfoId = await resolveFacultyInfoId({
+      facultyId: sub.faculty_id,
+      email: sub.email
+    });
+    const fid = resolvedFacultyInfoId || Number(user_id) || null;
     
     // Helper to get year from academic_year string (e.g. "2025-26" -> 2025)
     const yearNum = academicYear.split('-')[0];

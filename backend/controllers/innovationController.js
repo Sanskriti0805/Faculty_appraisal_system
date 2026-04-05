@@ -1,16 +1,26 @@
 const db = require('../config/database');
+const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 
 // --- Teaching Innovation ---
 
 exports.createTeachingInnovation = async (req, res) => {
     try {
         const { faculty_id, description, impact } = req.body;
+        const facultyInfoId = await resolveFacultyInfoId({
+            facultyId: faculty_id || req.user?.id,
+            email: req.user?.email
+        });
+
+        if (!facultyInfoId) {
+            return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+        }
+
         const evidence_file = req.file ? req.file.filename : null;
 
         const [result] = await db.query(
             `INSERT INTO teaching_innovation (faculty_id, description, impact, evidence_file) 
              VALUES (?, ?, ?, ?)`,
-            [faculty_id, description, impact, evidence_file]
+            [facultyInfoId, description, impact, evidence_file]
         );
 
         res.status(201).json({ success: true, id: result.insertId });
@@ -22,9 +32,13 @@ exports.createTeachingInnovation = async (req, res) => {
 exports.getTeachingInnovations = async (req, res) => {
     try {
         const { facultyId } = req.params;
+        const facultyInfoId = await resolveFacultyInfoId({ facultyId });
+        if (!facultyInfoId) {
+            return res.json({ success: true, data: [] });
+        }
         const [rows] = await db.query(
             'SELECT * FROM teaching_innovation WHERE faculty_id = ? ORDER BY created_at DESC',
-            [facultyId]
+            [facultyInfoId]
         );
         res.json({ success: true, data: rows });
     } catch (error) {
@@ -37,12 +51,21 @@ exports.getTeachingInnovations = async (req, res) => {
 exports.createInstitutionalContribution = async (req, res) => {
     try {
         const { faculty_id, contribution_type, description, year } = req.body;
+        const facultyInfoId = await resolveFacultyInfoId({
+            facultyId: faculty_id || req.user?.id,
+            email: req.user?.email
+        });
+
+        if (!facultyInfoId) {
+            return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+        }
+
         const evidence_file = req.file ? req.file.filename : null;
 
         const [result] = await db.query(
             `INSERT INTO institutional_contributions (faculty_id, contribution_type, description, year, evidence_file) 
              VALUES (?, ?, ?, ?, ?)`,
-            [faculty_id, contribution_type, description, year || new Date().getFullYear(), evidence_file]
+            [facultyInfoId, contribution_type, description, year || new Date().getFullYear(), evidence_file]
         );
 
         res.status(201).json({ success: true, id: result.insertId });
@@ -54,9 +77,13 @@ exports.createInstitutionalContribution = async (req, res) => {
 exports.getInstitutionalContributions = async (req, res) => {
     try {
         const { facultyId } = req.params;
+        const facultyInfoId = await resolveFacultyInfoId({ facultyId });
+        if (!facultyInfoId) {
+            return res.json({ success: true, data: [] });
+        }
         const [rows] = await db.query(
             'SELECT * FROM institutional_contributions WHERE faculty_id = ? ORDER BY created_at DESC',
-            [facultyId]
+            [facultyInfoId]
         );
         res.json({ success: true, data: rows });
     } catch (error) {

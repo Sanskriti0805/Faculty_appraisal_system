@@ -198,7 +198,25 @@ exports.createProposal = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
     }
 
+    // Validate required fields
+    if (!title || !funding_agency) {
+      return res.status(400).json({ success: false, message: 'Title and Funding Agency are required' });
+    }
+
+    if (!submission_date) {
+      return res.status(400).json({ success: false, message: 'Submission date is required' });
+    }
+
     const evidence_file = req.file ? req.file.filename : null;
+
+    // Log for debugging
+    console.log('Creating proposal with:', {
+      faculty_id: facultyInfoId,
+      title,
+      funding_agency,
+      submission_date,
+      evidence_file
+    });
 
     const [result] = await db.query(
       `INSERT INTO submitted_proposals 
@@ -215,6 +233,7 @@ exports.createProposal = async (req, res) => {
       data: { id: result.insertId, file: evidence_file }
     });
   } catch (error) {
+    console.error('Error creating proposal:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

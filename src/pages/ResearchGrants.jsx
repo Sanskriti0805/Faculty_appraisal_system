@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Plus, Trash2, ExternalLink, Upload } from 'lucide-react'
 import './CoursesTaught.css'
 import { grantsService } from '../services/grantsService'
@@ -7,6 +7,24 @@ import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
 
 const isNotFoundError = (error) => error?.response?.status === 404
+
+// Format date for display and input (YYYY-MM-DD format)
+const formatDateForInput = (dateValue) => {
+  if (!dateValue) return ''
+  // If it's already a string in YYYY-MM-DD format, return it
+  if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return dateValue
+  }
+  // If it's a string with time component, extract the date part
+  if (typeof dateValue === 'string') {
+    return dateValue.split('T')[0] || dateValue.substring(0, 10)
+  }
+  // If it's a Date object, format it
+  if (dateValue instanceof Date) {
+    return dateValue.toISOString().split('T')[0]
+  }
+  return ''
+}
 
 const deleteIgnoringNotFound = async (deleteFn, ids) => {
   const validIds = (ids || []).filter(id => Number.isFinite(Number(id)))
@@ -21,8 +39,15 @@ const deleteIgnoringNotFound = async (deleteFn, ids) => {
   }
 }
 
+const ReadOnlyField = ({ value, readOnly, children }) => (
+  readOnly
+    ? <div className="readonly-table-text">{value === null || value === undefined || value === '' ? '—' : String(value)}</div>
+    : children
+)
+
 const ResearchGrants = ({ initialData, readOnly }) => {
   const { user } = useAuth()
+  const hasHydratedEditable = useRef(false)
   const [selectedType, setSelectedType] = useState('')
   const [loading, setLoading] = useState(false)
   const [persistedGrantIds, setPersistedGrantIds] = useState([])
@@ -86,7 +111,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
           grantAmount: p.grant_amount,
           amountInLakhs: p.amount_in_lakhs,
           duration: p.duration,
-          submissionDate: p.submission_date,
+          submissionDate: formatDateForInput(p.submission_date),
           status: p.status,
           role: p.role,
           evidence_file: p.evidence_file
@@ -103,7 +128,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
 
   useEffect(() => {
     // For editable mode, hydrate form with already saved entries.
-    if (readOnly || initialData || !user?.id) return
+    if (readOnly || initialData || !user?.id || hasHydratedEditable.current) return
 
     const loadExisting = async () => {
       try {
@@ -143,7 +168,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
             grantAmount: p.grant_amount || '',
             amountInLakhs: p.amount_in_lakhs || '',
             duration: p.duration || '',
-            submissionDate: p.submission_date || '',
+            submissionDate: formatDateForInput(p.submission_date),
             status: p.status || '',
             role: p.role || '',
             evidence_file: p.evidence_file || null,
@@ -153,13 +178,15 @@ const ResearchGrants = ({ initialData, readOnly }) => {
             setSelectedType('proposals')
           }
         }
+
+        hasHydratedEditable.current = true
       } catch (error) {
         console.error('Failed to load existing grants/proposals:', error)
       }
     }
 
     loadExisting()
-  }, [initialData, readOnly, user])
+  }, [initialData, readOnly, user?.id])
 
   const handleGrantInputChange = (index, field, value) => {
     const updated = [...grants]
@@ -223,12 +250,6 @@ const ResearchGrants = ({ initialData, readOnly }) => {
       setProposals(proposals.filter((_, i) => i !== index))
     }
   }
-
-  const ReadOnlyField = React.useCallback(({ value, children }) => (
-    readOnly
-      ? <div className="readonly-table-text">{value === null || value === undefined || value === '' ? '—' : String(value)}</div>
-      : children
-  ), [readOnly])
 
   const handleSave = async () => {
     if (!selectedType) {
@@ -433,7 +454,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                   {grants.map((grant, index) => (
                     <tr key={grant.id}>
                       <td>
-                        <ReadOnlyField value={grant.projectName}>
+                        <ReadOnlyField readOnly={readOnly} value={grant.projectName}>
                           <input
                             type="text"
                             value={grant.projectName}
@@ -445,7 +466,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={grant.fundingAgency}>
+                        <ReadOnlyField readOnly={readOnly} value={grant.fundingAgency}>
                           <input
                             type="text"
                             value={grant.fundingAgency}
@@ -457,7 +478,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={grant.currency}>
+                        <ReadOnlyField readOnly={readOnly} value={grant.currency}>
                           <select
                             value={grant.currency}
                             onChange={(e) => handleGrantInputChange(index, 'currency', e.target.value)}
@@ -481,7 +502,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={grant.grantAmount}>
+                        <ReadOnlyField readOnly={readOnly} value={grant.grantAmount}>
                           <input
                             type="text"
                             value={grant.grantAmount}
@@ -493,7 +514,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={grant.amountInLakhs}>
+                        <ReadOnlyField readOnly={readOnly} value={grant.amountInLakhs}>
                           <input
                             type="text"
                             value={grant.amountInLakhs}
@@ -505,7 +526,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={grant.duration}>
+                        <ReadOnlyField readOnly={readOnly} value={grant.duration}>
                           <input
                             type="text"
                             value={grant.duration}
@@ -517,7 +538,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={grant.researchers}>
+                        <ReadOnlyField readOnly={readOnly} value={grant.researchers}>
                           <input
                             type="text"
                             value={grant.researchers}
@@ -529,7 +550,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={grant.role}>
+                        <ReadOnlyField readOnly={readOnly} value={grant.role}>
                           <select
                             value={grant.role}
                             onChange={(e) => handleGrantInputChange(index, 'role', e.target.value)}
@@ -646,7 +667,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                   {proposals.map((proposal, index) => (
                     <tr key={proposal.id}>
                       <td>
-                        <ReadOnlyField value={proposal.title}>
+                        <ReadOnlyField readOnly={readOnly} value={proposal.title}>
                           <input
                             type="text"
                             value={proposal.title}
@@ -658,7 +679,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={proposal.fundingAgency}>
+                        <ReadOnlyField readOnly={readOnly} value={proposal.fundingAgency}>
                           <input
                             type="text"
                             value={proposal.fundingAgency}
@@ -670,7 +691,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={proposal.currency}>
+                        <ReadOnlyField readOnly={readOnly} value={proposal.currency}>
                           <select
                             value={proposal.currency}
                             onChange={(e) => handleProposalInputChange(index, 'currency', e.target.value)}
@@ -694,7 +715,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={proposal.grantAmount}>
+                        <ReadOnlyField readOnly={readOnly} value={proposal.grantAmount}>
                           <input
                             type="text"
                             value={proposal.grantAmount}
@@ -706,7 +727,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={proposal.amountInLakhs}>
+                        <ReadOnlyField readOnly={readOnly} value={proposal.amountInLakhs}>
                           <input
                             type="text"
                             value={proposal.amountInLakhs}
@@ -718,7 +739,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={proposal.duration}>
+                        <ReadOnlyField readOnly={readOnly} value={proposal.duration}>
                           <input
                             type="text"
                             value={proposal.duration}
@@ -730,19 +751,19 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={proposal.submissionDate}>
+                        <ReadOnlyField readOnly={readOnly} value={proposal.submissionDate}>
                           <input
-                            type="text"
+                            type="date"
                             value={proposal.submissionDate}
                             onChange={(e) => handleProposalInputChange(index, 'submissionDate', e.target.value)}
-                            placeholder={readOnly ? '' : 'Date and status'}
+                            placeholder={readOnly ? '' : 'Date'}
                             disabled={readOnly}
                             style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
                           />
                         </ReadOnlyField>
                       </td>
                       <td>
-                        <ReadOnlyField value={proposal.role}>
+                        <ReadOnlyField readOnly={readOnly} value={proposal.role}>
                           <select
                             value={proposal.role}
                             onChange={(e) => handleProposalInputChange(index, 'role', e.target.value)}

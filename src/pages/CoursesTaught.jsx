@@ -21,6 +21,12 @@ const deleteIgnoringNotFound = async (deleteFn, ids) => {
   }
 }
 
+const ReadOnlyField = ({ value, readOnly, children }) => (
+  readOnly
+    ? <div className="readonly-table-text">{value === null || value === undefined || value === '' ? '—' : String(value)}</div>
+    : children
+)
+
 const CoursesTaught = ({ initialData, readOnly }) => {
   const { user } = useAuth()
   const [selectedSection, setSelectedSection] = useState('courses')
@@ -285,12 +291,6 @@ const CoursesTaught = ({ initialData, readOnly }) => {
     return '4.2: BTech/MTech/MS/LUSIP/SLI/Ph.D./Other Projects Guided / Co-Advised / Mentored'
   }
 
-  const ReadOnlyField = React.useCallback(({ value, children }) => (
-    readOnly
-      ? <div className="readonly-table-text">{value === null || value === undefined || value === '' ? '—' : String(value)}</div>
-      : children
-  ), [readOnly])
-
   const renderTable = (semester, items, semesterLabel) => {
     return (
       <div className="semester-section">
@@ -333,7 +333,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
             <tr key={course.id}>
               <td className="course-number">Course-{index + 1}</td>
               <td>
-                <ReadOnlyField value={course.title}>
+                <ReadOnlyField readOnly={readOnly} value={course.title}>
                   <input
                     type="text"
                     value={course.title}
@@ -344,7 +344,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                 </ReadOnlyField>
               </td>
               <td>
-                <ReadOnlyField value={course.percentage}>
+                <ReadOnlyField readOnly={readOnly} value={course.percentage}>
                   <input
                     type="text"
                     value={course.percentage}
@@ -355,7 +355,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                 </ReadOnlyField>
               </td>
               <td>
-                <ReadOnlyField value={course.students}>
+                <ReadOnlyField readOnly={readOnly} value={course.students}>
                   <input
                     type="number"
                     value={course.students}
@@ -406,7 +406,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                 </div>
               </td>
               <td>
-                <ReadOnlyField value={course.remarks}>
+                <ReadOnlyField readOnly={readOnly} value={course.remarks}>
                   <input
                     type="text"
                     value={course.remarks}
@@ -449,7 +449,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
           {projects.map((project, index) => (
             <tr key={project.id}>
               <td>
-                <ReadOnlyField value={project.projectTitle}>
+                <ReadOnlyField readOnly={readOnly} value={project.projectTitle}>
                   <input
                     type="text"
                     value={project.projectTitle}
@@ -459,7 +459,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                 </ReadOnlyField>
               </td>
               <td>
-                <ReadOnlyField value={project.projectType}>
+                <ReadOnlyField readOnly={readOnly} value={project.projectType}>
                   <select value={project.projectType} onChange={(e) => handleInputChange(semester, index, 'projectType', e.target.value)} disabled={readOnly}>
                     <option value="">Select Type</option>
                     <option value="B.Tech">B.Tech</option>
@@ -474,7 +474,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                 </ReadOnlyField>
               </td>
               <td>
-                <ReadOnlyField value={project.role}>
+                <ReadOnlyField readOnly={readOnly} value={project.role}>
                   <select value={project.role} onChange={(e) => handleInputChange(semester, index, 'role', e.target.value)} disabled={readOnly}>
                     <option value="">Select Role</option>
                     <option value="Supervisor">Supervisor</option>
@@ -482,10 +482,10 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                   </select>
                 </ReadOnlyField>
               </td>
-              <td><ReadOnlyField value={project.studentName}><input type="text" value={project.studentName} onChange={(e) => handleInputChange(semester, index, 'studentName', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
-              <td><ReadOnlyField value={project.duration}><input type="text" value={project.duration} onChange={(e) => handleInputChange(semester, index, 'duration', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
-              <td><ReadOnlyField value={project.outcome}><input type="text" value={project.outcome} onChange={(e) => handleInputChange(semester, index, 'outcome', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
-              <td><ReadOnlyField value={project.remarks}><input type="text" value={project.remarks} onChange={(e) => handleInputChange(semester, index, 'remarks', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
+              <td><ReadOnlyField readOnly={readOnly} value={project.studentName}><input type="text" value={project.studentName} onChange={(e) => handleInputChange(semester, index, 'studentName', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
+              <td><ReadOnlyField readOnly={readOnly} value={project.duration}><input type="text" value={project.duration} onChange={(e) => handleInputChange(semester, index, 'duration', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
+              <td><ReadOnlyField readOnly={readOnly} value={project.outcome}><input type="text" value={project.outcome} onChange={(e) => handleInputChange(semester, index, 'outcome', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
+              <td><ReadOnlyField readOnly={readOnly} value={project.remarks}><input type="text" value={project.remarks} onChange={(e) => handleInputChange(semester, index, 'remarks', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
               <td>
                 {readOnly ? (
                   project.evidence_file ? (

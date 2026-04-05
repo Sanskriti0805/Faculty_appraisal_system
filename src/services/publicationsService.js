@@ -18,11 +18,7 @@ export const publicationsService = {
       }
     });
 
-    return await apiClient.post('/publications', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return await apiClient.post('/publications', formData);
   },
 
   // Delete publication

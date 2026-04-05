@@ -1,14 +1,24 @@
 const db = require('../config/database');
+const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 
 // Create a new award
 const createAward = async (req, res) => {
     try {
         const { faculty_id, honor_type, award_name, description } = req.body;
-        const certificate_file = req.file ? req.file.filename : null;
+        const facultyInfoId = await resolveFacultyInfoId({
+            facultyId: faculty_id || req.user?.id,
+            email: req.user?.email
+        });
+
+        if (!facultyInfoId) {
+            return res.status(400).json({ message: 'Faculty profile not found. Complete onboarding first.' });
+        }
+
+        const evidence_file = req.file ? req.file.filename : null;
 
         const [result] = await db.query(
-            'INSERT INTO awards_honours (faculty_id, honor_type, award_name, description, certificate_file) VALUES (?, ?, ?, ?, ?)',
-            [faculty_id, honor_type, award_name, description, certificate_file]
+            'INSERT INTO awards_honours (faculty_id, honor_type, award_name, description, evidence_file) VALUES (?, ?, ?, ?, ?)',
+            [facultyInfoId, honor_type, award_name, description, evidence_file]
         );
 
         res.status(201).json({
@@ -25,10 +35,14 @@ const createAward = async (req, res) => {
 const getAwards = async (req, res) => {
     try {
         const { facultyId } = req.params;
+        const facultyInfoId = await resolveFacultyInfoId({ facultyId });
+        if (!facultyInfoId) {
+            return res.json([]);
+        }
 
         const [awards] = await db.query(
             'SELECT * FROM awards_honours WHERE faculty_id = ? ORDER BY created_at DESC',
-            [facultyId]
+            [facultyInfoId]
         );
 
         res.json(awards);

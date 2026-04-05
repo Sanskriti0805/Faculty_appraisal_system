@@ -1,21 +1,84 @@
 const db = require('../config/database');
 
+const toNumberOrNull = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
+const resolveFacultyInfoId = async ({ facultyId, email }) => {
+  const numericFacultyId = toNumberOrNull(facultyId);
+
+  if (email) {
+    const [fiByEmail] = await db.query('SELECT id FROM faculty_information WHERE email = ? LIMIT 1', [email]);
+    if (fiByEmail.length > 0) {
+      return fiByEmail[0].id;
+    }
+  }
+
+  if (numericFacultyId !== null) {
+    const [fiById] = await db.query('SELECT id FROM faculty_information WHERE id = ? LIMIT 1', [numericFacultyId]);
+    if (fiById.length > 0) {
+      return fiById[0].id;
+    }
+
+    const [usersById] = await db.query('SELECT email FROM users WHERE id = ? LIMIT 1', [numericFacultyId]);
+    if (usersById.length > 0) {
+      const [fiByUserEmail] = await db.query('SELECT id FROM faculty_information WHERE email = ? LIMIT 1', [usersById[0].email]);
+      if (fiByUserEmail.length > 0) {
+        return fiByUserEmail[0].id;
+      }
+    }
+  }
+
+  return null;
+};
+
+const parseJsonArrayField = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  return [];
+};
+
 // Get all publications for a faculty (optimized with JOIN to avoid N+1 queries)
 exports.getPublicationsByFaculty = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
+    const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+
+    if (!facultyInfoId) {
+      return res.json({
+        success: true,
+        data: [],
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: 0,
+          totalPages: 0
+        }
+      });
+    }
 
     // Get publications with pagination
     const [publications] = await db.query(
       'SELECT * FROM research_publications WHERE faculty_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-      [req.params.facultyId, parseInt(limit), parseInt(offset)]
+      [facultyInfoId, parseInt(limit), parseInt(offset)]
     );
 
     // Get total count for pagination
     const [countResult] = await db.query(
       'SELECT COUNT(*) as total FROM research_publications WHERE faculty_id = ?',
-      [req.params.facultyId]
+      [facultyInfoId]
     );
     const total = countResult[0].total;
 
@@ -105,6 +168,19 @@ exports.createPublication = async (req, res) => {
       status = 'draft'
     } = req.body;
 
+    const facultyInfoId = await resolveFacultyInfoId({
+      facultyId: faculty_id || req.user?.id,
+      email: req.user?.email
+    });
+
+    if (!facultyInfoId) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+    }
+
+    const parsedAuthors = parseJsonArrayField(authors);
+    const parsedEditors = parseJsonArrayField(editors);
+
     // Get uploaded file if exists
     const evidence_file = req.file ? req.file.filename : null;
 
@@ -116,7 +192,7 @@ exports.createPublication = async (req, res) => {
        date_to, type_of_conference, city, state, country, publication_agency, title_of_book, 
        publication_id, details, evidence_file, status) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [faculty_id, publication_type, sub_type, title, year_of_publication, journal_name,
+      [facultyInfoId, publication_type, sub_type, title, year_of_publication, journal_name,
         conference_name, abbreviation, volume, number, pages_from, pages_to, date_from,
         date_to, type_of_conference, city, state, country, publication_agency, title_of_book,
         publication_id, details, evidence_file, status]
@@ -125,8 +201,8 @@ exports.createPublication = async (req, res) => {
     const publicationId = result.insertId;
 
     // Insert authors
-    if (authors && Array.isArray(authors)) {
-      for (const author of authors) {
+    if (parsedAuthors.length > 0) {
+      for (const author of parsedAuthors) {
         await connection.query(
           'INSERT INTO authors (publication_id, first_name, middle_name, last_name) VALUES (?, ?, ?, ?)',
           [publicationId, author.first || author.firstName, author.middle || author.middleName, author.last || author.lastName]
@@ -135,8 +211,8 @@ exports.createPublication = async (req, res) => {
     }
 
     // Insert editors if book chapter
-    if (editors && Array.isArray(editors)) {
-      for (const editor of editors) {
+    if (parsedEditors.length > 0) {
+      for (const editor of parsedEditors) {
         await connection.query(
           'INSERT INTO editors (publication_id, first_name, middle_name, last_name) VALUES (?, ?, ?, ?)',
           [publicationId, editor.first || editor.firstName, editor.middle || editor.middleName, editor.last || editor.lastName]

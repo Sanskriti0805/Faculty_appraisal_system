@@ -1,11 +1,17 @@
 const db = require('../config/database');
+const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 
 // Get goals by faculty
 exports.getGoalsByFaculty = async (req, res) => {
     try {
+        const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+        if (!facultyInfoId) {
+            return res.json({ success: true, data: [] });
+        }
+
         const [rows] = await db.query(
             'SELECT * FROM faculty_goals WHERE faculty_id = ? ORDER BY created_at DESC',
-            [req.params.facultyId]
+            [facultyInfoId]
         );
         res.json({ success: true, data: rows });
     } catch (error) {
@@ -19,12 +25,17 @@ exports.saveGoals = async (req, res) => {
         await connection.beginTransaction();
         const { faculty_id, goals } = req.body;
 
-        if (!faculty_id) {
-            throw new Error('faculty_id is required');
+        const facultyInfoId = await resolveFacultyInfoId({
+            facultyId: faculty_id || req.user?.id,
+            email: req.user?.email
+        });
+
+        if (!facultyInfoId) {
+            throw new Error('Faculty profile not found. Complete onboarding first.');
         }
 
         // Delete existing goals for this faculty for a clean save (simple approach)
-        await connection.query('DELETE FROM faculty_goals WHERE faculty_id = ?', [faculty_id]);
+        await connection.query('DELETE FROM faculty_goals WHERE faculty_id = ?', [facultyInfoId]);
 
         // Insert new goals
         if (goals && Array.isArray(goals)) {
@@ -33,7 +44,7 @@ exports.saveGoals = async (req, res) => {
                     `INSERT INTO faculty_goals 
           (faculty_id, semester, teaching, research, contribution, outreach, description) 
           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    [faculty_id, goal.semester, goal.teaching, goal.research, goal.contribution, goal.outreach, goal.description]
+                    [facultyInfoId, goal.semester, goal.teaching, goal.research, goal.contribution, goal.outreach, goal.description]
                 );
             }
         }

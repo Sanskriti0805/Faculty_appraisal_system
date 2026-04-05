@@ -62,10 +62,8 @@ const Consultancy = ({ initialData, readOnly }) => {
 
     const hydrateExisting = async () => {
       try {
-        const mySub = await apiClient.get('/submissions/my')
-        if (!mySub?.success || !mySub?.data?.id) return
-        const details = await apiClient.get(`/submissions/${mySub.data.id}`)
-        const rows = Array.isArray(details?.data?.consultancy) ? details.data.consultancy : []
+        const response = await apiClient.get(`/consultancy/faculty/${user.id}`)
+        const rows = Array.isArray(response?.data) ? response.data : []
         if (rows.length === 0) return
 
         setPersistedConsultancyIds(rows.map(c => c.id).filter(Boolean))
@@ -155,6 +153,8 @@ const Consultancy = ({ initialData, readOnly }) => {
           formData.append('year', c.year);
           if (c.evidenceFile) {
             formData.append('evidence_file', c.evidenceFile);
+          } else if (c.evidence_file) {
+            formData.append('existing_evidence_file', c.evidence_file);
           }
 
           return fetch(`http://${window.location.hostname}:5000/api/consultancy`, {
@@ -164,16 +164,44 @@ const Consultancy = ({ initialData, readOnly }) => {
           });
         });
 
-      const createdResponses = await Promise.all(promises);
-      const createdIds = []
+      if (promises.length === 0) {
+        alert('Please fill at least one consultancy row with Organisation and Project.');
+        return false;
+      }
 
-      for (const response of createdResponses) {
-        if (!response.ok) continue
-        const payload = await response.json()
-        const id = payload?.data?.id
-        if (Number.isFinite(Number(id))) {
-          createdIds.push(id)
+      const createdResponses = await Promise.all(promises);
+      const settled = await Promise.all(createdResponses.map(async (response) => {
+        let payload = null
+        try {
+          payload = await response.json()
+        } catch {
+          payload = null
         }
+
+        if (!response.ok) {
+          return {
+            ok: false,
+            message: payload?.message || `Failed to save consultancy entry (HTTP ${response.status})`
+          }
+        }
+
+        return {
+          ok: true,
+          id: payload?.id || payload?.data?.id || null
+        }
+      }))
+
+      const failed = settled.find((item) => !item.ok)
+      if (failed) {
+        throw new Error(failed.message)
+      }
+
+      const createdIds = settled
+        .map((item) => item.id)
+        .filter((id) => Number.isFinite(Number(id)))
+
+      if (promises.length > 0 && createdIds.length === 0) {
+        throw new Error('Consultancy entries were not saved. Please try again.')
       }
 
       setPersistedConsultancyIds(createdIds)

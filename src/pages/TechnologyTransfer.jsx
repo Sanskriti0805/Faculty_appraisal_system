@@ -14,6 +14,7 @@ const TechnologyTransfer = () => {
     technologyInfo: '',
   })
   const [evidenceFile, setEvidenceFile] = useState(null)
+  const [persistedEvidenceFile, setPersistedEvidenceFile] = useState('')
 
   useEffect(() => {
     if (!user?.id) return
@@ -25,12 +26,27 @@ const TechnologyTransfer = () => {
 
         const details = await apiClient.get(`/submissions/${mySub.data.id}`)
         const rows = Array.isArray(details?.data?.techTransfer) ? details.data.techTransfer : []
-        if (rows.length === 0) return
+        if (rows.length === 0) {
+          setPersistedEvidenceFile('')
+          return
+        }
 
-        setTechnologyTransferId(rows[0].id || null)
+        const latest = [...rows].sort((a, b) => {
+          const bTs = b?.created_at ? new Date(b.created_at).getTime() : Number(b?.id || 0)
+          const aTs = a?.created_at ? new Date(a.created_at).getTime() : Number(a?.id || 0)
+          return bTs - aTs
+        })[0]
+        setTechnologyTransferId(latest.id || null)
+        setPersistedEvidenceFile(latest.evidence_file || '')
 
-        const summary = rows
-          .map((r) => `${r.title || ''}${r.agency ? ` - ${r.agency}` : ''}`.trim())
+        // Show exactly what the user entered as the technology text.
+        const summary = [...rows]
+          .sort((a, b) => {
+            const aTs = a?.created_at ? new Date(a.created_at).getTime() : Number(a?.id || 0)
+            const bTs = b?.created_at ? new Date(b.created_at).getTime() : Number(b?.id || 0)
+            return aTs - bTs
+          })
+          .map((r) => (r.title || '').trim())
           .filter(Boolean)
           .join('\n')
         setFormData({ technologyInfo: summary })
@@ -72,11 +88,13 @@ const TechnologyTransfer = () => {
       const formDataObj = new FormData()
       formDataObj.append('faculty_id', facultyId)
       formDataObj.append('title', formData.technologyInfo.substring(0, 100))
-      formDataObj.append('agency', 'Internal/External')
+      formDataObj.append('agency', '')
       formDataObj.append('date', new Date().toISOString().split('T')[0])
 
       if (evidenceFile) {
         formDataObj.append('evidence_file', evidenceFile)
+      } else if (persistedEvidenceFile) {
+        formDataObj.append('existing_evidence_file', persistedEvidenceFile)
       }
 
       const response = await fetch('http://localhost:5000/api/activities/tech-transfer', {
@@ -87,6 +105,10 @@ const TechnologyTransfer = () => {
 
       const data = await response.json()
       if (data.success) {
+        setTechnologyTransferId(data.id || data?.data?.id || technologyTransferId)
+        if (evidenceFile) {
+          setPersistedEvidenceFile(evidenceFile.name)
+        }
         alert('Data saved successfully!')
         return true
       } else {
@@ -151,13 +173,13 @@ const TechnologyTransfer = () => {
               >
                 <Upload size={32} color="#5b8fc7" />
                 <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-                  {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+                  {evidenceFile ? evidenceFile.name : (persistedEvidenceFile || 'Click to upload or drag and drop')}
                 </span>
                 <span style={{ fontSize: '0.85rem', color: '#666' }}>
                   PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
                 </span>
                 <FilePreviewButton
-                  file={evidenceFile}
+                  file={evidenceFile || persistedEvidenceFile}
                   style={{ width: '32px', height: '32px', marginTop: '0.25rem' }}
                 />
               </label>

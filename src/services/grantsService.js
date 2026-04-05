@@ -17,11 +17,7 @@ export const grantsService = {
       }
     });
 
-    return await apiClient.post('/grants', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return await apiClient.post('/grants', formData);
   },
 
   updateGrant: async (id, grantData) => {
@@ -61,11 +57,7 @@ export const grantsService = {
       }
     });
 
-    return await apiClient.post('/grants/proposals', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return await apiClient.post('/grants/proposals', formData);
   },
 
   updateProposal: async (id, proposalData) => {

@@ -16,6 +16,7 @@ const PaperReview = () => {
     reviewDetails: '',
   })
   const [evidenceFile, setEvidenceFile] = useState(null)
+  const [persistedEvidenceFile, setPersistedEvidenceFile] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -28,12 +29,17 @@ const PaperReview = () => {
 
         const details = await apiClient.get(`/submissions/${mySub.data.id}`)
         const rows = Array.isArray(details?.data?.paperReviews) ? details.data.paperReviews : []
-        if (rows.length === 0) return
+        if (rows.length === 0) {
+          setPersistedEvidenceFile('')
+          return
+        }
 
-        const first = rows[0]
-        const detailsText = rows
-          .map((r) => `• ${r.journal_name || 'Journal'} (${r.review_type || 'Review'})`)
-          .join('\n')
+        const first = [...rows].sort((a, b) => {
+          const bTs = b?.created_at ? new Date(b.created_at).getTime() : Number(b?.id || 0)
+          const aTs = a?.created_at ? new Date(a.created_at).getTime() : Number(a?.id || 0)
+          return bTs - aTs
+        })[0]
+        const detailsText = first.journal_name || ''
 
         setFormData({
           tier: first.tier || '',
@@ -43,6 +49,7 @@ const PaperReview = () => {
         
         // Store ID to prevent duplicate creation
         setReviewId(first.id || null)
+        setPersistedEvidenceFile(first.evidence_file || '')
       } catch (error) {
         console.error('Failed to prefill paper reviews:', error)
       }
@@ -79,13 +86,15 @@ const PaperReview = () => {
       const formDataObj = new FormData()
       formDataObj.append('faculty_id', facultyId)
       formDataObj.append('review_type', formData.paperType || 'Journal')
-      formDataObj.append('journal_name', formData.reviewDetails.substring(0, 100)) // Use part of details as name if needed
+      formDataObj.append('journal_name', formData.reviewDetails.trim().substring(0, 255))
       formDataObj.append('tier', formData.tier)
       formDataObj.append('number_of_papers', 1) // Default to 1 for this form
       formDataObj.append('month_of_review', new Date().toISOString().split('T')[0])
 
       if (evidenceFile) {
         formDataObj.append('evidence_file', evidenceFile)
+      } else if (persistedEvidenceFile) {
+        formDataObj.append('existing_evidence_file', persistedEvidenceFile)
       }
 
       const response = await fetch('http://localhost:5000/api/activities/paper-reviews', {
@@ -97,6 +106,9 @@ const PaperReview = () => {
       const data = await response.json()
       if (data.success) {
         setReviewId(data.id || null)
+        if (evidenceFile) {
+          setPersistedEvidenceFile(evidenceFile.name)
+        }
         alert('Data saved successfully!')
         return true
       } else {
@@ -175,12 +187,12 @@ const PaperReview = () => {
                   height: '100%',
                   minHeight: '200px'
                 }}>
-                  <Upload size={24} color={evidenceFile ? '#28a745' : '#666'} />
+                  <Upload size={24} color={(evidenceFile || persistedEvidenceFile) ? '#28a745' : '#666'} />
                   <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
-                    {evidenceFile ? evidenceFile.name : 'Upload Evidence (PDF)'}
+                    {evidenceFile ? evidenceFile.name : (persistedEvidenceFile || 'Upload Evidence (PDF)')}
                   </span>
                   <FilePreviewButton
-                    file={evidenceFile}
+                    file={evidenceFile || persistedEvidenceFile}
                     style={{ width: '32px', height: '32px' }}
                   />
                   <input

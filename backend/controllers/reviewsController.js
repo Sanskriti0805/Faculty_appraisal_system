@@ -1,11 +1,17 @@
 const db = require('../config/database');
+const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 
 // Get all reviews for a faculty
 exports.getReviewsByFaculty = async (req, res) => {
   try {
+    const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+    if (!facultyInfoId) {
+      return res.json({ success: true, data: [] });
+    }
+
     const [rows] = await db.query(
       'SELECT * FROM paper_reviews WHERE faculty_id = ? ORDER BY created_at DESC',
-      [req.params.facultyId]
+      [facultyInfoId]
     );
     res.json({ success: true, data: rows });
   } catch (error) {
@@ -27,13 +33,22 @@ exports.createReview = async (req, res) => {
       last_name,
       month_of_review
     } = req.body;
+
+    const facultyInfoId = await resolveFacultyInfoId({
+      facultyId: faculty_id || req.user?.id,
+      email: req.user?.email
+    });
+
+    if (!facultyInfoId) {
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+    }
     
     const [result] = await db.query(
       `INSERT INTO paper_reviews 
       (faculty_id, review_type, journal_name, abbreviation, number_of_papers, 
        first_name, middle_name, last_name, month_of_review) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [faculty_id, review_type, journal_name, abbreviation, number_of_papers,
+      [facultyInfoId, review_type, journal_name, abbreviation, number_of_papers,
        first_name, middle_name, last_name, month_of_review]
     );
 

@@ -20,11 +20,7 @@ export const patentsService = {
       }
     });
 
-    return await apiClient.post('/patents', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return await apiClient.post('/patents', formData);
   },
 
   // Delete patent

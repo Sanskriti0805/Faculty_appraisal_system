@@ -1,11 +1,30 @@
 const db = require('../config/database');
+const { resolveFacultyInfoId } = require('../utils/facultyResolver');
+
+const parseJsonArrayField = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 
 // Get all patents for a faculty
 exports.getPatentsByFaculty = async (req, res) => {
   try {
+    const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+    if (!facultyInfoId) {
+      return res.json({ success: true, data: [] });
+    }
+
     const [patents] = await db.query(
       'SELECT * FROM patents WHERE faculty_id = ? ORDER BY created_at DESC',
-      [req.params.facultyId]
+      [facultyInfoId]
     );
 
     // Get authors for each patent
@@ -40,6 +59,18 @@ exports.createPatent = async (req, res) => {
       authors
     } = req.body;
 
+    const facultyInfoId = await resolveFacultyInfoId({
+      facultyId: faculty_id || req.user?.id,
+      email: req.user?.email
+    });
+
+    if (!facultyInfoId) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+    }
+
+    const parsedAuthors = parseJsonArrayField(authors);
+
     const certificate_file = req.file ? req.file.filename : null;
     
     // Insert patent
@@ -47,17 +78,17 @@ exports.createPatent = async (req, res) => {
       `INSERT INTO patents 
       (faculty_id, patent_type, title, agency, month, certificate_file, publication_id) 
       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [faculty_id, patent_type, title, agency, month, certificate_file, publication_id]
+      [facultyInfoId, patent_type, title, agency, month, certificate_file, publication_id]
     );
 
     const patentId = result.insertId;
 
     // Insert authors
-    if (authors && Array.isArray(authors)) {
-      for (const author of authors) {
+    if (parsedAuthors.length > 0) {
+      for (const author of parsedAuthors) {
         await connection.query(
           'INSERT INTO authors (patent_id, first_name, last_name) VALUES (?, ?, ?)',
-          [patentId, author.firstName, author.lastName]
+          [patentId, author.firstName || '', author.lastName || '']
         );
       }
     }

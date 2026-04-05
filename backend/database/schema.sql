@@ -224,6 +224,7 @@ CREATE TABLE IF NOT EXISTS consultancy (
     amount DECIMAL(15,2),
     duration VARCHAR(100),
     year INT,
+    evidence_file VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (faculty_id) REFERENCES faculty_information(id) ON DELETE CASCADE
 );

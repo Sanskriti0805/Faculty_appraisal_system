@@ -33,10 +33,6 @@ export const coursesService = {
     });
 
     // Use apiClient for consistent base URL and interceptors
-    return await apiClient.post('/courses/new', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return await apiClient.post('/courses/new', formData);
   },
 };

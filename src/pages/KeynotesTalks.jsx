@@ -7,6 +7,23 @@ import FilePreviewButton from '../components/FilePreviewButton'
 import apiClient from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
+const formatDateForDisplay = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString('en-GB')
+}
+
+const formatVenue = (venue = {}) => {
+  const parts = [venue.city, venue.state, venue.country].map((p) => (p || '').trim()).filter(Boolean)
+  return parts.join(', ')
+}
+
+const formatStoredFileName = (name) => {
+  if (!name) return ''
+  return String(name).replace(/^\d+(?:-\d+)+-/, '')
+}
+
 const KeynotesTalks = () => {
   const { user, token } = useAuth()
   const [persistedTalkIds, setPersistedTalkIds] = useState([])
@@ -16,6 +33,7 @@ const KeynotesTalks = () => {
     typeOfEvent: '',
     organizer: '',
     date: '',
+    dates: [],
     certificateFile: null,
     venue: {
       city: '',
@@ -45,15 +63,16 @@ const KeynotesTalks = () => {
           id: row.id,
           category: row.event_type || 'Keynote',
           title: row.title || '',
-          typeOfEvent: row.event_type || '',
+          typeOfEvent: row.audience_type || '',
           organizer: row.event_name || '',
-          date: '',
+          date: row.date ? String(row.date).slice(0, 10) : '',
+          dates: row.date ? [String(row.date).slice(0, 10)] : [],
           certificateFile: null,
           evidence_file: row.evidence_file || null,
           venue: {
-            city: row.audience_type || '',
+            city: (row.location || '').split(',')[0]?.trim() || '',
             state: '',
-            country: ''
+            country: (row.location || '').split(',').slice(1).join(',').trim() || ''
           }
         }))
         setSubmittedTalks(mapped)
@@ -127,10 +146,14 @@ const KeynotesTalks = () => {
         formDataObj.append('event_name', talk.organizer)
         formDataObj.append('title', talk.title)
         formDataObj.append('event_type', talk.category)
-        formDataObj.append('audience_type', `${talk.venue.city}, ${talk.venue.country}`)
+        formDataObj.append('audience_type', talk.typeOfEvent || '')
+        formDataObj.append('date', (talk.dates && talk.dates.length > 0 ? talk.dates[0] : talk.date) || '')
+        formDataObj.append('location', `${talk.venue.city}, ${talk.venue.country}`)
 
         if (talk.certificateFile) {
           formDataObj.append('evidence_file', talk.certificateFile)
+        } else if (talk.evidence_file) {
+          formDataObj.append('existing_evidence_file', talk.evidence_file)
         }
 
         return fetch('http://localhost:5000/api/activities/keynotes-talks', {
@@ -141,15 +164,38 @@ const KeynotesTalks = () => {
       })
 
       const responses = await Promise.all(promises)
-      const createdIds = []
-
-      for (const response of responses) {
-        if (!response.ok) continue
-        const payload = await response.json()
-        const id = payload?.data?.id
-        if (Number.isFinite(Number(id))) {
-          createdIds.push(id)
+      const settled = await Promise.all(responses.map(async (response) => {
+        let payload = null
+        try {
+          payload = await response.json()
+        } catch {
+          payload = null
         }
+
+        if (!response.ok) {
+          return {
+            ok: false,
+            message: payload?.message || `Failed to save keynote/talk entry (HTTP ${response.status})`
+          }
+        }
+
+        return {
+          ok: true,
+          id: payload?.id || payload?.data?.id || null
+        }
+      }))
+
+      const failed = settled.find((item) => !item.ok)
+      if (failed) {
+        throw new Error(failed.message)
+      }
+
+      const createdIds = settled
+        .map((item) => item.id)
+        .filter((id) => Number.isFinite(Number(id)))
+
+      if (allTalks.length > 0 && createdIds.length === 0) {
+        throw new Error('Keynotes/talks were not saved. Please try again.')
       }
 
       setPersistedTalkIds(createdIds)
@@ -168,7 +214,29 @@ const KeynotesTalks = () => {
 
   const handleAddDate = (e) => {
     e.preventDefault()
-    alert('Add Date functionality would go here (e.g., adding to a list of dates).')
+    if (!formData.date) {
+      alert('Please select a date first.')
+      return
+    }
+
+    setFormData((prev) => {
+      if (prev.dates.includes(prev.date)) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        dates: [...prev.dates, prev.date],
+        date: ''
+      }
+    })
+  }
+
+  const handleRemoveDate = (dateToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      dates: prev.dates.filter((d) => d !== dateToRemove)
+    }))
   }
 
   const handleAddTalk = (e) => {
@@ -178,7 +246,17 @@ const KeynotesTalks = () => {
       return
     }
 
-    setSubmittedTalks(prev => [...prev, formData])
+    const normalizedDates = [...formData.dates]
+    if (formData.date && !normalizedDates.includes(formData.date)) {
+      normalizedDates.push(formData.date)
+    }
+
+    if (normalizedDates.length === 0) {
+      alert('Please add at least one date.')
+      return
+    }
+
+    setSubmittedTalks(prev => [...prev, { ...formData, dates: normalizedDates, date: normalizedDates[0] }])
     setFormData(initialState)
     alert('Talk added to list. You can now add another.')
   }
@@ -259,6 +337,31 @@ const KeynotesTalks = () => {
               <button type="button" className="add-date-btn" onClick={handleAddDate}>
                 Add Date
               </button>
+              {formData.dates.length > 0 && (
+                <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {formData.dates.map((d) => (
+                    <span key={d} style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.25rem 0.6rem',
+                      border: '1px solid #d1d8e0',
+                      borderRadius: '999px',
+                      fontSize: '0.85rem',
+                      color: '#1e3a5f'
+                    }}>
+                      {d}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDate(d)}
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#6b7280' }}
+                      >
+                        x
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label>Upload Evidence<span className="required-star">*</span></label>
@@ -323,7 +426,29 @@ const KeynotesTalks = () => {
                 {submittedTalks.map((talk, index) => (
                   <li key={index}>
                     <div className="talk-info">
-                      <strong>{talk.title}</strong> ({talk.typeOfEvent}) - {talk.venue.city}, {talk.venue.country} ({talk.date})
+                      <strong>{talk.title || 'Untitled Talk'}</strong>
+                      <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>
+                        Category: {talk.category || 'N/A'} | Type: {talk.typeOfEvent || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>
+                        Organizer: {talk.organizer || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>
+                        Venue: {formatVenue(talk.venue) || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>
+                        Date: {(talk.dates && talk.dates.length > 0)
+                          ? talk.dates.map((d) => formatDateForDisplay(d)).join(', ')
+                          : (formatDateForDisplay(talk.date) || 'N/A')}
+                      </div>
+                      {(talk.certificateFile || talk.evidence_file) && (
+                        <span style={{ marginTop: '0.35rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.85rem', color: '#4b5563' }}>
+                            File: {talk.certificateFile?.name || formatStoredFileName(talk.evidence_file)}
+                          </span>
+                          <FilePreviewButton file={talk.certificateFile || talk.evidence_file} style={{ width: '28px', height: '28px' }} />
+                        </span>
+                      )}
                     </div>
                     <button
                       type="button"

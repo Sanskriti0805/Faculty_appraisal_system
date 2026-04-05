@@ -7,6 +7,31 @@ import FilePreviewButton from '../components/FilePreviewButton'
 import apiClient from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
+const formatDateForDisplay = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString('en-GB')
+}
+
+const isGenericVenueToken = (value) => {
+  const token = (value || '').trim().toLowerCase()
+  return token === 'city' || token === 'state' || token === 'country'
+}
+
+const formatVenue = (venue = {}) => {
+  const parts = [venue.city, venue.state, venue.country]
+    .map((p) => (p || '').trim())
+    .filter((p) => p && !isGenericVenueToken(p))
+  return parts.join(', ')
+}
+
+const formatStoredFileName = (name) => {
+  if (!name) return ''
+  // Stored uploads can include generated prefixes like 177542...-53136799-<original-name>
+  return String(name).replace(/^\d+(?:-\d+)+-/, '')
+}
+
 const ConferenceSessions = () => {
   const { user, token } = useAuth()
   const [persistedSessionIds, setPersistedSessionIds] = useState([])
@@ -44,24 +69,30 @@ const ConferenceSessions = () => {
 
         setPersistedSessionIds(rows.map((row) => row.id).filter(Boolean))
 
-        const mapped = rows.map((row) => ({
-          id: row.id,
-          eventType: 'Conference',
-          sponsoringAgency: '',
-          eventTitle: row.session_title || '',
-          abbreviation: '',
-          organizer: row.conference_name || '',
-          role: row.role || '',
-          certificateFile: null,
-          evidence_file: row.evidence_file || null,
-          venue: {
-            city: row.location || '',
-            state: '',
-            country: ''
-          },
-          fromDate: '',
-          toDate: ''
-        }))
+        const mapped = rows.map((row) => {
+          const locationParts = (row.location || '').split(',').map((part) => part.trim()).filter(Boolean)
+          const city = locationParts[0] || ''
+          const country = locationParts.length > 1 ? locationParts[locationParts.length - 1] : ''
+
+          return {
+            id: row.id,
+            eventType: 'Conference',
+            sponsoringAgency: '',
+            eventTitle: row.session_title || '',
+            abbreviation: '',
+            organizer: row.conference_name || '',
+            role: row.role || '',
+            certificateFile: null,
+            evidence_file: row.evidence_file || null,
+            venue: {
+              city,
+              state: '',
+              country
+            },
+            fromDate: row.date ? String(row.date).slice(0, 10) : '',
+            toDate: ''
+          }
+        })
         setSubmittedSessions(mapped)
       } catch (error) {
         console.error('Failed to prefill conference sessions:', error)
@@ -81,11 +112,12 @@ const ConferenceSessions = () => {
 
   const handleVenueChange = (e) => {
     const { name, value } = e.target
+    const nextValue = isGenericVenueToken(value) ? '' : value
     setFormData(prev => ({
       ...prev,
       venue: {
         ...prev.venue,
-        [name]: value
+        [name]: nextValue
       }
     }))
   }
@@ -131,10 +163,13 @@ const ConferenceSessions = () => {
         formDataObj.append('conference_name', session.organizer) // Using organizer as conference name for simplicity
         formDataObj.append('session_title', session.eventTitle)
         formDataObj.append('role', session.role)
-        formDataObj.append('location', `${session.venue.city}, ${session.venue.country}`)
+        formDataObj.append('location', formatVenue(session.venue))
+        formDataObj.append('date', session.fromDate || session.toDate || '')
 
         if (session.certificateFile) {
           formDataObj.append('evidence_file', session.certificateFile)
+        } else if (session.evidence_file) {
+          formDataObj.append('existing_evidence_file', session.evidence_file)
         }
 
         return fetch('http://localhost:5000/api/activities/conference-sessions', {
@@ -145,15 +180,38 @@ const ConferenceSessions = () => {
       })
 
       const responses = await Promise.all(promises)
-      const createdIds = []
-
-      for (const response of responses) {
-        if (!response.ok) continue
-        const payload = await response.json()
-        const id = payload?.data?.id
-        if (Number.isFinite(Number(id))) {
-          createdIds.push(id)
+      const settled = await Promise.all(responses.map(async (response) => {
+        let payload = null
+        try {
+          payload = await response.json()
+        } catch {
+          payload = null
         }
+
+        if (!response.ok) {
+          return {
+            ok: false,
+            message: payload?.message || `Failed to save conference session (HTTP ${response.status})`
+          }
+        }
+
+        return {
+          ok: true,
+          id: payload?.id || payload?.data?.id || null
+        }
+      }))
+
+      const failed = settled.find((item) => !item.ok)
+      if (failed) {
+        throw new Error(failed.message)
+      }
+
+      const createdIds = settled
+        .map((item) => item.id)
+        .filter((id) => Number.isFinite(Number(id)))
+
+      if (allSessions.length > 0 && createdIds.length === 0) {
+        throw new Error('Conference sessions were not saved. Please try again.')
       }
 
       setPersistedSessionIds(createdIds)
@@ -196,7 +254,7 @@ const ConferenceSessions = () => {
       </div>
 
       <div className="form-card">
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSave} autoComplete="off">
           {/* Row 1 */}
           <div className="form-row">
             <div className="form-group">
@@ -289,6 +347,7 @@ const ConferenceSessions = () => {
                   name="city"
                   value={formData.venue.city}
                   onChange={handleVenueChange}
+                  autoComplete="off"
                 />
               </div>
               <div className="form-group">
@@ -298,6 +357,7 @@ const ConferenceSessions = () => {
                   name="state"
                   value={formData.venue.state}
                   onChange={handleVenueChange}
+                  autoComplete="off"
                 />
               </div>
               <div className="form-group">
@@ -307,6 +367,7 @@ const ConferenceSessions = () => {
                   name="country"
                   value={formData.venue.country}
                   onChange={handleVenueChange}
+                  autoComplete="off"
                 />
               </div>
             </div>
@@ -349,7 +410,26 @@ const ConferenceSessions = () => {
                 {submittedSessions.map((session, index) => (
                   <li key={index}>
                     <div className="session-info">
-                      <strong>{session.eventTitle}</strong> ({session.role}) - {session.venue.city}, {session.venue.country}
+                      <strong>{session.eventTitle || 'Untitled Session'}</strong>
+                      <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>
+                        Organizer: {session.organizer || 'N/A'} | Role: {session.role || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>
+                        Venue: {formatVenue(session.venue) || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#4b5563' }}>
+                        Date: {session.fromDate && session.toDate
+                          ? `${formatDateForDisplay(session.fromDate)} to ${formatDateForDisplay(session.toDate)}`
+                          : formatDateForDisplay(session.fromDate || session.toDate) || 'N/A'}
+                      </div>
+                      {(session.certificateFile || session.evidence_file) && (
+                        <span style={{ marginTop: '0.35rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.85rem', color: '#4b5563' }}>
+                            File: {session.certificateFile?.name || formatStoredFileName(session.evidence_file)}
+                          </span>
+                          <FilePreviewButton file={session.certificateFile || session.evidence_file} style={{ width: '28px', height: '28px' }} />
+                        </span>
+                      )}
                     </div>
                     <button
                       type="button"

@@ -2,11 +2,7 @@ import apiClient from './api';
 
 export const awardsService = {
     createAward: async (formData) => {
-        return await apiClient.post('/awards', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        });
+        return await apiClient.post('/awards', formData);
     },
 
     getAwards: async (facultyId) => {

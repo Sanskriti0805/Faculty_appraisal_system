@@ -44,21 +44,25 @@ const AwardsHonours = ({ initialData, readOnly }) => {
     setFormData({ ...formData, evidenceFile: e.target.files[0] })
   }
 
-  const handleAddAward = async () => {
-    if (!formData.awardName.trim()) {
-      alert('Please enter the award name')
-      return
+  const persistCurrentAward = async ({ showSuccessAlert = true, requireAwardName = true } = {}) => {
+    const awardName = formData.awardName?.trim()
+
+    if (!awardName) {
+      if (requireAwardName) {
+        alert('Please enter the award name')
+        return false
+      }
+      return true
     }
 
-    // Check if this award already exists (prevent duplicates)
-    const isDuplicate = awards.some(award => 
-      award.award_name?.trim().toLowerCase() === formData.awardName.trim().toLowerCase() &&
+    const isDuplicate = awards.some(award =>
+      award.award_name?.trim().toLowerCase() === awardName.toLowerCase() &&
       award.honor_type === formData.honorType
     )
-    
+
     if (isDuplicate) {
       alert('This award has already been saved. Please enter a different award or edit the existing one.')
-      return
+      return false
     }
 
     setLoading(true)
@@ -66,20 +70,20 @@ const AwardsHonours = ({ initialData, readOnly }) => {
       const facultyId = user?.id
       if (!facultyId) {
         alert('Unable to identify logged-in faculty. Please login again.')
-        return
+        return false
       }
+
       const data = new FormData()
       data.append('faculty_id', facultyId)
       data.append('honor_type', formData.honorType)
-      data.append('award_name', formData.awardName)
+      data.append('award_name', awardName)
       data.append('description', formData.description)
       if (formData.evidenceFile) {
-        data.append('certificate_file', formData.evidenceFile)
+        data.append('evidence_file', formData.evidenceFile)
       }
 
       await awardsService.createAward(data)
 
-      // Reset form
       setFormData({
         honorType: 'National',
         awardName: '',
@@ -87,15 +91,22 @@ const AwardsHonours = ({ initialData, readOnly }) => {
         evidenceFile: null
       })
 
-      // Reload awards
       await loadAwards()
-      alert('Award added successfully!')
+      if (showSuccessAlert) {
+        alert('Award added successfully!')
+      }
+      return true
     } catch (error) {
       console.error('Error adding award:', error)
       alert('Error adding award: ' + (error.response?.data?.message || error.message))
+      return false
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleAddAward = async () => {
+    await persistCurrentAward({ showSuccessAlert: true, requireAwardName: true })
   }
 
   const handleDeleteAward = async (id) => {
@@ -294,9 +305,9 @@ const AwardsHonours = ({ initialData, readOnly }) => {
                         {award.description || '-'}
                       </td>
                       <td style={{ padding: '1rem' }}>
-                        {award.certificate_file ? (
+                        {(award.evidence_file || award.certificate_file) ? (
                           <button
-                            onClick={() => handleViewEvidence(award.certificate_file)}
+                            onClick={() => handleViewEvidence(award.evidence_file || award.certificate_file)}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -359,7 +370,13 @@ const AwardsHonours = ({ initialData, readOnly }) => {
         )}
       </div>
       {!readOnly && (
-        <FormActions onSave={async () => true} currentPath={window.location.pathname} />
+        <FormActions
+          onSave={async () => {
+            // Save and Next should also persist the currently typed award row (if any).
+            return await persistCurrentAward({ showSuccessAlert: false, requireAwardName: false })
+          }}
+          currentPath={window.location.pathname}
+        />
       )}
     </div>
   )
