@@ -459,22 +459,36 @@ exports.getDepartmentFaculty = async (req, res) => {
   try {
     const { id } = req.params;
     const includeArchived = getBoolean(req.query.include_archived);
-    const params = [id, includeArchived];
-    let scopeFilter = '';
+    let targetDepartmentId = Number(id);
 
     if (req.user.role === 'hod') {
-      scopeFilter = ' AND department_id = ? ';
-      params.push(req.user.department_id);
+      const hodDeptId = Number(req.user.department_id || 0);
+      if (hodDeptId > 0 && targetDepartmentId !== hodDeptId) {
+        return res.status(403).json({ success: false, message: 'HOD can only view faculty from own department' });
+      }
+      if (hodDeptId > 0) {
+        targetDepartmentId = hodDeptId;
+      }
     }
-    
+
+    if (!targetDepartmentId || Number.isNaN(targetDepartmentId)) {
+      return res.status(400).json({ success: false, message: 'Valid department id is required' });
+    }
+
+    const [depts] = await db.query('SELECT name FROM departments WHERE id = ?', [targetDepartmentId]);
+    const targetDepartmentName = depts.length > 0 ? depts[0].name : null;
+
     const [faculty] = await db.query(`
       SELECT id, name, email, designation, salutation, employee_id, employment_type, date_of_joining, created_at,
              archived_at, archived_by, archive_reason
       FROM users 
-      WHERE department_id = ? AND role = 'faculty' AND COALESCE(is_archived, 0) = ?
-      ${scopeFilter}
+      WHERE role = 'faculty' AND COALESCE(is_archived, 0) = ?
+        AND (
+          department_id = ?
+          OR (department_id IS NULL AND ? <> '' AND department = ?)
+        )
       ORDER BY name
-    `, params);
+    `, [includeArchived, targetDepartmentId, targetDepartmentName || '', targetDepartmentName || '']);
 
     res.json({ success: true, data: faculty });
   } catch (error) {

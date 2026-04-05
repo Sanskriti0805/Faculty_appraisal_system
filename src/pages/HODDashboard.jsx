@@ -20,24 +20,40 @@ const HODDashboard = () => {
   const headers = { Authorization: `Bearer ${token}` };
 
   const loadData = useCallback(async () => {
-    if (!user?.department_id) { setLoading(false); return; }
     setLoading(true);
     try {
-      const [facRes, deptRes] = await Promise.all([
-        fetch(`${API_BASE}/register/departments/${user.department_id}/faculty`, { headers }),
-        fetch(`${API_BASE}/register/departments`, { headers })
+      const [deptRes, archiveRes] = await Promise.all([
+        fetch(`${API_BASE}/register/departments`, { headers }),
+        fetch(`${API_BASE}/register/archive`, { headers })
       ]);
-      const [archiveRes, facData, deptData] = await Promise.all([
-        fetch(`${API_BASE}/register/archive`, { headers }),
-        facRes.json(),
-        deptRes.json()
-      ]);
+
+      const deptData = await deptRes.json();
       const archiveData = await archiveRes.json();
-      if (facData.success) setFaculty(facData.data);
+
+      let effectiveDeptId = user?.department_id ? Number(user.department_id) : null;
+
       if (deptData.success) {
-        const dept = deptData.data.find(d => d.id === user.department_id);
+        if (!effectiveDeptId && user?.department) {
+          const targetDeptName = String(user.department || '').trim().toLowerCase();
+          const byName = deptData.data.find(d => String(d.name || '').trim().toLowerCase() === targetDeptName);
+          if (byName) effectiveDeptId = Number(byName.id);
+        }
+        const dept = deptData.data.find(d => Number(d.id) === Number(effectiveDeptId));
         setDeptInfo(dept);
       }
+
+      if (effectiveDeptId) {
+        const facRes = await fetch(`${API_BASE}/register/departments/${effectiveDeptId}/faculty`, { headers });
+        const facData = await facRes.json();
+        if (facData.success) {
+          setFaculty(facData.data);
+        } else {
+          setFaculty([]);
+        }
+      } else {
+        setFaculty([]);
+      }
+
       if (archiveData.success) setArchiveFaculty(archiveData.data.faculty || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -111,10 +127,10 @@ const HODDashboard = () => {
       <nav className="admin-topnav">
         <div className="admin-topnav-brand">
           <img src="/lnmiit-logo.svg" alt="LNMIIT" className="admin-topnav-logo" onError={e => e.target.style.display = 'none'} />
-          <div>
-            <div className="admin-topnav-title">Faculty Appraisal System</div>
-            <div className="admin-topnav-subtitle">Head of Department Dashboard</div>
-          </div>
+        </div>
+        <div className="admin-topnav-center">
+          <div className="admin-topnav-title">Faculty Appraisal System</div>
+          <div className="admin-topnav-subtitle">Head of Department Dashboard</div>
         </div>
         <div className="admin-topnav-right">
           <div className="admin-topnav-user">
