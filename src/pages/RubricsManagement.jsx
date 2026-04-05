@@ -15,6 +15,7 @@ const RubricsManagement = () => {
   const [expandedSections, setExpandedSections] = useState({});
   const [deletedIds, setDeletedIds] = useState([]);
   const [toast, setToast] = useState(null);
+  const [recalcPopup, setRecalcPopup] = useState(null);
   const inputRef = useRef(null);
   const sectionInputRef = useRef(null);
 
@@ -80,6 +81,21 @@ const RubricsManagement = () => {
       academic_year: new Date().getFullYear().toString()
     };
     setRubrics(prev => [...prev, newRow]);
+  };
+
+  const handleAddSubSection = (sectionName) => {
+    const newRow = {
+      _isNew: true,
+      id: `new_${Date.now()}`,
+      section_name: sectionName,
+      sub_section: '',
+      max_marks: 0,
+      weightage: '',
+      academic_year: new Date().getFullYear().toString()
+    };
+    setRubrics(prev => [...prev, newRow]);
+    // Auto-expand this section when adding an item
+    setExpandedSections(prev => ({ ...prev, [sectionName]: true }));
   };
 
   const handleDeleteRow = (index) => {
@@ -165,7 +181,14 @@ const RubricsManagement = () => {
         }
       }
 
-      showToast('Changes saved successfully!');
+      // Recalculate scores and show popup if any faculties were affected
+      const recalcRes = await apiClient.post('/rubrics/recalculate');
+      if (recalcRes && recalcRes.success && recalcRes.affectedFaculties && recalcRes.affectedFaculties.length > 0) {
+        setRecalcPopup(recalcRes.affectedFaculties);
+      } else {
+        showToast('Changes saved successfully!');
+      }
+
       fetchRubrics();
     } catch (error) {
       console.error('Save error:', error);
@@ -293,6 +316,13 @@ const RubricsManagement = () => {
                               </div>
                               <div style={{ display: 'flex', gap: '15px' }}>
                                 <button 
+                                  onClick={() => handleAddSubSection(sectionName)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', fontSize: '0.85rem', fontWeight: 600 }}
+                                  title="Add Sub Section to this Section"
+                                >
+                                  + Add Item
+                                </button>
+                                <button 
                                   onClick={() => { setEditingSection(sectionName); setEditSectionValue(sectionName); }}
                                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: '0.85rem', fontWeight: 600 }}
                                   title="Edit Section Name"
@@ -335,6 +365,28 @@ const RubricsManagement = () => {
           </table>
         </div>
       </div>
+
+      {recalcPopup && (
+        <div className="rubric-modal-overlay">
+          <div className="rubric-modal-content">
+            <h2>Scores Updated</h2>
+            <p>The total score has been updated for the following faculties:</p>
+            <div className="faculty-list">
+              {recalcPopup.join(', ')}
+            </div>
+            <div className="modal-suggestion">
+              <p>Accordingly, you need to go to the statistics sheet. Recalculate the statistics, update the grades and increments.</p>
+            </div>
+            <button 
+              className="action-btn-primary" 
+              onClick={() => setRecalcPopup(null)}
+              style={{ marginTop: '15px', width: '100%' }}
+            >
+              OK, Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

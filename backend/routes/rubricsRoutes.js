@@ -8,4 +8,6 @@ router.post('/', rubricsController.createRubric);
 router.put('/:id', rubricsController.updateRubric);
 router.delete('/:id', rubricsController.deleteRubric);
 
+router.post('/recalculate', rubricsController.recalculateScores);
+
 module.exports = router;

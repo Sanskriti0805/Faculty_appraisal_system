@@ -1,4 +1,38 @@
 const db = require('../config/database');
+const { autoAllocateMarks } = require('../services/rubricMapper');
+
+// Recalculate scores for all submitted/approved forms
+exports.recalculateScores = async (req, res) => {
+    try {
+        const query = `
+            SELECT s.id, s.faculty_id, s.academic_year, u.name as faculty_name 
+            FROM submissions s 
+            JOIN users u ON s.faculty_id = u.id 
+            WHERE s.status != 'draft'
+        `;
+        const [submissions] = await db.query(query);
+
+        const affectedFaculties = [];
+
+        for (const sub of submissions) {
+            const success = await autoAllocateMarks(sub.id, sub.faculty_id, sub.academic_year);
+            if (success) {
+                if (!affectedFaculties.includes(sub.faculty_name)) {
+                    affectedFaculties.push(sub.faculty_name);
+                }
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Scores recalculated successfully.',
+            affectedFaculties
+        });
+    } catch (error) {
+        console.error('Error recalculating scores:', error);
+        res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+    }
+};
 
 // GET all rubrics
 exports.getAllRubrics = async (req, res) => {

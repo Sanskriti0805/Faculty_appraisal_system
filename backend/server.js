@@ -70,18 +70,39 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Bootstrap database tables on startup
+const { bootstrapDatabaseTables } = require('./database/bootstrapDynamicForms');
+
 // Run DB migrations (safe — adds columns if missing)
 const registrationController = require('./controllers/registrationController');
-registrationController.runMigrations().catch(err => console.error('Migration error:', err));
 
 // Initialize scheduler for automatic form releases and reminders
 const schedulerService = require('./services/schedulerService');
-schedulerService.start();
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`📁 Upload directory: ${path.join(__dirname, 'uploads')}`);
-});
+async function startServer() {
+  try {
+    // First bootstrap all tables
+    await bootstrapDatabaseTables();
+    console.log('✅ Database tables verified');
+
+    // Then run any migrations
+    await registrationController.runMigrations();
+    console.log('✅ Migrations completed');
+
+    // Start scheduler
+    schedulerService.start();
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server is running on http://localhost:${PORT}`);
+      console.log(`📁 Upload directory: ${path.join(__dirname, 'uploads')}`);
+    });
+  } catch (error) {
+    console.error('❌ Server startup error:', error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 module.exports = app;

@@ -118,11 +118,17 @@ exports.saveSheet2Remarks = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid request' });
     }
 
+    const [subRows] = await db.query('SELECT faculty_id, academic_year FROM submissions WHERE id = ?', [submission_id]);
+    if (subRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+    const { faculty_id, academic_year } = subRows[0];
+
     await db.query(`
-      INSERT INTO dofa_evaluation_sheet2 (submission_id, ${field})
-      VALUES (?, ?)
+      INSERT INTO dofa_evaluation_sheet2 (submission_id, faculty_id, academic_year, ${field})
+      VALUES (?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE ${field} = VALUES(${field})
-    `, [submission_id, value]);
+    `, [submission_id, faculty_id, academic_year, value]);
 
     res.json({ success: true, message: 'Updated successfully' });
   } catch (error) {
@@ -165,9 +171,10 @@ exports.applyGrading = async (req, res) => {
   try {
     // 1. Fetch all total scores
     const [scores] = await db.query(`
-      SELECT submission_id, SUM(score) as total_score
-      FROM dofa_evaluation_scores
-      GROUP BY submission_id
+      SELECT e.submission_id, SUM(e.score) as total_score, s.faculty_id, s.academic_year
+      FROM dofa_evaluation_scores e
+      JOIN submissions s ON e.submission_id = s.id
+      GROUP BY e.submission_id, s.faculty_id, s.academic_year
     `);
 
     // 2. Fetch parameters
@@ -201,10 +208,10 @@ exports.applyGrading = async (req, res) => {
 
       if (assignedGrade) {
         await db.query(`
-          INSERT INTO dofa_evaluation_sheet2 (submission_id, final_grade)
-          VALUES (?, ?)
+          INSERT INTO dofa_evaluation_sheet2 (submission_id, faculty_id, academic_year, final_grade)
+          VALUES (?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE final_grade = VALUES(final_grade)
-        `, [s.submission_id, assignedGrade]);
+        `, [s.submission_id, s.faculty_id, s.academic_year, assignedGrade]);
       }
     }
 
@@ -287,7 +294,12 @@ exports.saveGradeIncrements = async (req, res) => {
 exports.applyIncrements = async (req, res) => {
   try {
     // 1. Get all submissions with grades
-    const [submissions] = await db.query('SELECT submission_id, final_grade FROM dofa_evaluation_sheet2 WHERE final_grade IS NOT NULL');
+    const [submissions] = await db.query(`
+      SELECT e2.submission_id, e2.final_grade, s.faculty_id, s.academic_year 
+      FROM dofa_evaluation_sheet2 e2
+      JOIN submissions s ON e2.submission_id = s.id
+      WHERE e2.final_grade IS NOT NULL
+    `);
     
     // 2. Get mapping
     const [mappingRows] = await db.query('SELECT * FROM dofa_grade_increments');
@@ -299,10 +311,10 @@ exports.applyIncrements = async (req, res) => {
       const inc = mapping[sub.final_grade];
       if (inc !== undefined) {
         await db.query(`
-          INSERT INTO dofa_evaluation_sheet3 (submission_id, increment_percentage)
-          VALUES (?, ?)
+          INSERT INTO dofa_evaluation_sheet3 (submission_id, faculty_id, academic_year, increment_percentage)
+          VALUES (?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE increment_percentage = VALUES(increment_percentage)
-        `, [sub.submission_id, inc]);
+        `, [sub.submission_id, sub.faculty_id, sub.academic_year, inc]);
       }
     }
 
@@ -343,7 +355,7 @@ exports.saveScore = async (req, res) => {
     await db.query(`
       INSERT INTO dofa_evaluation_scores (submission_id, rubric_id, score)
       VALUES (?, ?, ?)
-      ON DUPLICATE KEY UPDATE score = VALUES(score), updated_at = CURRENT_TIMESTAMP
+      ON DUPLICATE KEY UPDATE score = VALUES(score)
     `, [submission_id, rubric_id, parseFloat(score) || 0]);
 
     res.json({ success: true, message: 'Score saved' });

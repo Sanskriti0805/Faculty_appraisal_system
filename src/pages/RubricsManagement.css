@@ -120,3 +120,57 @@
 .rubrics-table th {
   white-space: nowrap;
 }
+
+/* Recalculate Popup Modal */
+.rubric-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.rubric-modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  max-width: 450px;
+  width: 100%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.rubric-modal-content h2 {
+  margin-top: 0;
+  color: #1e3a8a;
+  font-size: 1.5rem;
+}
+
+.rubric-modal-content .faculty-list {
+  font-weight: bold;
+  color: #3b82f6;
+  margin: 15px 0;
+  padding: 10px;
+  background: #eff6ff;
+  border-radius: 6px;
+  word-wrap: break-word;
+}
+
+.rubric-modal-content .modal-suggestion {
+  background: #fefce8;
+  border-left: 4px solid #facc15;
+  padding: 12px;
+  margin-bottom: 20px;
+  text-align: left;
+  font-size: 0.9rem;
+  color: #854d0e;
+  line-height: 1.4;
+}
+.rubric-modal-content .modal-suggestion p {
+  margin: 0;
+}
