@@ -41,6 +41,7 @@ const ResearchPlan = lazy(() => import('./pages/ResearchPlan'))
 const TeachingPlan = lazy(() => import('./pages/TeachingPlan'))
 const PartB = lazy(() => import('./pages/PartB'))
 const DynamicFormSection = lazy(() => import('./pages/DynamicFormSection'))
+const MySubmissionView = lazy(() => import('./pages/MySubmissionView'))
 
 // DOFA pages
 const DOFADashboard = lazy(() => import('./pages/DOFADashboard'))
@@ -126,6 +127,7 @@ function App() {
               <Route path="teaching-plan" element={<TeachingPlan />} />
               <Route path="part-b" element={<PartB />} />
               <Route path="faculty/dynamic/:sectionId" element={<DynamicFormSection />} />
+              <Route path="my-submission" element={<MySubmissionView />} />
             </Route>
 
             {/* ── DOFA Routes ── */}

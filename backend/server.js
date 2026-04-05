@@ -34,6 +34,7 @@ const activityRoutes = require('./routes/activityRoutes');
 const formBuilderRoutes = require('./routes/formBuilderRoutes');
 const authRoutes = require('./routes/authRoutes');
 const registrationRoutes = require('./routes/registrationRoutes');
+const editRequestsRoutes = require('./routes/editRequestsRoutes');
 
 // API Routes
 app.use('/api/faculty', facultyRoutes);
@@ -55,6 +56,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/form-builder', formBuilderRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/register', registrationRoutes);
+app.use('/api/edit-requests', editRequestsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

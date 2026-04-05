@@ -7,10 +7,74 @@ import FormActions from '../components/FormActions'
 import { useAuth } from '../context/AuthContext'
 import FilePreviewButton from '../components/FilePreviewButton'
 
+// ── Submission Success Popup ──────────────────────────────────────────────
+const SubmissionSuccessPopup = ({ academicYear, deadline, onClose }) => (
+  <div style={{
+    position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 9999, padding: 24, backdropFilter: 'blur(4px)'
+  }}>
+    <div style={{
+      background: '#fff', borderRadius: 20, padding: '40px 36px',
+      maxWidth: 520, width: '100%', textAlign: 'center',
+      boxShadow: '0 24px 80px rgba(0,0,0,0.15)', animation: 'popupIn 0.35s ease-out'
+    }}>
+      <div style={{
+        width: 72, height: 72, borderRadius: '50%',
+        background: 'linear-gradient(135deg,#059669,#10b981)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        margin: '0 auto 20px'
+      }}>
+        <CheckCircle size={38} color="#fff" />
+      </div>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: '0 0 10px' }}>
+        Form Submitted Successfully!
+      </h2>
+      <p style={{ color: '#475569', lineHeight: 1.7, margin: '0 0 20px', fontSize: '0.95rem' }}>
+        Dear Faculty, your appraisal forms <strong>(Form A &amp; Form B)</strong> for <strong>{academicYear}</strong> have been submitted.
+      </p>
+      {deadline && (
+        <div style={{
+          background: 'linear-gradient(135deg,#eff6ff,#dbeafe)',
+          border: '1px solid #93c5fd', borderRadius: 12,
+          padding: '14px 20px', margin: '0 0 20px'
+        }}>
+          <p style={{ margin: 0, fontSize: '0.88rem', color: '#1e40af' }}>
+            <strong>Submission Deadline:</strong> {deadline}
+          </p>
+        </div>
+      )}
+      <p style={{ color: '#64748b', lineHeight: 1.7, margin: '0 0 24px', fontSize: '0.88rem' }}>
+        You can <strong>view your submitted form</strong> and <strong>request changes</strong> to specific sections if needed — but only before the submission deadline. If the deadline has passed, no further edits will be allowed.
+      </p>
+      <button
+        onClick={onClose}
+        style={{
+          padding: '13px 36px', background: 'linear-gradient(135deg,#034da2,#0466d6)',
+          color: '#fff', border: 'none', borderRadius: 12, fontSize: '1rem',
+          fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s',
+          boxShadow: '0 4px 14px rgba(3,77,162,0.3)'
+        }}
+      >
+        Got it — Go to Dashboard
+      </button>
+    </div>
+    <style>{`
+      @keyframes popupIn {
+        from { opacity: 0; transform: scale(0.88) translateY(20px); }
+        to   { opacity: 1; transform: scale(1) translateY(0); }
+      }
+    `}</style>
+  </div>
+)
+
 const PartB = ({ initialData, readOnly }) => {
   const { user, token } = useAuth()
   const [submissionId, setSubmissionId] = useState(null)
+  const [submissionStatus, setSubmissionStatus] = useState(null)
+  const [sessionDeadline, setSessionDeadline] = useState(null)
   const [selectedSemester, setSelectedSemester] = useState('Odd Semester')
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const [goals, setGoals] = useState([
     { id: 1, semester: 'Odd Semester', teaching: '', research: '', contribution: '', outreach: '', description: '', evidenceFile: null }
   ])
@@ -24,7 +88,21 @@ const PartB = ({ initialData, readOnly }) => {
           headers: { Authorization: `Bearer ${token}` }
         })
         const data = await res.json()
-        if (data.success) setSubmissionId(data.data.id)
+        if (data.success) {
+          setSubmissionId(data.data.id)
+          setSubmissionStatus(data.data.status)
+        }
+
+        // Also fetch active session deadline for popup
+        const sessionRes = await fetch('http://localhost:5000/api/sessions/active')
+        const sessionData = await sessionRes.json()
+        if (sessionData.success && sessionData.data?.deadline) {
+          setSessionDeadline(
+            new Date(sessionData.data.deadline).toLocaleDateString('en-IN', {
+              day: '2-digit', month: 'long', year: 'numeric'
+            })
+          )
+        }
       } catch (err) {
         console.error('Failed to fetch submission:', err)
       }
@@ -114,7 +192,12 @@ const PartB = ({ initialData, readOnly }) => {
       return;
     }
 
-    if (!window.confirm('Are you sure you want to submit the complete appraisal? This will lock the form for review.')) {
+    const isResubmitting = submissionStatus === 'sent_back'
+    const confirmMsg = isResubmitting
+      ? 'Are you sure you want to re-submit your updated appraisal? This will send the latest version for review.'
+      : 'Are you sure you want to submit the complete appraisal? This will lock the form for review.'
+
+    if (!window.confirm(confirmMsg)) {
       return;
     }
 
@@ -134,8 +217,13 @@ const PartB = ({ initialData, readOnly }) => {
 
       const data = await response.json();
       if (data.success) {
-        alert('✅ Appraisal submitted successfully! Marks have been auto-allocated. Redirecting...');
-        setTimeout(() => { window.location.href = '/'; }, 2000);
+        if (isResubmitting) {
+          alert('✅ Appraisal re-submitted successfully! Your updated form has been sent for review.');
+          window.location.href = '/';
+        } else {
+          // Show the styled popup for first-time submission
+          setShowSuccessPopup(true);
+        }
       } else {
         alert('Submission failed: ' + data.message);
       }
@@ -149,6 +237,14 @@ const PartB = ({ initialData, readOnly }) => {
 
   return (
     <div className={`form-page ${readOnly ? 'read-only-mode' : ''}`}>
+      {/* Submission Success Popup */}
+      {showSuccessPopup && (
+        <SubmissionSuccessPopup
+          academicYear={user?.academic_year || 'current academic year'}
+          deadline={sessionDeadline}
+          onClose={() => { setShowSuccessPopup(false); window.location.href = '/'; }}
+        />
+      )}
       {!readOnly && (
         <div className="page-header">
           <div>

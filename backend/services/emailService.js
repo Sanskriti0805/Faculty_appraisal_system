@@ -281,6 +281,141 @@ class EmailService {
     return this.sendForgotPassword({ to, name, resetUrl, role });
   }
 
+  // ─── Edit Request: Notification to DOFA ──────────────────────────────
+
+  /**
+   * Notify DOFA office that a faculty has requested edits to specific form sections
+   */
+  async sendEditRequestNotificationToDOFA({ facultyName, facultyEmail, academicYear, sections, requestMessage, requestId }) {
+    const siteUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const sectionList = sections.map(s => `<li style="margin-bottom:4px;">${s}</li>`).join('');
+
+    const bodyHtml = `
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p>Dear DOFA Office,</p>
+                    <p>A faculty member has submitted a request to make changes to specific sections of their appraisal form for the academic year <b>${academicYear}</b>.</p>
+
+                    <div style="background: #f0f4ff; border: 1px solid #c3d3f0; border-radius: 8px; padding: 16px 20px; margin: 16px 0;">
+                      <p style="margin: 0 0 8px 0; font-weight: 600; color: #034da2;">Faculty Details:</p>
+                      <p style="margin: 0 0 4px 0;"><b>Name:</b> ${facultyName}</p>
+                      <p style="margin: 0;"><b>Email:</b> ${facultyEmail}</p>
+                    </div>
+
+                    <p><b>Sections Requested for Editing:</b></p>
+                    <ul style="color: #2c3e50; line-height: 1.8; margin: 0 0 12px 0; padding-left: 20px;">
+                      ${sectionList}
+                    </ul>
+
+                    ${requestMessage ? `<p><b>Faculty's Message:</b></p><p style="background:#fafafa; border-left: 3px solid #034da2; padding: 10px 14px; border-radius: 4px; color: #334155;">${requestMessage}</p>` : ''}
+
+                    <p>Please log in to the DOFA dashboard to review and approve or deny this request.</p>
+                    <div style="text-align:center;margin:24px 0;">
+                      <a href="${siteUrl}/dofa/dashboard" style="display:inline-block;padding:14px 40px;background-color:#034da2;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600;">
+                        Review Edit Request
+                      </a>
+                    </div>
+                    <p style="font-size:13px;color:#718096;">Request ID: #${requestId}</p>
+                    <br/>
+                    <p>Best regards,</p>
+                    <p><b>Faculty Appraisal System</b></p>
+                    <p>LNMIIT, Jaipur</p>
+                  </td>
+                </tr>`;
+
+    const html = this.buildLNMIITTemplate({ recipientName: 'DOFA Office', bodyHtml });
+
+    // Get DOFA emails from environment or use fallback
+    const dofaEmail = process.env.DOFA_EMAIL || process.env.EMAIL_FROM_ADDRESS || 'dofa@lnmiit.ac.in';
+
+    await this._send({
+      to: dofaEmail,
+      subject: `Edit Request — ${facultyName} | ${academicYear} Appraisal`,
+      html
+    });
+  }
+
+  // ─── Edit Request: Approved — Notification to Faculty ─────────────────
+
+  /**
+   * Notify faculty that their edit request has been approved
+   */
+  async sendEditRequestApprovedToFaculty({ to, facultyName, academicYear, approvedSections, dofaNote }) {
+    const siteUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const sectionList = approvedSections.map(s => `<li style="margin-bottom:4px;">${s}</li>`).join('');
+
+    const bodyHtml = `
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p>Dear <b>${facultyName}</b>,</p>
+                    <p>Your request to edit sections of your appraisal form for the academic year <b>${academicYear}</b> has been <b style="color: #059669;">approved</b> by the DOFA office.</p>
+
+                    <div style="background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 8px; padding: 16px 20px; margin: 16px 0;">
+                      <p style="margin: 0 0 8px 0; font-weight: 600; color: #059669;">Sections Approved for Editing:</p>
+                      <ul style="color: #065f46; line-height: 1.8; margin: 0; padding-left: 20px;">
+                        ${sectionList}
+                      </ul>
+                    </div>
+
+                    ${dofaNote ? `<p><b>Note from DOFA Office:</b></p><p style="background:#fafafa; border-left: 3px solid #059669; padding: 10px 14px; border-radius: 4px; color: #334155;">${dofaNote}</p>` : ''}
+
+                    <p>Please log in to the portal, make your changes in the approved sections, and <b>re-submit your form before the deadline</b>.</p>
+                    <div style="text-align:center;margin:24px 0;">
+                      <a href="${siteUrl}" style="display:inline-block;padding:14px 40px;background-color:#059669;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600;">
+                        Go to My Appraisal Form
+                      </a>
+                    </div>
+                    <p style="font-size:13px;color:#718096;">Please remember: changes must be submitted before the deadline. Only the approved sections will be editable.</p>
+                    <br/>
+                    <p>Best regards,</p>
+                    <p><b>DOFA Office, LNMIIT Jaipur</b></p>
+                  </td>
+                </tr>`;
+
+    const html = this.buildLNMIITTemplate({ recipientName: facultyName, bodyHtml });
+
+    await this._send({
+      to,
+      subject: `Edit Request Approved — ${academicYear} Appraisal Form`,
+      html
+    });
+  }
+
+  // ─── Edit Request: Denied — Notification to Faculty ───────────────────
+
+  /**
+   * Notify faculty that their edit request has been denied
+   */
+  async sendEditRequestDeniedToFaculty({ to, facultyName, academicYear, dofaNote }) {
+    const bodyHtml = `
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p>Dear <b>${facultyName}</b>,</p>
+                    <p>We regret to inform you that your request to edit sections of your appraisal form for the academic year <b>${academicYear}</b> has been <b style="color: #dc2626;">denied</b> by the DOFA office.</p>
+
+                    ${dofaNote ? `
+                    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 16px 0;">
+                      <p style="margin: 0 0 8px 0; font-weight: 600; color: #dc2626;">Reason from DOFA Office:</p>
+                      <p style="margin: 0; color: #7f1d1d;">${dofaNote}</p>
+                    </div>` : ''}
+
+                    <p>If you have questions or concerns, please contact the DOFA office directly.</p>
+                    <br/>
+                    <p>Best regards,</p>
+                    <p><b>DOFA Office, LNMIIT Jaipur</b></p>
+                    <p>webmaster@lnmiit.ac.in</p>
+                  </td>
+                </tr>`;
+
+    const html = this.buildLNMIITTemplate({ recipientName: facultyName, bodyHtml });
+
+    await this._send({
+      to,
+      subject: `Edit Request Denied — ${academicYear} Appraisal Form`,
+      html
+    });
+  }
+
   // ─── Internal Send Method ──────────────────────────────────────────────
 
   /**
