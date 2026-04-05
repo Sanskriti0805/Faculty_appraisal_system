@@ -60,15 +60,15 @@ const LoginPage = () => {
         {/* Logo */}
         <div className="login-logo-section">
           <img
-            src="/lnmiit-logo.svg"
+            src="/lnmiit-logo.png"
             alt="LNMIIT"
             className="login-logo"
             onError={(e) => { e.target.style.display = 'none'; }}
           />
-          <div className="login-logo-fallback">
+          {/* <div className="login-logo-fallback">
             <div className="login-logo-text">LNMIIT<span>■■</span></div>
             <div className="login-logo-subtitle">The LNM Institute of Information Technology</div>
-          </div>
+          </div> */}
           <h1 className="login-title">Faculty Appraisal System</h1>
           <p className="login-subtitle">Sign in to access your dashboard</p>
         </div>
