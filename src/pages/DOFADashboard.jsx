@@ -122,6 +122,8 @@ const DOFADashboard = () => {
           submission_id: id,
           reviewer_id: 1, // Mock DOFA user ID
           reviewer_role: 'dofa',
+          section_name: 'General',
+          section_key: 'general',
           comment: comment
         })
       });

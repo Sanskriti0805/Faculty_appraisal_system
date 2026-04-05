@@ -285,11 +285,11 @@ const CoursesTaught = ({ initialData, readOnly }) => {
     return '4.2: BTech/MTech/MS/LUSIP/SLI/Ph.D./Other Projects Guided / Co-Advised / Mentored'
   }
 
-  const ReadOnlyField = ({ value, children }) => (
+  const ReadOnlyField = React.useCallback(({ value, children }) => (
     readOnly
       ? <div className="readonly-table-text">{value === null || value === undefined || value === '' ? '—' : String(value)}</div>
       : children
-  )
+  ), [readOnly])
 
   const renderTable = (semester, items, semesterLabel) => {
     return (

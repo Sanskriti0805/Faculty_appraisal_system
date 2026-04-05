@@ -24,6 +24,22 @@ export const grantsService = {
     });
   },
 
+  updateGrant: async (id, grantData) => {
+    const formData = new FormData();
+
+    Object.keys(grantData).forEach(key => {
+      if (grantData[key] !== null && grantData[key] !== undefined) {
+        formData.append(key, grantData[key]);
+      }
+    });
+
+    return await apiClient.put(`/grants/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
   // Delete grant
   deleteGrant: async (id) => {
     return await apiClient.delete(`/grants/${id}`);
@@ -46,6 +62,22 @@ export const grantsService = {
     });
 
     return await apiClient.post('/grants/proposals', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  updateProposal: async (id, proposalData) => {
+    const formData = new FormData();
+
+    Object.keys(proposalData).forEach(key => {
+      if (proposalData[key] !== null && proposalData[key] !== undefined) {
+        formData.append(key, proposalData[key]);
+      }
+    });
+
+    return await apiClient.put(`/grants/proposals/${id}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

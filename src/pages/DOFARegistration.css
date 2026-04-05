@@ -442,3 +442,36 @@
 .archive-table:last-of-type {
   margin-bottom: 0;
 }
+
+.admin-history-modal {
+  width: min(980px, 96vw);
+}
+
+.admin-history-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e8ecf0;
+  border-radius: 10px;
+}
+
+.admin-history-table {
+  min-width: 900px;
+}
+
+.admin-history-table th:last-child,
+.admin-history-table td:last-child {
+  min-width: 220px;
+}
+
+.admin-history-view-btn {
+  padding: 7px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.admin-history-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}

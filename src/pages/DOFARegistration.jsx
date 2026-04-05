@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Building2, Users, Plus, X, CheckCircle, AlertCircle,
   RefreshCw, Mail, Hash, Briefcase, Calendar, Send, Loader, Archive, RotateCcw, Eye, Download
@@ -14,6 +15,8 @@ const EMPLOYMENT_TYPES = [{ value: 'fixed', label: 'Fixed' }, { value: 'contract
 
 const DOFARegistration = () => {
   const { user, token } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState([]);
@@ -21,6 +24,7 @@ const DOFARegistration = () => {
   const [archiveLoading, setArchiveLoading] = useState(true);
   const [archiveData, setArchiveData] = useState({ faculty: [], departments: [] });
   const [historyModal, setHistoryModal] = useState({ open: false, faculty: null, submissions: [], loading: false });
+  const [downloadingSubmissionId, setDownloadingSubmissionId] = useState(null);
 
   // Toast notification
   const [toast, setToast] = useState(null);
@@ -259,6 +263,111 @@ const DOFARegistration = () => {
       setHistoryModal({ open: true, faculty, submissions: data.success ? data.data : [], loading: false });
     } catch {
       setHistoryModal({ open: true, faculty, submissions: [], loading: false });
+    }
+  };
+
+  const getReviewRoute = (submissionId) => {
+    const basePath = location.pathname.startsWith('/dofa-office') ? '/dofa-office' : '/dofa';
+    return `${basePath}/review/${submissionId}`;
+  };
+
+  const openSubmissionReview = (submissionId) => {
+    if (!submissionId) return;
+    setHistoryModal({ open: false, faculty: null, submissions: [], loading: false });
+    navigate(getReviewRoute(submissionId));
+  };
+
+  const fetchSubmissionData = async (submissionId) => {
+    const res = await fetch(`${API_BASE}/submissions/${submissionId}`, { headers });
+    const data = await res.json();
+    return data.success ? data.data : null;
+  };
+
+  const handleDownloadSubmissionPDF = async (submissionRow) => {
+    if (!submissionRow?.id) return;
+
+    setDownloadingSubmissionId(submissionRow.id);
+    try {
+      const data = await fetchSubmissionData(submissionRow.id);
+      if (!data) {
+        showToast('Could not fetch submission data for PDF', 'error');
+        return;
+      }
+
+      const { submission: sub, facultyInfo, publications, courses, grants, patents, awards, proposals, newCourses } = data;
+
+      const html = `<!DOCTYPE html><html><head><title>${sub.faculty_name} - Appraisal ${sub.academic_year}</title>
+      <style>
+        body{font-family:Arial,sans-serif;margin:30px;color:#222}
+        h1{color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:8px}
+        h2{color:#2d4373;margin-top:24px;font-size:1.1rem;border-bottom:1px solid #ddd;padding-bottom:4px}
+        table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+        th{background:#f5f7fa;padding:8px;text-align:left;border:1px solid #ddd}
+        td{padding:8px;border:1px solid #ddd}
+        .meta{display:flex;gap:2rem;background:#f9fafb;padding:12px;border-radius:6px;margin-bottom:12px;flex-wrap:wrap}
+        .meta-item label{font-size:11px;color:#777;display:block}
+        .meta-item span{font-weight:600}
+      </style></head><body>
+      <h1>Annual Performance Appraisal — Form ${sub.form_type || 'A'}</h1>
+      <div class="meta">
+        <div class="meta-item"><label>Name</label><span>${sub.faculty_name || ''}</span></div>
+        <div class="meta-item"><label>Department</label><span>${sub.department || 'N/A'}</span></div>
+        <div class="meta-item"><label>Academic Year</label><span>${sub.academic_year || ''}</span></div>
+        <div class="meta-item"><label>Status</label><span>${sub.status || ''}</span></div>
+        <div class="meta-item"><label>Designation</label><span>${facultyInfo?.designation || 'N/A'}</span></div>
+      </div>
+
+      <h2>Part A — Courses Taught (${courses?.length || 0})</h2>
+      <table><tr><th>Course Name</th><th>Code</th><th>Semester</th><th>Program</th><th>Enrollment</th></tr>
+      ${(courses || []).map(c => `<tr><td>${c.course_name||''}</td><td>${c.course_code||''}</td><td>${c.semester||''}</td><td>${c.program||''}</td><td>${c.enrollment||''}</td></tr>`).join('')}
+      </table>
+
+      <h2>Research Publications (${publications?.length || 0})</h2>
+      <table><tr><th>Type</th><th>Sub Type</th><th>Title</th><th>Year</th><th>Journal/Conference</th></tr>
+      ${(publications || []).map(p => `<tr><td>${p.publication_type||''}</td><td>${p.sub_type||''}</td><td>${p.title||''}</td><td>${p.year_of_publication||''}</td><td>${p.journal_name||p.conference_name||''}</td></tr>`).join('')}
+      </table>
+
+      <h2>Research Grants (${grants?.length || 0})</h2>
+      <table><tr><th>Project Name</th><th>Agency</th><th>Amount (Lakhs)</th><th>Role</th></tr>
+      ${(grants || []).map(g => `<tr><td>${g.project_name||''}</td><td>${g.funding_agency||''}</td><td>${g.amount_in_lakhs||0}</td><td>${g.role||''}</td></tr>`).join('')}
+      </table>
+
+      <h2>Patents (${patents?.length || 0})</h2>
+      <table><tr><th>Type</th><th>Title</th><th>Agency</th></tr>
+      ${(patents || []).map(p => `<tr><td>${p.patent_type||''}</td><td>${p.title||''}</td><td>${p.agency||''}</td></tr>`).join('')}
+      </table>
+
+      <h2>Awards & Honours (${awards?.length || 0})</h2>
+      <table><tr><th>Award</th><th>Agency</th><th>Year</th></tr>
+      ${(awards || []).map(a => `<tr><td>${a.award_name||''}</td><td>${a.awarding_agency||''}</td><td>${a.year||''}</td></tr>`).join('')}
+      </table>
+
+      <h2>New Courses Developed (${newCourses?.length || 0})</h2>
+      <table><tr><th>Course Name</th><th>Code</th><th>Level</th><th>Program</th></tr>
+      ${(newCourses || []).map(c => `<tr><td>${c.course_name||''}</td><td>${c.course_code||''}</td><td>${c.level||''}</td><td>${c.program||''}</td></tr>`).join('')}
+      </table>
+
+      <h2>Submitted Proposals (${proposals?.length || 0})</h2>
+      <table><tr><th>Title</th><th>Agency</th><th>Amount</th><th>Status</th></tr>
+      ${(proposals || []).map(p => `<tr><td>${p.title||''}</td><td>${p.funding_agency||''}</td><td>${p.grant_amount||0}</td><td>${p.status||''}</td></tr>`).join('')}
+      </table>
+
+      <p style="margin-top:40px;font-size:11px;color:#888">Generated on ${new Date().toLocaleString()}</p>
+      </body></html>`;
+
+      const win = window.open('', '_blank');
+      if (!win) {
+        showToast('Popup blocked. Please allow popups and try again.', 'error');
+        return;
+      }
+      win.document.write(html);
+      win.document.close();
+      win.print();
+    } catch (error) {
+      console.error('PDF download failed:', error);
+      showToast('Failed to generate PDF', 'error');
+    } finally {
+      setDownloadingSubmissionId(null);
     }
   };
 
@@ -820,7 +929,7 @@ const DOFARegistration = () => {
 
       {historyModal.open && (
         <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setHistoryModal({ open: false, faculty: null, submissions: [], loading: false }); }}>
-          <div className="admin-modal" style={{ maxWidth: '760px' }}>
+          <div className="admin-modal admin-history-modal" style={{ maxWidth: '980px' }}>
             <div className="admin-modal-header">
               <h2 className="admin-modal-title">Submission History: {historyModal.faculty?.name}</h2>
               <button className="admin-modal-close" onClick={() => setHistoryModal({ open: false, faculty: null, submissions: [], loading: false })}><X size={16} /></button>
@@ -831,32 +940,54 @@ const DOFARegistration = () => {
               ) : historyModal.submissions.length === 0 ? (
                 <div className="admin-empty">No submissions found for this faculty member.</div>
               ) : (
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Academic Year</th>
-                      <th>Calendar Year</th>
-                      <th>Form</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {historyModal.submissions.map(s => (
-                      <tr key={s.id}>
-                        <td>{s.academic_year}</td>
-                        <td>{s.calendar_year || '—'}</td>
-                        <td>{s.form_type}</td>
-                        <td>{s.status}</td>
-                        <td>
-                          <a className="admin-btn-submit" style={{ padding: '6px 10px', fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }} href={`${API_BASE}/submissions/${s.id}`} target="_blank" rel="noreferrer">
-                            <Eye size={12} /> View Saved Form
-                          </a>
-                        </td>
+                <div className="admin-history-table-wrap">
+                  <table className="admin-table admin-history-table">
+                    <thead>
+                      <tr>
+                        <th>Academic Year</th>
+                        <th>Calendar Year</th>
+                        <th>Form</th>
+                        <th>Status</th>
+                        <th>Submitted On</th>
+                        <th>Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {historyModal.submissions.map(s => (
+                        <tr key={s.id}>
+                          <td>{s.academic_year || '—'}</td>
+                          <td>{s.calendar_year || '—'}</td>
+                          <td>{s.form_type || 'A'}</td>
+                          <td>
+                            <span className="admin-badge faculty" style={{ textTransform: 'capitalize' }}>
+                              {String(s.status || 'draft').replace(/_/g, ' ')}
+                            </span>
+                          </td>
+                          <td>{formatDate(s.submitted_at || s.updated_at || s.created_at)}</td>
+                          <td>
+                            <div className="admin-history-action-group">
+                              <button
+                                type="button"
+                                className="admin-btn-submit admin-history-view-btn"
+                                onClick={() => openSubmissionReview(s.id)}
+                              >
+                                <Eye size={12} /> Preview
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-btn-submit admin-history-view-btn"
+                                onClick={() => handleDownloadSubmissionPDF(s)}
+                                disabled={downloadingSubmissionId === s.id}
+                              >
+                                <Download size={12} /> {downloadingSubmissionId === s.id ? 'Preparing PDF...' : 'Download PDF'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
             <div className="admin-modal-footer">

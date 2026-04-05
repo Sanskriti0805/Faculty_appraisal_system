@@ -97,6 +97,64 @@ exports.createGrant = async (req, res) => {
   }
 };
 
+// Update grant
+exports.updateGrant = async (req, res) => {
+  try {
+    const {
+      grant_type,
+      project_name,
+      funding_agency,
+      currency,
+      grant_amount,
+      amount_in_lakhs,
+      duration,
+      researchers,
+      role
+    } = req.body;
+
+    const facultyInfoId = await resolveFacultyInfoId({ email: req.user?.email, facultyId: req.user?.id });
+    if (!facultyInfoId) {
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+    }
+
+    const values = [
+      grant_type,
+      project_name,
+      funding_agency,
+      currency,
+      grant_amount,
+      amount_in_lakhs,
+      duration,
+      researchers,
+      role,
+    ];
+
+    let query = `
+      UPDATE research_grants
+      SET grant_type = ?, project_name = ?, funding_agency = ?, currency = ?, grant_amount = ?,
+          amount_in_lakhs = ?, duration = ?, researchers = ?, role = ?
+    `;
+
+    if (req.file && req.file.filename) {
+      query += ', evidence_file = ?';
+      values.push(req.file.filename);
+    }
+
+    query += ' WHERE id = ? AND faculty_id = ?';
+    values.push(req.params.id, facultyInfoId);
+
+    const [result] = await db.query(query, values);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Grant not found' });
+    }
+
+    res.json({ success: true, message: 'Grant updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // Get all proposals for a faculty
 exports.getProposalsByFaculty = async (req, res) => {
   try {
@@ -156,6 +214,64 @@ exports.createProposal = async (req, res) => {
       message: 'Proposal created successfully',
       data: { id: result.insertId, file: evidence_file }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Update proposal
+exports.updateProposal = async (req, res) => {
+  try {
+    const {
+      title,
+      funding_agency,
+      currency,
+      grant_amount,
+      amount_in_lakhs,
+      duration,
+      submission_date,
+      status,
+      role
+    } = req.body;
+
+    const facultyInfoId = await resolveFacultyInfoId({ email: req.user?.email, facultyId: req.user?.id });
+    if (!facultyInfoId) {
+      return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+    }
+
+    const values = [
+      title,
+      funding_agency,
+      currency,
+      grant_amount,
+      amount_in_lakhs,
+      duration,
+      submission_date,
+      status,
+      role,
+    ];
+
+    let query = `
+      UPDATE submitted_proposals
+      SET title = ?, funding_agency = ?, currency = ?, grant_amount = ?, amount_in_lakhs = ?,
+          duration = ?, submission_date = ?, status = ?, role = ?
+    `;
+
+    if (req.file && req.file.filename) {
+      query += ', evidence_file = ?';
+      values.push(req.file.filename);
+    }
+
+    query += ' WHERE id = ? AND faculty_id = ?';
+    values.push(req.params.id, facultyInfoId);
+
+    const [result] = await db.query(query, values);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Proposal not found' });
+    }
+
+    res.json({ success: true, message: 'Proposal updated successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

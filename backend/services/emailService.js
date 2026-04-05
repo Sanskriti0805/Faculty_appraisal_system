@@ -283,6 +283,71 @@ class EmailService {
 
   // ─── Edit Request: Notification to DOFA ──────────────────────────────
 
+  escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // ─── Submission Sent Back: Notification to Faculty ───────────────────
+
+  /**
+   * Notify faculty that submission has been sent back with section-wise comments.
+   */
+  async sendSubmissionSentBackToFaculty({ to, facultyName, academicYear, comments = [] }) {
+    const siteUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const safeName = this.escapeHtml(facultyName || 'Faculty Member');
+
+    const commentItems = comments.length > 0
+      ? comments.map((item) => {
+          const section = this.escapeHtml(item.section_name || 'General');
+          const text = this.escapeHtml(item.comment || '');
+          return `
+            <li style="margin-bottom:10px;">
+              <p style="margin:0 0 4px 0;"><b>Section:</b> ${section}</p>
+              <p style="margin:0; color:#334155;">${text || '—'}</p>
+            </li>
+          `;
+        }).join('')
+      : '<li style="margin-bottom:10px;">No detailed comments were attached. Please contact DOFA office.</li>';
+
+    const bodyHtml = `
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p>Dear <b>${safeName}</b>,</p>
+                    <p>Your appraisal submission for the academic year <b>${this.escapeHtml(academicYear || 'N/A')}</b> has been <b style="color: #c53030;">sent back</b> by the DOFA office for revisions.</p>
+
+                    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 16px 0;">
+                      <p style="margin: 0 0 10px 0; font-weight: 600; color: #991b1b;">Section-wise Review Comments:</p>
+                      <ul style="margin: 0; padding-left: 18px; line-height: 1.6; color: #1f2937;">
+                        ${commentItems}
+                      </ul>
+                    </div>
+
+                    <p>Please review the comments section-wise, update the relevant sections, and re-submit your form.</p>
+                    <div style="text-align:center;margin:24px 0;">
+                      <a href="${siteUrl}" style="display:inline-block;padding:14px 40px;background-color:#c53030;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600;">
+                        Open Appraisal Portal
+                      </a>
+                    </div>
+                    <br/>
+                    <p>Best regards,</p>
+                    <p><b>DOFA Office, LNMIIT Jaipur</b></p>
+                  </td>
+                </tr>`;
+
+    const html = this.buildLNMIITTemplate({ recipientName: safeName, bodyHtml });
+
+    await this._send({
+      to,
+      subject: `Submission Sent Back — ${academicYear || 'Academic Year'} Appraisal`,
+      html
+    });
+  }
+
   /**
    * Notify DOFA office that a faculty has requested edits to specific form sections
    */

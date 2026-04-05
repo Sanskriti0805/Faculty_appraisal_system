@@ -217,10 +217,31 @@ async function bootstrapDatabaseTables() {
         submission_id INT NOT NULL,
         reviewer_id INT,
         reviewer_role ENUM('dofa', 'dofa_office'),
+        section_name VARCHAR(255) NOT NULL DEFAULT 'General',
+        section_key VARCHAR(100) NULL,
         comment TEXT NOT NULL,
+        is_resolved TINYINT(1) NOT NULL DEFAULT 0,
+        resolved_at TIMESTAMP NULL,
+        resolved_in_version INT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
         FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+    `);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS submission_versions (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        submission_id INT NOT NULL,
+        version_number INT NOT NULL,
+        snapshot_data LONGTEXT NOT NULL,
+        snapshot_note VARCHAR(255) NULL,
+        created_by INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_submission_version (submission_id, version_number),
+        KEY idx_submission_versions_submission (submission_id),
+        FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     `);
 

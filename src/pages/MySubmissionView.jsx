@@ -51,6 +51,7 @@ const MySubmissionView = () => {
   const [loading,        setLoading]        = useState(true);
   const [activeTab,      setActiveTab]      = useState('faculty');
   const [editPanelOpen,  setEditPanelOpen]  = useState(false);
+  const [commentView,    setCommentView]    = useState('pending');
 
   const [selectedSections, setSelectedSections] = useState([]);
   const [requestMessage,   setRequestMessage]   = useState('');
@@ -586,14 +587,49 @@ const MySubmissionView = () => {
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               Comments from DOFA
             </h3>
-            {comments.map((c, i) => (
-              <div key={i} className="msv-request-item" style={{ marginBottom: '0.5rem' }}>
-                <div className="msv-request-item-content">
-                  <p><strong>{c.reviewer_name || 'DOFA Office'}</strong> · {formatDate(c.created_at)}</p>
-                  <p style={{ marginTop: '0.25rem', color: '#334155' }}>{c.comment}</p>
-                </div>
+            {comments.length > 0 && (
+              <div className="msv-comment-view-tabs" role="tablist" aria-label="Comment status filters">
+                <button type="button" className={`msv-comment-view-tab ${commentView === 'pending' ? 'active' : ''}`} onClick={() => setCommentView('pending')}>
+                  Pending <span>{comments.filter((c) => Number(c.is_resolved) !== 1).length}</span>
+                </button>
+                <button type="button" className={`msv-comment-view-tab ${commentView === 'resolved' ? 'active' : ''}`} onClick={() => setCommentView('resolved')}>
+                  Resolved <span>{comments.filter((c) => Number(c.is_resolved) === 1).length}</span>
+                </button>
               </div>
-            ))}
+            )}
+
+            {commentView === 'pending' ? (
+              comments.filter((c) => Number(c.is_resolved) !== 1).length > 0 ? comments
+                .filter((c) => Number(c.is_resolved) !== 1)
+                .map((c, i) => (
+                  <div key={`pending-${i}-${c.id || ''}`} className="msv-request-item" style={{ marginBottom: '0.5rem' }}>
+                    <div className="msv-request-item-content">
+                      <p><strong>{c.reviewer_name || 'DOFA Office'}</strong> · {formatDate(c.created_at)}</p>
+                      <div className="msv-comment-section-row">
+                        <span className="msv-comment-section-badge">{c.section_name || 'General'}</span>
+                      </div>
+                      <p style={{ marginTop: '0.25rem', color: '#334155' }}>{c.comment}</p>
+                    </div>
+                  </div>
+                )) : <p className="no-comments" style={{ textAlign: 'left' }}>No pending comments</p>
+            ) : (
+              comments.filter((c) => Number(c.is_resolved) === 1).length > 0 ? comments
+                .filter((c) => Number(c.is_resolved) === 1)
+                .map((c, i) => (
+                  <div key={`resolved-${i}-${c.id || ''}`} className="msv-request-item" style={{ marginBottom: '0.5rem' }}>
+                    <div className="msv-request-item-content">
+                      <p><strong>{c.reviewer_name || 'DOFA Office'}</strong> · {formatDate(c.created_at)}</p>
+                      <div className="msv-comment-section-row">
+                        <span className="msv-comment-section-badge">{c.section_name || 'General'}</span>
+                        <span className="msv-comment-resolved-badge">
+                          Resolved{c.resolved_in_version ? ` in v${c.resolved_in_version}` : ''}
+                        </span>
+                      </div>
+                      <p style={{ marginTop: '0.25rem', color: '#334155' }}>{c.comment}</p>
+                    </div>
+                  </div>
+                )) : <p className="no-comments" style={{ textAlign: 'left' }}>No resolved comments</p>
+            )}
           </div>
         </div>
       )}

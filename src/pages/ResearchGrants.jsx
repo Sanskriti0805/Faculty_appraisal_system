@@ -224,11 +224,11 @@ const ResearchGrants = ({ initialData, readOnly }) => {
     }
   }
 
-  const ReadOnlyField = ({ value, children }) => (
+  const ReadOnlyField = React.useCallback(({ value, children }) => (
     readOnly
       ? <div className="readonly-table-text">{value === null || value === undefined || value === '' ? '—' : String(value)}</div>
       : children
-  )
+  ), [readOnly])
 
   const handleSave = async () => {
     if (!selectedType) {
@@ -245,62 +245,90 @@ const ResearchGrants = ({ initialData, readOnly }) => {
       }
 
       if (selectedType === 'grants') {
-        await deleteIgnoringNotFound(grantsService.deleteGrant, persistedGrantIds)
+        const nextPersistedIds = []
+        const currentIds = new Set()
 
-        const promises = grants
-          .filter(g => g.projectName && g.fundingAgency)
-          .map(grant => {
-            const grantData = {
-              faculty_id: facultyId,
-              grant_type: 'External',
-              project_name: grant.projectName,
-              funding_agency: grant.fundingAgency,
-              currency: grant.currency,
-              grant_amount: grant.grantAmount,
-              amount_in_lakhs: grant.amountInLakhs,
-              duration: grant.duration,
-              researchers: grant.researchers,
-              role: grant.role,
-              evidence_file: grant.evidenceFile
+        for (const grant of grants) {
+          if (!grant.projectName && !grant.fundingAgency && !grant.grantAmount && !grant.amountInLakhs && !grant.duration && !grant.researchers && !grant.role && !grant.evidenceFile) {
+            continue
+          }
+
+          const grantData = {
+            faculty_id: facultyId,
+            grant_type: 'External',
+            project_name: grant.projectName,
+            funding_agency: grant.fundingAgency,
+            currency: grant.currency,
+            grant_amount: grant.grantAmount,
+            amount_in_lakhs: grant.amountInLakhs,
+            duration: grant.duration,
+            researchers: grant.researchers,
+            role: grant.role,
+            evidence_file: grant.evidenceFile
+          }
+
+          if (persistedGrantIds.includes(grant.id)) {
+            currentIds.add(grant.id)
+            await grantsService.updateGrant(grant.id, grantData)
+            nextPersistedIds.push(grant.id)
+          } else {
+            const created = await grantsService.createGrant(grantData)
+            const createdId = created?.data?.id
+            if (Number.isFinite(Number(createdId))) {
+              nextPersistedIds.push(createdId)
             }
-            return grantsService.createGrant(grantData)
-          })
+          }
+        }
 
-        const createdResponses = await Promise.all(promises)
-        const createdIds = createdResponses
-          .map(response => response?.data?.id)
-          .filter(id => Number.isFinite(Number(id)))
+        const removedIds = persistedGrantIds.filter(id => !currentIds.has(id))
+        if (removedIds.length > 0) {
+          await deleteIgnoringNotFound(grantsService.deleteGrant, removedIds)
+        }
 
-        setPersistedGrantIds(createdIds)
+        setPersistedGrantIds(nextPersistedIds)
         setPersistedProposalIds([])
       } else if (selectedType === 'proposals') {
-        await deleteIgnoringNotFound(grantsService.deleteProposal, persistedProposalIds)
+        const nextPersistedIds = []
+        const currentIds = new Set()
 
-        const promises = proposals
-          .filter(p => p.title && p.fundingAgency)
-          .map(proposal => {
-            const proposalData = {
-              faculty_id: facultyId,
-              title: proposal.title,
-              funding_agency: proposal.fundingAgency,
-              currency: proposal.currency,
-              grant_amount: proposal.grantAmount,
-              amount_in_lakhs: proposal.amountInLakhs,
-              duration: proposal.duration,
-              submission_date: proposal.submissionDate,
-              status: proposal.status,
-              role: proposal.role,
-              evidence_file: proposal.evidenceFile
+        for (const proposal of proposals) {
+          if (!proposal.title && !proposal.fundingAgency && !proposal.grantAmount && !proposal.amountInLakhs && !proposal.duration && !proposal.submissionDate && !proposal.status && !proposal.role && !proposal.evidenceFile) {
+            continue
+          }
+
+          const proposalData = {
+            faculty_id: facultyId,
+            title: proposal.title,
+            funding_agency: proposal.fundingAgency,
+            currency: proposal.currency,
+            grant_amount: proposal.grantAmount,
+            amount_in_lakhs: proposal.amountInLakhs,
+            duration: proposal.duration,
+            submission_date: proposal.submissionDate,
+            status: proposal.status,
+            role: proposal.role,
+            evidence_file: proposal.evidenceFile
+          }
+
+          if (persistedProposalIds.includes(proposal.id)) {
+            currentIds.add(proposal.id)
+            await grantsService.updateProposal(proposal.id, proposalData)
+            nextPersistedIds.push(proposal.id)
+          } else {
+            const created = await grantsService.createProposal(proposalData)
+            const createdId = created?.data?.id
+            if (Number.isFinite(Number(createdId))) {
+              nextPersistedIds.push(createdId)
             }
-            return grantsService.createProposal(proposalData)
-          })
+          }
+        }
 
-        const createdResponses = await Promise.all(promises)
-        const createdIds = createdResponses
-          .map(response => response?.data?.id)
-          .filter(id => Number.isFinite(Number(id)))
+        const removedIds = persistedProposalIds.filter(id => !currentIds.has(id))
+        if (removedIds.length > 0) {
+          await deleteIgnoringNotFound(grantsService.deleteProposal, removedIds)
+        }
 
-        setPersistedProposalIds(createdIds)
+        setPersistedProposalIds(nextPersistedIds)
         setPersistedGrantIds([])
       }
 
