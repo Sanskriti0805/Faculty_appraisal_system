@@ -3,6 +3,7 @@ import { Upload, ExternalLink } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const TeachingInnovation = ({ initialData, readOnly }) => {
   const [formData, setFormData] = useState({
@@ -137,6 +138,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                     <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
                       {formData.onCampusFile && formData.onCampusFile.name ? formData.onCampusFile.name : formData.onCampusFile || 'Upload Supporting Document'}
                     </span>
+                    <FilePreviewButton file={formData.onCampusFile} style={{ width: '32px', height: '32px' }} />
                     <input
                       type="file"
                       onChange={(e) => handleFileUpload('onCampusFile', e.target.files[0])}
@@ -193,6 +195,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                     <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
                       {formData.onlineFile && formData.onlineFile.name ? formData.onlineFile.name : formData.onlineFile || 'Upload Supporting Document'}
                     </span>
+                    <FilePreviewButton file={formData.onlineFile} style={{ width: '32px', height: '32px' }} />
                     <input
                       type="file"
                       onChange={(e) => handleFileUpload('onlineFile', e.target.files[0])}
@@ -249,6 +252,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                     <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
                       {formData.evaluationFile && formData.evaluationFile.name ? formData.evaluationFile.name : formData.evaluationFile || 'Upload Supporting Document'}
                     </span>
+                    <FilePreviewButton file={formData.evaluationFile} style={{ width: '32px', height: '32px' }} />
                     <input
                       type="file"
                       onChange={(e) => handleFileUpload('evaluationFile', e.target.files[0])}

@@ -3,6 +3,7 @@ import { Trash2, Plus } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './ConferenceSessions.css'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const ConferenceSessions = () => {
   const initialState = {
@@ -199,10 +200,13 @@ const ConferenceSessions = () => {
           <div className="form-row">
             <div className="form-group">
               <label>Upload Evidence<span className="required-star">*</span></label>
-              <input
-                type="file"
-                onChange={handleFileChange}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                />
+                <FilePreviewButton file={formData.certificateFile} />
+              </div>
             </div>
           </div>
 

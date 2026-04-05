@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Phone } from 'lucide-react';
+import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Phone, Archive, RotateCcw, Eye, Download, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './HODDashboard.css';
 
@@ -14,6 +14,8 @@ const HODDashboard = () => {
   const [deptInfo, setDeptInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [archiveFaculty, setArchiveFaculty] = useState([]);
+  const [historyModal, setHistoryModal] = useState({ open: false, faculty: null, submissions: [], loading: false });
 
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -25,12 +27,18 @@ const HODDashboard = () => {
         fetch(`${API_BASE}/register/departments/${user.department_id}/faculty`, { headers }),
         fetch(`${API_BASE}/register/departments`, { headers })
       ]);
-      const [facData, deptData] = await Promise.all([facRes.json(), deptRes.json()]);
+      const [archiveRes, facData, deptData] = await Promise.all([
+        fetch(`${API_BASE}/register/archive`, { headers }),
+        facRes.json(),
+        deptRes.json()
+      ]);
+      const archiveData = await archiveRes.json();
       if (facData.success) setFaculty(facData.data);
       if (deptData.success) {
         const dept = deptData.data.find(d => d.id === user.department_id);
         setDeptInfo(dept);
       }
+      if (archiveData.success) setArchiveFaculty(archiveData.data.faculty || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [user, token]);
@@ -39,6 +47,63 @@ const HODDashboard = () => {
 
   const handleLogout = () => { logout(); navigate('/login'); };
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  const handleArchiveFaculty = async (f) => {
+    if (!window.confirm('Are you sure you want to delete this faculty?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/register/faculty/${f.id}/archive`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'Archived by HOD' })
+      });
+      const data = await res.json();
+      if (!data.success) alert(data.message || 'Failed to archive faculty');
+      loadData();
+    } catch {
+      alert('Failed to archive faculty');
+    }
+  };
+
+  const handleRestoreFaculty = async (f) => {
+    if (!window.confirm('Are you sure you want to add this faculty back into the appraisal system?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/register/faculty/${f.id}/restore`, { method: 'PUT', headers });
+      const data = await res.json();
+      if (!data.success) alert(data.message || 'Failed to restore faculty');
+      loadData();
+    } catch {
+      alert('Failed to restore faculty');
+    }
+  };
+
+  const handleArchiveExport = async (format) => {
+    try {
+      const res = await fetch(`${API_BASE}/register/archive/export?type=faculty&format=${format}`, { headers });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `faculty_archive_hod.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert('Failed to export archive data');
+    }
+  };
+
+  const openSubmissionHistory = async (facultyItem) => {
+    setHistoryModal({ open: true, faculty: facultyItem, submissions: [], loading: true });
+    try {
+      const res = await fetch(`${API_BASE}/register/faculty/${facultyItem.id}/submissions`, { headers });
+      const data = await res.json();
+      setHistoryModal({ open: true, faculty: facultyItem, submissions: data.success ? data.data : [], loading: false });
+    } catch {
+      setHistoryModal({ open: true, faculty: facultyItem, submissions: [], loading: false });
+    }
+  };
 
   return (
     <div className="admin-page">
@@ -117,6 +182,7 @@ const HODDashboard = () => {
                   <th>Employee ID</th>
                   <th>Employment Type</th>
                   <th>Date of Joining</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -136,6 +202,54 @@ const HODDashboard = () => {
                       ) : '—'}
                     </td>
                     <td>{formatDate(f.date_of_joining)}</td>
+                    <td style={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+                      <button className="admin-btn-cancel" onClick={() => openSubmissionHistory(f)} style={{ padding: '6px 10px', fontSize: '12px', marginRight: '6px' }}>
+                        <Eye size={12} /> View
+                      </button>
+                      <button className="admin-btn-cancel" onClick={() => handleArchiveFaculty(f)} style={{ padding: '6px 10px', fontSize: '12px' }}>
+                        <Archive size={12} /> Archive
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <h2 className="admin-section-title" style={{ marginTop: '28px' }}><Archive size={20} /> Archived Faculty</h2>
+        <div className="admin-table-card">
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+            <button className="admin-btn-submit" onClick={() => handleArchiveExport('csv')} style={{ padding: '8px 12px', fontSize: '12px' }}>
+              <Download size={14} /> Export CSV
+            </button>
+            <button className="admin-btn-submit" onClick={() => handleArchiveExport('xlsx')} style={{ padding: '8px 12px', fontSize: '12px' }}>
+              <Download size={14} /> Export Excel
+            </button>
+          </div>
+          {archiveFaculty.length === 0 ? (
+            <div className="admin-empty">No archived faculty in your department.</div>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Archived At</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {archiveFaculty.map(f => (
+                  <tr key={`arch-${f.id}`}>
+                    <td>{f.name}</td>
+                    <td>{f.email}</td>
+                    <td>{formatDate(f.archived_at)}</td>
+                    <td>
+                      <button className="admin-btn-submit" onClick={() => handleRestoreFaculty(f)} style={{ padding: '6px 10px', fontSize: '12px' }}>
+                        <RotateCcw size={12} /> Restore
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -192,6 +306,54 @@ const HODDashboard = () => {
             </div>
             <div className="admin-modal-footer">
               <button className="admin-btn-cancel" onClick={() => setSelected(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historyModal.open && (
+        <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setHistoryModal({ open: false, faculty: null, submissions: [], loading: false }); }}>
+          <div className="admin-modal" style={{ maxWidth: '760px' }}>
+            <div className="admin-modal-header">
+              <h2 className="admin-modal-title">Submission History: {historyModal.faculty?.name}</h2>
+              <button className="admin-modal-close" onClick={() => setHistoryModal({ open: false, faculty: null, submissions: [], loading: false })}><X size={16} /></button>
+            </div>
+            <div className="admin-modal-body">
+              {historyModal.loading ? (
+                <div className="admin-empty">Loading submission history...</div>
+              ) : historyModal.submissions.length === 0 ? (
+                <div className="admin-empty">No submissions found for this faculty member.</div>
+              ) : (
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Academic Year</th>
+                      <th>Calendar Year</th>
+                      <th>Form</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyModal.submissions.map(s => (
+                      <tr key={s.id}>
+                        <td>{s.academic_year}</td>
+                        <td>{s.calendar_year || '—'}</td>
+                        <td>{s.form_type}</td>
+                        <td>{s.status}</td>
+                        <td>
+                          <a className="admin-btn-submit" style={{ padding: '6px 10px', fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }} href={`${API_BASE}/submissions/${s.id}`} target="_blank" rel="noreferrer">
+                            <Eye size={12} /> View Saved Form
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="admin-modal-footer">
+              <button className="admin-btn-cancel" onClick={() => setHistoryModal({ open: false, faculty: null, submissions: [], loading: false })}>Close</button>
             </div>
           </div>
         </div>

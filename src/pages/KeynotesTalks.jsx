@@ -3,6 +3,7 @@ import { Calendar, Plus, Trash2 } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './KeynotesTalks.css'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const KeynotesTalks = () => {
   const initialState = {
@@ -196,10 +197,13 @@ const KeynotesTalks = () => {
             </div>
             <div className="form-group">
               <label>Upload Evidence<span className="required-star">*</span></label>
-              <input
-                type="file"
-                onChange={handleFileChange}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                />
+                <FilePreviewButton file={formData.certificateFile} />
+              </div>
             </div>
           </div>
 

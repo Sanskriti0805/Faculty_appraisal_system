@@ -5,6 +5,7 @@ import './FormPages.css'
 import './PartB.css'
 import FormActions from '../components/FormActions'
 import { useAuth } from '../context/AuthContext'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const PartB = ({ initialData, readOnly }) => {
   const { user, token } = useAuth()
@@ -320,6 +321,10 @@ const PartB = ({ initialData, readOnly }) => {
                         >
                           {goal.evidenceFile ? <FileText size={18} /> : <Upload size={18} />}
                         </label>
+                        <FilePreviewButton
+                          file={goal.evidenceFile || goal.evidence_file}
+                          style={{ width: '32px', height: '32px', marginLeft: '0.5rem' }}
+                        />
                         {goal.evidenceFile && (
                           <button
                             className="compact-remove-btn"

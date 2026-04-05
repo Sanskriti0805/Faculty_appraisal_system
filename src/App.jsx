@@ -8,6 +8,7 @@ import Layout from './components/Layout'
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
 
 // DOFA Registration (migrated from Admin)
 const DOFARegistration = lazy(() => import('./pages/DOFARegistration'))
@@ -50,6 +51,7 @@ const EvaluationSheet = lazy(() => import('./pages/EvaluationSheet'))
 const EvaluationSheet2 = lazy(() => import('./pages/EvaluationSheet2'))
 const EvaluationSheet3 = lazy(() => import('./pages/EvaluationSheet3'))
 const FormBuilder = lazy(() => import('./pages/FormBuilder'))
+const FormRelease = lazy(() => import('./pages/FormRelease'))
 
 const LoadingFallback = () => (
   <div style={{
@@ -77,6 +79,13 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+            {/* ── Onboarding (first-login profile completion) ── */}
+            <Route path="/onboarding" element={
+              <ProtectedRoute>
+                <Onboarding />
+              </ProtectedRoute>
+            } />
 
 
 
@@ -135,6 +144,7 @@ function App() {
               <Route path="sheet3" element={<EvaluationSheet3 />} />
               <Route path="registration" element={<DOFARegistration />} />
               <Route path="manage-users" element={<DOFARegistration />} />
+              <Route path="form-release" element={<FormRelease />} />
             </Route>
 
             {/* ── DOFA Office Routes ── */}
@@ -152,6 +162,7 @@ function App() {
               <Route path="form-builder" element={<FormBuilder />} />
               <Route path="registration" element={<DOFARegistration />} />
               <Route path="manage-users" element={<DOFARegistration />} />
+              <Route path="form-release" element={<FormRelease />} />
             </Route>
 
             {/* ── Catch-all → login ── */}

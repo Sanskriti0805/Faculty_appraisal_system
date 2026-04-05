@@ -182,13 +182,15 @@
   border-radius: 10px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   border: 1px solid #e8ecf0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   margin-bottom: 32px;
 }
 
 .admin-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 1120px;
 }
 
 .admin-table th {
@@ -208,6 +210,13 @@
   font-size: 13px;
   color: #2d3748;
   border-bottom: 1px solid #f0f4f8;
+  vertical-align: middle;
+}
+
+.admin-table th:last-child,
+.admin-table td:last-child {
+  min-width: 170px;
+  white-space: nowrap;
 }
 
 .admin-table tr:last-child td { border-bottom: none; }
@@ -405,4 +414,31 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Archive section polish */
+.admin-table-card.archive-card {
+  padding: 18px;
+  border-radius: 12px;
+}
+
+.archive-actions-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.archive-group-title {
+  font-size: 16px;
+  margin: 4px 0 10px;
+  color: #1a202c;
+}
+
+.archive-table {
+  margin-bottom: 18px;
+}
+
+.archive-table:last-of-type {
+  margin-bottom: 0;
 }

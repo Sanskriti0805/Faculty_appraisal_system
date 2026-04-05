@@ -3,6 +3,7 @@ import { Upload, ExternalLink } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const InstitutionalContributions = ({ initialData, readOnly }) => {
   const [formData, setFormData] = useState({
@@ -67,6 +68,15 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
   const handleFileChange = (field, file) => {
     setFiles({ ...files, [field]: file })
   }
+
+  const renderUploadControl = (field) => (
+    <label style={{ cursor: 'pointer', padding: '0.5rem', border: '1px dashed #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <Upload size={16} color={files[field] ? '#28a745' : '#666'} />
+      <span style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{files[field] ? 'Uploaded' : 'Evidence'}</span>
+      <FilePreviewButton file={files[field]} style={{ width: '30px', height: '30px' }} />
+      <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange(field, e.target.files[0])} />
+    </label>
+  )
 
   const handleSave = async () => {
     setLoading(true)
@@ -156,11 +166,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
                   </a>
                 )
               ) : (
-                <label style={{ cursor: 'pointer', padding: '0.5rem', border: '1px dashed #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Upload size={16} color={files.dean ? '#28a745' : '#666'} />
-                  <span style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{files.dean ? 'Uploaded' : 'Evidence'}</span>
-                  <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange('dean', e.target.files[0])} />
-                </label>
+                renderUploadControl('dean')
               )}
             </div>
           </div>
@@ -190,11 +196,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
                   </a>
                 )
               ) : (
-                <label style={{ cursor: 'pointer', padding: '0.5rem', border: '1px dashed #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Upload size={16} color={files.hod ? '#28a745' : '#666'} />
-                  <span style={{ fontSize: '0.8rem' }}>{files.hod ? 'Uploaded' : 'Evidence'}</span>
-                  <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange('hod', e.target.files[0])} />
-                </label>
+                renderUploadControl('hod')
               )}
             </div>
           </div>
@@ -224,11 +226,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
                   </a>
                 )
               ) : (
-                <label style={{ cursor: 'pointer', padding: '0.5rem', border: '1px dashed #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Upload size={16} color={files.warden ? '#28a745' : '#666'} />
-                  <span style={{ fontSize: '0.8rem' }}>{files.warden ? 'Uploaded' : 'Evidence'}</span>
-                  <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange('warden', e.target.files[0])} />
-                </label>
+                renderUploadControl('warden')
               )}
             </div>
           </div>
@@ -258,11 +256,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
                   </a>
                 )
               ) : (
-                <label style={{ cursor: 'pointer', padding: '0.5rem', border: '1px dashed #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Upload size={16} color={files.centreLead ? '#28a745' : '#666'} />
-                  <span style={{ fontSize: '0.8rem' }}>{files.centreLead ? 'Uploaded' : 'Evidence'}</span>
-                  <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange('centreLead', e.target.files[0])} />
-                </label>
+                renderUploadControl('centreLead')
               )}
             </div>
           </div>
@@ -292,11 +286,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
                   </a>
                 )
               ) : (
-                <label style={{ cursor: 'pointer', padding: '0.5rem', border: '1px dashed #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Upload size={16} color={files.committee ? '#28a745' : '#666'} />
-                  <span style={{ fontSize: '0.8rem' }}>{files.committee ? 'Uploaded' : 'Evidence'}</span>
-                  <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange('committee', e.target.files[0])} />
-                </label>
+                renderUploadControl('committee')
               )}
             </div>
           </div>
@@ -326,11 +316,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
                   </a>
                 )
               ) : (
-                <label style={{ cursor: 'pointer', padding: '0.5rem', border: '1px dashed #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Upload size={16} color={files.facultyInCharge ? '#28a745' : '#666'} />
-                  <span style={{ fontSize: '0.8rem' }}>{files.facultyInCharge ? 'Uploaded' : 'Evidence'}</span>
-                  <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange('facultyInCharge', e.target.files[0])} />
-                </label>
+                renderUploadControl('facultyInCharge')
               )}
             </div>
           </div>
@@ -360,11 +346,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
                   </a>
                 )
               ) : (
-                <label style={{ cursor: 'pointer', padding: '0.5rem', border: '1px dashed #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Upload size={16} color={files.otherResponsibility ? '#28a745' : '#666'} />
-                  <span style={{ fontSize: '0.8rem' }}>{files.otherResponsibility ? 'Uploaded' : 'Evidence'}</span>
-                  <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange('otherResponsibility', e.target.files[0])} />
-                </label>
+                renderUploadControl('otherResponsibility')
               )}
             </div>
           </div>

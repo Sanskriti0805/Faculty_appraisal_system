@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import { coursesService } from '../services/coursesService'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const NewCourses = () => {
   const [ugProgram, setUgProgram] = useState('')
@@ -231,6 +232,10 @@ const NewCourses = () => {
                       accept=".pdf,.doc,.docx"
                     />
                   </label>
+                  <FilePreviewButton
+                    file={course.cifFile}
+                    style={{ width: '32px', height: '32px', marginLeft: '0.5rem' }}
+                  />
                 </td>
                 <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                   <button

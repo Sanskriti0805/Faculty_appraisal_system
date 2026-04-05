@@ -1,9 +1,10 @@
-import React, { Component } from 'react';
-import { Navigate } from 'react-router-dom';
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, needsOnboarding } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -26,6 +27,11 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Newly invited users must complete their profile first
+  if (needsOnboarding && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {

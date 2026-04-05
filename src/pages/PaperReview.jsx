@@ -3,6 +3,7 @@ import { Upload } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 import { reviewsService } from '../services/reviewsService'
 
 const PaperReview = () => {
@@ -129,6 +130,10 @@ const PaperReview = () => {
                   <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
                     {evidenceFile ? evidenceFile.name : 'Upload Evidence (PDF)'}
                   </span>
+                  <FilePreviewButton
+                    file={evidenceFile}
+                    style={{ width: '32px', height: '32px' }}
+                  />
                   <input
                     type="file"
                     style={{ display: 'none' }}

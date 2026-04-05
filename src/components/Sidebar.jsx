@@ -9,6 +9,7 @@ const Sidebar = () => {
   const [partBOpen, setPartBOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState({})
   const [dynamicSections, setDynamicSections] = useState([])
+  const [formsReleased, setFormsReleased] = useState(true) // default true for non-faculty
 
   React.useEffect(() => {
     const fetchDynamicSections = async () => {
@@ -24,6 +25,25 @@ const Sidebar = () => {
     };
     fetchDynamicSections();
   }, []);
+
+  // Check if forms are released (for faculty sidebar)
+  React.useEffect(() => {
+    const isDOFA = location.pathname.startsWith('/dofa');
+    if (isDOFA) return; // DOFA always sees everything
+
+    const checkReleaseStatus = async () => {
+      try {
+        const res = await fetch(`http://${window.location.hostname}:5000/api/sessions/active`);
+        const data = await res.json();
+        if (data.success) {
+          setFormsReleased(data.released === true);
+        }
+      } catch (err) {
+        console.error('Error checking release status:', err);
+      }
+    };
+    checkReleaseStatus();
+  }, [location.pathname]);
 
   const isDOFAOfficeRoute = location.pathname.startsWith('/dofa-office')
   const isDOFARoute = location.pathname.startsWith('/dofa') && !isDOFAOfficeRoute
@@ -83,6 +103,7 @@ const Sidebar = () => {
   if (isDOFARoute || isDOFAOfficeRoute) {
     const dofaNavItems = [
       { name: 'Dashboard', path: '/dofa/dashboard' },
+      { name: 'Form Release', path: '/dofa/form-release' },
       { name: 'Rubrics Management', path: '/dofa/rubrics' },
       { name: 'Sheet 1 — Evaluation', path: '/dofa/sheet1' },
       { name: 'Sheet 2', path: '/dofa/sheet2' },
@@ -93,6 +114,7 @@ const Sidebar = () => {
 
     const dofaOfficeNavItems = [
       { name: 'Dashboard', path: '/dofa-office/dashboard' },
+      { name: 'Form Release', path: '/dofa-office/form-release' },
       { name: 'Rubrics Management', path: '/dofa-office/rubrics' },
       { name: 'Sheet 1 — Evaluation', path: '/dofa-office/sheet1' },
       { name: 'Sheet 2', path: '/dofa-office/sheet2' },
@@ -146,6 +168,8 @@ const Sidebar = () => {
       </div>
 
       <nav className="sidebar-nav">
+        {formsReleased ? (
+          <>
         <div className="nav-section">
           <button
             className="nav-section-header"
@@ -230,6 +254,19 @@ const Sidebar = () => {
             </div>
           )}
         </div>
+          </>
+        ) : (
+          <div className="nav-section">
+            <div className="nav-section-header" style={{ cursor: 'default' }}>
+              <span>Appraisal Forms</span>
+            </div>
+            <div className="nav-section-items">
+              <div className="nav-item" style={{ color: '#94a3b8', fontSize: '0.82rem', lineHeight: '1.5', padding: '12px 16px' }}>
+                Forms are not available yet. You will be notified by email when they are released.
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
     </aside>
   )

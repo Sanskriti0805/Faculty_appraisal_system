@@ -3,6 +3,7 @@ import { Plus, Trash2, Upload, FileText } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 import { awardsService } from '../services/awardsService'
 
 const AwardsHonours = ({ initialData, readOnly }) => {
@@ -204,6 +205,10 @@ const AwardsHonours = ({ initialData, readOnly }) => {
                   <span style={{ fontSize: '0.85rem', color: '#666' }}>
                     PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
                   </span>
+                  <FilePreviewButton
+                    file={formData.evidenceFile}
+                    style={{ width: '32px', height: '32px', marginTop: '0.25rem' }}
+                  />
                 </label>
               </div>
             </div>

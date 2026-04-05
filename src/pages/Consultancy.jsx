@@ -3,6 +3,7 @@ import { Upload, Plus, Trash2, ExternalLink } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const Consultancy = ({ initialData, readOnly }) => {
   const [loading, setLoading] = useState(false)
@@ -136,9 +137,12 @@ const Consultancy = ({ initialData, readOnly }) => {
           style={{ display: 'none' }}
           onChange={(e) => handleFileChange(consultancy.id, e.target.files[0])}
         />
-        <label htmlFor={`file-${consultancy.id}`} style={{ cursor: 'pointer', color: consultancy.evidenceFile ? '#5cb85c' : '#5b8fc7' }}>
-          <Upload size={18} />
-        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+          <label htmlFor={`file-${consultancy.id}`} style={{ cursor: 'pointer', color: consultancy.evidenceFile ? '#5cb85c' : '#5b8fc7' }}>
+            <Upload size={18} />
+          </label>
+          <FilePreviewButton file={consultancy.evidenceFile || consultancy.evidence_file} />
+        </div>
       </>
     );
   };

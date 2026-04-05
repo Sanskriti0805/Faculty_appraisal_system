@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import './ConferencesOutside.css'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const ConferencesOutside = () => {
   const initialState = {
@@ -224,11 +225,14 @@ const ConferencesOutside = () => {
           <div className="form-row">
             <div className="form-group">
               <label>Upload Evidence</label>
-              <input
-                type="file"
-                name="posterFile"
-                onChange={handleFileChange}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <input
+                  type="file"
+                  name="posterFile"
+                  onChange={handleFileChange}
+                />
+                <FilePreviewButton file={formData.posterFile} />
+              </div>
             </div>
           </div>
 

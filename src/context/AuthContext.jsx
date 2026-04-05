@@ -62,13 +62,30 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const refreshUser = useCallback(async () => {
+    const storedToken = localStorage.getItem('auth_token');
+    if (!storedToken) return;
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        headers: { Authorization: `Bearer ${storedToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUser(data.user);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
+      }
+    } catch {}
+  }, []);
+
   const getAuthHeader = () => ({
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json'
   });
 
+  const needsOnboarding = !!user && (user.onboarding_complete === 0 || user.onboarding_complete === false);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, getAuthHeader, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, getAuthHeader, isAuthenticated: !!user, needsOnboarding, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import { patentsService } from '../services/patentsService'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const Patents = ({ initialData, readOnly }) => {
   const [formData, setFormData] = useState({
@@ -177,6 +178,7 @@ const Patents = ({ initialData, readOnly }) => {
                   <span style={{ fontSize: '0.85rem', color: '#666' }}>
                     PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
                   </span>
+                  <FilePreviewButton file={certificateFiles.granted} style={{ width: '32px', height: '32px' }} />
                 </label>
               </div>
             )}
@@ -241,6 +243,7 @@ const Patents = ({ initialData, readOnly }) => {
                   <span style={{ fontSize: '0.85rem', color: '#666' }}>
                     PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
                   </span>
+                  <FilePreviewButton file={certificateFiles.published} style={{ width: '32px', height: '32px' }} />
                 </label>
               </div>
             )}
@@ -305,6 +308,7 @@ const Patents = ({ initialData, readOnly }) => {
                   <span style={{ fontSize: '0.85rem', color: '#666' }}>
                     PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
                   </span>
+                  <FilePreviewButton file={certificateFiles.applied} style={{ width: '32px', height: '32px' }} />
                 </label>
               </div>
             )}

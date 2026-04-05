@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom'
 import apiClient from '../services/api';
 import './CoursesTaught.css'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const CoursesTaught = ({ initialData, readOnly }) => {
   const [selectedSection, setSelectedSection] = useState('courses')
@@ -300,6 +301,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                       >
                         {course.feedbackFile ? <FileText size={18} /> : <Upload size={18} />}
                       </label>
+                      <FilePreviewButton file={course.feedbackFile || course.evidence_file} style={{ width: '32px', height: '32px' }} />
                     </div>
                   )}
                 </div>
@@ -399,6 +401,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                     >
                       {project.certificateFile ? <FileText size={18} /> : <Upload size={18} />}
                     </label>
+                    <FilePreviewButton file={project.certificateFile || project.evidence_file} style={{ width: '32px', height: '32px' }} />
                   </div>
                 )}
               </td>

@@ -3,6 +3,7 @@ import { Upload, FileText, X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
+import FilePreviewButton from '../components/FilePreviewButton'
 
 const Courseware = () => {
   const location = useLocation()
@@ -105,6 +106,10 @@ const Courseware = () => {
                     <X size={14} />
                   </button>
                 )}
+                <FilePreviewButton
+                  file={formData.labManualFile}
+                  style={{ width: '32px', height: '32px' }}
+                />
                 {formData.labManualFile && (
                   <span style={{ marginLeft: '10px', fontSize: '0.9rem', color: '#555' }}>
                     {formData.labManualFile.name}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Building2, Users, Plus, X, CheckCircle, AlertCircle,
-  RefreshCw, Mail, Hash, Briefcase, Calendar, Copy
+  RefreshCw, Mail, Hash, Briefcase, Calendar, Send, Loader, Archive, RotateCcw, Eye, Download
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './DOFARegistration.css';
@@ -18,6 +18,9 @@ const DOFARegistration = () => {
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [archiveLoading, setArchiveLoading] = useState(true);
+  const [archiveData, setArchiveData] = useState({ faculty: [], departments: [] });
+  const [historyModal, setHistoryModal] = useState({ open: false, faculty: null, submissions: [], loading: false });
 
   // Toast notification
   const [toast, setToast] = useState(null);
@@ -29,14 +32,7 @@ const DOFARegistration = () => {
   // Modal state
   const [deptModal, setDeptModal] = useState(false);
   const [facultyModal, setFacultyModal] = useState(false);
-  const [generatedPassword, setGeneratedPassword] = useState(null);
-
-  const handleCopyPassword = () => {
-    if (generatedPassword) {
-      navigator.clipboard.writeText(generatedPassword.password);
-      showToast('Password copied to clipboard!', 'success');
-    }
-  };
+  const [bulkModal, setBulkModal] = useState(false);
 
   // Forms
   const [deptForm, setDeptForm] = useState({ name: '', code: '', hod_email: '', hod_name: '' });
@@ -44,6 +40,12 @@ const DOFARegistration = () => {
     salutation: 'Dr', name: '', designation: '', email: '',
     employee_id: '', employment_type: 'fixed', date_of_joining: '', department_id: ''
   });
+
+  // Bulk invite state
+  const [bulkRole, setBulkRole] = useState('faculty');
+  const [bulkEmails, setBulkEmails] = useState('');
+  const [bulkResults, setBulkResults] = useState(null);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [deptError, setDeptError] = useState('');
@@ -55,18 +57,22 @@ const DOFARegistration = () => {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setArchiveLoading(true);
     try {
-      const [deptsRes, usersRes] = await Promise.all([
+      const [deptsRes, usersRes, archiveRes] = await Promise.all([
         fetch(`${API_BASE}/register/departments`, { headers }),
-        fetch(`${API_BASE}/register/users`, { headers })
+        fetch(`${API_BASE}/register/users`, { headers }),
+        fetch(`${API_BASE}/register/archive`, { headers })
       ]);
-      const [deptsData, usersData] = await Promise.all([deptsRes.json(), usersRes.json()]);
+      const [deptsData, usersData, archiveApiData] = await Promise.all([deptsRes.json(), usersRes.json(), archiveRes.json()]);
       if (deptsData.success) setDepartments(deptsData.data);
       if (usersData.success) setUsers(usersData.data);
+      if (archiveApiData.success) setArchiveData(archiveApiData.data);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+      setArchiveLoading(false);
     }
   }, [token]);
 
@@ -75,6 +81,7 @@ const DOFARegistration = () => {
   // Stats
   const facultyCount = users.filter(u => u.role === 'faculty').length;
   const hodCount = users.filter(u => u.role === 'hod').length;
+  const pendingOnboarding = users.filter(u => !u.onboarding_complete).length;
 
   const handleDeptSubmit = async (e) => {
     e.preventDefault();
@@ -90,9 +97,6 @@ const DOFARegistration = () => {
       const data = await res.json();
       if (data.success) {
         setDeptModal(false);
-        if (data.tempPassword) {
-          setGeneratedPassword({ email: deptForm.hod_email, name: deptForm.hod_name || 'HOD', password: data.tempPassword, role: 'HOD' });
-        }
         setDeptForm({ name: '', code: '', hod_email: '', hod_name: '' });
         showToast('Department registered! Password setup email sent to HOD. ✅');
         loadData();
@@ -117,9 +121,6 @@ const DOFARegistration = () => {
       const data = await res.json();
       if (data.success) {
         setFacultyModal(false);
-        if (data.tempPassword) {
-          setGeneratedPassword({ email: facultyForm.email, name: facultyForm.name, password: data.tempPassword, role: 'Faculty' });
-        }
         setFacultyForm({ salutation: 'Dr', name: '', designation: '', email: '', employee_id: '', employment_type: 'fixed', date_of_joining: '', department_id: '' });
         showToast('Faculty registered! Password setup email sent. ✅');
         loadData();
@@ -130,9 +131,149 @@ const DOFARegistration = () => {
     finally { setSubmitting(false); }
   };
 
+  const handleBulkInvite = async () => {
+    const rawEmails = bulkEmails
+      .split(/[,\n]+/)
+      .map(e => e.trim())
+      .filter(e => e.length > 0);
 
+    if (rawEmails.length === 0) return;
+
+    setBulkSubmitting(true);
+    setBulkResults(null);
+    try {
+      const res = await fetch(`${API_BASE}/register/bulk-invite`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ role: bulkRole, emails: rawEmails })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBulkResults(data);
+        showToast(data.message);
+        loadData();
+      } else {
+        showToast(data.message || 'Bulk invite failed', 'error');
+      }
+    } catch {
+      showToast('Server error. Please try again.', 'error');
+    } finally {
+      setBulkSubmitting(false);
+    }
+  };
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  const withConfirm = (message) => window.confirm(message);
+
+  const runAction = async (url, method = 'PUT', body = null) => {
+    const options = { method, headers };
+    if (body) options.body = JSON.stringify(body);
+    const response = await fetch(url, options);
+    return response.json();
+  };
+
+  const handleArchiveFaculty = async (faculty) => {
+    if (!withConfirm('Are you sure you want to delete this faculty?')) return;
+    try {
+      const data = await runAction(`${API_BASE}/register/faculty/${faculty.id}/archive`, 'PUT', { reason: 'Archived from Manage Users' });
+      if (data.success) {
+        showToast('Faculty moved to archive.');
+        loadData();
+      } else {
+        showToast(data.message || 'Failed to archive faculty', 'error');
+      }
+    } catch {
+      showToast('Failed to archive faculty', 'error');
+    }
+  };
+
+  const handleRestoreFaculty = async (faculty) => {
+    if (!withConfirm('Are you sure you want to add this faculty back into the appraisal system?')) return;
+    try {
+      const data = await runAction(`${API_BASE}/register/faculty/${faculty.id}/restore`);
+      if (data.success) {
+        showToast('Faculty restored successfully.');
+        loadData();
+      } else {
+        showToast(data.message || 'Failed to restore faculty', 'error');
+      }
+    } catch {
+      showToast('Failed to restore faculty', 'error');
+    }
+  };
+
+  const handleArchiveDepartment = async (department) => {
+    if (!withConfirm('Are you sure you want to delete this department?')) return;
+    try {
+      const data = await runAction(`${API_BASE}/register/departments/${department.id}/archive`, 'PUT', { reason: 'Archived from Manage Users' });
+      if (data.success) {
+        showToast('Department moved to archive.');
+        loadData();
+      } else {
+        showToast(data.message || 'Failed to archive department', 'error');
+      }
+    } catch {
+      showToast('Failed to archive department', 'error');
+    }
+  };
+
+  const handleRestoreDepartment = async (department) => {
+    if (!withConfirm('Are you sure you want to restore this department to the appraisal system?')) return;
+    try {
+      const data = await runAction(`${API_BASE}/register/departments/${department.id}/restore`);
+      if (data.success) {
+        showToast('Department restored successfully.');
+        loadData();
+      } else {
+        showToast(data.message || 'Failed to restore department', 'error');
+      }
+    } catch {
+      showToast('Failed to restore department', 'error');
+    }
+  };
+
+  const handleArchiveExport = async (type, format) => {
+    try {
+      const response = await fetch(`${API_BASE}/register/archive/export?type=${type}&format=${format}`, { headers });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ext = format === 'xlsx' ? 'xlsx' : 'csv';
+      a.href = url;
+      a.download = `${type}_archive.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      showToast('Failed to export archive data', 'error');
+    }
+  };
+
+  const openSubmissionHistory = async (faculty) => {
+    setHistoryModal({ open: true, faculty, submissions: [], loading: true });
+    try {
+      const res = await fetch(`${API_BASE}/register/faculty/${faculty.id}/submissions`, { headers });
+      const data = await res.json();
+      setHistoryModal({ open: true, faculty, submissions: data.success ? data.data : [], loading: false });
+    } catch {
+      setHistoryModal({ open: true, faculty, submissions: [], loading: false });
+    }
+  };
+
+  const statusColor = (status) => {
+    if (status === 'sent') return '#276749';
+    if (status === 'sent_no_email') return '#c05621';
+    if (status === 'skipped') return '#2c5282';
+    return '#c53030';
+  };
+  const statusBg = (status) => {
+    if (status === 'sent') return '#f0fff4';
+    if (status === 'sent_no_email') return '#fffaf0';
+    if (status === 'skipped') return '#ebf4ff';
+    return '#fff5f5';
+  };
 
   return (
     <div className="admin-page">
@@ -185,6 +326,15 @@ const DOFARegistration = () => {
               <div className="admin-stat-label">HODs Registered</div>
             </div>
           </div>
+          {pendingOnboarding > 0 && (
+            <div className="admin-stat-card">
+              <div className="admin-stat-icon" style={{ background: '#fff5f5', color: '#c53030' }}><Mail size={22} /></div>
+              <div>
+                <div className="admin-stat-value">{pendingOnboarding}</div>
+                <div className="admin-stat-label">Pending Onboarding</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Quick Actions */}
@@ -201,6 +351,13 @@ const DOFARegistration = () => {
             <h3 className="admin-action-title">Register Faculty</h3>
             <p className="admin-action-desc">Add a new faculty member to the system. They will receive a welcome email with a link to set their password.</p>
             <button className="admin-action-btn"><Plus size={15} /> Add Faculty</button>
+          </div>
+
+          <div className="admin-action-card bulk" onClick={() => { setBulkModal(true); setBulkResults(null); setBulkEmails(''); setBulkRole('faculty'); }}>
+            <div className="admin-action-icon"><Send size={26} /></div>
+            <h3 className="admin-action-title">Bulk Email Invite</h3>
+            <p className="admin-action-desc">Send invite emails to multiple faculty or HODs at once. Paste comma-separated emails — they'll set up their own profiles.</p>
+            <button className="admin-action-btn bulk-btn"><Mail size={15} /> Send Invites</button>
           </div>
         </div>
 
@@ -222,6 +379,7 @@ const DOFARegistration = () => {
                     <th>HOD Email</th>
                     <th>Faculty Count</th>
                     <th>Registered On</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -233,6 +391,11 @@ const DOFARegistration = () => {
                       <td>{d.hod_email}</td>
                       <td>{d.faculty_count || 0}</td>
                       <td>{formatDate(d.created_at)}</td>
+                      <td>
+                        <button className="admin-btn-cancel" onClick={() => handleArchiveDepartment(d)} style={{ padding: '6px 10px', fontSize: '12px' }}>
+                          <Archive size={12} /> Archive
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -260,6 +423,8 @@ const DOFARegistration = () => {
                     <th>Employee ID</th>
                     <th>Employment</th>
                     <th>Date of Joining</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -278,6 +443,21 @@ const DOFARegistration = () => {
                         ) : '—'}
                       </td>
                       <td>{formatDate(u.date_of_joining)}</td>
+                      <td>
+                        {u.onboarding_complete ? (
+                          <span className="admin-badge faculty">Active</span>
+                        ) : (
+                          <span className="admin-badge" style={{ background: '#fff5f5', color: '#c53030' }}>Pending</span>
+                        )}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <button className="admin-btn-cancel" onClick={() => openSubmissionHistory(u)} style={{ padding: '6px 10px', fontSize: '12px', marginRight: '6px' }}>
+                          <Eye size={12} /> View
+                        </button>
+                        <button className="admin-btn-cancel" onClick={() => handleArchiveFaculty(u)} style={{ padding: '6px 10px', fontSize: '12px' }}>
+                          <Archive size={12} /> Archive
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -285,56 +465,103 @@ const DOFARegistration = () => {
             )}
           </div>
         </div>
-      </main>
 
-      {/* Generated Temp Password Modal */}
-      {generatedPassword && (
-        <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setGeneratedPassword(null); }}>
-          <div className="admin-modal" style={{ maxWidth: '450px' }}>
-            <div className="admin-modal-header" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ background: '#e6f4ea', color: '#137333', padding: '8px', borderRadius: '50%' }}>
-                  <CheckCircle size={24} />
-                </div>
-                <h2 className="admin-modal-title" style={{ margin: 0, fontSize: '1.25rem', color: '#202124' }}>Registration Successful</h2>
-              </div>
-              <button className="admin-modal-close" onClick={() => setGeneratedPassword(null)}><X size={20} /></button>
-            </div>
-            <div className="admin-modal-body" style={{ padding: '0 20px 20px' }}>
-              <p style={{ fontSize: '14px', color: '#5f6368', marginBottom: '20px', lineHeight: '1.5' }}>
-                <strong>{generatedPassword.name}</strong> has been registered as {generatedPassword.role}. A temporary password has been generated for their first login.
-              </p>
-              
-              <div style={{ background: '#f8f9fa', border: '1px solid #dadce0', borderRadius: '8px', padding: '16px' }}>
-                <div style={{ fontSize: '12px', color: '#5f6368', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>
-                  Temporary Password
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', border: '1px solid #e8eaed', padding: '10px 14px', borderRadius: '6px' }}>
-                  <code style={{ fontSize: '18px', fontWeight: 'bold', color: '#1a73e8', letterSpacing: '1px' }}>
-                    {generatedPassword.password}
-                  </code>
-                  <button 
-                    onClick={handleCopyPassword}
-                    style={{ background: '#f1f3f4', border: 'none', color: '#5f6368', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', transition: 'all 0.2s' }}
-                    onMouseOver={(e) => {e.currentTarget.style.background = '#e8eaed'; e.currentTarget.style.color = '#202124';}}
-                    onMouseOut={(e) => {e.currentTarget.style.background = '#f1f3f4'; e.currentTarget.style.color = '#5f6368';}}
-                  >
-                    <Copy size={16} /> Copy
+        <div>
+          <h2 className="admin-section-title"><Archive size={20} /> Archive</h2>
+          <div className="admin-table-card archive-card" style={{ marginBottom: '18px' }}>
+            <div className="archive-actions-row">
+              <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('faculty', 'csv')} style={{ padding: '8px 12px', fontSize: '12px' }}>
+                <Download size={14} /> Faculty CSV
+              </button>
+              <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('faculty', 'xlsx')} style={{ padding: '8px 12px', fontSize: '12px' }}>
+                <Download size={14} /> Faculty Excel
+              </button>
+              {(user?.role === 'dofa' || user?.role === 'dofa_office' || user?.role === 'admin') && (
+                <>
+                  <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('department', 'csv')} style={{ padding: '8px 12px', fontSize: '12px' }}>
+                    <Download size={14} /> Department CSV
                   </button>
-                </div>
-                <p style={{ fontSize: '12px', color: '#80868b', marginTop: '12px', marginBottom: 0 }}>
-                  Please securely share this password to {generatedPassword.email} if the automated email fails to deliver.
-                </p>
-              </div>
+                  <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('department', 'xlsx')} style={{ padding: '8px 12px', fontSize: '12px' }}>
+                    <Download size={14} /> Department Excel
+                  </button>
+                </>
+              )}
             </div>
-            <div className="admin-modal-footer" style={{ padding: '16px 20px', borderTop: '1px solid #f1f3f4', display: 'flex', justifyContent: 'flex-end' }}>
-              <button className="admin-btn-submit" onClick={() => setGeneratedPassword(null)}>Done</button>
-            </div>
+
+            {archiveLoading ? (
+              <div className="admin-empty">Loading archive...</div>
+            ) : (
+              <>
+                <h3 className="archive-group-title">Archived Faculty</h3>
+                {archiveData.faculty?.length ? (
+                  <table className="admin-table archive-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Department</th>
+                        <th>Archived At</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {archiveData.faculty.map(f => (
+                        <tr key={`arch-f-${f.id}`}>
+                          <td>{f.name}</td>
+                          <td>{f.email}</td>
+                          <td>{f.department_name || f.department || '—'}</td>
+                          <td>{formatDate(f.archived_at)}</td>
+                          <td>
+                            <button className="admin-btn-submit" onClick={() => handleRestoreFaculty(f)} style={{ padding: '6px 10px', fontSize: '12px' }}>
+                              <RotateCcw size={12} /> Restore
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : <div className="admin-empty" style={{ marginBottom: '14px' }}>No faculty in archive.</div>}
+
+                {(user?.role === 'dofa' || user?.role === 'dofa_office' || user?.role === 'admin') && (
+                  <>
+                    <h3 className="archive-group-title">Archived Departments</h3>
+                    {archiveData.departments?.length ? (
+                      <table className="admin-table archive-table">
+                        <thead>
+                          <tr>
+                            <th>Department</th>
+                            <th>Code</th>
+                            <th>Faculty Count</th>
+                            <th>Archived At</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {archiveData.departments.map(d => (
+                            <tr key={`arch-d-${d.id}`}>
+                              <td>{d.name}</td>
+                              <td>{d.code}</td>
+                              <td>{d.faculty_count || 0}</td>
+                              <td>{formatDate(d.archived_at)}</td>
+                              <td>
+                                <button className="admin-btn-submit" onClick={() => handleRestoreDepartment(d)} style={{ padding: '6px 10px', fontSize: '12px' }}>
+                                  <RotateCcw size={12} /> Restore
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : <div className="admin-empty">No departments in archive.</div>}
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
-      )}
+      </main>
 
-      {/* Department Registration Modal */}
+      {/* ── Department Registration Modal ── */}
       {deptModal && (
         <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setDeptModal(false); }}>
           <div className="admin-modal">
@@ -369,7 +596,7 @@ const DOFARegistration = () => {
                   <input className="admin-form-input" type="email" placeholder="hod@lnmiit.ac.in" value={deptForm.hod_email}
                     onChange={e => setDeptForm(p => ({ ...p, hod_email: e.target.value }))} />
                   <p style={{ fontSize: '12px', color: '#718096', margin: '5px 0 0' }}>
-                    HOD will receive an email to set up their password.
+                    HOD will receive an email with a temporary password.
                   </p>
                 </div>
               </div>
@@ -385,7 +612,7 @@ const DOFARegistration = () => {
         </div>
       )}
 
-      {/* Faculty Registration Modal */}
+      {/* ── Faculty Registration Modal ── */}
       {facultyModal && (
         <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setFacultyModal(false); }}>
           <div className="admin-modal">
@@ -460,7 +687,7 @@ const DOFARegistration = () => {
                 </div>
 
                 <p style={{ fontSize: '12px', color: '#718096', margin: '4px 0 0' }}>
-                  Faculty will receive a welcome email with a link to set their password.
+                  Faculty will receive a welcome email with a temporary password.
                 </p>
               </div>
               <div className="admin-modal-footer">
@@ -474,6 +701,177 @@ const DOFARegistration = () => {
           </div>
         </div>
       )}
+
+      {/* ── Bulk Invite Modal ── */}
+      {bulkModal && (
+        <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setBulkModal(false); } }}>
+          <div className="admin-modal" style={{ maxWidth: '560px' }}>
+            <div className="admin-modal-header">
+              <h2 className="admin-modal-title">Bulk Email Invite</h2>
+              <button className="admin-modal-close" onClick={() => setBulkModal(false)}><X size={16} /></button>
+            </div>
+            <div className="admin-modal-body">
+
+              {/* Role toggle */}
+              <div className="admin-form-field">
+                <label className="admin-form-label">Invite as</label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {[{ value: 'faculty', label: '👨‍🏫 Faculty' }, { value: 'hod', label: '🏢 HOD' }].map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setBulkRole(opt.value)}
+                      style={{
+                        flex: 1, padding: '10px', borderRadius: '8px',
+                        border: `2px solid ${bulkRole === opt.value ? '#2c5282' : '#e2e8f0'}`,
+                        background: bulkRole === opt.value ? '#ebf4ff' : '#f8fafc',
+                        color: bulkRole === opt.value ? '#2c5282' : '#4a5568',
+                        fontWeight: bulkRole === opt.value ? '600' : '400',
+                        fontSize: '14px', cursor: 'pointer', transition: 'all 0.15s',
+                        fontFamily: 'Inter, sans-serif'
+                      }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Email textarea */}
+              <div className="admin-form-field">
+                <label className="admin-form-label">
+                  {bulkRole === 'faculty' ? 'Faculty' : 'HOD'} Emails <span>*</span>
+                </label>
+                <textarea
+                  className="admin-form-input"
+                  rows={6}
+                  placeholder={`Enter emails separated by commas or new lines:\ne.g.\njohn.doe@lnmiit.ac.in\njane.smith@lnmiit.ac.in, raj.kumar@lnmiit.ac.in`}
+                  value={bulkEmails}
+                  onChange={e => setBulkEmails(e.target.value)}
+                  style={{ resize: 'vertical', lineHeight: '1.5', fontFamily: 'monospace, sans-serif', fontSize: '13px' }}
+                />
+                <p style={{ fontSize: '12px', color: '#718096', margin: '6px 0 0' }}>
+                  Each recipient will receive a temporary password via email. They'll complete their profile on first login.
+                </p>
+              </div>
+
+              {/* Results */}
+              {bulkResults && (
+                <div style={{ marginTop: '4px' }}>
+                  <div style={{
+                    padding: '10px 14px', background: '#f0fff4', border: '1px solid #c6f6d5',
+                    borderRadius: '8px', fontSize: '13px', color: '#276749', marginBottom: '12px', fontWeight: '500'
+                  }}>
+                    ✅ {bulkResults.message}
+                  </div>
+                  <div style={{ maxHeight: '180px', overflowY: 'auto', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    {bulkResults.results.map((r, i) => (
+                      <div key={i} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '8px 14px', borderBottom: i < bulkResults.results.length - 1 ? '1px solid #f0f4f8' : 'none',
+                        fontSize: '13px'
+                      }}>
+                        <span style={{ color: '#2d3748', fontFamily: 'monospace', fontSize: '12px' }}>{r.email}</span>
+                        <span style={{
+                          padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600',
+                          background: statusBg(r.status), color: statusColor(r.status)
+                        }}>
+                          {r.status === 'sent' ? '✓ Sent' :
+                           r.status === 'sent_no_email' ? '⚠ Created' :
+                           r.status === 'skipped' ? '↩ Exists' :
+                           r.status === 'invalid' ? '✗ Invalid' : '✗ Failed'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="admin-modal-footer">
+              <button type="button" className="admin-btn-cancel" onClick={() => setBulkModal(false)}>Close</button>
+              {!bulkResults && (
+                <button
+                  type="button"
+                  className="admin-btn-submit"
+                  disabled={bulkSubmitting || !bulkEmails.trim()}
+                  onClick={handleBulkInvite}
+                  style={{ background: 'linear-gradient(135deg, #276749, #38a169)' }}
+                >
+                  {bulkSubmitting ? (
+                    <><Loader size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Sending...</>
+                  ) : (
+                    <><Send size={14} /> Send Invites</>
+                  )}
+                </button>
+              )}
+              {bulkResults && (
+                <button
+                  type="button"
+                  className="admin-btn-submit"
+                  onClick={() => { setBulkResults(null); setBulkEmails(''); }}
+                  style={{ background: 'linear-gradient(135deg, #1e3a5f, #2c5282)' }}
+                >
+                  Send More
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historyModal.open && (
+        <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setHistoryModal({ open: false, faculty: null, submissions: [], loading: false }); }}>
+          <div className="admin-modal" style={{ maxWidth: '760px' }}>
+            <div className="admin-modal-header">
+              <h2 className="admin-modal-title">Submission History: {historyModal.faculty?.name}</h2>
+              <button className="admin-modal-close" onClick={() => setHistoryModal({ open: false, faculty: null, submissions: [], loading: false })}><X size={16} /></button>
+            </div>
+            <div className="admin-modal-body">
+              {historyModal.loading ? (
+                <div className="admin-empty">Loading submission history...</div>
+              ) : historyModal.submissions.length === 0 ? (
+                <div className="admin-empty">No submissions found for this faculty member.</div>
+              ) : (
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Academic Year</th>
+                      <th>Calendar Year</th>
+                      <th>Form</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyModal.submissions.map(s => (
+                      <tr key={s.id}>
+                        <td>{s.academic_year}</td>
+                        <td>{s.calendar_year || '—'}</td>
+                        <td>{s.form_type}</td>
+                        <td>{s.status}</td>
+                        <td>
+                          <a className="admin-btn-submit" style={{ padding: '6px 10px', fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }} href={`${API_BASE}/submissions/${s.id}`} target="_blank" rel="noreferrer">
+                            <Eye size={12} /> View Saved Form
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="admin-modal-footer">
+              <button type="button" className="admin-btn-cancel" onClick={() => setHistoryModal({ open: false, faculty: null, submissions: [], loading: false })}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .admin-action-card.bulk::before { background: linear-gradient(90deg, #276749, #38a169); }
+        .admin-action-card.bulk .admin-action-icon { background: #f0fff4; color: #276749; }
+        .bulk-btn { background: #276749; color: #fff; }
+      `}</style>
     </div>
   );
 };
