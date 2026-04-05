@@ -16,6 +16,10 @@ router.get('/stats', submissionsController.getSubmissionStats);
 // Export bulk excel 
 router.get('/export/excel/:academic_year', authenticate, submissionsController.exportComprehensiveExcel);
 
+// Submission version history
+router.get('/:id/versions', authenticate, submissionsController.getSubmissionVersions);
+router.get('/:id/versions/:versionNumber', authenticate, submissionsController.getSubmissionVersionByNumber);
+
 // Get submission by ID
 router.get('/:id', authenticate, submissionsController.getSubmissionById);
 

@@ -19,6 +19,35 @@ import PartB from './PartB';
 
 const API = `http://${window.location.hostname}:5000/api`;
 
+const COMMENT_SECTIONS = [
+  { key: 'faculty_info', label: 'Faculty Information' },
+  { key: 'courses_taught', label: 'Teaching & Projects' },
+  { key: 'research_publications', label: 'Research Publications' },
+  { key: 'research_grants', label: 'Research, Grants & Reviews' },
+  { key: 'patents', label: 'Events, Patents & Awards' },
+  { key: 'consultancy', label: 'Consultancy' },
+  { key: 'teaching_innovation', label: 'Innovation & Contributions' },
+  { key: 'continuing_education', label: 'Additional' },
+  { key: 'part_b', label: 'Part B' }
+];
+
+const TAB_TO_SECTION_KEY = {
+  faculty: 'faculty_info',
+  teaching: 'courses_taught',
+  publications: 'research_publications',
+  research: 'research_grants',
+  events: 'patents',
+  consultancy: 'consultancy',
+  innovation: 'teaching_innovation',
+  additional: 'continuing_education',
+  partb: 'part_b'
+};
+
+const SECTION_KEY_TO_LABEL = COMMENT_SECTIONS.reduce((acc, item) => {
+  acc[item.key] = item.label;
+  return acc;
+}, {});
+
 /* ── Collapsible Section ─────────────────────────────────── */
 const CollapsibleSection = ({ title, count, children, defaultOpen = false, icon }) => {
   const [open, setOpen] = useState(defaultOpen);
@@ -128,11 +157,21 @@ const DOFAReview = () => {
   const [comment, setComment] = useState('');
   const [activeTab, setActiveTab] = useState('faculty');
   const [expandedPubs, setExpandedPubs] = useState({});
+  const [comments, setComments] = useState([]);
+  const [commentView, setCommentView] = useState('pending');
+  const [selectedCommentSection, setSelectedCommentSection] = useState('faculty_info');
+  const [submissionVersions, setSubmissionVersions] = useState([]);
+  const [selectedVersionNumber, setSelectedVersionNumber] = useState(null);
+  const [selectedVersionSnapshot, setSelectedVersionSnapshot] = useState(null);
+  const [versionLoading, setVersionLoading] = useState(false);
 
   const toLabel = (key) =>
     String(key || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   useEffect(() => { fetchSubmissionDetails(); }, [id]);
+  useEffect(() => {
+    setSelectedCommentSection(TAB_TO_SECTION_KEY[activeTab] || 'faculty_info');
+  }, [activeTab]);
 
   const fetchSubmissionDetails = async () => {
     try {
@@ -141,12 +180,63 @@ const DOFAReview = () => {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
       });
       const data = await response.json();
-      if (data.success) setSubmissionData(data.data);
+      if (data.success) {
+        setSubmissionData(data.data);
+        setComments(Array.isArray(data.data?.comments) ? data.data.comments : []);
+      }
+
+      const versionsRes = await fetch(`${API}/submissions/${id}/versions`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      const versionsData = await versionsRes.json();
+      if (versionsData.success) {
+        setSubmissionVersions(Array.isArray(versionsData.data) ? versionsData.data : []);
+      }
     } catch (error) {
       console.error('Error fetching submission:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewVersion = async (versionNumber) => {
+    if (versionLoading) return;
+    if (selectedVersionNumber === versionNumber) {
+      setSelectedVersionNumber(null);
+      setSelectedVersionSnapshot(null);
+      return;
+    }
+
+    try {
+      setVersionLoading(true);
+      const response = await fetch(`${API}/submissions/${id}/versions/${versionNumber}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      const data = await response.json();
+      if (data.success && data.data?.snapshot) {
+        setSelectedVersionNumber(Number(versionNumber));
+        setSelectedVersionSnapshot(data.data.snapshot);
+      }
+    } catch (error) {
+      console.error('Error loading submission version:', error);
+      alert('Failed to load selected version.');
+    } finally {
+      setVersionLoading(false);
+    }
+  };
+
+  const clearVersionView = () => {
+    setSelectedVersionNumber(null);
+    setSelectedVersionSnapshot(null);
+  };
+
+  const handleVersionSelect = async (event) => {
+    const value = String(event.target.value || '').trim();
+    if (!value) {
+      clearVersionView();
+      return;
+    }
+    await handleViewVersion(Number(value));
   };
 
   const handleApprove = async () => {
@@ -170,17 +260,33 @@ const DOFAReview = () => {
   };
 
   const handleSendBack = async () => {
-    if (!comment.trim()) { alert('Please provide a comment before sending back'); return; }
+    const hasDraftComment = Boolean(comment.trim());
+    const hasExistingPendingComment = comments.some((c) => Number(c.is_resolved) !== 1);
+    if (!hasDraftComment && !hasExistingPendingComment) {
+      alert('Please add at least one comment before sending back');
+      return;
+    }
     if (!window.confirm('Are you sure you want to send back this submission?')) return;
+    const sectionKey = selectedCommentSection || TAB_TO_SECTION_KEY[activeTab] || 'faculty_info';
+    const sectionName = SECTION_KEY_TO_LABEL[sectionKey] || 'General';
     try {
-      await fetch(`${API}/review/comment`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        },
-        body: JSON.stringify({ submission_id: id, reviewer_id: 1, reviewer_role: 'dofa', comment })
-      });
+      if (hasDraftComment) {
+        await fetch(`${API}/review/comment`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          },
+          body: JSON.stringify({
+            submission_id: id,
+            reviewer_id: 1,
+            reviewer_role: 'dofa',
+            section_name: sectionName,
+            section_key: sectionKey,
+            comment
+          })
+        });
+      }
       const statusRes = await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
         headers: {
@@ -190,7 +296,11 @@ const DOFAReview = () => {
         body: JSON.stringify({ status: 'sent_back' })
       });
       const statusData = await statusRes.json();
-      if (statusData.success) { alert('Submission sent back successfully'); navigate(backPath); }
+      if (statusData.success) {
+        setComment('');
+        alert('Submission sent back successfully');
+        navigate(backPath);
+      }
       else alert(`Error: ${statusData.message || 'Failed to send back submission'}`);
     } catch (error) {
       console.error('Error sending back submission:', error);
@@ -200,6 +310,8 @@ const DOFAReview = () => {
 
   const handleAddComment = async () => {
     if (!comment.trim()) { alert('Please enter a comment'); return; }
+    const sectionKey = selectedCommentSection || TAB_TO_SECTION_KEY[activeTab] || 'faculty_info';
+    const sectionName = SECTION_KEY_TO_LABEL[sectionKey] || 'General';
     try {
       const res = await fetch(`${API}/review/comment`, {
         method: 'POST',
@@ -207,7 +319,14 @@ const DOFAReview = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
-        body: JSON.stringify({ submission_id: id, reviewer_id: 1, reviewer_role: 'dofa', comment })
+        body: JSON.stringify({
+          submission_id: id,
+          reviewer_id: 1,
+          reviewer_role: 'dofa',
+          section_name: sectionName,
+          section_key: sectionKey,
+          comment
+        })
       });
       const data = await res.json();
       if (data.success) { setComment(''); fetchSubmissionDetails(); alert('Comment added successfully'); }
@@ -221,13 +340,18 @@ const DOFAReview = () => {
   if (loading) return <div className="dofa-review"><div className="loading-state">Loading submission…</div></div>;
   if (!submissionData) return <div className="dofa-review"><div className="empty-state">Submission not found</div></div>;
 
+  const displayData = selectedVersionSnapshot || submissionData;
+
   const {
     submission, facultyInfo, courses, publications, grants, patents,
     awards, newCourses, proposals, paperReviews, techTransfer,
     conferenceSessions, keynotesTalks, consultancy, teachingInnovation,
     institutionalContributions, courseware, continuingEducation,
-    otherActivities, researchPlan, teachingPlan, goals, comments
-  } = submissionData;
+    otherActivities, researchPlan, teachingPlan, goals
+  } = displayData;
+
+  const pendingComments = comments.filter((c) => Number(c.is_resolved) !== 1);
+  const resolvedComments = comments.filter((c) => Number(c.is_resolved) === 1);
 
   /* ── Helpers ── */
   const renderFileLink = (filename) => {
@@ -368,6 +492,20 @@ const DOFAReview = () => {
       <div className="review-content">
         <div className="content-main">
 
+          {selectedVersionNumber && (
+            <div className="section-card" style={{ marginBottom: '0.75rem', border: '1px solid #bfdbfe', background: '#eff6ff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+                <div>
+                  <h3 className="section-title" style={{ marginBottom: '0.25rem' }}>Viewing Snapshot v{selectedVersionNumber}</h3>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#1e3a8a' }}>
+                    Review actions are disabled while viewing historical submission data.
+                  </p>
+                </div>
+                <button className="btn btn-secondary" onClick={clearVersionView}>Return to Latest</button>
+              </div>
+            </div>
+          )}
+
           {/* Faculty Information */}
           {activeTab === 'faculty' && (
             <div className="section-card">
@@ -387,6 +525,20 @@ const DOFAReview = () => {
               <div className="mirror-component-wrapper">
                 <CoursesTaught initialData={{ courses, newCourses }} readOnly={true} />
               </div>
+
+              <CollapsibleSection title="Courseware &amp; Course Material" defaultOpen={false}>
+                <div style={{ padding: '0.75rem 1rem' }}>
+                  {renderInfoGrid(courseware, ['type', 'courseware', 'link', 'labManualFile'])}
+                </div>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Teaching-learning Innovation" defaultOpen={false}>
+                <div style={{ padding: '0.75rem 1rem' }}>
+                  <div className="mirror-component-wrapper">
+                    <TeachingInnovation initialData={teachingInnovation} readOnly={true} />
+                  </div>
+                </div>
+              </CollapsibleSection>
             </div>
           )}
 
@@ -713,50 +865,136 @@ const DOFAReview = () => {
 
             <div className="action-section">
               <label>Comment</label>
+              <select
+                className="comment-textarea"
+                style={{ marginBottom: '0.5rem', minHeight: '2.4rem' }}
+                value={selectedCommentSection}
+                onChange={(e) => setSelectedCommentSection(e.target.value)}
+                disabled={Boolean(selectedVersionNumber)}
+              >
+                {COMMENT_SECTIONS.map((section) => (
+                  <option key={section.key} value={section.key}>{section.label}</option>
+                ))}
+              </select>
               <textarea
                 className="comment-textarea"
                 placeholder="Enter your review comments…"
                 value={comment}
                 onChange={e => setComment(e.target.value)}
                 rows="4"
+                disabled={Boolean(selectedVersionNumber)}
               />
-              <button className="btn btn-secondary" style={{ width: '100%' }} onClick={handleAddComment}>
+              <button className="btn btn-secondary" style={{ width: '100%' }} onClick={handleAddComment} disabled={Boolean(selectedVersionNumber)}>
                 Add Comment
               </button>
             </div>
 
             <div className="action-buttons-group">
-              <button className="btn btn-success" onClick={handleApprove}>
+              <button className="btn btn-success" onClick={handleApprove} disabled={Boolean(selectedVersionNumber)}>
                 <CheckCircle size={15} /> Approve
               </button>
-              <button className="btn btn-danger" onClick={handleSendBack}>
+              <button className="btn btn-danger" onClick={handleSendBack} disabled={Boolean(selectedVersionNumber)}>
                 <XCircle size={15} /> Send Back
               </button>
             </div>
+          </div>
+
+          <div className="comments-card">
+            <h3 className="card-title">
+              Submission Versions
+              {submissionVersions.length > 0 && (
+                <span className="table-count-badge" style={{ marginLeft: 'auto' }}>{submissionVersions.length}</span>
+              )}
+            </h3>
+            {submissionVersions.length > 0 ? (
+              <div>
+                <select
+                  className="comment-textarea"
+                  style={{ minHeight: '2.4rem' }}
+                  value={selectedVersionNumber ? String(selectedVersionNumber) : ''}
+                  onChange={handleVersionSelect}
+                  disabled={versionLoading}
+                >
+                  <option value="">Latest Submission (default)</option>
+                  {submissionVersions.map((version) => (
+                    <option key={version.id || version.version_number} value={version.version_number}>
+                      v{version.version_number} - {new Date(version.created_at).toLocaleString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </option>
+                  ))}
+                </select>
+
+                {selectedVersionNumber && (
+                  <p className="comment-text" style={{ marginTop: '0.5rem' }}>
+                    Viewing v{selectedVersionNumber}. Select "Latest Submission" to exit snapshot view.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="no-comments">No submission versions yet</p>
+            )}
           </div>
 
           {/* Comments History */}
           <div className="comments-card">
             <h3 className="card-title">
               Comments
-              {comments?.length > 0 && (
+              {comments.length > 0 && (
                 <span className="table-count-badge" style={{ marginLeft: 'auto' }}>{comments.length}</span>
               )}
             </h3>
-            {comments && comments.length > 0 ? (
-              <div className="comments-list">
-                {comments.map((c, i) => (
-                  <div key={i} className="comment-item">
-                    <div className="comment-header">
-                      <span className="reviewer-name">{c.reviewer_name || 'Reviewer'}</span>
-                      <span className="comment-date">{new Date(c.created_at).toLocaleDateString()}</span>
-                    </div>
-                    <p className="comment-text">{c.comment}</p>
-                  </div>
-                ))}
+            {comments.length > 0 && (
+              <div className="comment-view-tabs" role="tablist" aria-label="Comment status filters">
+                <button type="button" className={`comment-view-tab ${commentView === 'pending' ? 'active' : ''}`} onClick={() => setCommentView('pending')}>
+                  Pending <span>{pendingComments.length}</span>
+                </button>
+                <button type="button" className={`comment-view-tab ${commentView === 'resolved' ? 'active' : ''}`} onClick={() => setCommentView('resolved')}>
+                  Resolved <span>{resolvedComments.length}</span>
+                </button>
               </div>
+            )}
+            {commentView === 'pending' ? (
+              pendingComments.length > 0 ? (
+                <div className="comments-list">
+                  {pendingComments.map((c, i) => (
+                    <div key={`pending-${i}-${c.id || ''}`} className="comment-item">
+                      <div className="comment-header">
+                        <span className="reviewer-name">{c.reviewer_name || 'Reviewer'}</span>
+                        <span className="comment-date">{new Date(c.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div className="comment-section-row">
+                        <span className="comment-section-badge">{c.section_name || 'General'}</span>
+                      </div>
+                      <p className="comment-text">{c.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="no-comments">No pending comments</p>
             ) : (
-              <p className="no-comments">No comments yet</p>
+              resolvedComments.length > 0 ? (
+                <div className="comments-list">
+                  {resolvedComments.map((c, i) => (
+                    <div key={`resolved-${i}-${c.id || ''}`} className="comment-item resolved">
+                      <div className="comment-header">
+                        <span className="reviewer-name">{c.reviewer_name || 'Reviewer'}</span>
+                        <span className="comment-date">{new Date(c.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div className="comment-section-row">
+                        <span className="comment-section-badge">{c.section_name || 'General'}</span>
+                        <span className="comment-resolved-badge">
+                          Resolved{c.resolved_in_version ? ` in v${c.resolved_in_version}` : ''}
+                        </span>
+                      </div>
+                      <p className="comment-text">{c.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="no-comments">No resolved comments</p>
             )}
           </div>
         </div>

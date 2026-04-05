@@ -47,6 +47,209 @@ function getCurrentAcademicYear() {
   }
 }
 
+const TEACHING_SECTION_KEYS = ['courses_taught', 'new_courses', 'courseware', 'teaching_innovation'];
+
+const COMMENT_SECTION_LABEL_TO_KEYS = {
+  'Faculty Information': ['faculty_info'],
+  'Teaching & Projects': TEACHING_SECTION_KEYS,
+  'Research Publications': ['research_publications'],
+  'Research, Grants & Reviews': ['research_grants', 'paper_review', 'submitted_proposals'],
+  'Events, Patents & Awards': ['patents', 'awards_honours', 'conference_sessions', 'keynotes_talks', 'technology_transfer'],
+  'Consultancy': ['consultancy'],
+  'Innovation & Contributions': ['teaching_innovation', 'institutional_contributions'],
+  'Additional': ['continuing_education', 'other_activities', 'research_plan', 'teaching_plan', 'courseware'],
+  'Part B': ['part_b']
+};
+
+const normalizeCommentSectionKey = (comment = {}) => {
+  const rawKey = String(comment.section_key || '').trim().toLowerCase();
+  if (rawKey === 'courses_taught') return [...TEACHING_SECTION_KEYS];
+  if (rawKey) return [rawKey];
+
+  const bySectionName = COMMENT_SECTION_LABEL_TO_KEYS[String(comment.section_name || '').trim()];
+  if (Array.isArray(bySectionName) && bySectionName.length > 0) return bySectionName;
+
+  return ['general'];
+};
+
+const coerceSnapshotData = (data) => {
+  if (!data || typeof data !== 'object') return {};
+  return {
+    submission: data.submission || {},
+    facultyInfo: data.facultyInfo || {},
+    courses: Array.isArray(data.courses) ? data.courses : [],
+    publications: Array.isArray(data.publications) ? data.publications : [],
+    grants: Array.isArray(data.grants) ? data.grants : [],
+    patents: Array.isArray(data.patents) ? data.patents : [],
+    awards: Array.isArray(data.awards) ? data.awards : [],
+    newCourses: Array.isArray(data.newCourses) ? data.newCourses : [],
+    proposals: Array.isArray(data.proposals) ? data.proposals : [],
+    paperReviews: Array.isArray(data.paperReviews) ? data.paperReviews : [],
+    techTransfer: Array.isArray(data.techTransfer) ? data.techTransfer : [],
+    conferenceSessions: Array.isArray(data.conferenceSessions) ? data.conferenceSessions : [],
+    keynotesTalks: Array.isArray(data.keynotesTalks) ? data.keynotesTalks : [],
+    consultancy: Array.isArray(data.consultancy) ? data.consultancy : [],
+    teachingInnovation: Array.isArray(data.teachingInnovation) ? data.teachingInnovation : [],
+    institutionalContributions: Array.isArray(data.institutionalContributions) ? data.institutionalContributions : [],
+    goals: Array.isArray(data.goals) ? data.goals : [],
+    courseware: data.courseware || null,
+    continuingEducation: data.continuingEducation || null,
+    otherActivities: data.otherActivities || null,
+    researchPlan: data.researchPlan || null,
+    teachingPlan: data.teachingPlan || null,
+    comments: Array.isArray(data.comments) ? data.comments : []
+  };
+};
+
+const buildSubmissionSnapshotPayload = async (submissionId) => {
+  const [submission] = await db.query(`
+    SELECT s.*, u.name as faculty_name, u.department, u.email, u.designation,
+           a.name as approved_by_name
+    FROM submissions s
+    JOIN users u ON s.faculty_id = u.id
+    LEFT JOIN users a ON s.approved_by = a.id
+    WHERE s.id = ?
+  `, [submissionId]);
+
+  if (submission.length === 0) {
+    throw new Error('Submission not found for snapshot creation.');
+  }
+
+  const sub = submission[0];
+  const user_id = sub.faculty_id;
+  const academicYear = sub.academic_year;
+  const resolvedFacultyInfoId = await resolveFacultyInfoId({
+    facultyId: sub.faculty_id,
+    email: sub.email
+  });
+  const fid = resolvedFacultyInfoId || Number(user_id) || null;
+  const yearNum = academicYear.split('-')[0];
+
+  const [
+    facultyInfo,
+    courses,
+    publications,
+    grants,
+    patents,
+    awards,
+    newCourses,
+    proposals,
+    paperReviews,
+    techTransfer,
+    conferenceSessions,
+    keynotesTalks,
+    consultancy,
+    teachingInnovation,
+    institutionalContributions,
+    goals,
+    comments,
+    courseware,
+    continuingEducation,
+    otherActivities,
+    researchPlan,
+    teachingPlan
+  ] = await Promise.all([
+    db.query('SELECT * FROM faculty_information WHERE id = ?', [fid]),
+    db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM research_publications WHERE faculty_id = ? AND year_of_publication >= ?', [fid, yearNum]),
+    db.query('SELECT * FROM research_grants WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM patents WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM awards_honours WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM new_courses WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM submitted_proposals WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM paper_reviews WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM technology_transfer WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM conference_sessions WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM keynotes_talks WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM consultancy WHERE faculty_id = ? AND year >= ?', [fid, yearNum]),
+    db.query('SELECT * FROM teaching_innovation WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM institutional_contributions WHERE faculty_id = ?', [fid]),
+    db.query('SELECT * FROM faculty_goals WHERE faculty_id = ?', [fid]),
+    db.query(`
+      SELECT rc.*, COALESCE(NULLIF(rc.section_name, ''), 'General') as section_name,
+             NULLIF(rc.section_key, '') as section_key, u.name as reviewer_name, u.designation
+      FROM review_comments rc
+      LEFT JOIN users u ON rc.reviewer_id = u.id
+      WHERE rc.submission_id = ?
+      ORDER BY rc.created_at DESC
+    `, [submissionId]),
+    fetchLegacySectionContent(user_id, academicYear, 'courseware'),
+    fetchLegacySectionContent(user_id, academicYear, 'continuing_education'),
+    fetchLegacySectionContent(user_id, academicYear, 'other_activities'),
+    fetchLegacySectionContent(user_id, academicYear, 'research_plan'),
+    fetchLegacySectionContent(user_id, academicYear, 'teaching_plan')
+  ]);
+
+  return {
+    submission: sub,
+    facultyInfo: facultyInfo[0][0] || {},
+    courses: courses[0] || [],
+    publications: publications[0] || [],
+    grants: grants[0] || [],
+    patents: patents[0] || [],
+    awards: awards[0] || [],
+    newCourses: newCourses[0] || [],
+    proposals: proposals[0] || [],
+    paperReviews: paperReviews[0] || [],
+    techTransfer: techTransfer[0] || [],
+    conferenceSessions: conferenceSessions[0] || [],
+    keynotesTalks: keynotesTalks[0] || [],
+    consultancy: consultancy[0] || [],
+    teachingInnovation: teachingInnovation[0] || [],
+    institutionalContributions: institutionalContributions[0] || [],
+    goals: goals[0] || [],
+    courseware: courseware || null,
+    continuingEducation: continuingEducation || null,
+    otherActivities: otherActivities || null,
+    researchPlan: researchPlan || null,
+    teachingPlan: teachingPlan || null,
+    comments: comments[0] || []
+  };
+};
+
+const ensureSubmissionVersionsTable = async () => {
+  const [tables] = await db.query("SHOW TABLES LIKE 'submission_versions'");
+  if (tables.length === 0) {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS submission_versions (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        submission_id INT NOT NULL,
+        version_number INT NOT NULL,
+        snapshot_data LONGTEXT NOT NULL,
+        snapshot_note VARCHAR(255) NULL,
+        created_by INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_submission_version (submission_id, version_number),
+        KEY idx_submission_versions_submission (submission_id),
+        CONSTRAINT fk_submission_versions_submission FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
+        CONSTRAINT fk_submission_versions_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+  }
+};
+
+const createSubmissionSnapshot = async ({ submissionId, createdBy = null, note = null }) => {
+  await ensureSubmissionVersionsTable();
+
+  const snapshotPayload = await buildSubmissionSnapshotPayload(submissionId);
+  const snapshotData = JSON.stringify(snapshotPayload);
+
+  const [latestVersionRows] = await db.query(
+    'SELECT COALESCE(MAX(version_number), 0) AS currentVersion FROM submission_versions WHERE submission_id = ?',
+    [submissionId]
+  );
+  const nextVersion = Number(latestVersionRows[0]?.currentVersion || 0) + 1;
+
+  await db.query(
+    `INSERT INTO submission_versions
+      (submission_id, version_number, snapshot_data, snapshot_note, created_by)
+     VALUES (?, ?, ?, ?, ?)`,
+    [submissionId, nextVersion, snapshotData, note || null, createdBy || null]
+  );
+
+  return nextVersion;
+};
+
 async function fetchLegacySectionContent(facultyId, academicYear, sectionKey) {
   const [rows] = await db.query(
     `SELECT content_json
@@ -337,6 +540,21 @@ exports.updateSubmissionStatus = async (req, res) => {
     // Trigger auto-allocation if status is 'submitted'
     if (status === 'submitted') {
       try {
+        const nextVersion = await createSubmissionSnapshot({
+          submissionId: Number(id),
+          createdBy: req.user?.id || null,
+          note: submission.status === 'sent_back' ? 'Faculty re-submission after DOFA review' : 'Faculty submission'
+        });
+
+        await db.query(
+          `UPDATE review_comments
+           SET is_resolved = 1,
+               resolved_at = CURRENT_TIMESTAMP,
+               resolved_in_version = ?
+           WHERE submission_id = ? AND is_resolved = 0`,
+          [nextVersion, Number(id)]
+        );
+
         // Get faculty_id and academic_year for the submission
         const [subDetails] = await db.query('SELECT faculty_id, academic_year FROM submissions WHERE id = ?', [id]);
         if (subDetails.length > 0) {
@@ -348,7 +566,117 @@ exports.updateSubmissionStatus = async (req, res) => {
       }
     }
 
+    if (status === 'sent_back') {
+      try {
+        const [facultyRows] = await db.query(
+          `SELECT s.academic_year, u.name AS faculty_name, u.email
+           FROM submissions s
+           JOIN users u ON u.id = s.faculty_id
+           WHERE s.id = ?
+           LIMIT 1`,
+          [id]
+        );
+
+        if (facultyRows.length > 0) {
+          const faculty = facultyRows[0];
+          const [commentsRows] = await db.query(
+            `SELECT section_name, section_key, comment, created_at
+             FROM review_comments
+             WHERE submission_id = ?
+             ORDER BY created_at DESC`,
+            [id]
+          );
+
+          const latestBySection = new Map();
+          commentsRows.forEach((item) => {
+            const keys = normalizeCommentSectionKey(item);
+            keys.forEach((key) => {
+              if (!latestBySection.has(key)) {
+                latestBySection.set(key, {
+                  section_name: item.section_name || 'General',
+                  section_key: key,
+                  comment: item.comment || ''
+                });
+              }
+            });
+          });
+
+          await emailService.sendSubmissionSentBackToFaculty({
+            to: faculty.email,
+            facultyName: faculty.faculty_name,
+            academicYear: faculty.academic_year,
+            comments: Array.from(latestBySection.values())
+          });
+        }
+      } catch (emailError) {
+        console.error('Failed to send sent-back notification email:', emailError);
+      }
+    }
+
     res.json({ success: true, message: 'Submission status updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET /api/submissions/:id/versions
+exports.getSubmissionVersions = async (req, res) => {
+  try {
+    await ensureSubmissionVersionsTable();
+    const { id } = req.params;
+
+    const [rows] = await db.query(
+      `SELECT sv.id, sv.submission_id, sv.version_number, sv.snapshot_note, sv.created_at,
+              sv.created_by, u.name AS created_by_name
+       FROM submission_versions sv
+       LEFT JOIN users u ON u.id = sv.created_by
+       WHERE sv.submission_id = ?
+       ORDER BY sv.version_number DESC`,
+      [id]
+    );
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET /api/submissions/:id/versions/:versionNumber
+exports.getSubmissionVersionByNumber = async (req, res) => {
+  try {
+    await ensureSubmissionVersionsTable();
+    const { id, versionNumber } = req.params;
+
+    const [rows] = await db.query(
+      `SELECT sv.id, sv.submission_id, sv.version_number, sv.snapshot_note, sv.created_at,
+              sv.created_by, u.name AS created_by_name, sv.snapshot_data
+       FROM submission_versions sv
+       LEFT JOIN users u ON u.id = sv.created_by
+       WHERE sv.submission_id = ? AND sv.version_number = ?
+       LIMIT 1`,
+      [id, versionNumber]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Submission version not found' });
+    }
+
+    let parsed = {};
+    try {
+      parsed = JSON.parse(rows[0].snapshot_data || '{}');
+    } catch (parseError) {
+      parsed = {};
+    }
+
+    const safeData = coerceSnapshotData(parsed);
+    res.json({
+      success: true,
+      data: {
+        ...rows[0],
+        snapshot_data: undefined,
+        snapshot: safeData
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
