@@ -38,4 +38,7 @@ router.post('/grade-increments', evaluationController.saveGradeIncrements);
 // POST apply increments based on grades
 router.post('/apply-increments', evaluationController.applyIncrements);
 
+// POST re-run auto-allocation for a specific submission
+router.post('/rerun-allocation/:submissionId', evaluationController.rerunAllocation);
+
 module.exports = router;

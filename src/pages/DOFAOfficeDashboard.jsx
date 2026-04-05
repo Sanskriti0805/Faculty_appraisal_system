@@ -254,7 +254,6 @@ const DOFAOfficeDashboard = () => {
                   <th>Faculty Name</th>
                   <th>Department</th>
                   <th>Status</th>
-                  <th>Assigned Reviewer</th>
                   <th>Locked</th>
                   <th>Actions</th>
                 </tr>
@@ -270,11 +269,6 @@ const DOFAOfficeDashboard = () => {
                     </td>
                     <td>{submission.department || '-'}</td>
                     <td>{getStatusBadge(submission.status)}</td>
-                    <td>
-                      {submission.approved_by_name || (
-                        <span className="unassigned">Unassigned</span>
-                      )}
-                    </td>
                     <td>
                       <span className={`lock-status ${submission.locked ? 'locked' : 'unlocked'}`}>
                         {submission.locked ? (

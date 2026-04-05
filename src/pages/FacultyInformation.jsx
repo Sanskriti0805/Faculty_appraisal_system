@@ -1,18 +1,32 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Edit2 } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FacultyInformation.css'
 import FormActions from '../components/FormActions'
+import { useAuth } from '../context/AuthContext'
 
 const FacultyInformation = () => {
   const location = useLocation()
+  const { user } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [facultyData, setFacultyData] = useState({
-    name: 'Dr. John Smith',
-    designation: 'Associate Professor',
-    department: 'Computer Science',
-    dateOfJoining: '15th August 2018',
+    name: '',
+    designation: '',
+    department: '',
+    dateOfJoining: '',
   })
+
+  useEffect(() => {
+    if (user) {
+      setFacultyData({
+        name: user.name || '',
+        designation: user.designation || 'Faculty',
+        department: user.department || '',
+        dateOfJoining: user.date_of_joining ? new Date(user.date_of_joining).toLocaleDateString() : '',
+      })
+    }
+  }, [user])
+
 
   const handleInputChange = (field, value) => {
     setFacultyData({ ...facultyData, [field]: value })

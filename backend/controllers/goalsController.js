@@ -13,12 +13,15 @@ exports.getGoalsByFaculty = async (req, res) => {
     }
 };
 
-// Create or update goals
 exports.saveGoals = async (req, res) => {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
         const { faculty_id, goals } = req.body;
+
+        if (!faculty_id) {
+            throw new Error('faculty_id is required');
+        }
 
         // Delete existing goals for this faculty for a clean save (simple approach)
         await connection.query('DELETE FROM faculty_goals WHERE faculty_id = ?', [faculty_id]);

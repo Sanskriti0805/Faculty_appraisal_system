@@ -20,8 +20,13 @@ const EvaluationSheet2 = () => {
     try {
       const res = await apiClient.get('/evaluation/sheet2');
       if (res.success) {
-        setData(res.data || []);
+        const rows = res.data || [];
+        setData(rows);
         setGradingParams(res.gradingParameters || []);
+        // Auto-calculate stats after data loads
+        if (rows.length > 0) {
+          calcStats(rows);
+        }
       }
     } catch (err) {
       showToast('Error loading Sheet 2 data', 'error');
@@ -55,47 +60,28 @@ const EvaluationSheet2 = () => {
     }
   };
 
-  const calculateStats = () => {
-    if (data.length === 0) return;
-    // Explicitly cast to Number to prevent string concatenation during reduce
-    const scores = data.map(d => Number(d.total_score) || 0).sort((a, b) => a - b);
-    
-    // Mean
+  // Accept optional rows array so we can call from fetchData
+  const calcStats = (rows) => {
+    const src = rows || data;
+    if (src.length === 0) return;
+    const scores = src.map(d => Number(d.total_score) || 0).sort((a, b) => a - b);
     const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
-    
-    // Median
     const mid = Math.floor(scores.length / 2);
     const median = scores.length % 2 !== 0 ? scores[mid] : (scores[mid - 1] + scores[mid]) / 2;
-    
-    // Mode
     const counts = {};
     scores.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
-    
-    let maxCount = 0;
-    let modes = [];
+    let maxCount = 0, modes = [];
     for (const val in counts) {
-      if (counts[val] > maxCount) {
-        maxCount = counts[val];
-        modes = [val];
-      } else if (counts[val] === maxCount) {
-        modes.push(val);
-      }
+      if (counts[val] > maxCount) { maxCount = counts[val]; modes = [val]; }
+      else if (counts[val] === maxCount) modes.push(val);
     }
-    
-    // If every score appears exactly once and there's more than one score, there is no real mode.
     const modeValue = (maxCount === 1 && scores.length > 1) ? 'None' : modes.join(', ');
-
-    // Standard Deviation
     const variance = scores.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / scores.length;
     const stdDev = Math.sqrt(variance);
-
-    setStats({
-      mean: mean.toFixed(2),
-      median: median.toFixed(2),
-      mode: modeValue,
-      stdDev: stdDev.toFixed(2)
-    });
+    setStats({ mean: mean.toFixed(2), median: median.toFixed(2), mode: modeValue, stdDev: stdDev.toFixed(2) });
   };
+
+  const calculateStats = () => calcStats(null);
 
   const handleAddRule = () => {
     setGradingParams([...gradingParams, { condition_op: '>', threshold_value: 0, grade: '' }]);
@@ -173,20 +159,9 @@ const EvaluationSheet2 = () => {
         </div>
       </div>
 
-      <div 
-        className="eval2-grading-config"
-        style={{ 
-          opacity: stats.mean !== null ? 1 : 0.5, 
-          pointerEvents: stats.mean !== null ? 'auto' : 'none' 
-        }}
-      >
+      <div className="eval2-grading-config">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2>Grading Parameters Configuration</h2>
-          {stats.mean === null && (
-            <span style={{ color: '#d32f2f', fontSize: '0.9rem', fontWeight: 500 }}>
-              *Please calculate statistics first to enable
-            </span>
-          )}
         </div>
         <div className="grading-rules-list">
           {gradingParams.map((param, idx) => (

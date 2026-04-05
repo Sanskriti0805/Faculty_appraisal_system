@@ -4,12 +4,32 @@ import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import './PartB.css'
 import FormActions from '../components/FormActions'
+import { useAuth } from '../context/AuthContext'
 
 const PartB = ({ initialData, readOnly }) => {
+  const { user, token } = useAuth()
+  const [submissionId, setSubmissionId] = useState(null)
   const [selectedSemester, setSelectedSemester] = useState('Odd Semester')
   const [goals, setGoals] = useState([
     { id: 1, semester: 'Odd Semester', teaching: '', research: '', contribution: '', outreach: '', description: '', evidenceFile: null }
   ])
+
+  // Fetch or create submission for current faculty
+  useEffect(() => {
+    if (!user || !token) return
+    const fetchSubmission = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/submissions/my', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
+        if (data.success) setSubmissionId(data.data.id)
+      } catch (err) {
+        console.error('Failed to fetch submission:', err)
+      }
+    }
+    fetchSubmission()
+  }, [user, token])
 
   useEffect(() => {
     if (initialData && Array.isArray(initialData) && initialData.length > 0) {
@@ -61,9 +81,9 @@ const PartB = ({ initialData, readOnly }) => {
     try {
       const response = await fetch('http://localhost:5000/api/goals/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          faculty_id: 1, // Mock faculty ID
+          faculty_id: user?.id,
           goals: goals
         })
       });
@@ -83,6 +103,16 @@ const PartB = ({ initialData, readOnly }) => {
   const handleSubmitFinal = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
 
+    if (!user || !token) {
+      alert('You must be logged in to submit.');
+      return;
+    }
+
+    if (!submissionId) {
+      alert('Submission record not found. Please try again.');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to submit the complete appraisal? This will lock the form for review.')) {
       return;
     }
@@ -95,25 +125,22 @@ const PartB = ({ initialData, readOnly }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/submissions/1/status', {
+      const response = await fetch(`http://localhost:5000/api/submissions/${submissionId}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: 'submitted' })
       });
 
       const data = await response.json();
       if (data.success) {
-        alert('Appraisal submitted successfully! Redirecting in 2 seconds...');
-        // Small delay to prevent "vanishing" UI
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 2000);
+        alert('✅ Appraisal submitted successfully! Marks have been auto-allocated. Redirecting...');
+        setTimeout(() => { window.location.href = '/'; }, 2000);
       } else {
         alert('Submission failed: ' + data.message);
       }
     } catch (error) {
       console.error('Error submitting appraisal:', error);
-      alert('Failed to submit appraisal. Check console for details. Error: ' + error.message);
+      alert('Failed to submit appraisal. Error: ' + error.message);
     }
   }
 

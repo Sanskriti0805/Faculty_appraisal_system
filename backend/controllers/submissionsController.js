@@ -1,6 +1,51 @@
 const db = require('../config/database');
 const { autoAllocateMarks } = require('../services/rubricMapper');
 
+// GET /api/submissions/my — get or create draft submission for logged-in faculty
+exports.getMySubmission = async (req, res) => {
+  try {
+    const facultyId = req.user.id;
+    const academicYear = getCurrentAcademicYear();
+
+    // Find existing submission for this faculty + year
+    const [rows] = await db.query(
+      'SELECT * FROM submissions WHERE faculty_id = ? AND academic_year = ? ORDER BY created_at DESC LIMIT 1',
+      [facultyId, academicYear]
+    );
+
+    if (rows.length > 0) {
+      return res.json({ success: true, data: rows[0] });
+    }
+
+    // Create new draft submission
+    const [result] = await db.query(
+      'INSERT INTO submissions (faculty_id, academic_year, form_type, status) VALUES (?, ?, ?, ?)',
+      [facultyId, academicYear, 'A', 'draft']
+    );
+
+    const [newRow] = await db.query('SELECT * FROM submissions WHERE id = ?', [result.insertId]);
+    res.json({ success: true, data: newRow[0] });
+  } catch (error) {
+    console.error('getMySubmission error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Helper: returns current academic year string, e.g. "2024-25"
+function getCurrentAcademicYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-12
+  const year = now.getFullYear();
+  // Academic year starts in July: before July → previous-current, from July → current-next
+  if (month >= 7) {
+    return `${year}-${String(year + 1).slice(-2)}`;
+  } else {
+    return `${year - 1}-${String(year).slice(-2)}`;
+  }
+}
+
+
+
 // Get all submissions with filters
 exports.getAllSubmissions = async (req, res) => {
   try {

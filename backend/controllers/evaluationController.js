@@ -386,3 +386,31 @@ exports.saveRemark = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// POST /api/evaluation/rerun-allocation/:submissionId
+exports.rerunAllocation = async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+    const { autoAllocateMarks } = require('../services/rubricMapper');
+
+    const [rows] = await db.query('SELECT faculty_id, academic_year FROM submissions WHERE id = ?', [submissionId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+
+    const { faculty_id, academic_year } = rows[0];
+    await autoAllocateMarks(submissionId, faculty_id, academic_year);
+
+    // Return updated scores
+    const [scores] = await db.query(
+      'SELECT rubric_id, score FROM dofa_evaluation_scores WHERE submission_id = ?',
+      [submissionId]
+    );
+    const total = scores.reduce((s, r) => s + parseFloat(r.score || 0), 0);
+
+    res.json({ success: true, message: 'Re-allocation complete', total: total.toFixed(2), scores });
+  } catch (error) {
+    console.error('Rerun allocation error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

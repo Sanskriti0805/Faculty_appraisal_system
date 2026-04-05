@@ -238,3 +238,9 @@ thead .eval-sticky-left {
 }
 .eval-toast--success { background-color: #27ae60; }
 .eval-toast--error { background-color: #e74c3c; }
+
+.rerun-btn { margin-top: 5px; font-size: 0.75rem; padding: 2px 6px; border: 1px solid #c0c8db; border-radius: 4px; background: #e8ecf2; cursor: pointer; color: #1e3a5f; }
+.rerun-btn:hover:not(:disabled) { background: #d0d8e6; }
+.rerun-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.eval-score-cell input { background-color: #f7fafe; }

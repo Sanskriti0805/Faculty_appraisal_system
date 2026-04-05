@@ -10,6 +10,7 @@ const EvaluationSheet = () => {
   const [remarks, setRemarks] = useState({});
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [rerunning, setRerunning] = useState(null); // submissionId being re-run
   const saveTimers = useRef({});
 
   useEffect(() => { fetchData(); }, []);
@@ -108,6 +109,23 @@ const EvaluationSheet = () => {
     }
   };
 
+  const rerunAllocation = async (sub) => {
+    setRerunning(sub.submission_id);
+    try {
+      const data = await apiClient.post(`/evaluation/rerun-allocation/${sub.submission_id}`);
+      if (data.success) {
+        showToast(`Re-allocated! Total: ${data.total}`);
+        fetchData(); // refresh all scores
+      } else {
+        showToast(data.message || 'Re-run failed', 'error');
+      }
+    } catch {
+      showToast('Error re-running allocation', 'error');
+    } finally {
+      setRerunning(null);
+    }
+  };
+
   // Group rubrics by section_name
   const sections = [];
   rubrics.forEach(r => {
@@ -187,6 +205,14 @@ const EvaluationSheet = () => {
                 <td className="eval-sticky-left sno">{idx + 1}</td>
                 <td className="eval-sticky-left faculty-name">
                   <div className="faculty-name-main">{sub.faculty_name}</div>
+                  <button 
+                    className="rerun-btn"
+                    onClick={() => rerunAllocation(sub)}
+                    disabled={rerunning === sub.submission_id}
+                    title="Re-run Auto-Allocation"
+                  >
+                    {rerunning === sub.submission_id ? 'Running...' : '🔄 Re-calc'}
+                  </button>
                 </td>
                 <td><div className="cell-content">{sub.designation || '—'}</div></td>
                 <td>{sub.regular_visiting || 'Regular'}</td>
