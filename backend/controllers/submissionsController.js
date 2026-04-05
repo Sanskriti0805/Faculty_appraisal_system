@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { autoAllocateMarks } = require('../services/rubricMapper');
+const emailService = require('../services/emailService');
 
 // GET /api/submissions/my — get or create draft submission for logged-in faculty
 exports.getMySubmission = async (req, res) => {
@@ -356,6 +357,51 @@ exports.toggleSubmissionLock = async (req, res) => {
       message: locked ? 'Submission locked successfully' : 'Submission unlocked successfully'
     });
   } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+// Send manual reminder email for a submission
+exports.sendReminder = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [rows] = await db.query(`
+      SELECT s.*, u.name as faculty_name, u.email, s.academic_year
+      FROM submissions s
+      JOIN users u ON s.faculty_id = u.id
+      WHERE s.id = ?
+    `, [id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+
+    const sub = rows[0];
+
+    if (!sub.email) {
+      return res.status(400).json({ success: false, message: 'Faculty has no email address' });
+    }
+
+    // Fetch active session to get deadline
+    const [sessions] = await db.query(
+      `SELECT * FROM appraisal_sessions WHERE academic_year = ? AND is_released = 1 ORDER BY id DESC LIMIT 1`,
+      [sub.academic_year]
+    );
+
+    const deadline = sessions[0]?.deadline
+      ? new Date(sessions[0].deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+      : 'Please check with DOFA office';
+
+    await emailService.sendDeadlineReminder({
+      to: sub.email,
+      name: sub.faculty_name,
+      academicYear: sub.academic_year,
+      deadline
+    });
+
+    res.json({ success: true, message: `Reminder sent to ${sub.email}` });
+  } catch (error) {
+    console.error('Send reminder error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

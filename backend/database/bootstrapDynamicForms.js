@@ -238,6 +238,24 @@ async function bootstrapDatabaseTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     `);
 
+    // 11. Faculty goals (Part B)
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS faculty_goals (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        faculty_id INT NOT NULL,
+        submission_id INT DEFAULT NULL,
+        semester VARCHAR(50),
+        teaching DECIMAL(5,2) DEFAULT 0,
+        research DECIMAL(5,2) DEFAULT 0,
+        contribution DECIMAL(5,2) DEFAULT 0,
+        outreach DECIMAL(5,2) DEFAULT 0,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+    `);
+
     // Create useful indexes (safely skip if already exist)
     const indexQueries = [
       `CREATE INDEX idx_users_email ON users(email)`,

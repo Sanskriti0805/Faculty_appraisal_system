@@ -25,4 +25,7 @@ router.put('/:id/status', authenticate, submissionsController.updateSubmissionSt
 router.post('/consultancy/save', submissionsController.saveConsultancy);
 router.put('/:id/lock', submissionsController.toggleSubmissionLock);
 
+// Send manual reminder email to faculty
+router.post('/:id/reminder', submissionsController.sendReminder);
+
 module.exports = router;

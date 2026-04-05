@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, XCircle, MessageSquare, User, BookOpen, FileText, Award, Briefcase, ExternalLink, Lightbulb } from 'lucide-react';
 import './DOFAReview.css';
 
@@ -19,6 +19,9 @@ const API = `http://${window.location.hostname}:5000/api`;
 const DOFAReview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isOfficeRoute = location.pathname.startsWith('/dofa-office');
+  const backPath = isOfficeRoute ? '/dofa-office/dashboard' : '/dofa/dashboard';
   const [submissionData, setSubmissionData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
@@ -31,7 +34,11 @@ const DOFAReview = () => {
   const fetchSubmissionDetails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API}/submissions/${id}`);
+      const response = await fetch(`${API}/submissions/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      });
       const data = await response.json();
       if (data.success) {
         setSubmissionData(data.data);
@@ -51,7 +58,10 @@ const DOFAReview = () => {
     try {
       const response = await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify({
           status: 'approved',
           approved_by: 1 // Mock DOFA user ID
@@ -61,10 +71,13 @@ const DOFAReview = () => {
       const data = await response.json();
       if (data.success) {
         alert('Submission approved successfully');
-        navigate('/dofa/dashboard');
+        navigate(backPath);
+      } else {
+        alert(`Error: ${data.message || 'Failed to approve submission'}`);
       }
     } catch (error) {
       console.error('Error approving submission:', error);
+      alert('Error approving submission');
     }
   };
 
@@ -80,9 +93,12 @@ const DOFAReview = () => {
 
     try {
       // Add comment
-      await fetch(`${API}/review/comment`, {
+      const commentRes = await fetch(`${API}/review/comment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify({
           submission_id: id,
           reviewer_id: 1, // Mock DOFA user ID
@@ -92,16 +108,25 @@ const DOFAReview = () => {
       });
 
       // Update status
-      await fetch(`${API}/submissions/${id}/status`, {
+      const statusRes = await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify({ status: 'sent_back' })
       });
 
-      alert('Submission sent back successfully');
-      navigate('/dofa/dashboard');
+      const statusData = await statusRes.json();
+      if (statusData.success) {
+        alert('Submission sent back successfully');
+        navigate(backPath);
+      } else {
+        alert(`Error: ${statusData.message || 'Failed to send back submission'}`);
+      }
     } catch (error) {
       console.error('Error sending back submission:', error);
+      alert('Error sending back submission');
     }
   };
 
@@ -112,9 +137,12 @@ const DOFAReview = () => {
     }
 
     try {
-      await fetch(`${API}/review/comment`, {
+      const res = await fetch(`${API}/review/comment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify({
           submission_id: id,
           reviewer_id: 1, // Mock DOFA user ID
@@ -123,11 +151,17 @@ const DOFAReview = () => {
         })
       });
 
-      setComment('');
-      fetchSubmissionDetails();
-      alert('Comment added successfully');
+      const data = await res.json();
+      if (data.success) {
+        setComment('');
+        fetchSubmissionDetails();
+        alert('Comment added successfully');
+      } else {
+        alert(`Error: ${data.message || 'Failed to add comment'}`);
+      }
     } catch (error) {
       console.error('Error adding comment:', error);
+      alert('Error adding comment');
     }
   };
 
@@ -190,7 +224,7 @@ const DOFAReview = () => {
     <div className="dofa-review">
       {/* Header */}
       <div className="review-header">
-        <button className="back-btn" onClick={() => navigate('/dofa/dashboard')}>
+        <button className="back-btn" onClick={() => navigate(backPath)}>
           <ArrowLeft size={20} />
           Back to Dashboard
         </button>
