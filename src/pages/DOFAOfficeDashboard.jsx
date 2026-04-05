@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Lock, Unlock, Mail, Download, Users, FileText, Clock, CheckSquare, Eye, CheckCircle, XCircle, Calendar, FileCode, Table, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Lock, Unlock, Mail, Download, Users, FileText, Clock, CheckSquare, Eye, CheckCircle, XCircle, Calendar, FileCode, Table, X, ChevronDown, LayoutList } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import './DOFAOfficeDashboard.css';
 
@@ -21,11 +21,25 @@ const DOFAOfficeDashboard = () => {
   const [availableYears, setAvailableYears] = useState([]);
   const [downloadModal, setDownloadModal] = useState({ open: false, submission: null });
   const [downloadingFormat, setDownloadingFormat] = useState(null);
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const [exportLoading, setExportLoading] = useState(null); // 'forms' | 'summary'
+  const exportDropdownRef = useRef(null);
 
   useEffect(() => {
     fetchStats();
     fetchSubmissions();
   }, [filter, yearFilter]);
+
+  // Close export dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target)) {
+        setExportDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchStats = async () => {
     try {
@@ -255,20 +269,191 @@ const DOFAOfficeDashboard = () => {
     }
   };
 
-  const handleExportCSV = () => {
-    const headers = ['Faculty Name', 'Department', 'Academic Year', 'Status', 'Submitted Date'];
-    const rows = submissions.map(s => [
-      s.faculty_name, s.department || '', s.academic_year, s.status,
-      s.submitted_at ? new Date(s.submitted_at).toLocaleDateString() : ''
-    ]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `submissions_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  // ── Bulk Export: Summary PDF (dashboard table view for all faculties) ────
+  const handleExportSummaryPDF = () => {
+    setExportLoading('summary');
+    setExportDropdownOpen(false);
+    try {
+      const yearLabel = yearFilter === 'all' ? 'All Academic Years' : yearFilter;
+      const subs = yearFilter === 'all' ? submissions : submissions.filter(s => s.academic_year === yearFilter);
+
+      const statusText = { draft: 'Draft', submitted: 'Submitted', under_review: 'Under Review', approved: 'Approved', sent_back: 'Sent Back' };
+
+      // Group by academic year for the table
+      const byYear = subs.reduce((acc, s) => {
+        const yr = s.academic_year || 'Unknown';
+        if (!acc[yr]) acc[yr] = [];
+        acc[yr].push(s);
+        return acc;
+      }, {});
+
+      let tableRows = '';
+      Object.keys(byYear).sort().reverse().forEach(yr => {
+        byYear[yr].forEach((s, i) => {
+          tableRows += `<tr>
+            <td>${i === 0 ? `<strong>${yr}</strong>` : ''}</td>
+            <td>${s.faculty_name || '-'}</td>
+            <td>${s.department || '-'}</td>
+            <td>${s.designation || '-'}</td>
+            <td>${s.email || '-'}</td>
+            <td>${s.form_type || 'A'}</td>
+            <td><span class="badge ${s.status}">${statusText[s.status] || s.status}</span></td>
+            <td>${s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
+          </tr>`;
+        });
+      });
+
+      const html = `<!DOCTYPE html>
+<html><head><title>DOFA Appraisal Summary — ${yearLabel}</title>
+<style>
+  @page { size: A4 landscape; margin: 16mm; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
+  h1 { font-size: 18px; color: #1e3a5f; margin-bottom: 4px; }
+  .meta { font-size: 11px; color: #6b7280; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #1e3a5f; color: white; padding: 8px 10px; text-align: left; font-size: 10px; }
+  td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #f9fafb; }
+  .badge { padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+  .badge.draft { background: #f3f4f6; color: #6b7280; }
+  .badge.submitted { background: #dbeafe; color: #1e40af; }
+  .badge.under_review { background: #fed7aa; color: #92400e; }
+  .badge.approved { background: #bbf7d0; color: #166534; }
+  .badge.sent_back { background: #fecaca; color: #991b1b; }
+  .footer { margin-top: 20px; font-size: 10px; color: #9ca3af; }
+</style></head><body>
+<h1>Faculty Appraisal Submission Summary</h1>
+<p class="meta">Academic Year: <strong>${yearLabel}</strong> &nbsp;|&nbsp; Total Records: <strong>${subs.length}</strong> &nbsp;|&nbsp; Generated: ${new Date().toLocaleString('en-IN')}</p>
+<table>
+  <thead><tr><th>Academic Year</th><th>Faculty Name</th><th>Department</th><th>Designation</th><th>Email</th><th>Form</th><th>Status</th><th>Submitted On</th></tr></thead>
+  <tbody>${tableRows}</tbody>
+</table>
+<p class="footer">Dean of Faculty Affairs (DOFA) Office &mdash; Confidential Record</p>
+</body></html>`;
+
+      const win = window.open('', '_blank');
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => { win.print(); }, 400);
+    } finally {
+      setExportLoading(null);
+    }
+  };
+
+  // ── Bulk Export: All Faculty Forms PDF (one PDF with all faculty detailed forms) ──
+  const handleExportFormsPDF = async () => {
+    setExportLoading('forms');
+    setExportDropdownOpen(false);
+    try {
+      const yearLabel = yearFilter === 'all' ? 'All Academic Years' : yearFilter;
+      const subs = yearFilter === 'all' ? submissions : submissions.filter(s => s.academic_year === yearFilter);
+
+      if (subs.length === 0) {
+        alert('No submissions found for the selected academic year.');
+        return;
+      }
+
+      // Fetch full data for each submission
+      const allData = [];
+      for (const sub of subs) {
+        try {
+          const res = await fetch(`${API}/submissions/${sub.id}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+          });
+          const data = await res.json();
+          if (data.success) allData.push(data.data);
+        } catch (e) {
+          console.warn(`Could not fetch submission ${sub.id}`);
+        }
+      }
+
+      const facultySections = allData.map(({ submission: s, facultyInfo, courses, publications, grants, patents, awards, newCourses, proposals, institutionalContributions, teachingInnovation }) => `
+        <div class="faculty-block">
+          <div class="faculty-header">
+            <h2>${s.faculty_name}</h2>
+            <div class="faculty-meta-grid">
+              <div><label>Department</label><span>${s.department || '-'}</span></div>
+              <div><label>Designation</label><span>${facultyInfo?.designation || s.designation || '-'}</span></div>
+              <div><label>Email</label><span>${s.email || '-'}</span></div>
+              <div><label>Academic Year</label><span>${s.academic_year}</span></div>
+              <div><label>Form Type</label><span>Form ${s.form_type || 'A'}</span></div>
+              <div><label>Status</label><span class="badge ${s.status}">${{ draft: 'Draft', submitted: 'Submitted', under_review: 'Under Review', approved: 'Approved', sent_back: 'Sent Back' }[s.status] || s.status}</span></div>
+              <div><label>Date of Submission</label><span>${s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Not Submitted'}</span></div>
+              ${s.total_score != null ? `<div><label>Total Score</label><span>${s.total_score}</span></div>` : ''}
+            </div>
+          </div>
+
+          <h3>Courses Taught (${(courses || []).length})</h3>
+          ${(courses || []).length > 0 ? `<table><thead><tr><th>Course Name</th><th>Code</th><th>Semester</th><th>Program</th><th>Enrollment</th><th>Feedback Score</th></tr></thead><tbody>
+          ${(courses || []).map(c => `<tr><td>${c.course_name||'-'}</td><td>${c.course_code||'-'}</td><td>${c.semester||'-'}</td><td>${c.program||'-'}</td><td>${c.enrollment||'-'}</td><td>${c.feedback_score||'-'}</td></tr>`).join('')}
+          </tbody></table>` : '<p class="none">None recorded.</p>'}
+
+          <h3>Research Publications (${(publications || []).length})</h3>
+          ${(publications || []).length > 0 ? `<table><thead><tr><th>Type</th><th>Sub-type</th><th>Title</th><th>Year</th><th>Journal / Conference</th></tr></thead><tbody>
+          ${(publications || []).map(p => `<tr><td>${p.publication_type||''}</td><td>${p.sub_type||''}</td><td>${p.title||''}</td><td>${p.year_of_publication||''}</td><td>${p.journal_name||p.conference_name||''}</td></tr>`).join('')}
+          </tbody></table>` : '<p class="none">None recorded.</p>'}
+
+          <h3>Research Grants (${(grants || []).length})</h3>
+          ${(grants || []).length > 0 ? `<table><thead><tr><th>Project Title</th><th>Funding Agency</th><th>Amount (Lakhs)</th><th>Role</th></tr></thead><tbody>
+          ${(grants || []).map(g => `<tr><td>${g.project_name||''}</td><td>${g.funding_agency||''}</td><td>${g.amount_in_lakhs||0}</td><td>${g.role||''}</td></tr>`).join('')}
+          </tbody></table>` : '<p class="none">None recorded.</p>'}
+
+          <h3>Patents (${(patents || []).length})</h3>
+          ${(patents || []).length > 0 ? `<table><thead><tr><th>Type</th><th>Title</th><th>Agency</th></tr></thead><tbody>
+          ${(patents || []).map(p => `<tr><td>${p.patent_type||''}</td><td>${p.title||''}</td><td>${p.agency||''}</td></tr>`).join('')}
+          </tbody></table>` : '<p class="none">None recorded.</p>'}
+
+          <h3>Awards &amp; Honours (${(awards || []).length})</h3>
+          ${(awards || []).length > 0 ? `<table><thead><tr><th>Award</th><th>Awarding Agency</th><th>Year</th></tr></thead><tbody>
+          ${(awards || []).map(a => `<tr><td>${a.award_name||''}</td><td>${a.awarding_agency||''}</td><td>${a.year||''}</td></tr>`).join('')}
+          </tbody></table>` : '<p class="none">None recorded.</p>'}
+
+          <h3>New Courses Developed (${(newCourses || []).length})</h3>
+          ${(newCourses || []).length > 0 ? `<table><thead><tr><th>Course Name</th><th>Code</th><th>Level</th><th>Program</th></tr></thead><tbody>
+          ${(newCourses || []).map(c => `<tr><td>${c.course_name||''}</td><td>${c.course_code||''}</td><td>${c.level||''}</td><td>${c.program||''}</td></tr>`).join('')}
+          </tbody></table>` : '<p class="none">None recorded.</p>'}
+        </div>
+      `).join('');
+
+      const html = `<!DOCTYPE html>
+<html><head><title>Faculty Appraisal Forms — ${yearLabel}</title>
+<style>
+  @page { size: A4 portrait; margin: 16mm; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
+  h1 { font-size: 18px; color: #1e3a5f; margin-bottom: 4px; }
+  .cover-meta { font-size: 11px; color: #6b7280; margin-bottom: 10px; }
+  .faculty-block { page-break-after: always; padding: 12px 0; }
+  .faculty-block:last-child { page-break-after: auto; }
+  .faculty-header { background: #f0f4f8; border-left: 4px solid #1e3a5f; padding: 12px 16px; border-radius: 4px; margin-bottom: 14px; }
+  .faculty-header h2 { font-size: 16px; color: #1e3a5f; margin: 0 0 10px 0; }
+  .faculty-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 16px; }
+  .faculty-meta-grid div label { display: block; font-size: 9px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.3px; }
+  .faculty-meta-grid div span { font-weight: 600; font-size: 11px; }
+  h3 { font-size: 12px; color: #374151; margin: 14px 0 6px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 10px; }
+  th { background: #1e3a5f; color: white; padding: 6px 8px; text-align: left; }
+  td { padding: 5px 8px; border-bottom: 1px solid #f0f0f0; }
+  tr:nth-child(even) td { background: #fafafa; }
+  .none { color: #9ca3af; font-style: italic; font-size: 10px; margin: 4px 0 8px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 9px; font-weight: 700; }
+  .badge.draft { background: #f3f4f6; color: #6b7280; }
+  .badge.submitted { background: #dbeafe; color: #1e40af; }
+  .badge.under_review { background: #fed7aa; color: #92400e; }
+  .badge.approved { background: #bbf7d0; color: #166534; }
+  .badge.sent_back { background: #fecaca; color: #991b1b; }
+</style></head><body>
+<h1>Annual Performance Appraisal — Faculty Forms</h1>
+<p class="cover-meta">Academic Year: <strong>${yearLabel}</strong> &nbsp;|&nbsp; Total Faculty: <strong>${allData.length}</strong> &nbsp;|&nbsp; Generated: ${new Date().toLocaleString('en-IN')}</p>
+${facultySections}
+</body></html>`;
+
+      const win = window.open('', '_blank');
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => { win.print(); }, 600);
+    } finally {
+      setExportLoading(null);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -309,10 +494,51 @@ const DOFAOfficeDashboard = () => {
               <option key={yr} value={yr}>{yr}</option>
             ))}
           </select>
-          <button className="export-btn" onClick={handleExportCSV}>
-            <Download size={18} />
-            Export CSV
-          </button>
+
+          {/* Export Dropdown */}
+          <div className="export-dropdown-wrapper" ref={exportDropdownRef}>
+            <button
+              className={`export-btn ${exportLoading ? 'export-btn-loading' : ''}`}
+              onClick={() => setExportDropdownOpen(o => !o)}
+              disabled={!!exportLoading}
+            >
+              {exportLoading ? (
+                <><span className="export-spinner" />Exporting...</>
+              ) : (
+                <><Download size={16} />Export Data<ChevronDown size={14} style={{ marginLeft: 2 }} /></>
+              )}
+            </button>
+
+            {exportDropdownOpen && (
+              <div className="export-dropdown-menu">
+                <button
+                  className="export-dropdown-item"
+                  onClick={handleExportFormsPDF}
+                >
+                  <div className="export-item-icon" style={{ background: '#fef3c7', color: '#92400e' }}>
+                    <FileText size={16} />
+                  </div>
+                  <div className="export-item-text">
+                    <strong>Faculty Forms PDF</strong>
+                    <span>Full appraisal forms for all faculty — combined PDF</span>
+                  </div>
+                </button>
+
+                <button
+                  className="export-dropdown-item"
+                  onClick={handleExportSummaryPDF}
+                >
+                  <div className="export-item-icon" style={{ background: '#dbeafe', color: '#1e40af' }}>
+                    <LayoutList size={16} />
+                  </div>
+                  <div className="export-item-text">
+                    <strong>Submission Summary PDF</strong>
+                    <span>Dashboard overview — name, dept, status, date, etc.</span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
