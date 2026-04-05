@@ -104,3 +104,35 @@
 .nav-sub-item:hover {
   padding-left: 3.75rem;
 }
+
+.nav-item-locked {
+  color: #7f8fa7;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.nav-item-locked:hover {
+  background-color: transparent;
+  color: #7f8fa7;
+  padding-left: 2.75rem;
+}
+
+.nav-sub-item.nav-item-locked:hover {
+  padding-left: 3.5rem;
+}
+
+.sidebar-lock-note {
+  margin: 0.5rem 1rem 0.75rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.08);
+  border-left: 3px solid #94a3b8;
+  border-radius: 6px;
+}
+
+.sidebar-lock-note-warning {
+  border-left-color: #f59e0b;
+  color: #fde68a;
+}

@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
-import { getNextPath, getPreviousPath } from '../constants/navigation';
+import { FORM_SEQUENCE, getNextPath, getPreviousPath } from '../constants/navigation';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * FormActions - Standardized action buttons for appraisal forms
@@ -13,8 +14,122 @@ import { getNextPath, getPreviousPath } from '../constants/navigation';
  */
 const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLabel = 'Save and Next', onSubmit }) => {
   const navigate = useNavigate();
-  const nextPath = getNextPath(currentPath);
-  const prevPath = getPreviousPath(currentPath);
+  const { user, token } = useAuth();
+  const [submissionStatus, setSubmissionStatus] = React.useState(null);
+  const [approvedSections, setApprovedSections] = React.useState([]);
+  const [hasSectionRestrictions, setHasSectionRestrictions] = React.useState(false);
+
+  const pathToSectionKey = React.useMemo(() => ({
+    '/faculty-information': 'faculty_info',
+    '/courses-taught': 'courses_taught',
+    '/new-courses': 'new_courses',
+    '/courseware': 'courseware',
+    '/teaching-innovation': 'teaching_innovation',
+    '/research-publications': 'research_publications',
+    '/research-grants': 'research_grants',
+    '/patents': 'patents',
+    '/technology-transfer': 'technology_transfer',
+    '/paper-review': 'paper_review',
+    '/conference-sessions': 'conference_sessions',
+    '/keynotes-talks': 'keynotes_talks',
+    '/conferences-outside': 'conference_sessions',
+    '/other-activities': 'other_activities',
+    '/awards-honours': 'awards_honours',
+    '/consultancy': 'consultancy',
+    '/continuing-education': 'continuing_education',
+    '/institutional-contributions': 'institutional_contributions',
+    '/other-important-activities': 'other_activities',
+    '/research-plan': 'research_plan',
+    '/teaching-plan': 'teaching_plan',
+    '/part-b': 'part_b',
+  }), []);
+
+  React.useEffect(() => {
+    const isFaculty = user?.role === 'faculty';
+    const isDofaPath = currentPath?.startsWith('/dofa');
+    if (!isFaculty || isDofaPath || !token) return;
+
+    const loadAccess = async () => {
+      try {
+        const subRes = await fetch(`http://${window.location.hostname}:5000/api/submissions/my`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const subData = await subRes.json();
+
+        if (!subData.success || !subData.data) {
+          setSubmissionStatus(null);
+          setApprovedSections([]);
+          setHasSectionRestrictions(false);
+          return;
+        }
+
+        setSubmissionStatus(subData.data.status);
+
+        if (subData.data.status !== 'sent_back') {
+          setApprovedSections([]);
+          setHasSectionRestrictions(false);
+          return;
+        }
+
+        const reqRes = await fetch(`http://${window.location.hostname}:5000/api/edit-requests/my-submission/${subData.data.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const reqData = await reqRes.json();
+        const unlockedSections = Array.isArray(reqData.unlockedSections) ? reqData.unlockedSections : [];
+        setApprovedSections(unlockedSections);
+        setHasSectionRestrictions(unlockedSections.length > 0);
+      } catch (error) {
+        console.error('Failed to load form action access:', error);
+      }
+    };
+
+    loadAccess();
+  }, [currentPath, token, user]);
+
+  const isPathEditable = React.useCallback((path) => {
+    if (user?.role !== 'faculty') return true;
+    if (!submissionStatus || submissionStatus === 'draft') return true;
+    if (['submitted', 'under_review', 'approved'].includes(submissionStatus)) return false;
+
+    if (submissionStatus === 'sent_back') {
+      if (!hasSectionRestrictions) return true;
+      if (path === '/part-b') return true;
+      if (path.startsWith('/faculty/dynamic/')) return false;
+      const sectionKey = pathToSectionKey[path];
+      return !!sectionKey && approvedSections.includes(sectionKey);
+    }
+
+    return true;
+  }, [approvedSections, hasSectionRestrictions, pathToSectionKey, submissionStatus, user]);
+
+  const getNextEditablePath = React.useCallback((path) => {
+    const currentIndex = FORM_SEQUENCE.findIndex(item => item.path === path);
+    if (currentIndex === -1) return getNextPath(path);
+
+    for (let i = currentIndex + 1; i < FORM_SEQUENCE.length; i += 1) {
+      const candidate = FORM_SEQUENCE[i].path;
+      if (isPathEditable(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  }, [isPathEditable]);
+
+  const getPreviousEditablePath = React.useCallback((path) => {
+    const currentIndex = FORM_SEQUENCE.findIndex(item => item.path === path);
+    if (currentIndex === -1) return getPreviousPath(path);
+
+    for (let i = currentIndex - 1; i >= 0; i -= 1) {
+      const candidate = FORM_SEQUENCE[i].path;
+      if (isPathEditable(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  }, [isPathEditable]);
+
+  const effectiveNextPath = getNextEditablePath(currentPath);
+  const effectivePrevPath = getPreviousEditablePath(currentPath);
 
   const handleSaveOnly = async () => {
     try {
@@ -33,10 +148,12 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
       const success = await onSave();
       // If onSave doesn't return anything, assume success unless it throws
-      if (success !== false && (nextPath || nextLabel !== 'Save and Next')) {
-        if (nextPath) {
-          navigate(nextPath);
+      if (success !== false && (effectiveNextPath || nextLabel !== 'Save and Next')) {
+        if (effectiveNextPath) {
+          navigate(effectiveNextPath);
           window.scrollTo(0, 0);
+        } else if (submissionStatus === 'sent_back' && hasSectionRestrictions) {
+          alert('No more editable sections are available in this cycle.');
         }
       }
     } catch (error) {
@@ -45,8 +162,8 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
   };
 
   const handlePrevious = () => {
-    if (prevPath) {
-      navigate(prevPath);
+    if (effectivePrevPath) {
+      navigate(effectivePrevPath);
       window.scrollTo(0, 0);
     }
   };
@@ -67,7 +184,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
       border: '1px solid #eee'
     }}>
       <div style={{ display: 'flex', gap: '1rem' }}>
-        {showPrevious && prevPath && (
+        {showPrevious && effectivePrevPath && (
           <button
             onClick={handlePrevious}
             className="btn-secondary"
@@ -112,7 +229,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
           {loading ? 'Saving...' : 'Save Draft'}
         </button>
 
-        {(nextPath || nextLabel !== 'Save and Next') && (
+        {(effectiveNextPath || nextLabel !== 'Save and Next') && (
           <button
             onClick={handleSaveAndNext}
             disabled={loading}

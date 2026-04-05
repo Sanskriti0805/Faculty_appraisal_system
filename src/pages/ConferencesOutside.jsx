@@ -1,12 +1,16 @@
 import React, { useState } from 'react'
+import { useEffect } from 'react'
 import { Trash2, Plus } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import './ConferencesOutside.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
+import { useAuth } from '../context/AuthContext'
+import { legacySectionsService } from '../services/legacySectionsService'
 
 const ConferencesOutside = () => {
+  const { user } = useAuth()
   const initialState = {
     eventType: 'Conference',
     eventMode: 'Offline',
@@ -26,6 +30,24 @@ const ConferencesOutside = () => {
   const [submittedConferences, setSubmittedConferences] = useState([])
   const [formData, setFormData] = useState(initialState)
 
+  useEffect(() => {
+    if (!user?.id) return
+
+    const hydrate = async () => {
+      try {
+        const res = await legacySectionsService.getMySection('conferences_outside')
+        const parsed = res?.data
+        if (!parsed) return
+        setSubmittedConferences(Array.isArray(parsed.submittedConferences) ? parsed.submittedConferences : [])
+        setFormData(parsed.formData || initialState)
+      } catch (error) {
+        console.error('Failed to load conferences outside data:', error)
+      }
+    }
+
+    hydrate()
+  }, [user])
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({
@@ -44,20 +66,40 @@ const ConferencesOutside = () => {
 
   const handleSave = async (e) => {
     if (e && e.preventDefault) e.preventDefault()
-    // Submit both the previously added conferences and the current one (if filled)
-    const allConferences = [...submittedConferences]
-    if (formData.eventTitle) {
-      allConferences.push(formData)
-    }
-
-    if (allConferences.length === 0) {
+    
+    // Only save NEW conference data if form has content
+    // Don't re-save submittedConferences as they're already in database
+    if (!formData.eventTitle && submittedConferences.length === 0) {
       alert('Please add at least one conference')
       return false
     }
 
-    console.log('All Conferences Data:', allConferences)
-    alert('All data saved successfully!')
-    return true
+    if (!user?.id) {
+      alert('Unable to identify logged-in faculty. Please login again.')
+      return false
+    }
+
+    try {
+      // Only include new conference if it has data, keep submitted ones as-is
+      const dataToSave = {
+        submittedConferences: submittedConferences, // Keep existing ones unchanged
+        formData: formData.eventTitle ? initialState : formData // Reset form after adding new
+      }
+      
+      // If form has new conference data, add it to the list
+      if (formData.eventTitle) {
+        dataToSave.submittedConferences = [...submittedConferences, formData]
+        dataToSave.formData = initialState // Reset form
+      }
+      
+      await legacySectionsService.saveSection('conferences_outside', dataToSave)
+      alert('All data saved successfully!')
+      return true
+    } catch (error) {
+      console.error('Failed to save conferences outside data:', error)
+      alert('Failed to save data. Please try again.')
+      return false
+    }
   }
 
   const handleAddConference = (e) => {

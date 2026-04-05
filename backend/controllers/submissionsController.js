@@ -46,6 +46,32 @@ function getCurrentAcademicYear() {
   }
 }
 
+async function fetchLegacySectionContent(facultyId, academicYear, sectionKey) {
+  const [rows] = await db.query(
+    `SELECT content_json
+     FROM legacy_section_entries
+     WHERE faculty_id = ? AND section_key = ? AND academic_year = ?
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [facultyId, sectionKey, academicYear]
+  );
+
+  if (rows.length > 0) {
+    return rows[0].content_json || null;
+  }
+
+  const [fallbackRows] = await db.query(
+    `SELECT content_json
+     FROM legacy_section_entries
+     WHERE faculty_id = ? AND section_key = ?
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [facultyId, sectionKey]
+  );
+
+  return fallbackRows.length > 0 ? fallbackRows[0].content_json || null : null;
+}
+
 
 
 // Get all submissions with filters
@@ -105,6 +131,15 @@ exports.getSubmissionById = async (req, res) => {
     }
 
     const sub = submission[0];
+
+    if (req.user?.role === 'faculty' && Number(req.user.id) !== Number(sub.faculty_id)) {
+      return res.status(403).json({ success: false, message: 'You can only view your own submission.' });
+    }
+
+    if (!['faculty', 'dofa', 'dofa_office', 'admin', 'hod'].includes(req.user?.role)) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions to view submission.' });
+    }
+
     const user_id = sub.faculty_id;
     const academicYear = sub.academic_year;
 
@@ -166,6 +201,15 @@ exports.getSubmissionById = async (req, res) => {
     // Get Part B goals
     const [goals] = await db.query('SELECT * FROM faculty_goals WHERE faculty_id = ?', [fid]);
 
+    // Get legacy section content stored separately from the core submission tables.
+    const [courseware, continuingEducation, otherActivities, researchPlan, teachingPlan] = await Promise.all([
+      fetchLegacySectionContent(user_id, academicYear, 'courseware'),
+      fetchLegacySectionContent(user_id, academicYear, 'continuing_education'),
+      fetchLegacySectionContent(user_id, academicYear, 'other_activities'),
+      fetchLegacySectionContent(user_id, academicYear, 'research_plan'),
+      fetchLegacySectionContent(user_id, academicYear, 'teaching_plan'),
+    ]);
+
     // Get review comments
     const [comments] = await db.query(`
       SELECT rc.*, u.name as reviewer_name
@@ -195,6 +239,11 @@ exports.getSubmissionById = async (req, res) => {
         teachingInnovation: teachingInnovation || [],
         institutionalContributions: institutionalContributions || [],
         goals: goals || [],
+        courseware: courseware || null,
+        continuingEducation: continuingEducation || null,
+        otherActivities: otherActivities || null,
+        researchPlan: researchPlan || null,
+        teachingPlan: teachingPlan || null,
         comments: comments || []
       }
     });
@@ -228,6 +277,39 @@ exports.updateSubmissionStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, approved_by } = req.body;
+
+    const [existingRows] = await db.query('SELECT id, faculty_id, status, academic_year FROM submissions WHERE id = ?', [id]);
+    if (existingRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+
+    const submission = existingRows[0];
+
+    // Faculty can only submit/re-submit their own record.
+    if (req.user?.role === 'faculty') {
+      if (Number(submission.faculty_id) !== Number(req.user.id)) {
+        return res.status(403).json({ success: false, message: 'You can only update your own submission.' });
+      }
+
+      if (status !== 'submitted') {
+        return res.status(403).json({ success: false, message: 'Faculty can only submit or re-submit.' });
+      }
+
+      if (!['draft', 'sent_back'].includes(submission.status)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Submission is locked. Request edits or wait for DOFA to send back.'
+        });
+      }
+    }
+
+    // DOFA/DOFA office/Admin can manage review statuses.
+    if (req.user && req.user.role !== 'faculty') {
+      const allowed = ['under_review', 'approved', 'sent_back', 'submitted'];
+      if (!allowed.includes(status)) {
+        return res.status(400).json({ success: false, message: 'Invalid status transition requested.' });
+      }
+    }
 
     let query = 'UPDATE submissions SET status = ?';
     const params = [status];

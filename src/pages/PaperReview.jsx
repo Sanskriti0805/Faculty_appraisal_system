@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
+import { useEffect } from 'react'
 import { Upload } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
-import { reviewsService } from '../services/reviewsService'
+import apiClient from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const PaperReview = () => {
+  const { user, token } = useAuth()
+  const [reviewId, setReviewId] = useState(null) // Track if editing existing review
   const [formData, setFormData] = useState({
     tier: '',
     paperType: '',
@@ -15,19 +18,63 @@ const PaperReview = () => {
   const [evidenceFile, setEvidenceFile] = useState(null)
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    if (!user?.id) return
+
+    const hydrateExisting = async () => {
+      try {
+        const mySub = await apiClient.get('/submissions/my')
+        if (!mySub?.success || !mySub?.data?.id) return
+
+        const details = await apiClient.get(`/submissions/${mySub.data.id}`)
+        const rows = Array.isArray(details?.data?.paperReviews) ? details.data.paperReviews : []
+        if (rows.length === 0) return
+
+        const first = rows[0]
+        const detailsText = rows
+          .map((r) => `• ${r.journal_name || 'Journal'} (${r.review_type || 'Review'})`)
+          .join('\n')
+
+        setFormData({
+          tier: first.tier || '',
+          paperType: first.review_type || '',
+          reviewDetails: detailsText
+        })
+        
+        // Store ID to prevent duplicate creation
+        setReviewId(first.id || null)
+      } catch (error) {
+        console.error('Failed to prefill paper reviews:', error)
+      }
+    }
+
+    hydrateExisting()
+  }, [user])
+
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value })
   }
 
   const handleSave = async () => {
-    if (!formData.reviewDetails.trim()) {
-      alert('Please enter review details')
-      return false
-    }
-
     setLoading(true)
     try {
-      const facultyId = user?.id || 1;
+      const facultyId = user?.id
+      if (!facultyId || !token) {
+        alert('Unable to identify logged-in faculty. Please login again.')
+        return false
+      }
+
+      if (reviewId) {
+        await fetch(`http://localhost:5000/api/activities/paper-reviews/${reviewId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      }
+
+      if (!formData.reviewDetails.trim()) {
+        alert('Data saved successfully!')
+        return true
+      }
 
       const formDataObj = new FormData()
       formDataObj.append('faculty_id', facultyId)
@@ -43,11 +90,13 @@ const PaperReview = () => {
 
       const response = await fetch('http://localhost:5000/api/activities/paper-reviews', {
         method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
         body: formDataObj
       })
 
       const data = await response.json()
       if (data.success) {
+        setReviewId(data.id || null)
         alert('Data saved successfully!')
         return true
       } else {

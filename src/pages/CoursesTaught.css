@@ -188,6 +188,19 @@
   vertical-align: middle;
 }
 
+.read-only-mode .courses-table td {
+  vertical-align: top;
+}
+
+.readonly-table-text {
+  color: #334155;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .course-number {
   font-weight: 600;
   color: #5a6c7d;
@@ -340,6 +353,10 @@
 .feedback-input {
   flex: 1;
   min-width: 0;
+}
+
+.read-only-mode .feedback-container .feedback-input.readonly-table-text {
+  padding: 0;
 }
 
 .compact-upload-wrapper {

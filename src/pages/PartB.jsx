@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Trash2, Upload, FileText, X, CheckCircle, ExternalLink } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import './PartB.css'
 import FormActions from '../components/FormActions'
 import { useAuth } from '../context/AuthContext'
 import FilePreviewButton from '../components/FilePreviewButton'
-import { useSubmission } from '../context/SubmissionContext'
 
 // ── Submission Success Popup ──────────────────────────────────────────────
 const SubmissionSuccessPopup = ({ academicYear, deadline, onClose }) => (
@@ -71,7 +69,6 @@ const SubmissionSuccessPopup = ({ academicYear, deadline, onClose }) => (
 
 const PartB = ({ initialData, readOnly }) => {
   const { user, token } = useAuth()
-  const { submissionData, refetchSubmission } = useSubmission()
   const [submissionId, setSubmissionId] = useState(null)
   const [submissionStatus, setSubmissionStatus] = useState(null)
   const [sessionDeadline, setSessionDeadline] = useState(null)
@@ -113,15 +110,57 @@ const PartB = ({ initialData, readOnly }) => {
   }, [user, token])
 
   useEffect(() => {
-    const activeData = initialData || (submissionData && submissionData.goals ? submissionData.goals : null);
-    if (activeData && Array.isArray(activeData) && activeData.length > 0) {
-      setGoals(activeData.map(g => ({
+    if (initialData && Array.isArray(initialData) && initialData.length > 0) {
+      const normalizedGoals = initialData.map(g => ({
         ...g,
         id: g.id || Math.random(),
         evidenceFile: g.evidence_file || null
-      })))
+      }))
+      setGoals(normalizedGoals)
+      if (normalizedGoals[0]?.semester) {
+        setSelectedSemester(normalizedGoals[0].semester)
+      }
     }
-  }, [initialData, submissionData])
+  }, [initialData])
+
+  useEffect(() => {
+    // In editable mode, prefill with saved Part B data so sent_back edits never open as blank.
+    if (readOnly || (initialData && Array.isArray(initialData) && initialData.length > 0) || !user?.id || !token) {
+      return
+    }
+
+    const fetchGoals = async () => {
+      try {
+        const res = await fetch(`http://localhost:5000/api/goals/${user.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
+        if (!data.success || !Array.isArray(data.data) || data.data.length === 0) {
+          return
+        }
+
+        const normalizedGoals = data.data.map(g => ({
+          id: g.id || Math.random(),
+          semester: g.semester || 'Odd Semester',
+          teaching: g.teaching || '',
+          research: g.research || '',
+          contribution: g.contribution || '',
+          outreach: g.outreach || '',
+          description: g.description || '',
+          evidenceFile: g.evidence_file || null
+        }))
+
+        setGoals(normalizedGoals)
+        if (normalizedGoals[0]?.semester) {
+          setSelectedSemester(normalizedGoals[0].semester)
+        }
+      } catch (err) {
+        console.error('Failed to fetch existing goals:', err)
+      }
+    }
+
+    fetchGoals()
+  }, [initialData, readOnly, token, user])
 
   const semesterOptions = [
     'Odd Semester',
@@ -158,22 +197,8 @@ const PartB = ({ initialData, readOnly }) => {
     }
   }
 
-  const handleSave = async (e, showSuccess = true) => {
+  const handleSave = async (e, showSuccess = true, returnMeta = false) => {
     if (e && e.preventDefault) e.preventDefault();
-
-    // Validate that percentage fields only contain numbers
-    for (const goal of goals) {
-      if (
-        (goal.teaching && isNaN(Number(goal.teaching))) ||
-        (goal.research && isNaN(Number(goal.research))) ||
-        (goal.contribution && isNaN(Number(goal.contribution))) ||
-        (goal.outreach && isNaN(Number(goal.outreach)))
-      ) {
-        alert('Validation Error: Please ensure all time/effort percentage fields contain only valid numbers (e.g., 20 or 20.5), not letters or special characters.');
-        return false;
-      }
-    }
-
     try {
       const response = await fetch('http://localhost:5000/api/goals/save', {
         method: 'POST',
@@ -185,20 +210,23 @@ const PartB = ({ initialData, readOnly }) => {
       });
 
       const data = await response.json();
-      if (data.success) {
-        if (showSuccess) {
-          if (refetchSubmission) await refetchSubmission();
-          alert('Data saved successfully!');
-        }
-        return true;
-      } else {
-        if (!showSuccess) alert('Failed to save data: ' + data.message);
-        return false;
+      const result = {
+        success: !!data.success,
+        status: response.status,
+        code: data.code,
+        message: data.message
+      };
+
+      if (result.success && showSuccess) {
+        alert('Data saved successfully!');
       }
+
+      return returnMeta ? result : result.success;
     } catch (error) {
       console.error('Error saving goals:', error);
       if (showSuccess) alert('Failed to save data. Error: ' + error.message);
-      return false;
+      const fallback = { success: false, status: 0, code: 'NETWORK_ERROR', message: error.message };
+      return returnMeta ? fallback : false;
     }
   }
 
@@ -225,9 +253,18 @@ const PartB = ({ initialData, readOnly }) => {
     }
 
     // Save current goals first
-    const saveSuccessful = await handleSave(null, false);
-    if (!saveSuccessful) {
-      // The handleSave function already displays the exact error message
+    const saveResult = await handleSave(null, false, true);
+    const isPartBLockedDuringResubmit =
+      isResubmitting &&
+      saveResult.status === 403 &&
+      saveResult.code === 'SECTION_LOCKED';
+
+    if (isPartBLockedDuringResubmit) {
+      alert('Part B is currently locked for edits in this cycle. Proceeding with re-submission of your approved section updates.');
+    }
+
+    if (!saveResult.success && !isPartBLockedDuringResubmit) {
+      alert('Failed to save goals. Please try again before submitting.');
       return;
     }
 

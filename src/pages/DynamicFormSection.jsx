@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useParams, useLocation } from 'react-router-dom';
 import { Plus, Trash2, AlertCircle } from 'lucide-react';
 import apiClient from '../services/api';
 import './DynamicFormSection.css';
 import FormActions from '../components/FormActions';
+import { useAuth } from '../context/AuthContext';
 
 const DynamicFormSection = () => {
-  const { user } = useAuth();
   const { sectionId } = useParams();
   const location = useLocation();
+  const { user } = useAuth();
   const [section, setSection] = useState(null);
   const [responses, setResponses] = useState({});
   const [loading, setLoading] = useState(true);
@@ -18,14 +18,15 @@ const DynamicFormSection = () => {
 
   useEffect(() => {
     fetchData();
-  }, [sectionId]);
+  }, [sectionId, user]);
 
   const fetchData = async () => {
     try {
+      if (!user?.id) return;
       setLoading(true);
       const [schemaRes, respRes] = await Promise.all([
         apiClient.get('/form-builder/schema'),
-        apiClient.get(`/form-builder/responses?faculty_id=1`) // TODO: Use real faculty ID
+        apiClient.get(`/form-builder/responses?faculty_id=${user.id}`)
       ]);
 
       if (schemaRes.success) {
@@ -77,6 +78,10 @@ const DynamicFormSection = () => {
 
   const handleSave = async () => {
     try {
+      if (!user?.id) {
+        showToast('Unable to identify logged-in faculty. Please login again.', 'error');
+        return false;
+      }
       setSaving(true);
       const responsePayload = Object.entries(responses).map(([fieldId, value]) => ({
         field_id: parseInt(fieldId),
@@ -84,7 +89,7 @@ const DynamicFormSection = () => {
       }));
 
       const res = await apiClient.post('/form-builder/responses', {
-        faculty_id: user?.id || 1, // TODO: Use real faculty ID
+        faculty_id: user?.id,
         responses: responsePayload
       });
 

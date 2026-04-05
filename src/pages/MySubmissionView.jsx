@@ -1,28 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, FileText, Eye, Send, CheckCircle, Clock,
+  ArrowLeft, FileText, Send, CheckCircle, Clock,
   AlertTriangle, ChevronDown, ChevronUp, BookOpen, Award,
-  Briefcase, Lightbulb, User, RefreshCw, XCircle
+  Briefcase, Lightbulb, User, RefreshCw, ExternalLink
 } from 'lucide-react';
 import './MySubmissionView.css';
-import './DOFAReview.css';
 import { useAuth } from '../context/AuthContext';
-
-// Use existing mirror-mode components (read-only)
-import CoursesTaught from './CoursesTaught';
-import ResearchPublications from './ResearchPublications';
-import ResearchGrants from './ResearchGrants';
-import Patents from './Patents';
-import AwardsHonours from './AwardsHonours';
-import TeachingInnovation from './TeachingInnovation';
-import InstitutionalContributions from './InstitutionalContributions';
-import Consultancy from './Consultancy';
-import PartB from './PartB';
 
 const API = `http://${window.location.hostname}:5000/api`;
 
-// Sections faculty can request edits for (must match backend SECTION_LABELS keys)
 const EDITABLE_SECTIONS = [
   { key: 'faculty_info',                label: 'Faculty Information' },
   { key: 'courses_taught',              label: 'Courses Taught' },
@@ -61,48 +48,36 @@ const MySubmissionView = () => {
   const [submissionData, setSubmissionData] = useState(null);
   const [sessionInfo,    setSessionInfo]    = useState(null);
   const [editRequests,   setEditRequests]   = useState([]);
-  const [loading,         setLoading]        = useState(true);
-  const [activeTab,       setActiveTab]      = useState('faculty');
-  const [editPanelOpen,   setEditPanelOpen]  = useState(false);
+  const [loading,        setLoading]        = useState(true);
+  const [activeTab,      setActiveTab]      = useState('faculty');
+  const [editPanelOpen,  setEditPanelOpen]  = useState(false);
 
-  // Edit request form state
   const [selectedSections, setSelectedSections] = useState([]);
-  const [requestMessage,    setRequestMessage]   = useState('');
-  const [submitting,        setSubmitting]        = useState(false);
+  const [requestMessage,   setRequestMessage]   = useState('');
+  const [submitting,       setSubmitting]        = useState(false);
 
-  useEffect(() => {
-    fetchAll();
-  }, []);
+  useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      // 1. Get my submission
       const subRes = await fetch(`${API}/submissions/my`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const subData = await subRes.json();
-      if (!subData.success || !subData.data) {
-        setLoading(false);
-        return;
-      }
+      if (!subData.success || !subData.data) { setLoading(false); return; }
       const submission = subData.data;
 
-      // 2. Get submission details (full data)
       const detailRes = await fetch(`${API}/submissions/${submission.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const detailData = await detailRes.json();
-      if (detailData.success) {
-        setSubmissionData(detailData.data);
-      }
+      if (detailData.success) setSubmissionData(detailData.data);
 
-      // 3. Get session info (for deadline)
       const sessionRes = await fetch(`${API}/sessions/active`);
       const sessionJson = await sessionRes.json();
       if (sessionJson.success) setSessionInfo(sessionJson);
 
-      // 4. Get edit requests for this submission
       await fetchEditRequests(submission.id);
     } catch (err) {
       console.error('Error loading submission view:', err);
@@ -125,18 +100,16 @@ const MySubmissionView = () => {
     }
   };
 
-  const handleSectionToggle = (key) => {
+  const handleSectionToggle = (key) =>
     setSelectedSections(prev =>
       prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
     );
-  };
 
   const handleSubmitEditRequest = async () => {
     if (selectedSections.length === 0) {
       alert('Please select at least one section to request edits for.');
       return;
     }
-
     setSubmitting(true);
     try {
       const res = await fetch(`${API}/edit-requests`, {
@@ -149,9 +122,8 @@ const MySubmissionView = () => {
         })
       });
       const data = await res.json();
-
       if (data.success) {
-        alert('✅ Your edit request has been submitted! DOFA has been notified via email. You will receive an email once it is reviewed.');
+        alert('✅ Your edit request has been submitted! DOFA has been notified.');
         setSelectedSections([]);
         setRequestMessage('');
         setEditPanelOpen(false);
@@ -166,94 +138,189 @@ const MySubmissionView = () => {
     }
   };
 
-  // ─── Compute deadline status ──────────────────────────────────────────
-
-  const isPastDeadline = sessionInfo?.pastDeadline || false;
-  const isDeadlinePending = sessionInfo?.released && !isPastDeadline;
-
-  // ─── Pending/approved edit request lookup ─────────────────────────────
-
-  const pendingRequest  = editRequests.find(r => r.status === 'pending');
-  const approvedRequest = editRequests.find(r => r.status === 'approved');
-
-  const canRequestEdits =
+  const isPastDeadline   = sessionInfo?.pastDeadline || false;
+  const pendingRequest   = editRequests.find(r => r.status === 'pending');
+  const approvedRequest  = editRequests.find(r => r.status === 'approved');
+  const canRequestEdits  =
     submissionData?.submission?.status === 'submitted' &&
-    !isPastDeadline &&
-    !pendingRequest;
+    !isPastDeadline && !pendingRequest;
 
-  // ─── Loading / not found ──────────────────────────────────────────────
+  /* ── Helpers ── */
+  const formatDate = (d) =>
+    d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
 
-  if (loading) {
+  const uploadBase = `http://${window.location.hostname}:5000/uploads/`;
+
+  const toLabel = (key) =>
+    String(key || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const formatCellValue = (value, key) => {
+    if (value === null || value === undefined || value === '')
+      return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>;
+
+    if (key && key.includes('evidence_file') && typeof value === 'string') {
+      return (
+        <a href={`${uploadBase}${value}`} target="_blank" rel="noopener noreferrer" className="msv-link-cell">
+          <ExternalLink size={11} /> View File
+        </a>
+      );
+    }
+
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleDateString('en-IN');
+    }
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>;
+      return value.map(e => typeof e === 'object' ? JSON.stringify(e) : String(e)).join(', ');
+    }
+
+    if (typeof value === 'object') return JSON.stringify(value);
+
+    return String(value);
+  };
+
+  const renderDataTable = (title, rows, preferredColumns = []) => {
+    const safeRows = Array.isArray(rows) ? rows.filter(Boolean) : [];
+    if (safeRows.length === 0) {
+      return (
+        <div className="msv-data-section" key={title}>
+          <h4 className="msv-subsection-title">{title}</h4>
+          <p className="msv-no-data-inline">No submitted entries.</p>
+        </div>
+      );
+    }
+
+    const hidden = new Set(['id', 'faculty_id']);
+    const rawCols = Object.keys(safeRows[0]).filter(k => !hidden.has(k));
+    const preferred = preferredColumns.filter(k => rawCols.includes(k));
+    const rest = rawCols.filter(k => !preferred.includes(k));
+    const columns = [...preferred, ...rest];
+
     return (
-      <div className="my-submission-view">
-        <div className="msv-loading">
-          <div className="msv-spinner" />
-          <p>Loading your submission...</p>
+      <div className="msv-data-section" key={title}>
+        <h4 className="msv-subsection-title">{title}
+          <span style={{
+            marginLeft: '0.5rem', padding: '0.1rem 0.45rem',
+            background: '#e0e7ff', color: '#3730a3',
+            borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700
+          }}>{safeRows.length}</span>
+        </h4>
+        <div className="msv-table-wrap">
+          <table className="msv-table">
+            <thead>
+              <tr>
+                {columns.map(col => <th key={col}>{toLabel(col)}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {safeRows.map((row, idx) => (
+                <tr key={`${title}-${idx}`}>
+                  {columns.map(col => (
+                    <td key={`${title}-${idx}-${col}`}>{formatCellValue(row[col], col)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     );
-  }
+  };
 
-  if (!submissionData) {
+  const renderFieldGrid = (title, data) => {
+    const entries = Object.entries(data || {}).filter(([, v]) => v !== null && v !== undefined && v !== '');
+    if (entries.length === 0) {
+      return (
+        <div className="msv-data-section" key={title}>
+          <h4 className="msv-subsection-title">{title}</h4>
+          <p className="msv-no-data-inline">No submitted entries.</p>
+        </div>
+      );
+    }
     return (
-      <div className="my-submission-view">
-        <div className="msv-empty">
-          <FileText size={48} strokeWidth={1} />
-          <p>No submission found for the current academic year.</p>
-          <button className="msv-back-btn" onClick={() => navigate('/')}>
-            <ArrowLeft size={16} /> Back to Dashboard
-          </button>
+      <div className="msv-data-section" key={title}>
+        <h4 className="msv-subsection-title">{title}</h4>
+        <div className="msv-info-grid">
+          {entries.map(([key, value]) => (
+            <div key={key} className="msv-info-item">
+              <label>{toLabel(key)}</label>
+              <p>{formatCellValue(value, key)}</p>
+            </div>
+          ))}
         </div>
       </div>
     );
-  }
+  };
+
+  const renderGoalsBySemester = () => {
+    const safeGoals = Array.isArray(goals) ? goals : [];
+    if (safeGoals.length === 0) return <p className="msv-no-data">No goals data available.</p>;
+    const semesters = [...new Set(safeGoals.map(g => g.semester || 'Unspecified'))];
+    return semesters.map(sem => renderDataTable(
+      `Semester: ${sem}`,
+      safeGoals.filter(g => (g.semester || 'Unspecified') === sem),
+      ['teaching', 'research', 'contribution', 'outreach', 'description', 'evidence_file']
+    ));
+  };
+
+  /* ── States ── */
+  if (loading) return (
+    <div className="my-submission-view">
+      <div className="msv-loading">
+        <div className="msv-spinner" />
+        <p>Loading your submission…</p>
+      </div>
+    </div>
+  );
+
+  if (!submissionData) return (
+    <div className="my-submission-view">
+      <div className="msv-empty">
+        <FileText size={44} strokeWidth={1.25} />
+        <p>No submission found for the current academic year.</p>
+        <button className="msv-back-btn" onClick={() => navigate('/')}>
+          <ArrowLeft size={14} /> Back to Dashboard
+        </button>
+      </div>
+    </div>
+  );
 
   const {
-    submission,
-    facultyInfo,
-    courses, newCourses,
-    publications,
-    grants, proposals,
-    patents,
-    awards,
-    paperReviews,
-    techTransfer,
-    conferenceSessions, keynotesTalks,
-    consultancy,
-    teachingInnovation,
-    institutionalContributions,
-    goals,
-    comments,
+    submission, facultyInfo, courses, newCourses, publications,
+    grants, proposals, patents, awards, paperReviews, techTransfer,
+    conferenceSessions, keynotesTalks, consultancy, teachingInnovation,
+    institutionalContributions, goals, comments,
   } = submissionData;
 
   const statusLabel = STATUS_LABELS[submission?.status] || submission?.status;
 
   const tabs = [
-    { key: 'faculty',       label: 'Faculty Info',     icon: <User size={15} /> },
-    { key: 'teaching',      label: 'Teaching',         icon: <BookOpen size={15} /> },
-    { key: 'publications',  label: 'Publications',     icon: <FileText size={15} /> },
-    { key: 'research',      label: 'Research & Grants',icon: <Briefcase size={15} /> },
-    { key: 'events',        label: 'Events & Awards',  icon: <Award size={15} /> },
-    { key: 'consultancy',   label: 'Consultancy',      icon: <Briefcase size={15} /> },
-    { key: 'innovation',    label: 'Innovation',       icon: <Lightbulb size={15} /> },
-    { key: 'partb',         label: 'Part B',           icon: <CheckCircle size={15} /> },
+    { key: 'faculty',      label: 'Faculty Info',      icon: <User size={14} /> },
+    { key: 'teaching',     label: 'Teaching',           icon: <BookOpen size={14} /> },
+    { key: 'publications', label: 'Publications',       icon: <FileText size={14} />, count: publications?.length },
+    { key: 'research',     label: 'Research & Grants',  icon: <Briefcase size={14} /> },
+    { key: 'events',       label: 'Events & Awards',    icon: <Award size={14} /> },
+    { key: 'consultancy',  label: 'Consultancy',        icon: <Briefcase size={14} />, count: consultancy?.length },
+    { key: 'innovation',   label: 'Innovation',         icon: <Lightbulb size={14} /> },
+    { key: 'partb',        label: 'Part B',             icon: <CheckCircle size={14} /> },
   ];
-
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
 
   return (
     <div className="my-submission-view">
+
       {/* ── Header ── */}
       <div className="msv-header">
         <button className="msv-back-btn" onClick={() => navigate('/')}>
-          <ArrowLeft size={16} /> Back to Dashboard
+          <ArrowLeft size={14} /> Back
         </button>
         <div className="msv-title-block">
           <h1 className="msv-title">My Submitted Form</h1>
           <p className="msv-subtitle">Academic Year: {submission.academic_year}</p>
         </div>
         <span className={`msv-status-badge badge-${submission.status}`}>
-          <CheckCircle size={13} /> {statusLabel}
+          <CheckCircle size={12} /> {statusLabel}
         </span>
       </div>
 
@@ -261,89 +328,81 @@ const MySubmissionView = () => {
       <div className={`msv-status-bar status-${submission.status}`}>
         <div className="msv-status-icon">
           {submission.status === 'submitted' || submission.status === 'approved'
-            ? <CheckCircle size={26} />
+            ? <CheckCircle size={22} />
             : submission.status === 'sent_back'
-              ? <RefreshCw size={26} />
-              : <Clock size={26} />}
+              ? <RefreshCw size={22} />
+              : <Clock size={22} />}
         </div>
         <div className="msv-status-info">
           <h3>
-            {submission.status === 'submitted' && 'Form Successfully Submitted'}
-            {submission.status === 'approved' && 'Form Approved by DOFA'}
-            {submission.status === 'sent_back' && 'Edit Access Granted'}
-            {submission.status === 'draft' && 'Draft — Not Yet Submitted'}
+            {submission.status === 'submitted'    && 'Form Successfully Submitted'}
+            {submission.status === 'approved'     && 'Form Approved by DOFA'}
+            {submission.status === 'sent_back'    && 'Edit Access Granted'}
+            {submission.status === 'draft'        && 'Draft — Not Yet Submitted'}
             {submission.status === 'under_review' && 'Under Review'}
           </h3>
           <p>
             Submitted on <strong>{formatDate(submission.submitted_at)}</strong>
-            {isPastDeadline && ' — Submission deadline has passed. No further edits are allowed.'}
-            {!isPastDeadline && sessionInfo?.data?.deadline && ` · Deadline: ${formatDate(sessionInfo.data.deadline)}`}
+            {isPastDeadline && ' · Submission deadline has passed. No further edits allowed.'}
+            {!isPastDeadline && sessionInfo?.data?.deadline &&
+              ` · Deadline: ${formatDate(sessionInfo.data.deadline)}`}
           </p>
         </div>
       </div>
 
-      {/* ── Edit Request Panel (only if submitted and not past deadline) ── */}
+      {/* ── Edit Request Panel ── */}
       {(submission.status === 'submitted' || pendingRequest || approvedRequest) && (
         <div className="msv-edit-panel">
-          <div
-            className="msv-edit-panel-header"
-            onClick={() => setEditPanelOpen(o => !o)}
-          >
+          <div className="msv-edit-panel-header" onClick={() => setEditPanelOpen(o => !o)}>
             <div className="msv-edit-panel-header-left">
-              <div className="msv-panel-icon">
-                <Send size={18} />
-              </div>
+              <div className="msv-panel-icon"><Send size={16} /></div>
               <div>
                 <h3>Request Section Edits</h3>
                 <p>Ask DOFA to unlock specific sections for editing</p>
               </div>
             </div>
-            {editPanelOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            {editPanelOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </div>
 
           {editPanelOpen && (
             <div className="msv-edit-panel-body">
-              {/* Deadline passed notice */}
               {isPastDeadline && (
                 <div className="msv-deadline-warning">
-                  <AlertTriangle size={18} />
+                  <AlertTriangle size={16} />
                   <span>The submission deadline has passed on <strong>{formatDate(sessionInfo?.data?.deadline)}</strong>. You can no longer request changes.</span>
                 </div>
               )}
 
-              {/* Pending request notice */}
               {pendingRequest && (
                 <div className="msv-pending-notice">
-                  <Clock size={20} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <Clock size={18} style={{ flexShrink: 0, marginTop: 2 }} />
                   <p>
-                    <strong>Edit request pending review.</strong> Your request submitted on {formatDate(pendingRequest.created_at)} is awaiting DOFA approval.
-                    Sections requested: <strong>{pendingRequest.requested_sections?.join(', ')}</strong>
+                    <strong>Edit request pending review.</strong> Submitted on {formatDate(pendingRequest.created_at)}.{' '}
+                    Sections: <strong>{pendingRequest.requested_sections?.join(', ')}</strong>
                   </p>
                 </div>
               )}
 
-              {/* Approved request notice */}
               {approvedRequest && !pendingRequest && (
                 <div className="msv-approved-notice">
-                  <CheckCircle size={20} style={{ flexShrink: 0, marginTop: 2, color: '#059669' }} />
+                  <CheckCircle size={18} style={{ flexShrink: 0, marginTop: 2, color: '#059669' }} />
                   <div>
-                    <p><strong>Edit access has been granted for the following sections:</strong></p>
+                    <p><strong>Edit access granted for:</strong></p>
                     <ul>
                       {approvedRequest.approved_sections?.map(s => (
                         <li key={s}>{EDITABLE_SECTIONS.find(e => e.key === s)?.label || s}</li>
                       ))}
                     </ul>
-                    <p style={{ marginTop: 8, fontSize: '0.82rem', color: '#047857' }}>
-                      Use the sidebar to navigate to those sections and make your changes. Then re-submit from Part B.
+                    <p style={{ marginTop: 6, fontSize: '0.78rem', color: '#047857' }}>
+                      Navigate to those sections in the sidebar and make your changes, then re-submit from Part B.
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* New request form */}
               {canRequestEdits && !isPastDeadline && (
                 <>
-                  <p className="msv-sections-label">Select the sections you want to edit:</p>
+                  <p className="msv-sections-label">Select sections you want to edit:</p>
                   <div className="msv-sections-grid">
                     {EDITABLE_SECTIONS.map(section => (
                       <label
@@ -361,11 +420,11 @@ const MySubmissionView = () => {
                   </div>
 
                   <div className="msv-request-message">
-                    <label>Why do you need to make changes? <span style={{ fontWeight: 400, color: '#94a3b8' }}>(optional)</span></label>
+                    <label>Reason for changes <span style={{ fontWeight: 400, color: '#94a3b8', textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
                     <textarea
                       value={requestMessage}
                       onChange={e => setRequestMessage(e.target.value)}
-                      placeholder="Briefly explain the reason for requesting changes..."
+                      placeholder="Briefly explain why you need to make changes…"
                       rows={3}
                     />
                   </div>
@@ -378,20 +437,20 @@ const MySubmissionView = () => {
                     {submitting ? (
                       <>
                         <span style={{
-                          width: 15, height: 15,
-                          border: '2px solid rgba(255,255,255,0.35)',
+                          width: 14, height: 14,
+                          border: '2px solid rgba(255,255,255,0.3)',
                           borderTopColor: '#fff',
                           borderRadius: '50%',
                           display: 'inline-block',
                           animation: 'msvSpin 0.7s linear infinite',
                           flexShrink: 0
                         }} />
-                        Submitting...
+                        Submitting…
                       </>
                     ) : (
                       <>
-                        <Send size={16} />
-                        {`Submit Request (${selectedSections.length} section${selectedSections.length !== 1 ? 's' : ''})`}
+                        <Send size={14} />
+                        Submit Request{selectedSections.length > 0 ? ` (${selectedSections.length})` : ''}
                       </>
                     )}
                   </button>
@@ -399,29 +458,19 @@ const MySubmissionView = () => {
                 </>
               )}
 
-              {/* Past Requests history */}
               {editRequests.length > 0 && (
                 <div className="msv-past-requests">
                   <h4>Request History</h4>
                   {editRequests.map(req => (
                     <div key={req.id} className="msv-request-item">
-                      <span
-                        className={`msv-request-item-status badge-${req.status}`}
-                        style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700 }}
-                      >
+                      <span className={`msv-request-item-status badge-${req.status}`}>
                         {req.status === 'pending' ? 'Pending' : req.status === 'approved' ? 'Approved' : 'Denied'}
                       </span>
                       <div className="msv-request-item-content">
-                        <p>
-                          <strong>Requested:</strong> {req.requested_sections?.join(', ')}
-                        </p>
-                        {req.approved_sections && (
-                          <p><strong>Approved:</strong> {req.approved_sections.join(', ')}</p>
-                        )}
-                        {req.dofa_note && (
-                          <p><strong>DOFA Note:</strong> {req.dofa_note}</p>
-                        )}
-                        <p style={{ color: '#94a3b8', fontSize: '0.78rem' }}>
+                        <p><strong>Requested:</strong> {req.requested_sections?.join(', ')}</p>
+                        {req.approved_sections && <p><strong>Approved:</strong> {req.approved_sections.join(', ')}</p>}
+                        {req.dofa_note && <p><strong>Note:</strong> {req.dofa_note}</p>}
+                        <p style={{ color: '#94a3b8', fontSize: '0.72rem' }}>
                           {formatDate(req.created_at)}
                           {req.reviewed_at && ` · Reviewed: ${formatDate(req.reviewed_at)}`}
                         </p>
@@ -443,7 +492,17 @@ const MySubmissionView = () => {
             className={`msv-tab-btn ${activeTab === t.key ? 'active' : ''}`}
             onClick={() => setActiveTab(t.key)}
           >
-            {t.icon} {t.label}
+            {t.icon}
+            {t.label}
+            {t.count !== undefined && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 17, height: 17, padding: '0 3px',
+                background: activeTab === t.key ? 'rgba(255,255,255,0.25)' : '#e0e7ff',
+                color: activeTab === t.key ? '#fff' : '#3730a3',
+                borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700
+              }}>{t.count}</span>
+            )}
           </button>
         ))}
       </div>
@@ -454,138 +513,91 @@ const MySubmissionView = () => {
 
           {activeTab === 'faculty' && (
             <>
-              <h3 className="msv-section-title"><User size={18} /> Faculty Information</h3>
-              {facultyInfo && Object.keys(facultyInfo).length > 0 ? (
-                <div className="msv-info-grid">
-                  {[
-                    ['Name', facultyInfo.name],
-                    ['Employee ID', facultyInfo.employee_id],
-                    ['Department', facultyInfo.department],
-                    ['Designation', facultyInfo.designation],
-                    ['Email', facultyInfo.email],
-                    ['Phone', facultyInfo.phone],
-                    ['Date of Joining', facultyInfo.date_of_joining ? new Date(facultyInfo.date_of_joining).toLocaleDateString('en-IN') : null],
-                  ].map(([label, val]) => (
-                    <div key={label} className="msv-info-item">
-                      <label>{label}</label>
-                      <p>{val || '—'}</p>
-                    </div>
-                  ))}
-                  <div className="msv-info-item msv-full-width">
-                    <label>Qualifications</label>
-                    <p>{facultyInfo.qualifications || '—'}</p>
-                  </div>
-                </div>
-              ) : <p className="msv-no-data">No faculty information available.</p>}
+              <h3 className="msv-section-title"><User size={17} /> Faculty Information</h3>
+              {renderFieldGrid('Submitted Faculty Profile', facultyInfo)}
             </>
           )}
 
           {activeTab === 'teaching' && (
             <>
-              <h3 className="msv-section-title"><BookOpen size={18} /> Teaching & Courses</h3>
-              <div className="mirror-component-wrapper">
-                <CoursesTaught initialData={{ courses, newCourses }} readOnly={true} />
-              </div>
+              <h3 className="msv-section-title"><BookOpen size={17} /> Teaching & Courses</h3>
+              {renderDataTable('Courses Taught', courses, ['course_code', 'course_title', 'semester', 'year', 'students', 'feedback_score', 'evidence_file'])}
+              {renderDataTable('New Courses Developed', newCourses, ['title', 'course_name', 'semester', 'year', 'role', 'evidence_file'])}
             </>
           )}
 
           {activeTab === 'publications' && (
             <>
-              <h3 className="msv-section-title"><FileText size={18} /> Research Publications</h3>
-              {publications && publications.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                  {publications.map((pub, i) => (
-                    <div key={i} className="mirror-component-wrapper" style={{ border: '1px solid #eee', borderRadius: 8, padding: '1rem', background: '#fafafa' }}>
-                      <ResearchPublications initialData={pub} readOnly={true} />
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="msv-no-data">No publications data available.</p>}
+              <h3 className="msv-section-title"><FileText size={17} /> Research Publications</h3>
+              {renderDataTable('Research Publications', publications, ['publication_type', 'sub_type', 'title', 'year_of_publication', 'journal_name', 'conference_name', 'publication_agency', 'evidence_file'])}
             </>
           )}
 
           {activeTab === 'research' && (
             <>
-              <h3 className="msv-section-title"><Briefcase size={18} /> Research Grants & Proposals</h3>
-              <div className="mirror-component-wrapper">
-                <ResearchGrants initialData={{ grants, proposals }} readOnly={true} />
-              </div>
+              <h3 className="msv-section-title"><Briefcase size={17} /> Research Grants & Proposals</h3>
+              {renderDataTable('Research Grants', grants, ['grant_type', 'project_name', 'funding_agency', 'currency', 'grant_amount', 'amount_in_lakhs', 'duration', 'researchers', 'role', 'evidence_file'])}
+              {renderDataTable('Submitted Proposals', proposals, ['title', 'funding_agency', 'currency', 'grant_amount', 'amount_in_lakhs', 'duration', 'submission_date', 'status', 'role', 'evidence_file'])}
+              {renderDataTable('Technology Transfer', techTransfer, ['title', 'details', 'year', 'organization', 'role', 'evidence_file'])}
             </>
           )}
 
           {activeTab === 'events' && (
             <>
-              <h3 className="msv-section-title"><Award size={18} /> Events, Patents & Awards</h3>
-              <div style={{ marginBottom: '2.5rem' }}>
-                <h4 style={{ color: '#1e3a5f', marginBottom: '1rem', fontSize: '1rem' }}>Patents</h4>
-                <div className="mirror-component-wrapper">
-                  <Patents initialData={patents || []} readOnly={true} />
-                </div>
-              </div>
-              <div>
-                <h4 style={{ color: '#1e3a5f', marginBottom: '1rem', fontSize: '1rem' }}>Awards & Honours</h4>
-                <div className="mirror-component-wrapper">
-                  <AwardsHonours initialData={awards || []} readOnly={true} />
-                </div>
-              </div>
+              <h3 className="msv-section-title"><Award size={17} /> Events, Patents & Awards</h3>
+              {renderDataTable('Patents', patents, ['title', 'patent_number', 'status', 'year', 'country', 'evidence_file'])}
+              {renderDataTable('Awards & Honours', awards, ['title', 'awarding_body', 'year', 'level', 'evidence_file'])}
+              {renderDataTable('Paper Reviews', paperReviews, ['journal_name', 'review_count', 'year', 'details', 'evidence_file'])}
+              {renderDataTable('Conference Sessions', conferenceSessions, ['conference_name', 'role', 'date', 'location', 'evidence_file'])}
+              {renderDataTable('Keynotes & Talks', keynotesTalks, ['title', 'event_name', 'date', 'location', 'evidence_file'])}
             </>
           )}
 
           {activeTab === 'consultancy' && (
             <>
-              <h3 className="msv-section-title"><Briefcase size={18} /> Consultancy</h3>
-              {consultancy && consultancy.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                  {consultancy.map((item, i) => (
-                    <div key={i} className="mirror-component-wrapper" style={{ border: '1px solid #eee', borderRadius: 8, padding: '1rem', background: '#fafafa' }}>
-                      <Consultancy initialData={item} readOnly={true} />
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="msv-no-data">No consultancy data available.</p>}
+              <h3 className="msv-section-title"><Briefcase size={17} /> Consultancy</h3>
+              {renderDataTable('Consultancy Projects', consultancy, ['organization', 'project_title', 'role', 'duration', 'amount', 'year', 'evidence_file'])}
             </>
           )}
 
           {activeTab === 'innovation' && (
             <>
-              <h3 className="msv-section-title"><Lightbulb size={18} /> Innovation & Institutional Contributions</h3>
-              <div style={{ marginBottom: '2.5rem' }}>
-                <TeachingInnovation initialData={teachingInnovation} readOnly={true} />
-              </div>
-              <div>
-                <InstitutionalContributions initialData={institutionalContributions} readOnly={true} />
-              </div>
+              <h3 className="msv-section-title"><Lightbulb size={17} /> Innovation & Institutional Contributions</h3>
+              {renderDataTable('Teaching Innovation', teachingInnovation, ['title', 'description', 'impact', 'year', 'evidence_file'])}
+              {renderDataTable('Institutional Contributions', institutionalContributions, ['category', 'activity', 'role', 'year', 'details', 'evidence_file'])}
             </>
           )}
 
           {activeTab === 'partb' && (
             <>
-              <h3 className="msv-section-title"><CheckCircle size={18} /> Part B — Goal Setting</h3>
-              <div className="mirror-component-wrapper">
-                <PartB initialData={goals} readOnly={true} />
-              </div>
+              <h3 className="msv-section-title"><CheckCircle size={17} /> Part B — Goal Setting</h3>
+              {renderGoalsBySemester()}
             </>
           )}
 
         </div>
       </div>
 
-      {/* ── Comments from DOFA ── */}
+      {/* ── DOFA Comments ── */}
       {comments && comments.length > 0 && (
-        <div className="msv-content-card" style={{ marginTop: 20 }}>
+        <div className="msv-content-card" style={{ marginTop: '1.25rem' }}>
           <div className="msv-section-card">
-            <h3 className="msv-section-title">Comments from DOFA</h3>
+            <h3 className="msv-section-title">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Comments from DOFA
+            </h3>
             {comments.map((c, i) => (
-              <div key={i} className="msv-request-item" style={{ marginBottom: 8 }}>
+              <div key={i} className="msv-request-item" style={{ marginBottom: '0.5rem' }}>
                 <div className="msv-request-item-content">
-                  <p><strong>{c.reviewer_name || 'DOFA Office'}</strong> — {formatDate(c.created_at)}</p>
-                  <p style={{ marginTop: 4, color: '#334155' }}>{c.comment}</p>
+                  <p><strong>{c.reviewer_name || 'DOFA Office'}</strong> · {formatDate(c.created_at)}</p>
+                  <p style={{ marginTop: '0.25rem', color: '#334155' }}>{c.comment}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
       )}
+
     </div>
   );
 };

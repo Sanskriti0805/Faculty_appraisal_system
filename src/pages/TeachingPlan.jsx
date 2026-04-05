@@ -1,9 +1,13 @@
 import React, { useState } from 'react'
+import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
+import { useAuth } from '../context/AuthContext'
+import { legacySectionsService } from '../services/legacySectionsService'
 
 const TeachingPlan = () => {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     coreUGCourses: '',
     ugElectives: '',
@@ -11,14 +15,47 @@ const TeachingPlan = () => {
     optionalQuestion: '',
   })
 
+  useEffect(() => {
+    if (!user?.id) return
+
+    const hydrate = async () => {
+      try {
+        const res = await legacySectionsService.getMySection('teaching_plan')
+        const parsed = res?.data
+        if (!parsed) return
+        setFormData({
+          coreUGCourses: parsed.coreUGCourses || '',
+          ugElectives: parsed.ugElectives || '',
+          graduateCourses: parsed.graduateCourses || '',
+          optionalQuestion: parsed.optionalQuestion || '',
+        })
+      } catch (error) {
+        console.error('Failed to load teaching plan data:', error)
+      }
+    }
+
+    hydrate()
+  }, [user])
+
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value })
   }
 
   const handleSave = async () => {
-    console.log('Saving data:', formData)
-    alert('Data saved successfully!')
-    return true
+    if (!user?.id) {
+      alert('Unable to identify logged-in faculty. Please login again.')
+      return false
+    }
+
+    try {
+      await legacySectionsService.saveSection('teaching_plan', formData)
+      alert('Data saved successfully!')
+      return true
+    } catch (error) {
+      console.error('Failed to save teaching plan data:', error)
+      alert('Failed to save data. Please try again.')
+      return false
+    }
   }
 
   return (

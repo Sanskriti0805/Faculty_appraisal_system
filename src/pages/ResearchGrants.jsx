@@ -1,14 +1,32 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Trash2, ExternalLink, Upload } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
 import './CoursesTaught.css'
 import { grantsService } from '../services/grantsService'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
+import { useAuth } from '../context/AuthContext'
+
+const isNotFoundError = (error) => error?.response?.status === 404
+
+const deleteIgnoringNotFound = async (deleteFn, ids) => {
+  const validIds = (ids || []).filter(id => Number.isFinite(Number(id)))
+  const results = await Promise.allSettled(validIds.map(id => deleteFn(id)))
+
+  const firstRealError = results.find(
+    result => result.status === 'rejected' && !isNotFoundError(result.reason)
+  )
+
+  if (firstRealError) {
+    throw firstRealError.reason
+  }
+}
 
 const ResearchGrants = ({ initialData, readOnly }) => {
+  const { user } = useAuth()
   const [selectedType, setSelectedType] = useState('')
   const [loading, setLoading] = useState(false)
+  const [persistedGrantIds, setPersistedGrantIds] = useState([])
+  const [persistedProposalIds, setPersistedProposalIds] = useState([])
 
   const [grants, setGrants] = useState([
     {
@@ -44,6 +62,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
   useEffect(() => {
     if (initialData) {
       if (initialData.grants) {
+        setPersistedGrantIds(initialData.grants.map(g => g.id).filter(Boolean))
         setGrants(initialData.grants.map(g => ({
           id: g.id,
           projectName: g.project_name,
@@ -58,6 +77,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
         })) || [{ id: 1, projectName: '', fundingAgency: '', currency: 'INR', grantAmount: '', amountInLakhs: '', duration: '', researchers: '', role: '', evidenceFile: null }])
       }
       if (initialData.proposals) {
+        setPersistedProposalIds(initialData.proposals.map(p => p.id).filter(Boolean))
         setProposals(initialData.proposals.map(p => ({
           id: p.id,
           title: p.title,
@@ -72,8 +92,74 @@ const ResearchGrants = ({ initialData, readOnly }) => {
           evidence_file: p.evidence_file
         })) || [{ id: 1, title: '', fundingAgency: '', currency: 'INR', grantAmount: '', amountInLakhs: '', duration: '', submissionDate: '', status: '', role: '', evidenceFile: null }])
       }
+
+      if (Array.isArray(initialData.grants) && initialData.grants.length > 0) {
+        setSelectedType('grants')
+      } else if (Array.isArray(initialData.proposals) && initialData.proposals.length > 0) {
+        setSelectedType('proposals')
+      }
     }
   }, [initialData])
+
+  useEffect(() => {
+    // For editable mode, hydrate form with already saved entries.
+    if (readOnly || initialData || !user?.id) return
+
+    const loadExisting = async () => {
+      try {
+        const [grantsResp, proposalsResp] = await Promise.all([
+          grantsService.getGrantsByFaculty(user.id),
+          grantsService.getProposalsByFaculty(user.id)
+        ])
+
+        const fetchedGrants = Array.isArray(grantsResp?.data) ? grantsResp.data : []
+        const fetchedProposals = Array.isArray(proposalsResp?.data) ? proposalsResp.data : []
+
+        if (fetchedGrants.length > 0) {
+          setPersistedGrantIds(fetchedGrants.map(g => g.id).filter(Boolean))
+          setGrants(fetchedGrants.map(g => ({
+            id: g.id,
+            projectName: g.project_name || '',
+            fundingAgency: g.funding_agency || '',
+            currency: g.currency || 'INR',
+            grantAmount: g.grant_amount || '',
+            amountInLakhs: g.amount_in_lakhs || '',
+            duration: g.duration || '',
+            researchers: g.researchers || '',
+            role: g.role || '',
+            evidence_file: g.evidence_file || null,
+            evidenceFile: null
+          })))
+          setSelectedType('grants')
+        }
+
+        if (fetchedProposals.length > 0) {
+          setPersistedProposalIds(fetchedProposals.map(p => p.id).filter(Boolean))
+          setProposals(fetchedProposals.map(p => ({
+            id: p.id,
+            title: p.title || '',
+            fundingAgency: p.funding_agency || '',
+            currency: p.currency || 'INR',
+            grantAmount: p.grant_amount || '',
+            amountInLakhs: p.amount_in_lakhs || '',
+            duration: p.duration || '',
+            submissionDate: p.submission_date || '',
+            status: p.status || '',
+            role: p.role || '',
+            evidence_file: p.evidence_file || null,
+            evidenceFile: null
+          })))
+          if (fetchedGrants.length === 0) {
+            setSelectedType('proposals')
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load existing grants/proposals:', error)
+      }
+    }
+
+    loadExisting()
+  }, [initialData, readOnly, user])
 
   const handleGrantInputChange = (index, field, value) => {
     const updated = [...grants]
@@ -138,6 +224,12 @@ const ResearchGrants = ({ initialData, readOnly }) => {
     }
   }
 
+  const ReadOnlyField = ({ value, children }) => (
+    readOnly
+      ? <div className="readonly-table-text">{value === null || value === undefined || value === '' ? '—' : String(value)}</div>
+      : children
+  )
+
   const handleSave = async () => {
     if (!selectedType) {
       alert('Please select a type first')
@@ -146,12 +238,17 @@ const ResearchGrants = ({ initialData, readOnly }) => {
 
     setLoading(true)
     try {
-      const facultyId = user?.id || 1;
+      const facultyId = user?.id
+      if (!facultyId) {
+        alert('Unable to identify logged-in faculty. Please login again.')
+        return false
+      }
 
       if (selectedType === 'grants') {
-        // Save grants
+        await deleteIgnoringNotFound(grantsService.deleteGrant, persistedGrantIds)
+
         const promises = grants
-          .filter(g => g.projectName && g.fundingAgency) // Only save filled grants
+          .filter(g => g.projectName && g.fundingAgency)
           .map(grant => {
             const grantData = {
               faculty_id: facultyId,
@@ -169,11 +266,18 @@ const ResearchGrants = ({ initialData, readOnly }) => {
             return grantsService.createGrant(grantData)
           })
 
-        await Promise.all(promises)
+        const createdResponses = await Promise.all(promises)
+        const createdIds = createdResponses
+          .map(response => response?.data?.id)
+          .filter(id => Number.isFinite(Number(id)))
+
+        setPersistedGrantIds(createdIds)
+        setPersistedProposalIds([])
       } else if (selectedType === 'proposals') {
-        // Save proposals
+        await deleteIgnoringNotFound(grantsService.deleteProposal, persistedProposalIds)
+
         const promises = proposals
-          .filter(p => p.title && p.fundingAgency) // Only save filled proposals
+          .filter(p => p.title && p.fundingAgency)
           .map(proposal => {
             const proposalData = {
               faculty_id: facultyId,
@@ -191,7 +295,13 @@ const ResearchGrants = ({ initialData, readOnly }) => {
             return grantsService.createProposal(proposalData)
           })
 
-        await Promise.all(promises)
+        const createdResponses = await Promise.all(promises)
+        const createdIds = createdResponses
+          .map(response => response?.data?.id)
+          .filter(id => Number.isFinite(Number(id)))
+
+        setPersistedProposalIds(createdIds)
+        setPersistedGrantIds([])
       }
 
       alert('Data saved successfully!')
@@ -205,6 +315,11 @@ const ResearchGrants = ({ initialData, readOnly }) => {
     }
   }
 
+  const hasGrantRows = grants.some(g => g.projectName || g.fundingAgency || g.grantAmount || g.duration || g.researchers || g.role)
+  const hasProposalRows = proposals.some(p => p.title || p.fundingAgency || p.grantAmount || p.duration || p.submissionDate || p.status || p.role)
+  const showGrantsTable = readOnly ? hasGrantRows : selectedType === 'grants'
+  const showProposalsTable = readOnly ? hasProposalRows : selectedType === 'proposals'
+
   return (
     <div className={`courses-taught ${readOnly ? 'read-only-mode' : ''}`}>
       {!readOnly && (
@@ -217,6 +332,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
       )}
 
       {/* Type Selection */}
+      {!readOnly && (
       <div className="semester-section" style={{ marginBottom: '2rem' }}>
         <div style={{ padding: '1.5rem' }}>
           <label style={{
@@ -250,10 +366,11 @@ const ResearchGrants = ({ initialData, readOnly }) => {
           </select>
         </div>
       </div>
+      )}
 
       {/* External Grants Received Table */}
       {
-        selectedType === 'grants' && (
+        showGrantsTable && (
           <div className="semester-section">
             <div className="semester-header">
               <h3>External Grants Received</h3>
@@ -288,107 +405,123 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                   {grants.map((grant, index) => (
                     <tr key={grant.id}>
                       <td>
-                        <input
-                          type="text"
-                          value={grant.projectName}
-                          onChange={(e) => handleGrantInputChange(index, 'projectName', e.target.value)}
-                          placeholder="Project name"
-                          disabled={readOnly}
-                          style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                        />
+                        <ReadOnlyField value={grant.projectName}>
+                          <input
+                            type="text"
+                            value={grant.projectName}
+                            onChange={(e) => handleGrantInputChange(index, 'projectName', e.target.value)}
+                            placeholder={readOnly ? '' : 'Project name'}
+                            disabled={readOnly}
+                            style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          value={grant.fundingAgency}
-                          onChange={(e) => handleGrantInputChange(index, 'fundingAgency', e.target.value)}
-                          placeholder="Funding agency"
-                          disabled={readOnly}
-                          style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                        />
+                        <ReadOnlyField value={grant.fundingAgency}>
+                          <input
+                            type="text"
+                            value={grant.fundingAgency}
+                            onChange={(e) => handleGrantInputChange(index, 'fundingAgency', e.target.value)}
+                            placeholder={readOnly ? '' : 'Funding agency'}
+                            disabled={readOnly}
+                            style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <select
-                          value={grant.currency}
-                          onChange={(e) => handleGrantInputChange(index, 'currency', e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: readOnly ? 'none' : '1px solid #d1d8e0',
-                            borderRadius: '4px',
-                            fontSize: '0.9rem',
-                            background: readOnly ? 'transparent' : 'white',
-                            appearance: readOnly ? 'none' : 'auto'
-                          }}
-                          disabled={readOnly}
-                        >
-                          <option value="INR">INR</option>
-                          <option value="USD">USD</option>
-                          <option value="EUR">EUR</option>
-                          <option value="GBP">GBP</option>
-                          <option value="Other">Other</option>
-                        </select>
+                        <ReadOnlyField value={grant.currency}>
+                          <select
+                            value={grant.currency}
+                            onChange={(e) => handleGrantInputChange(index, 'currency', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.5rem',
+                              border: readOnly ? 'none' : '1px solid #d1d8e0',
+                              borderRadius: '4px',
+                              fontSize: '0.9rem',
+                              background: readOnly ? 'transparent' : 'white',
+                              appearance: readOnly ? 'none' : 'auto'
+                            }}
+                            disabled={readOnly}
+                          >
+                            <option value="INR">INR</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          value={grant.grantAmount}
-                          onChange={(e) => handleGrantInputChange(index, 'grantAmount', e.target.value)}
-                          placeholder="Amount"
-                          disabled={readOnly}
-                          style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                        />
+                        <ReadOnlyField value={grant.grantAmount}>
+                          <input
+                            type="text"
+                            value={grant.grantAmount}
+                            onChange={(e) => handleGrantInputChange(index, 'grantAmount', e.target.value)}
+                            placeholder={readOnly ? '' : 'Amount'}
+                            disabled={readOnly}
+                            style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          value={grant.amountInLakhs}
-                          onChange={(e) => handleGrantInputChange(index, 'amountInLakhs', e.target.value)}
-                          placeholder="In Lakhs*"
-                          style={{ backgroundColor: readOnly ? 'transparent' : '#fffef0', border: readOnly ? 'none' : '1px solid #ddd' }}
-                          disabled={readOnly}
-                        />
+                        <ReadOnlyField value={grant.amountInLakhs}>
+                          <input
+                            type="text"
+                            value={grant.amountInLakhs}
+                            onChange={(e) => handleGrantInputChange(index, 'amountInLakhs', e.target.value)}
+                            placeholder={readOnly ? '' : 'In Lakhs*'}
+                            style={{ backgroundColor: readOnly ? 'transparent' : '#fffef0', border: readOnly ? 'none' : '1px solid #ddd' }}
+                            disabled={readOnly}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          value={grant.duration}
-                          onChange={(e) => handleGrantInputChange(index, 'duration', e.target.value)}
-                          placeholder="Duration and type"
-                          disabled={readOnly}
-                          style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                        />
+                        <ReadOnlyField value={grant.duration}>
+                          <input
+                            type="text"
+                            value={grant.duration}
+                            onChange={(e) => handleGrantInputChange(index, 'duration', e.target.value)}
+                            placeholder={readOnly ? '' : 'Duration and type'}
+                            disabled={readOnly}
+                            style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          value={grant.researchers}
-                          onChange={(e) => handleGrantInputChange(index, 'researchers', e.target.value)}
-                          placeholder="Number"
-                          disabled={readOnly}
-                          style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                        />
+                        <ReadOnlyField value={grant.researchers}>
+                          <input
+                            type="text"
+                            value={grant.researchers}
+                            onChange={(e) => handleGrantInputChange(index, 'researchers', e.target.value)}
+                            placeholder={readOnly ? '' : 'Number'}
+                            disabled={readOnly}
+                            style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <select
-                          value={grant.role}
-                          onChange={(e) => handleGrantInputChange(index, 'role', e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: readOnly ? 'none' : '1px solid #d1d8e0',
-                            borderRadius: '4px',
-                            fontSize: '0.9rem',
-                            background: readOnly ? 'transparent' : 'white',
-                            appearance: readOnly ? 'none' : 'auto'
-                          }}
-                          disabled={readOnly}
-                        >
-                          <option value="">Select</option>
-                          <option value="PI">PI</option>
-                          <option value="Co-PI">Co-PI</option>
-                          <option value="Co-Investigator">Co-Investigator</option>
-                        </select>
+                        <ReadOnlyField value={grant.role}>
+                          <select
+                            value={grant.role}
+                            onChange={(e) => handleGrantInputChange(index, 'role', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.5rem',
+                              border: readOnly ? 'none' : '1px solid #d1d8e0',
+                              borderRadius: '4px',
+                              fontSize: '0.9rem',
+                              background: readOnly ? 'transparent' : 'white',
+                              appearance: readOnly ? 'none' : 'auto'
+                            }}
+                            disabled={readOnly}
+                          >
+                            <option value="">Select</option>
+                            <option value="PI">PI</option>
+                            <option value="Co-PI">Co-PI</option>
+                            <option value="Co-Investigator">Co-Investigator</option>
+                          </select>
+                        </ReadOnlyField>
                       </td>
                       <td>
                         {readOnly ? (
@@ -450,7 +583,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
 
       {/* Submitted Research Proposals Table */}
       {
-        selectedType === 'proposals' && (
+        showProposalsTable && (
           <div className="semester-section">
             <div className="semester-header">
               <h3>Submitted Research Proposals</h3>
@@ -485,107 +618,123 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                   {proposals.map((proposal, index) => (
                     <tr key={proposal.id}>
                       <td>
-                        <input
-                          type="text"
-                          value={proposal.title}
-                          onChange={(e) => handleProposalInputChange(index, 'title', e.target.value)}
-                          placeholder="Project title"
-                          disabled={readOnly}
-                          style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                        />
+                        <ReadOnlyField value={proposal.title}>
+                          <input
+                            type="text"
+                            value={proposal.title}
+                            onChange={(e) => handleProposalInputChange(index, 'title', e.target.value)}
+                            placeholder={readOnly ? '' : 'Project title'}
+                            disabled={readOnly}
+                            style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          value={proposal.fundingAgency}
-                          onChange={(e) => handleProposalInputChange(index, 'fundingAgency', e.target.value)}
-                          placeholder="Funding agency"
-                          disabled={readOnly}
-                          style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                        />
+                        <ReadOnlyField value={proposal.fundingAgency}>
+                          <input
+                            type="text"
+                            value={proposal.fundingAgency}
+                            onChange={(e) => handleProposalInputChange(index, 'fundingAgency', e.target.value)}
+                            placeholder={readOnly ? '' : 'Funding agency'}
+                            disabled={readOnly}
+                            style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <select
-                          value={proposal.currency}
-                          onChange={(e) => handleProposalInputChange(index, 'currency', e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: readOnly ? 'none' : '1px solid #d1d8e0',
-                            borderRadius: '4px',
-                            fontSize: '0.9rem',
-                            background: readOnly ? 'transparent' : 'white',
-                            appearance: readOnly ? 'none' : 'auto'
-                          }}
-                          disabled={readOnly}
-                        >
-                          <option value="INR">INR</option>
-                          <option value="USD">USD</option>
-                          <option value="EUR">EUR</option>
-                          <option value="GBP">GBP</option>
-                          <option value="Other">Other</option>
-                        </select>
+                        <ReadOnlyField value={proposal.currency}>
+                          <select
+                            value={proposal.currency}
+                            onChange={(e) => handleProposalInputChange(index, 'currency', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.5rem',
+                              border: readOnly ? 'none' : '1px solid #d1d8e0',
+                              borderRadius: '4px',
+                              fontSize: '0.9rem',
+                              background: readOnly ? 'transparent' : 'white',
+                              appearance: readOnly ? 'none' : 'auto'
+                            }}
+                            disabled={readOnly}
+                          >
+                            <option value="INR">INR</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          value={proposal.grantAmount}
-                          onChange={(e) => handleProposalInputChange(index, 'grantAmount', e.target.value)}
-                          placeholder="Amount"
-                          disabled={readOnly}
-                          style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                        />
+                        <ReadOnlyField value={proposal.grantAmount}>
+                          <input
+                            type="text"
+                            value={proposal.grantAmount}
+                            onChange={(e) => handleProposalInputChange(index, 'grantAmount', e.target.value)}
+                            placeholder={readOnly ? '' : 'Amount'}
+                            disabled={readOnly}
+                            style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          value={proposal.amountInLakhs}
-                          onChange={(e) => handleProposalInputChange(index, 'amountInLakhs', e.target.value)}
-                          placeholder="In Lakhs*"
-                          style={{ backgroundColor: readOnly ? 'transparent' : '#fffef0', border: readOnly ? 'none' : '1px solid #ddd' }}
-                          disabled={readOnly}
-                        />
+                        <ReadOnlyField value={proposal.amountInLakhs}>
+                          <input
+                            type="text"
+                            value={proposal.amountInLakhs}
+                            onChange={(e) => handleProposalInputChange(index, 'amountInLakhs', e.target.value)}
+                            placeholder={readOnly ? '' : 'In Lakhs*'}
+                            style={{ backgroundColor: readOnly ? 'transparent' : '#fffef0', border: readOnly ? 'none' : '1px solid #ddd' }}
+                            disabled={readOnly}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          value={proposal.duration}
-                          onChange={(e) => handleProposalInputChange(index, 'duration', e.target.value)}
-                          placeholder="Duration"
-                          disabled={readOnly}
-                          style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                        />
+                        <ReadOnlyField value={proposal.duration}>
+                          <input
+                            type="text"
+                            value={proposal.duration}
+                            onChange={(e) => handleProposalInputChange(index, 'duration', e.target.value)}
+                            placeholder={readOnly ? '' : 'Duration'}
+                            disabled={readOnly}
+                            style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          value={proposal.submissionDate}
-                          onChange={(e) => handleProposalInputChange(index, 'submissionDate', e.target.value)}
-                          placeholder="Date and status"
-                          disabled={readOnly}
-                          style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                        />
+                        <ReadOnlyField value={proposal.submissionDate}>
+                          <input
+                            type="text"
+                            value={proposal.submissionDate}
+                            onChange={(e) => handleProposalInputChange(index, 'submissionDate', e.target.value)}
+                            placeholder={readOnly ? '' : 'Date and status'}
+                            disabled={readOnly}
+                            style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
+                          />
+                        </ReadOnlyField>
                       </td>
                       <td>
-                        <select
-                          value={proposal.role}
-                          onChange={(e) => handleProposalInputChange(index, 'role', e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: readOnly ? 'none' : '1px solid #d1d8e0',
-                            borderRadius: '4px',
-                            fontSize: '0.9rem',
-                            background: readOnly ? 'transparent' : 'white',
-                            appearance: readOnly ? 'none' : 'auto'
-                          }}
-                          disabled={readOnly}
-                        >
-                          <option value="">Select</option>
-                          <option value="PI">PI</option>
-                          <option value="Co-PI">Co-PI</option>
-                          <option value="Co-Investigator">Co-Investigator</option>
-                        </select>
+                        <ReadOnlyField value={proposal.role}>
+                          <select
+                            value={proposal.role}
+                            onChange={(e) => handleProposalInputChange(index, 'role', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.5rem',
+                              border: readOnly ? 'none' : '1px solid #d1d8e0',
+                              borderRadius: '4px',
+                              fontSize: '0.9rem',
+                              background: readOnly ? 'transparent' : 'white',
+                              appearance: readOnly ? 'none' : 'auto'
+                            }}
+                            disabled={readOnly}
+                          >
+                            <option value="">Select</option>
+                            <option value="PI">PI</option>
+                            <option value="Co-PI">Co-PI</option>
+                            <option value="Co-Investigator">Co-Investigator</option>
+                          </select>
+                        </ReadOnlyField>
                       </td>
                       <td>
                         {readOnly ? (
@@ -648,6 +797,14 @@ const ResearchGrants = ({ initialData, readOnly }) => {
           </div>
         )
       }
+
+      {readOnly && !showGrantsTable && !showProposalsTable && (
+        <div className="semester-section" style={{ padding: '1.5rem' }}>
+          <p className="msv-no-data" style={{ margin: 0 }}>
+            No research grant/proposal entries were submitted.
+          </p>
+        </div>
+      )}
 
       {selectedType && !readOnly && (
         <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />

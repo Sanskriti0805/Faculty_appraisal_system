@@ -460,13 +460,16 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       }
     }
 
-    // ── Upsert all 75 rows (including zeros) ──────────────────────────────
+    // ── Reset previous rows for this submission first.
+    // This avoids cumulative duplicates in legacy databases missing a unique key.
+    await db.query('DELETE FROM dofa_evaluation_scores WHERE submission_id = ?', [submissionId]);
+
+    // ── Insert all rubric rows (including zeros) ──────────────────────────
     const valuesToInsert = rubrics.map(r => [submissionId, r.id, scoreMap[r.id] ?? 0]);
 
     await db.query(
       `INSERT INTO dofa_evaluation_scores (submission_id, rubric_id, score)
-       VALUES ?
-       ON DUPLICATE KEY UPDATE score = VALUES(score)`,
+       VALUES ?`,
       [valuesToInsert]
     );
 

@@ -1,15 +1,34 @@
 import React, { useState } from 'react'
+import { useEffect } from 'react'
 import { Plus, Trash2, Upload } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import { coursesService } from '../services/coursesService'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
+import apiClient from '../services/api'
+import { useAuth } from '../context/AuthContext'
+
+const isNotFoundError = (error) => error?.response?.status === 404
+
+const deleteIgnoringNotFound = async (deleteFn, ids) => {
+  const validIds = (ids || []).filter(id => Number.isFinite(Number(id)))
+  const results = await Promise.allSettled(validIds.map(id => deleteFn(id)))
+
+  const firstRealError = results.find(
+    result => result.status === 'rejected' && !isNotFoundError(result.reason)
+  )
+
+  if (firstRealError) {
+    throw firstRealError.reason
+  }
+}
 
 const NewCourses = () => {
+  const { user } = useAuth()
   const [ugProgram, setUgProgram] = useState('')
   const [mastersProgram, setMastersProgram] = useState('')
   const [loading, setLoading] = useState(false)
+  const [persistedCourseIds, setPersistedCourseIds] = useState([])
   
   const [ugCourses, setUgCourses] = useState([
     { id: 1, courseName: '', courseCode: '', level: '', remarks: '', cifFile: null }
@@ -28,6 +47,52 @@ const NewCourses = () => {
   const ugLevelOptions = ['1', '2', '3', '4']
   const mastersLevelOptions = ['5', '6']
   const doctoralLevelOptions = ['7', '8']
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const hydrateExisting = async () => {
+      try {
+        const mySub = await apiClient.get('/submissions/my')
+        if (!mySub?.success || !mySub?.data?.id) return
+
+        const details = await apiClient.get(`/submissions/${mySub.data.id}`)
+        const rows = Array.isArray(details?.data?.newCourses) ? details.data.newCourses : []
+        if (rows.length === 0) return
+
+        const mapRow = (row) => ({
+          id: row.id,
+          courseName: row.course_name || '',
+          courseCode: row.course_code || '',
+          level: row.level || '',
+          remarks: row.remarks || '',
+          cifFile: null,
+          cif_file: row.cif_file || null
+        })
+
+        const ugRows = rows.filter((r) => r.level_type === 'UG').map(mapRow)
+        const mastersRows = rows.filter((r) => r.level_type === 'Masters').map(mapRow)
+        const doctoralRows = rows.filter((r) => r.level_type === 'Doctoral').map(mapRow)
+        setPersistedCourseIds(rows.map(r => r.id).filter(Boolean))
+
+        if (ugRows.length > 0) {
+          setUgCourses(ugRows)
+          setUgProgram(rows.find((r) => r.level_type === 'UG')?.program || '')
+        }
+        if (mastersRows.length > 0) {
+          setMastersCourses(mastersRows)
+          setMastersProgram(rows.find((r) => r.level_type === 'Masters')?.program || '')
+        }
+        if (doctoralRows.length > 0) {
+          setDoctoralCourses(doctoralRows)
+        }
+      } catch (error) {
+        console.error('Failed to prefill new courses:', error)
+      }
+    }
+
+    hydrateExisting()
+  }, [user])
 
   const addCourse = (section) => {
     const newCourse = {
@@ -80,7 +145,12 @@ const NewCourses = () => {
   const handleSave = async () => {
     setLoading(true)
     try {
-      const facultyId = user?.id || 1;
+      const authUser = JSON.parse(localStorage.getItem('auth_user') || '{}')
+      const facultyId = authUser?.id
+      if (!facultyId) {
+        alert('Session expired. Please login again.')
+        return false
+      }
       
       // Collect all courses from all sections
       const allCourses = [
@@ -116,12 +186,19 @@ const NewCourses = () => {
         }))
       ]
 
-      // Save each course
+      // Save each course - only NEW courses (without ID from previous submission)
+      await deleteIgnoringNotFound((id) => apiClient.delete(`/courses/new/${id}`), persistedCourseIds)
+
       const promises = allCourses
-        .filter(course => course.course_name && course.course_code) // Only save filled courses
+        .filter(course => course.course_name && course.course_code)
         .map(course => coursesService.createNewCourse(course))
 
-      await Promise.all(promises)
+      const createdResponses = await Promise.all(promises)
+      const createdIds = createdResponses
+        .map(response => response?.data?.id)
+        .filter(id => Number.isFinite(Number(id)))
+
+      setPersistedCourseIds(createdIds)
       
       alert('Data saved successfully!')
       console.log('Saved courses to database')

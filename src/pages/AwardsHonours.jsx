@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Trash2, Upload, FileText } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { awardsService } from '../services/awardsService'
+import { useAuth } from '../context/AuthContext'
 
 const AwardsHonours = ({ initialData, readOnly }) => {
+  const { user } = useAuth()
   const [awards, setAwards] = useState([])
   const [formData, setFormData] = useState({
     honorType: 'National',
@@ -19,14 +20,15 @@ const AwardsHonours = ({ initialData, readOnly }) => {
   useEffect(() => {
     if (readOnly && initialData) {
       setAwards(initialData)
-    } else if (!readOnly) {
+    } else if (!readOnly && user?.id) {
       loadAwards()
     }
-  }, [readOnly, initialData])
+  }, [readOnly, initialData, user])
 
   const loadAwards = async () => {
     try {
-      const facultyId = user?.id || 1;
+      const facultyId = user?.id
+      if (!facultyId) return
       const data = await awardsService.getAwards(facultyId)
       setAwards(data)
     } catch (error) {
@@ -48,9 +50,24 @@ const AwardsHonours = ({ initialData, readOnly }) => {
       return
     }
 
+    // Check if this award already exists (prevent duplicates)
+    const isDuplicate = awards.some(award => 
+      award.award_name?.trim().toLowerCase() === formData.awardName.trim().toLowerCase() &&
+      award.honor_type === formData.honorType
+    )
+    
+    if (isDuplicate) {
+      alert('This award has already been saved. Please enter a different award or edit the existing one.')
+      return
+    }
+
     setLoading(true)
     try {
-      const facultyId = user?.id || 1;
+      const facultyId = user?.id
+      if (!facultyId) {
+        alert('Unable to identify logged-in faculty. Please login again.')
+        return
+      }
       const data = new FormData()
       data.append('faculty_id', facultyId)
       data.append('honor_type', formData.honorType)

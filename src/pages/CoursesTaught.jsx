@@ -1,18 +1,31 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext';
 import { Plus, Trash2, Upload, FileText, X, ExternalLink } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
 import apiClient from '../services/api';
 import './CoursesTaught.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
-import { useSubmission } from '../context/SubmissionContext';
+import { useAuth } from '../context/AuthContext'
+
+const isNotFoundError = (error) => error?.response?.status === 404
+
+const deleteIgnoringNotFound = async (deleteFn, ids) => {
+  const validIds = (ids || []).filter(id => Number.isFinite(Number(id)))
+  const results = await Promise.allSettled(validIds.map(id => deleteFn(id)))
+
+  const firstRealError = results.find(
+    result => result.status === 'rejected' && !isNotFoundError(result.reason)
+  )
+
+  if (firstRealError) {
+    throw firstRealError.reason
+  }
+}
 
 const CoursesTaught = ({ initialData, readOnly }) => {
-  const { user } = useAuth();
-  const { submissionData, loading, refetchSubmission } = useSubmission();
+  const { user } = useAuth()
   const [selectedSection, setSelectedSection] = useState('courses')
   const [selectedSemester, setSelectedSemester] = useState('fall')
+  const [persistedCourseIds, setPersistedCourseIds] = useState([])
 
   const [fallCourses, setFallCourses] = useState([
     { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
@@ -40,30 +53,71 @@ const CoursesTaught = ({ initialData, readOnly }) => {
   ])
 
   useEffect(() => {
-    const activeData = initialData || (submissionData ? { courses: submissionData.courses || [], projects: submissionData.projects || [] } : null);
-    
-    if (activeData) {
-      const { courses, projects } = activeData;
-      if (courses && courses.length > 0) {
+    if (initialData) {
+      const { courses, projects } = initialData;
+      if (courses) {
+        setPersistedCourseIds(courses.map(c => c.id).filter(Boolean))
         setFallCourses(courses.filter(c => c.semester === 'Fall').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment || '', feedback: c.feedback_score || '', remarks: c.remarks || '', evidence_file: c.evidence_file
-        })).concat(courses.filter(c => c.semester === 'Fall').length === 0 ? [{ id: Date.now(), title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }] : []));
+          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
+        })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
 
         setSpringCourses(courses.filter(c => c.semester === 'Spring').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment || '', feedback: c.feedback_score || '', remarks: c.remarks || '', evidence_file: c.evidence_file
-        })).concat(courses.filter(c => c.semester === 'Spring').length === 0 ? [{ id: Date.now(), title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }] : []));
+          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
+        })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
 
         setSummerCourses(courses.filter(c => c.semester === 'Summer').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment || '', feedback: c.feedback_score || '', remarks: c.remarks || '', evidence_file: c.evidence_file
-        })).concat(courses.filter(c => c.semester === 'Summer').length === 0 ? [{ id: Date.now(), title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }] : []));
-      }
-      
-      // Prevent emptying arrays if activeData exists but has no courses
-      if (!initialData && submissionData && (!courses || courses.length === 0)) {
-         // Keep the defaults
+          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
+        })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
       }
     }
-  }, [initialData, submissionData])
+  }, [initialData])
+
+  useEffect(() => {
+    // Editable mode should show previously saved entries.
+    if (readOnly || initialData || !user?.id) return
+
+    const hydrateFromSubmission = async () => {
+      try {
+        const mySub = await apiClient.get('/submissions/my')
+        if (!mySub?.success || !mySub?.data?.id) return
+
+        const subDetails = await apiClient.get(`/submissions/${mySub.data.id}`)
+        if (!subDetails?.success) return
+
+        const existingCourses = Array.isArray(subDetails.data?.courses) ? subDetails.data.courses : []
+        if (existingCourses.length === 0) return
+
+        setPersistedCourseIds(existingCourses.map(c => c.id).filter(Boolean))
+
+        const mapCourse = (c) => ({
+          id: c.id,
+          title: c.course_name || '',
+          percentage: c.percentage || '',
+          students: c.enrollment || '',
+          feedback: c.feedback_score || '',
+          remarks: c.remarks || '',
+          evidence_file: c.evidence_file || null,
+          feedbackFile: null
+        })
+
+        const fall = existingCourses.filter(c => c.semester === 'Fall').map(mapCourse)
+        const spring = existingCourses.filter(c => c.semester === 'Spring').map(mapCourse)
+        const summer = existingCourses.filter(c => c.semester === 'Summer').map(mapCourse)
+
+        setFallCourses(fall.length ? fall : [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }])
+        setSpringCourses(spring.length ? spring : [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }])
+        setSummerCourses(summer.length ? summer : [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }])
+
+        if (fall.length > 0) setSelectedSemester('fall')
+        else if (spring.length > 0) setSelectedSemester('spring')
+        else if (summer.length > 0) setSelectedSemester('summer')
+      } catch (error) {
+        console.error('Failed to prefill courses taught:', error)
+      }
+    }
+
+    hydrateFromSubmission()
+  }, [initialData, readOnly, user])
 
   const handleInputChange = (semester, index, field, value) => {
     if (readOnly) return;
@@ -159,30 +213,43 @@ const CoursesTaught = ({ initialData, readOnly }) => {
   const handleSave = async () => {
     if (readOnly) return false;
     try {
-      // Save Courses
+      const authUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      const facultyId = authUser?.id;
+      if (!facultyId) {
+        alert('Session expired. Please login again.');
+        return false;
+      }
+
+      await deleteIgnoringNotFound((id) => apiClient.delete(`/courses/${id}`), persistedCourseIds)
+
+      // Save Courses from the current form state
       const allCourses = [
         ...fallCourses.map(c => ({ ...c, semester: 'Fall' })),
         ...springCourses.map(c => ({ ...c, semester: 'Spring' })),
         ...summerCourses.map(c => ({ ...c, semester: 'Summer' }))
       ];
 
+      const createdIds = []
       for (const course of allCourses) {
-        if (course.title) {
-          await apiClient.post('/courses', {
-            faculty_id: user?.id || 1,
-            course_name: course.title,
-            semester: course.semester,
-            enrollment: course.students === '' ? null : parseInt(course.students),
-            percentage: course.percentage === '' ? null : course.percentage,
-            feedback_score: course.feedback === '' ? null : parseFloat(course.feedback),
-            status: 'submitted'
-          });
+        if (!course.title) continue;
+        
+        const created = await apiClient.post('/courses', {
+          faculty_id: facultyId,
+          course_name: course.title,
+          semester: course.semester,
+          enrollment: course.students === '' ? null : parseInt(course.students),
+          percentage: course.percentage === '' ? null : course.percentage,
+          feedback_score: course.feedback === '' ? null : parseFloat(course.feedback),
+          status: 'submitted'
+        });
+
+        if (Number.isFinite(Number(created?.data?.id))) {
+          createdIds.push(created.data.id)
         }
       }
 
-      if (!initialData && refetchSubmission) {
-        await refetchSubmission();
-      }
+      setPersistedCourseIds(createdIds)
+
       alert('Data saved successfully!');
       return true;
     } catch (error) {
@@ -216,6 +283,12 @@ const CoursesTaught = ({ initialData, readOnly }) => {
     }
     return '4.2: BTech/MTech/MS/LUSIP/SLI/Ph.D./Other Projects Guided / Co-Advised / Mentored'
   }
+
+  const ReadOnlyField = ({ value, children }) => (
+    readOnly
+      ? <div className="readonly-table-text">{value === null || value === undefined || value === '' ? '—' : String(value)}</div>
+      : children
+  )
 
   const renderTable = (semester, items, semesterLabel) => {
     return (
@@ -259,41 +332,51 @@ const CoursesTaught = ({ initialData, readOnly }) => {
             <tr key={course.id}>
               <td className="course-number">Course-{index + 1}</td>
               <td>
-                <input
-                  type="text"
-                  value={course.title}
-                  onChange={(e) => handleInputChange(semester, index, 'title', e.target.value)}
-                  disabled={readOnly}
-                  placeholder={readOnly ? '' : "Enter course title"}
-                />
+                <ReadOnlyField value={course.title}>
+                  <input
+                    type="text"
+                    value={course.title}
+                    onChange={(e) => handleInputChange(semester, index, 'title', e.target.value)}
+                    disabled={readOnly}
+                    placeholder={readOnly ? '' : "Enter course title"}
+                  />
+                </ReadOnlyField>
               </td>
               <td>
-                <input
-                  type="text"
-                  value={course.percentage}
-                  onChange={(e) => handleInputChange(semester, index, 'percentage', e.target.value)}
-                  disabled={readOnly}
-                  placeholder={readOnly ? '' : "e.g., 100%"}
-                />
+                <ReadOnlyField value={course.percentage}>
+                  <input
+                    type="text"
+                    value={course.percentage}
+                    onChange={(e) => handleInputChange(semester, index, 'percentage', e.target.value)}
+                    disabled={readOnly}
+                    placeholder={readOnly ? '' : "e.g., 100%"}
+                  />
+                </ReadOnlyField>
               </td>
               <td>
-                <input
-                  type="number"
-                  value={course.students}
-                  onChange={(e) => handleInputChange(semester, index, 'students', e.target.value)}
-                  disabled={readOnly}
-                />
+                <ReadOnlyField value={course.students}>
+                  <input
+                    type="number"
+                    value={course.students}
+                    onChange={(e) => handleInputChange(semester, index, 'students', e.target.value)}
+                    disabled={readOnly}
+                  />
+                </ReadOnlyField>
               </td>
               <td>
                 <div className="feedback-container">
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={course.feedback}
-                    onChange={(e) => handleInputChange(semester, index, 'feedback', e.target.value)}
-                    disabled={readOnly}
-                    className="feedback-input"
-                  />
+                  {readOnly ? (
+                    <div className="readonly-table-text feedback-input">{course.feedback === null || course.feedback === undefined || course.feedback === '' ? '—' : String(course.feedback)}</div>
+                  ) : (
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={course.feedback}
+                      onChange={(e) => handleInputChange(semester, index, 'feedback', e.target.value)}
+                      disabled={readOnly}
+                      className="feedback-input"
+                    />
+                  )}
 
                   {readOnly ? (
                     course.evidence_file ? (
@@ -322,12 +405,14 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                 </div>
               </td>
               <td>
-                <input
-                  type="text"
-                  value={course.remarks}
-                  onChange={(e) => handleInputChange(semester, index, 'remarks', e.target.value)}
-                  disabled={readOnly}
-                />
+                <ReadOnlyField value={course.remarks}>
+                  <input
+                    type="text"
+                    value={course.remarks}
+                    onChange={(e) => handleInputChange(semester, index, 'remarks', e.target.value)}
+                    disabled={readOnly}
+                  />
+                </ReadOnlyField>
               </td>
               {!readOnly && (
                 <td>
@@ -363,37 +448,43 @@ const CoursesTaught = ({ initialData, readOnly }) => {
           {projects.map((project, index) => (
             <tr key={project.id}>
               <td>
-                <input
-                  type="text"
-                  value={project.projectTitle}
-                  onChange={(e) => handleInputChange(semester, index, 'projectTitle', e.target.value)}
-                  disabled={readOnly}
-                />
+                <ReadOnlyField value={project.projectTitle}>
+                  <input
+                    type="text"
+                    value={project.projectTitle}
+                    onChange={(e) => handleInputChange(semester, index, 'projectTitle', e.target.value)}
+                    disabled={readOnly}
+                  />
+                </ReadOnlyField>
               </td>
               <td>
-                <select value={project.projectType} onChange={(e) => handleInputChange(semester, index, 'projectType', e.target.value)} disabled={readOnly}>
-                  <option value="">Select Type</option>
-                  <option value="B.Tech">B.Tech</option>
-                  <option value="M.Tech">M.Tech</option>
-                  <option value="MS">MS</option>
-                  <option value="LUSIP">LUSIP</option>
-                  <option value="Mini Project">Mini Project</option>
-                  <option value="M.Sc.">M.Sc.</option>
-                  <option value="SLI">SLI</option>
-                  <option value="Other Projects">Other Projects</option>
-                </select>
+                <ReadOnlyField value={project.projectType}>
+                  <select value={project.projectType} onChange={(e) => handleInputChange(semester, index, 'projectType', e.target.value)} disabled={readOnly}>
+                    <option value="">Select Type</option>
+                    <option value="B.Tech">B.Tech</option>
+                    <option value="M.Tech">M.Tech</option>
+                    <option value="MS">MS</option>
+                    <option value="LUSIP">LUSIP</option>
+                    <option value="Mini Project">Mini Project</option>
+                    <option value="M.Sc.">M.Sc.</option>
+                    <option value="SLI">SLI</option>
+                    <option value="Other Projects">Other Projects</option>
+                  </select>
+                </ReadOnlyField>
               </td>
               <td>
-                <select value={project.role} onChange={(e) => handleInputChange(semester, index, 'role', e.target.value)} disabled={readOnly}>
-                  <option value="">Select Role</option>
-                  <option value="Supervisor">Supervisor</option>
-                  <option value="Co-Supervisor">Co-Supervisor</option>
-                </select>
+                <ReadOnlyField value={project.role}>
+                  <select value={project.role} onChange={(e) => handleInputChange(semester, index, 'role', e.target.value)} disabled={readOnly}>
+                    <option value="">Select Role</option>
+                    <option value="Supervisor">Supervisor</option>
+                    <option value="Co-Supervisor">Co-Supervisor</option>
+                  </select>
+                </ReadOnlyField>
               </td>
-              <td><input type="text" value={project.studentName} onChange={(e) => handleInputChange(semester, index, 'studentName', e.target.value)} disabled={readOnly} /></td>
-              <td><input type="text" value={project.duration} onChange={(e) => handleInputChange(semester, index, 'duration', e.target.value)} disabled={readOnly} /></td>
-              <td><input type="text" value={project.outcome} onChange={(e) => handleInputChange(semester, index, 'outcome', e.target.value)} disabled={readOnly} /></td>
-              <td><input type="text" value={project.remarks} onChange={(e) => handleInputChange(semester, index, 'remarks', e.target.value)} disabled={readOnly} /></td>
+              <td><ReadOnlyField value={project.studentName}><input type="text" value={project.studentName} onChange={(e) => handleInputChange(semester, index, 'studentName', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
+              <td><ReadOnlyField value={project.duration}><input type="text" value={project.duration} onChange={(e) => handleInputChange(semester, index, 'duration', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
+              <td><ReadOnlyField value={project.outcome}><input type="text" value={project.outcome} onChange={(e) => handleInputChange(semester, index, 'outcome', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
+              <td><ReadOnlyField value={project.remarks}><input type="text" value={project.remarks} onChange={(e) => handleInputChange(semester, index, 'remarks', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
               <td>
                 {readOnly ? (
                   project.evidence_file ? (

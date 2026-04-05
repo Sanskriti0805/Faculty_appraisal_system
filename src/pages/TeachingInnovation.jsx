@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { Upload, ExternalLink } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
+import { useAuth } from '../context/AuthContext'
 
 const TeachingInnovation = ({ initialData, readOnly }) => {
+  const { user, token } = useAuth()
+  const [innovationIds, setInnovationIds] = useState({
+    onCampus: null,
+    online: null,
+    evaluation: null
+  })
   const [formData, setFormData] = useState({
     onCampus: '',
     onCampusFile: null,
@@ -29,8 +35,51 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
         evaluation: evaluation?.description || '',
         evaluationFile: evaluation?.evidence_file || null,
       })
+      
+      // Store IDs to prevent duplicate creation
+      setInnovationIds({
+        onCampus: onCampus?.id || null,
+        online: online?.id || null,
+        evaluation: evaluation?.id || null
+      })
     }
   }, [initialData])
+
+  useEffect(() => {
+    if (readOnly || (initialData && Array.isArray(initialData) && initialData.length > 0) || !user?.id) return
+
+    const fetchExisting = async () => {
+      try {
+        const res = await fetch(`http://${window.location.hostname}:5000/api/innovation/teaching/${user.id}`)
+        const data = await res.json()
+        if (!data.success || !Array.isArray(data.data)) return
+
+        const onCampus = data.data.find(i => i.impact === 'onCampus')
+        const online = data.data.find(i => i.impact === 'online')
+        const evaluation = data.data.find(i => i.impact === 'evaluation')
+
+        setFormData({
+          onCampus: onCampus?.description || '',
+          onCampusFile: onCampus?.evidence_file || null,
+          online: online?.description || '',
+          onlineFile: online?.evidence_file || null,
+          evaluation: evaluation?.description || '',
+          evaluationFile: evaluation?.evidence_file || null,
+        })
+        
+        // Store IDs to prevent duplicate creation
+        setInnovationIds({
+          onCampus: onCampus?.id || null,
+          online: online?.id || null,
+          evaluation: evaluation?.id || null
+        })
+      } catch (error) {
+        console.error('Failed to prefill teaching innovation:', error)
+      }
+    }
+
+    fetchExisting()
+  }, [initialData, readOnly, user])
 
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value })
@@ -45,29 +94,41 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
   const handleSave = async () => {
     setLoading(true)
     try {
-      const facultyId = user?.id || 1;
+      const facultyId = user?.id
+      if (!facultyId || !token) {
+        alert('Unable to identify logged-in faculty. Please login again.')
+        return false
+      }
 
-      const saveData = async (type, description, file) => {
+      const saveData = async (type, description, file, existingId) => {
+        if (existingId) {
+          await fetch(`http://${window.location.hostname}:5000/api/innovation/teaching/${existingId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        }
+
         if (!description) return;
 
         const formData = new FormData()
         formData.append('faculty_id', facultyId)
         formData.append('description', description)
-        formData.append('impact', type) // Using impact field to store type info for now or just generic
+        formData.append('impact', type) // Using impact field to store type info
         if (file) {
           formData.append('evidence_file', file)
         }
 
         return fetch('http://localhost:5000/api/innovation/teaching', {
           method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
           body: formData
         })
       }
 
       await Promise.all([
-        saveData('onCampus', formData.onCampus, formData.onCampusFile),
-        saveData('online', formData.online, formData.onlineFile),
-        saveData('evaluation', formData.evaluation, formData.evaluationFile)
+        saveData('onCampus', formData.onCampus, formData.onCampusFile, innovationIds.onCampus),
+        saveData('online', formData.online, formData.onlineFile, innovationIds.online),
+        saveData('evaluation', formData.evaluation, formData.evaluationFile, innovationIds.evaluation)
       ])
 
       alert('Data saved successfully!')
