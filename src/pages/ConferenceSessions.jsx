@@ -59,6 +59,7 @@ const ConferenceSessions = () => {
 
     setLoading(true)
     try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
       const facultyId = user?.id || 1;
       const allSessions = [...submittedSessions]
       if (formData.eventTitle) {

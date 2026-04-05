@@ -58,6 +58,7 @@ const KeynotesTalks = () => {
 
     setLoading(true)
     try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
       const facultyId = user?.id || 1;
       const allTalks = [...submittedTalks]
       if (formData.title) {

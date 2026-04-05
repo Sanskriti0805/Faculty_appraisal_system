@@ -26,6 +26,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
 
   const loadAwards = async () => {
     try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
       const facultyId = user?.id || 1;
       const data = await awardsService.getAwards(facultyId)
       setAwards(data)
@@ -50,6 +51,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
 
     setLoading(true)
     try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
       const facultyId = user?.id || 1;
       const data = new FormData()
       data.append('faculty_id', facultyId)

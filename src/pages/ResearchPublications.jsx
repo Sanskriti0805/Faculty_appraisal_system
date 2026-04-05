@@ -280,6 +280,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     if (e && e.preventDefault) e.preventDefault()
     setLoading(true)
     try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
       const facultyId = user?.id || 1;
       const publicationData = {
         faculty_id: facultyId,

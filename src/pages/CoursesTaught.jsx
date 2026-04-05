@@ -15,15 +15,15 @@ const CoursesTaught = ({ initialData, readOnly }) => {
   const [selectedSemester, setSelectedSemester] = useState('fall')
 
   const [fallCourses, setFallCourses] = useState([
-    { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
+    { id: 1, dbId: null, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
   ])
 
   const [springCourses, setSpringCourses] = useState([
-    { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
+    { id: 1, dbId: null, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
   ])
 
   const [summerCourses, setSummerCourses] = useState([
-    { id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
+    { id: 1, dbId: null, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
   ])
 
   // Projects Guided data
@@ -45,17 +45,17 @@ const CoursesTaught = ({ initialData, readOnly }) => {
     if (activeData) {
       const { courses, projects } = activeData;
       if (courses && courses.length > 0) {
-        setFallCourses(courses.filter(c => c.semester === 'Fall').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment || '', feedback: c.feedback_score || '', remarks: c.remarks || '', evidence_file: c.evidence_file
-        })).concat(courses.filter(c => c.semester === 'Fall').length === 0 ? [{ id: Date.now(), title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }] : []));
+        const mapCourse = c => ({
+          id: c.id, dbId: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment || '', feedback: c.feedback_score || '', remarks: c.remarks || '', evidence_file: c.evidence_file
+        });
+        const fallDb = courses.filter(c => c.semester === 'Fall');
+        setFallCourses(fallDb.length > 0 ? fallDb.map(mapCourse) : [{ id: Date.now(), dbId: null, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
 
-        setSpringCourses(courses.filter(c => c.semester === 'Spring').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment || '', feedback: c.feedback_score || '', remarks: c.remarks || '', evidence_file: c.evidence_file
-        })).concat(courses.filter(c => c.semester === 'Spring').length === 0 ? [{ id: Date.now(), title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }] : []));
+        const springDb = courses.filter(c => c.semester === 'Spring');
+        setSpringCourses(springDb.length > 0 ? springDb.map(mapCourse) : [{ id: Date.now(), dbId: null, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
 
-        setSummerCourses(courses.filter(c => c.semester === 'Summer').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment || '', feedback: c.feedback_score || '', remarks: c.remarks || '', evidence_file: c.evidence_file
-        })).concat(courses.filter(c => c.semester === 'Summer').length === 0 ? [{ id: Date.now(), title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }] : []));
+        const summerDb = courses.filter(c => c.semester === 'Summer');
+        setSummerCourses(summerDb.length > 0 ? summerDb.map(mapCourse) : [{ id: Date.now(), dbId: null, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
       }
       
       // Prevent emptying arrays if activeData exists but has no courses
@@ -159,26 +159,49 @@ const CoursesTaught = ({ initialData, readOnly }) => {
   const handleSave = async () => {
     if (readOnly) return false;
     try {
-      // Save Courses
+      // Save Courses — PUT for existing db rows, POST for new ones
       const allCourses = [
         ...fallCourses.map(c => ({ ...c, semester: 'Fall' })),
         ...springCourses.map(c => ({ ...c, semester: 'Spring' })),
         ...summerCourses.map(c => ({ ...c, semester: 'Summer' }))
       ];
 
+      const updatedFall = [...fallCourses];
+      const updatedSpring = [...springCourses];
+      const updatedSummer = [...summerCourses];
+
       for (const course of allCourses) {
-        if (course.title) {
-          await apiClient.post('/courses', {
-            faculty_id: user?.id || 1,
-            course_name: course.title,
-            semester: course.semester,
-            enrollment: course.students === '' ? null : parseInt(course.students),
-            percentage: course.percentage === '' ? null : course.percentage,
-            feedback_score: course.feedback === '' ? null : parseFloat(course.feedback),
-            status: 'submitted'
-          });
+        if (!course.title) continue;
+        const payload = {
+          faculty_id: user?.id || 1,
+          course_name: course.title,
+          semester: course.semester,
+          enrollment: course.students === '' ? null : parseInt(course.students),
+          percentage: course.percentage === '' ? null : course.percentage,
+          feedback_score: course.feedback === '' ? null : parseFloat(course.feedback),
+          status: 'submitted'
+        };
+
+        if (course.dbId) {
+          // Existing row — update it
+          await apiClient.put(`/courses/${course.dbId}`, payload);
+        } else {
+          // New row — insert and capture the new id
+          const res = await apiClient.post('/courses', payload);
+          const newDbId = res?.data?.data?.id;
+          if (newDbId) {
+            // update local state so next save also uses PUT
+            const assignDbId = (list) => list.map(c => c.id === course.id ? { ...c, dbId: newDbId } : c);
+            if (course.semester === 'Fall') updatedFall.splice(0, updatedFall.length, ...assignDbId(updatedFall));
+            else if (course.semester === 'Spring') updatedSpring.splice(0, updatedSpring.length, ...assignDbId(updatedSpring));
+            else updatedSummer.splice(0, updatedSummer.length, ...assignDbId(updatedSummer));
+          }
         }
       }
+
+      setFallCourses([...updatedFall]);
+      setSpringCourses([...updatedSpring]);
+      setSummerCourses([...updatedSummer]);
 
       if (!initialData && refetchSubmission) {
         await refetchSubmission();
@@ -187,7 +210,8 @@ const CoursesTaught = ({ initialData, readOnly }) => {
       return true;
     } catch (error) {
       console.error('Error saving courses:', error);
-      alert('Failed to save data. Please check if all numeric fields are valid.');
+      const message = error?.response?.data?.message || error.message || 'Please check the entered values.';
+      alert(`Failed to save data. ${message}`);
       return false;
     }
   }

@@ -77,6 +77,7 @@ const Consultancy = ({ initialData, readOnly }) => {
     if (readOnly) return true;
     setLoading(true);
     try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
       const facultyId = user?.id || 1;; // TODO: Actual faculty ID
 
       const promises = consultancies.map(c => {

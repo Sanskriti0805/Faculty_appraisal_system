@@ -47,6 +47,7 @@ const Patents = ({ initialData, readOnly }) => {
   const handleSave = async () => {
     setLoading(true)
     try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
       const facultyId = user?.id || 1;
 
       // Save each patent type if it has content

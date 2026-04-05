@@ -33,7 +33,8 @@ const OtherActivities = () => {
 
   const handleSave = async () => {
     try {
-      const facultyId = user?.id || 1
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      const facultyId = user?.id || 1;
       const requests = []
 
       if (formData.softwareDeveloped.trim()) {

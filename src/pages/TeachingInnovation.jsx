@@ -45,6 +45,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
   const handleSave = async () => {
     setLoading(true)
     try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
       const facultyId = user?.id || 1;
 
       const saveData = async (type, description, file) => {

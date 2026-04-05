@@ -7,6 +7,7 @@ const { cacheMiddleware } = require('../middleware/cache');
 // Courses taught routes with caching
 router.get('/faculty/:facultyId', cacheMiddleware(180), coursesController.getCoursesByFaculty);
 router.post('/', coursesController.createCourse);
+router.put('/:id', coursesController.updateCourse);
 router.delete('/:id', coursesController.deleteCourse);
 
 // New courses developed routes with caching

@@ -146,6 +146,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
 
     setLoading(true)
     try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
       const facultyId = user?.id || 1;
 
       if (selectedType === 'grants') {
