@@ -16,6 +16,16 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
     otherResponsibility: '',
   })
 
+  const [selectedRoles, setSelectedRoles] = useState({
+    dean: '',
+    hod: '',
+    warden: '',
+    centreLead: '',
+    committee: '',
+    facultyInCharge: '',
+    otherResponsibility: '',
+  })
+
   const [files, setFiles] = useState({
     dean: null,
     hod: null,
@@ -29,15 +39,15 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
 
   useEffect(() => {
     if (initialData && Array.isArray(initialData)) {
-      const findContribution = (label) => initialData.find(c => c.contribution_type === label)
+      const findContribution = (labels) => initialData.find(c => labels.includes(c.contribution_type))
 
-      const dean = findContribution('Dean/Associate/Assistant Dean')
-      const hod = findContribution('HoD/Deputy HoD')
-      const warden = findContribution('Warden/Chief Warden')
-      const centreLead = findContribution('Centre-Lead/Nucleus Member')
-      const committee = findContribution('Committee Member/Convener')
-      const facultyInCharge = findContribution('Faculty-in-Charge/Cell Member')
-      const otherResponsibility = findContribution('Other Major Responsibility')
+      const dean = findContribution(['Dean', 'Associate Dean', 'Assistant Dean', 'Dean/Associate/Assistant Dean'])
+      const hod = findContribution(['HoD', 'Deputy HoD', 'HoD/Deputy HoD'])
+      const warden = findContribution(['Chief Warden', 'Associate Chief Warden', 'Warden', 'Assistant Warden', 'Warden/Chief Warden'])
+      const centreLead = findContribution(['Centre Lead', 'Centre Co-Lead', 'Nucleus Member', 'Centre-Lead/Nucleus Member'])
+      const committee = findContribution(['Chairperson of committee', 'Convenor of committee', 'Committee Member', 'Committee Member/Convener'])
+      const facultyInCharge = findContribution(['Faculty Mentor of Cell', 'Member of Major responsibilities', 'Faculty-in-Charge/Cell Member'])
+      const otherResponsibility = findContribution(['Other Major Responsibility'])
 
       setFormData({
         dean: dean?.description || '',
@@ -47,6 +57,16 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
         committee: committee?.description || '',
         facultyInCharge: facultyInCharge?.description || '',
         otherResponsibility: otherResponsibility?.description || '',
+      })
+
+      setSelectedRoles({
+        dean: ['Dean', 'Associate Dean', 'Assistant Dean'].includes(dean?.contribution_type) ? dean.contribution_type : '',
+        hod: ['HoD', 'Deputy HoD'].includes(hod?.contribution_type) ? hod.contribution_type : '',
+        warden: ['Chief Warden', 'Associate Chief Warden', 'Warden', 'Assistant Warden'].includes(warden?.contribution_type) ? warden.contribution_type : '',
+        centreLead: ['Centre Lead', 'Centre Co-Lead', 'Nucleus Member'].includes(centreLead?.contribution_type) ? centreLead.contribution_type : '',
+        committee: ['Chairperson of committee', 'Convenor of committee', 'Committee Member'].includes(committee?.contribution_type) ? committee.contribution_type : '',
+        facultyInCharge: ['Faculty Mentor of Cell', 'Member of Major responsibilities'].includes(facultyInCharge?.contribution_type) ? facultyInCharge.contribution_type : '',
+        otherResponsibility: ['Other Major Responsibility'].includes(otherResponsibility?.contribution_type) ? otherResponsibility.contribution_type : '',
       })
 
       setFiles({
@@ -65,6 +85,10 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
     setFormData({ ...formData, [field]: value })
   }
 
+  const handleRoleChange = (field, value) => {
+    setSelectedRoles({ ...selectedRoles, [field]: value })
+  }
+
   const handleFileChange = (field, file) => {
     setFiles({ ...files, [field]: file })
   }
@@ -81,7 +105,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
   const handleSave = async () => {
     setLoading(true)
     try {
-      const facultyId = 1 // TODO: Actual faculty ID
+      const facultyId = user?.id || 1;
 
       const saveData = async (type, label, description, file) => {
         if (!description) return;
@@ -102,13 +126,13 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
       }
 
       await Promise.all([
-        saveData('dean', 'Dean/Associate/Assistant Dean', formData.dean, files.dean),
-        saveData('hod', 'HoD/Deputy HoD', formData.hod, files.hod),
-        saveData('warden', 'Warden/Chief Warden', formData.warden, files.warden),
-        saveData('centreLead', 'Centre-Lead/Nucleus Member', formData.centreLead, files.centreLead),
-        saveData('committee', 'Committee Member/Convener', formData.committee, files.committee),
-        saveData('facultyInCharge', 'Faculty-in-Charge/Cell Member', formData.facultyInCharge, files.facultyInCharge),
-        saveData('otherResponsibility', 'Other Major Responsibility', formData.otherResponsibility, files.otherResponsibility)
+        saveData('dean', selectedRoles.dean || 'Dean/Associate/Assistant Dean', formData.dean, files.dean),
+        saveData('hod', selectedRoles.hod || 'HoD/Deputy HoD', formData.hod, files.hod),
+        saveData('warden', selectedRoles.warden || 'Warden/Chief Warden', formData.warden, files.warden),
+        saveData('centreLead', selectedRoles.centreLead || 'Centre-Lead/Nucleus Member', formData.centreLead, files.centreLead),
+        saveData('committee', selectedRoles.committee || 'Committee Member/Convener', formData.committee, files.committee),
+        saveData('facultyInCharge', selectedRoles.facultyInCharge || 'Faculty-in-Charge/Cell Member', formData.facultyInCharge, files.facultyInCharge),
+        saveData('otherResponsibility', selectedRoles.otherResponsibility || 'Other Major Responsibility', formData.otherResponsibility, files.otherResponsibility)
       ])
 
       alert('Data saved successfully!')
@@ -143,181 +167,198 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
 
           <div className="form-field-vertical">
             <label>A- As a Dean / Associate Dean / Assistant Dean:</label>
+            <select 
+              value={selectedRoles.dean} 
+              onChange={(e) => handleRoleChange('dean', e.target.value)}
+              style={{ padding: '0.5rem', marginBottom: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', width: '250px' }}
+              disabled={readOnly}
+            >
+              <option value="">Select Specific Position...</option>
+              <option value="Dean">Dean</option>
+              <option value="Associate Dean">Associate Dean</option>
+              <option value="Assistant Dean">Assistant Dean</option>
+            </select>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="3"
                 value={formData.dean}
                 onChange={(e) => handleInputChange('dean', e.target.value)}
-                placeholder="Enter details of contributions as Dean/Associate Dean/Assistant Dean..."
+                placeholder="Enter details of contributions based on the selected position..."
                 style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
                 disabled={readOnly}
               />
               {readOnly ? (
                 files.dean && (
-                  <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.dean}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
+                  <a href={`http://${window.location.hostname}:5000/uploads/${files.dean}`} target="_blank" rel="noopener noreferrer" className="evidence-link" style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}>
                     <ExternalLink size={16} />
                     <span style={{ fontSize: '0.8rem' }}>View</span>
                   </a>
                 )
-              ) : (
-                renderUploadControl('dean')
-              )}
+              ) : renderUploadControl('dean')}
             </div>
           </div>
 
           <div className="form-field-vertical">
             <label>B- As an HoD / Deputy HoD:</label>
+            <select 
+              value={selectedRoles.hod} 
+              onChange={(e) => handleRoleChange('hod', e.target.value)}
+              style={{ padding: '0.5rem', marginBottom: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', width: '250px' }}
+              disabled={readOnly}
+            >
+              <option value="">Select Specific Position...</option>
+              <option value="HoD">HoD</option>
+              <option value="Deputy HoD">Deputy HoD</option>
+            </select>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="3"
                 value={formData.hod}
                 onChange={(e) => handleInputChange('hod', e.target.value)}
-                placeholder="Enter details of contributions as HoD/Deputy HoD..."
+                placeholder="Enter details of contributions based on the selected position..."
                 style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
                 disabled={readOnly}
               />
               {readOnly ? (
                 files.hod && (
-                  <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.hod}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
+                  <a href={`http://${window.location.hostname}:5000/uploads/${files.hod}`} target="_blank" rel="noopener noreferrer" className="evidence-link" style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}>
                     <ExternalLink size={16} />
                     <span style={{ fontSize: '0.8rem' }}>View</span>
                   </a>
                 )
-              ) : (
-                renderUploadControl('hod')
-              )}
+              ) : renderUploadControl('hod')}
             </div>
           </div>
 
           <div className="form-field-vertical">
-            <label>C- As Chief Warden / Associate Chief Warden / Warden:</label>
+            <label>C- As Chief Warden / Associate Chief Warden / Warden / Assistant Warden:</label>
+            <select 
+              value={selectedRoles.warden} 
+              onChange={(e) => handleRoleChange('warden', e.target.value)}
+              style={{ padding: '0.5rem', marginBottom: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', width: '250px' }}
+              disabled={readOnly}
+            >
+              <option value="">Select Specific Position...</option>
+              <option value="Chief Warden">Chief Warden</option>
+              <option value="Associate Chief Warden">Associate Chief Warden</option>
+              <option value="Warden">Warden</option>
+              <option value="Assistant Warden">Assistant Warden</option>
+            </select>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="3"
                 value={formData.warden}
                 onChange={(e) => handleInputChange('warden', e.target.value)}
-                placeholder="Enter details of contributions as Warden..."
+                placeholder="Enter details of contributions based on the selected position..."
                 style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
                 disabled={readOnly}
               />
               {readOnly ? (
                 files.warden && (
-                  <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.warden}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
+                  <a href={`http://${window.location.hostname}:5000/uploads/${files.warden}`} target="_blank" rel="noopener noreferrer" className="evidence-link" style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}>
                     <ExternalLink size={16} />
                     <span style={{ fontSize: '0.8rem' }}>View</span>
                   </a>
                 )
-              ) : (
-                renderUploadControl('warden')
-              )}
+              ) : renderUploadControl('warden')}
             </div>
           </div>
 
           <div className="form-field-vertical">
             <label>D- As Centre-Lead / Co-Lead / Nucleus Member:</label>
+            <select 
+              value={selectedRoles.centreLead} 
+              onChange={(e) => handleRoleChange('centreLead', e.target.value)}
+              style={{ padding: '0.5rem', marginBottom: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', width: '250px' }}
+              disabled={readOnly}
+            >
+              <option value="">Select Specific Position...</option>
+              <option value="Centre Lead">Centre Lead</option>
+              <option value="Centre Co-Lead">Centre Co-Lead</option>
+              <option value="Nucleus Member">Nucleus Member</option>
+            </select>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="3"
                 value={formData.centreLead}
                 onChange={(e) => handleInputChange('centreLead', e.target.value)}
-                placeholder="Enter details of contributions as Centre-Lead/Co-Lead/Nucleus Member..."
+                placeholder="Enter details of contributions based on the selected position..."
                 style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
                 disabled={readOnly}
               />
               {readOnly ? (
                 files.centreLead && (
-                  <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.centreLead}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
+                  <a href={`http://${window.location.hostname}:5000/uploads/${files.centreLead}`} target="_blank" rel="noopener noreferrer" className="evidence-link" style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}>
                     <ExternalLink size={16} />
                     <span style={{ fontSize: '0.8rem' }}>View</span>
                   </a>
                 )
-              ) : (
-                renderUploadControl('centreLead')
-              )}
+              ) : renderUploadControl('centreLead')}
             </div>
           </div>
 
           <div className="form-field-vertical">
-            <label>E- As Chairman / Vice Chairman / Convener / Member of one or more significant committees that involved significant efforts and time:</label>
+            <label>E- As Chairperson / Convenor / Member of one or more significant committees:</label>
+            <select 
+              value={selectedRoles.committee} 
+              onChange={(e) => handleRoleChange('committee', e.target.value)}
+              style={{ padding: '0.5rem', marginBottom: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', width: '250px' }}
+              disabled={readOnly}
+            >
+              <option value="">Select Specific Position...</option>
+              <option value="Chairperson of committee">Chairperson</option>
+              <option value="Convenor of committee">Convenor</option>
+              <option value="Committee Member">Member</option>
+            </select>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="3"
                 value={formData.committee}
                 onChange={(e) => handleInputChange('committee', e.target.value)}
-                placeholder="Enter details of committee contributions..."
+                placeholder="Enter details of committee contributions based on the selected position..."
                 style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
                 disabled={readOnly}
               />
               {readOnly ? (
                 files.committee && (
-                  <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.committee}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
+                  <a href={`http://${window.location.hostname}:5000/uploads/${files.committee}`} target="_blank" rel="noopener noreferrer" className="evidence-link" style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}>
                     <ExternalLink size={16} />
                     <span style={{ fontSize: '0.8rem' }}>View</span>
                   </a>
                 )
-              ) : (
-                renderUploadControl('committee')
-              )}
+              ) : renderUploadControl('committee')}
             </div>
           </div>
 
           <div className="form-field-vertical">
-            <label>F- As Faculty-in-Charge / Member of any Cell:</label>
+            <label>F- As Faculty-in-Charge / Faculty Mentor / Member of Major responsibilities:</label>
+            <select 
+              value={selectedRoles.facultyInCharge} 
+              onChange={(e) => handleRoleChange('facultyInCharge', e.target.value)}
+              style={{ padding: '0.5rem', marginBottom: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', width: '250px' }}
+              disabled={readOnly}
+            >
+              <option value="">Select Specific Position...</option>
+              <option value="Faculty Mentor of Cell">Faculty Mentor / In-Charge</option>
+              <option value="Member of Major responsibilities">Member of Major Responsibilities</option>
+            </select>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="3"
                 value={formData.facultyInCharge}
                 onChange={(e) => handleInputChange('facultyInCharge', e.target.value)}
-                placeholder="Enter details of contributions as Faculty-in-Charge/Member of any Cell..."
+                placeholder="Enter details of contributions based on the selected position..."
                 style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
                 disabled={readOnly}
               />
               {readOnly ? (
                 files.facultyInCharge && (
-                  <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.facultyInCharge}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
+                  <a href={`http://${window.location.hostname}:5000/uploads/${files.facultyInCharge}`} target="_blank" rel="noopener noreferrer" className="evidence-link" style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}>
                     <ExternalLink size={16} />
                     <span style={{ fontSize: '0.8rem' }}>View</span>
                   </a>
                 )
-              ) : (
-                renderUploadControl('facultyInCharge')
-              )}
+              ) : renderUploadControl('facultyInCharge')}
             </div>
           </div>
 
@@ -334,20 +375,12 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
               />
               {readOnly ? (
                 files.otherResponsibility && (
-                  <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.otherResponsibility}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
+                  <a href={`http://${window.location.hostname}:5000/uploads/${files.otherResponsibility}`} target="_blank" rel="noopener noreferrer" className="evidence-link" style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}>
                     <ExternalLink size={16} />
                     <span style={{ fontSize: '0.8rem' }}>View</span>
                   </a>
                 )
-              ) : (
-                renderUploadControl('otherResponsibility')
-              )}
+              ) : renderUploadControl('otherResponsibility')}
             </div>
           </div>
         </div>

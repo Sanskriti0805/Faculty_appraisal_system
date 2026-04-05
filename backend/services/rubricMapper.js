@@ -16,7 +16,8 @@ const db = require('../config/database');
  *     ID 4: enrollment<50  AND feedback≥4  → 4 pts
  *     ID 5: enrollment<50  AND 3.5≤fb<4   → 3 pts
  *     ID 6: enrollment<50  AND 3≤fb<3.5   → 2 pts
- *   Only ONE category applies per faculty (based on best course). The other → 0.
+ *   Each qualifying course contributes independently to exactly one rubric,
+ *   and scores are accumulated across all courses.
  */
 const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
   try {
@@ -42,9 +43,26 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
     const [talks]           = await db.query('SELECT * FROM keynotes_talks WHERE faculty_id = ?', [facultyId]);
     const [sessions]        = await db.query('SELECT * FROM conference_sessions WHERE faculty_id = ?', [facultyId]);
     const [contribs]        = await db.query('SELECT * FROM institutional_contributions WHERE faculty_id = ?', [facultyId]);
+    const [teachingInnovation] = await db.query('SELECT * FROM teaching_innovation WHERE faculty_id = ?', [facultyId]);
+
+    // Optional data sources: keep scoring resilient if these tables are not present yet.
+    let guidance = [];
+    try {
+      [guidance] = await db.query('SELECT * FROM research_guidance WHERE faculty_id = ?', [facultyId]);
+    } catch (_) {
+      guidance = [];
+    }
+
+    let otherActivities = [];
+    try {
+      [otherActivities] = await db.query('SELECT * FROM other_activities WHERE faculty_id = ?', [facultyId]);
+    } catch (_) {
+      otherActivities = [];
+    }
 
     // ── Helper: safely parse float ─────────────────────────────────────────
     const f = (v) => parseFloat(v) || 0;
+    const norm = (v) => String(v || '').toLowerCase();
 
     // ── Build score map: rubricId → score ──────────────────────────────────
     const scoreMap = {};
@@ -60,13 +78,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       // Initialise all 6 to 0
       tfRubrics.forEach(r => { scoreMap[r.id] = 0; });
 
-      // Track the best score found for each category
-      // category_ge50  → rubric indices 0,1,2  (IDs 1,2,3)
-      // category_lt50  → rubric indices 3,4,5  (IDs 4,5,6)
-      let bestGe50Score = -1; // best score for courses with enrollment >= 50
-      let bestGe50RubricIdx = -1; // which rubric index (0-2) won
-      let bestLt50Score = -1;  // best score for courses with enrollment < 50
-      let bestLt50RubricIdx = -1;
+      let qualifyingCourses = 0;
 
       for (const course of courses) {
         const enrollment = parseInt(course.enrollment) || 0;
@@ -77,48 +89,36 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
         if (enrollment >= 50) {
           // Category  5-4-3  (rubric IDs 1,2,3  → indices 0,1,2)
-          let rubricIdx = -1;
-          let pts = 0;
-          if (fb >= 4)           { rubricIdx = 0; pts = f(tfRubrics[0].max_marks); }
-          else if (fb >= 3.5)    { rubricIdx = 1; pts = f(tfRubrics[1].max_marks); }
-          else if (fb >= 3)      { rubricIdx = 2; pts = f(tfRubrics[2].max_marks); }
-          // fb < 3 → no points (rubricIdx stays -1)
-
-          if (rubricIdx >= 0 && pts > bestGe50Score) {
-            bestGe50Score = pts;
-            bestGe50RubricIdx = rubricIdx;
+          if (fb >= 4) {
+            scoreMap[tfRubrics[0].id] += f(tfRubrics[0].max_marks);
+            qualifyingCourses += 1;
+          } else if (fb >= 3.5) {
+            scoreMap[tfRubrics[1].id] += f(tfRubrics[1].max_marks);
+            qualifyingCourses += 1;
+          } else if (fb >= 3) {
+            scoreMap[tfRubrics[2].id] += f(tfRubrics[2].max_marks);
+            qualifyingCourses += 1;
           }
+          // fb < 3 → no points
         } else {
           // Category  4-3-2  (rubric IDs 4,5,6  → indices 3,4,5)
-          let rubricIdx = -1;
-          let pts = 0;
-          if (fb >= 4)           { rubricIdx = 3; pts = f(tfRubrics[3].max_marks); }
-          else if (fb >= 3.5)    { rubricIdx = 4; pts = f(tfRubrics[4].max_marks); }
-          else if (fb >= 3)      { rubricIdx = 5; pts = f(tfRubrics[5].max_marks); }
-          // fb < 3 → no points
-
-          if (rubricIdx >= 0 && pts > bestLt50Score) {
-            bestLt50Score = pts;
-            bestLt50RubricIdx = rubricIdx;
+          if (fb >= 4) {
+            scoreMap[tfRubrics[3].id] += f(tfRubrics[3].max_marks);
+            qualifyingCourses += 1;
+          } else if (fb >= 3.5) {
+            scoreMap[tfRubrics[4].id] += f(tfRubrics[4].max_marks);
+            qualifyingCourses += 1;
+          } else if (fb >= 3) {
+            scoreMap[tfRubrics[5].id] += f(tfRubrics[5].max_marks);
+            qualifyingCourses += 1;
           }
+          // fb < 3 → no points
         }
       }
 
-      // Determine which category wins (higher point value takes priority).
-      // Only ONE category can be active; the other must stay 0.
-      const ge50Wins = bestGe50Score >= bestLt50Score && bestGe50Score >= 0;
-      const lt50Wins = bestLt50Score > bestGe50Score && bestLt50Score >= 0;
-
-      if (ge50Wins && bestGe50RubricIdx >= 0) {
-        // Apply the single winning rubric from the ≥50 category
-        scoreMap[tfRubrics[bestGe50RubricIdx].id] = bestGe50Score;
-        // Rubric IDs 4,5,6 stay 0 (already set)
-        console.log(`  Teaching Feedback (≥50 students): rubric ID ${tfRubrics[bestGe50RubricIdx].id} → ${bestGe50Score} pts`);
-      } else if (lt50Wins && bestLt50RubricIdx >= 0) {
-        // Apply the single winning rubric from the <50 category
-        scoreMap[tfRubrics[bestLt50RubricIdx].id] = bestLt50Score;
-        // Rubric IDs 1,2,3 stay 0 (already set)
-        console.log(`  Teaching Feedback (<50 students): rubric ID ${tfRubrics[bestLt50RubricIdx].id} → ${bestLt50Score} pts`);
+      const teachingFeedbackTotal = tfRubrics.reduce((sum, r) => sum + (scoreMap[r.id] || 0), 0);
+      if (qualifyingCourses > 0) {
+        console.log(`  Teaching Feedback: ${qualifyingCourses} qualifying course(s) → ${teachingFeedbackTotal.toFixed(2)} pts`);
       } else {
         console.log(`  Teaching Feedback: no qualifying courses found → all 0`);
       }
@@ -140,9 +140,23 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       }
 
       // ── 2. Research Guidance (IDs 7-10) ───────────────────────────────
-      // No guidance table in DB → award 0
       else if (sec.includes('research guidance')) {
-        score = 0;
+        if (guidance.length === 0) {
+          score = 0;
+        } else {
+          const units = guidance.reduce((sum, g) => {
+            const gType = norm(g.guidance_type || g.type || g.category || g.program_type || g.level);
+            const qty = parseInt(g.count || g.quantity || g.students_count || g.number_of_students || g.number_of_projects || 1) || 1;
+
+            if (sub.includes('btp') && gType.includes('btp')) return sum + qty;
+            if ((sub.includes('phd') && !sub.includes('co-guide')) && gType.includes('phd') && !gType.includes('co')) return sum + qty;
+            if (sub.includes('co-guide') && gType.includes('co')) return sum + qty;
+            if ((sub.includes('m.tech') || sub.includes('m.sc')) && (gType.includes('m.tech') || gType.includes('mtech') || gType.includes('m.sc') || gType.includes('msc'))) return sum + qty;
+            return sum;
+          }, 0);
+
+          score = units > 0 ? Math.min(units * max, max) : 0;
+        }
       }
 
       // ── 3. New Courses designed (ID 11) ───────────────────────────────
@@ -184,7 +198,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       }
 
       // ── 5. Conference Publications ─────────────────────────────────────
-      else if (sec.includes('conference')) {
+      else if (sec.includes('conference') && !sec.includes('talks and conferences')) {
         const confPubs = publications.filter(p =>
           (p.publication_type || '').toLowerCase() === 'conference'
         );
@@ -293,9 +307,10 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       // ── 9. Technology Contribution ─────────────────────────────────────
       else if (sec.includes('technology contribution')) {
         if (sub.includes('software')) {
-          score = techTransfer.filter(t =>
-            (t.description || '').toLowerCase().includes('software') ||
-            (t.title || '').toLowerCase().includes('software')
+          score = techTransfer.filter(tt =>
+            norm(tt.description).includes('software') ||
+            norm(tt.title).includes('software') ||
+            norm(tt.agency).includes('software')
           ).length > 0 ? max : 0;
         } else {
           score = techTransfer.length > 0 ? max : 0;
@@ -321,37 +336,37 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
       // ── 11. Talks and Conferences ──────────────────────────────────────
       else if (sec.includes('talks and conferences')) {
+        const hasSessionMatch = (predicate) => sessions.some(s => {
+          const roleText = norm(s.role);
+          const titleText = norm(s.session_title);
+          const conferenceText = norm(s.conference_name);
+          const all = `${roleText} ${titleText} ${conferenceText}`;
+          return predicate({ roleText, titleText, conferenceText, all });
+        });
+
+        const isFdpOrConferenceTalk = (talk) => {
+          const eventName = norm(talk.event_name);
+          const eventType = norm(talk.event_type);
+          const title = norm(talk.title);
+          return eventType.includes('fdp') || eventType.includes('conference') || eventName.includes('fdp') || eventName.includes('conference') || title.includes('fdp') || title.includes('conference');
+        };
+
         if (sub.includes('convenor') && !sub.includes('co-convenor')) {
-          score = sessions.filter(s =>
-            (s.session_title || '').toLowerCase().includes('convenor') ||
-            (s.conference_name || '').toLowerCase().includes('workshop') ||
-            (s.conference_name || '').toLowerCase().includes('fdp')
-          ).length > 0 ? max : 0;
+          score = hasSessionMatch(({ all }) => all.includes('convenor') || all.includes('coordinator') || all.includes('workshop') || all.includes('fdp')) ? max : 0;
         } else if (sub.includes('co-convenor')) {
-          score = sessions.filter(s =>
-            (s.session_title || '').toLowerCase().includes('co-convenor')
-          ).length > 0 ? max : 0;
+          score = hasSessionMatch(({ all }) => all.includes('co-convenor') || all.includes('co convenor') || all.includes('coordinator')) ? max : 0;
         } else if (sub.includes('organizing committee')) {
-          score = sessions.filter(s =>
-            (s.session_title || '').toLowerCase().includes('organizing')
-          ).length > 0 ? max : 0;
+          score = hasSessionMatch(({ all }) => all.includes('organizing') || all.includes('committee')) ? max : 0;
         } else if (sub.includes('fdp') || (sub.includes('invited') && sub.includes('fdp'))) {
-          const fdpTalks = talks.filter(t =>
-            (t.event_name || '').toLowerCase().includes('fdp') ||
-            (t.event_name || '').toLowerCase().includes('conference')
-          );
+          const fdpTalks = talks.filter(isFdpOrConferenceTalk);
           score = Math.min(fdpTalks.length * max, 10);
         } else if (sub.includes('invited')) {
-          score = Math.min(talks.length * max, 5);
+          const invitedOther = talks.filter(talk => !isFdpOrConferenceTalk(talk));
+          score = Math.min(invitedOther.length * max, 5);
         } else if (sub.includes('pc chair') || sub.includes('session chair') || sub.includes('general chair')) {
-          score = sessions.filter(s =>
-            (s.session_title || '').toLowerCase().includes('chair')
-          ).length > 0 ? max : 0;
+          score = hasSessionMatch(({ all }) => all.includes('pc chair') || all.includes('session chair') || all.includes('general chair') || all.includes('chair')) ? max : 0;
         } else if (sub.includes('tpc') || sub.includes('other member')) {
-          score = sessions.filter(s =>
-            (s.session_title || '').toLowerCase().includes('member') ||
-            (s.session_title || '').toLowerCase().includes('tpc')
-          ).length > 0 ? max : 0;
+          score = hasSessionMatch(({ all }) => all.includes('tpc') || all.includes('technical program committee') || all.includes('member')) ? max : 0;
         } else {
           score = (talks.length > 0 || sessions.length > 0) ? max : 0;
         }
@@ -361,17 +376,20 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       else if (sec.includes('visits') || sec.includes('honours') || sec.includes('consultancy')) {
         if (sub.includes('visits') || sub.includes('collaborative')) {
           score = Math.min(contribs.filter(c =>
-            (c.contribution_type || '').toLowerCase().includes('visit')
+            norm(c.contribution_type).includes('visit') || norm(c.title).includes('visit') || norm(c.description).includes('visit')
           ).length * max, 10);
         } else if (sub.includes('international honours')) {
           score = awards.filter(a =>
-            (a.award_name || '').toLowerCase().includes('international') ||
-            (a.awarding_agency || '').toLowerCase().includes('international')
+            norm(a.honor_type) === 'international' ||
+            norm(a.award_name).includes('international') ||
+            norm(a.awarding_agency).includes('international')
           ).length > 0 ? max : 0;
         } else if (sub.includes('national honours')) {
           score = awards.filter(a =>
-            (a.award_name || '').toLowerCase().includes('national') ||
-            (a.awarding_agency || '').toLowerCase().includes('india')
+            norm(a.honor_type) === 'national' ||
+            norm(a.award_name).includes('national') ||
+            norm(a.awarding_agency).includes('national') ||
+            norm(a.awarding_agency).includes('india')
           ).length > 0 ? max : 0;
         } else if (sub.includes('consultancy')) {
           // Match by project amount
@@ -394,55 +412,52 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
       // ── 13. Institutional Contributions ───────────────────────────────
       else if (sec.includes('institutional contributions')) {
-        const adminTitles = {
-          'dean':               58,
-          'associate dean':     59,
-          'assistant dean':     60,
-          'hod':                61,
-          'chief warden':       62,
-          'associate chief warden': 63,
-          'warden':             64,
-          'assistant warden':   65,
-          'centre lead':        66,
-          'centre co-lead':     67,
-          'chairperson':        68,
-          'convenor':           69,
-          'committee member':   70,
-          'faculty mentor':     71,
-          'major responsibilities': 72,
-          'certificate programme': 73,
-          'scholarly articles': 74,
-        };
+        const matchedCount = contribs.filter(c => {
+          const hay = `${norm(c.contribution_type)} ${norm(c.title)} ${norm(c.description)}`;
 
-        // Match by sub_section keywords to contribution_type
-        let matched = false;
-        for (const [keyword, rubId] of Object.entries(adminTitles)) {
-          if (rubric.id === rubId || sub.includes(keyword)) {
-            const found = contribs.filter(c =>
-              (c.contribution_type || '').toLowerCase().includes(keyword) ||
-              (c.title || '').toLowerCase().includes(keyword)
-            );
-            if (found.length > 0) {
-              if (sub.includes('committee member') || sub.includes('scholarly') || sub.includes('faculty mentor')) {
-                score = Math.min(found.length * max, 5); // capped
-              } else {
-                score = max;
-              }
-              matched = true;
-            }
-            break;
+          if (sub.includes('associate dean')) return hay.includes('associate dean');
+          if (sub.includes('assistant dean')) return hay.includes('assistant dean');
+          if (sub.includes('dean')) return hay.includes(' dean');
+          if (sub.includes('hod')) return hay.includes('hod') || hay.includes('head of department');
+          if (sub.includes('chief warden')) return hay.includes('chief warden');
+          if (sub.includes('associate chief warden')) return hay.includes('associate chief warden');
+          if (sub.includes('assistant warden')) return hay.includes('assistant warden');
+          if (sub.includes('warden')) return hay.includes(' warden');
+          if (sub.includes('centre co-lead')) return hay.includes('centre co-lead') || hay.includes('center co-lead');
+          if (sub.includes('centre lead')) return hay.includes('centre lead') || hay.includes('center lead');
+          if (sub.includes('chairperson')) return hay.includes('chairperson');
+          if (sub.includes('convenor')) return hay.includes('convenor') || hay.includes('convener');
+          if (sub.includes('committee member')) return hay.includes('committee member') || hay.includes('member');
+          if (sub.includes('faculty mentor')) return hay.includes('faculty mentor') || hay.includes('mentor');
+          if (sub.includes('major responsibilities')) return hay.includes('major responsibilities') || hay.includes('admissions') || hay.includes('accreditation');
+          if (sub.includes('certificate programme')) return hay.includes('certificate programme') || hay.includes('certificate program');
+          if (sub.includes('scholarly')) return hay.includes('scholarly') || hay.includes('newspaper') || hay.includes('magazine');
+          return false;
+        }).length;
+
+        if (matchedCount > 0) {
+          if (sub.includes('committee member') || sub.includes('scholarly') || sub.includes('faculty mentor')) {
+            score = Math.min(matchedCount * max, 5);
+          } else {
+            score = max;
           }
+        } else {
+          score = 0;
         }
-        if (!matched) score = 0;
       }
 
       // ── 14. Other Activities ──────────────────────────────────────────
       else if (sec.includes('other activities')) {
-        // Check activity data — if no specific table just check institutional misc
-        score = 0; // no other_activities table yet
+        const hasOtherActivity = otherActivities.length > 0 || teachingInnovation.length > 0;
+        score = hasOtherActivity ? max : 0;
       }
 
-      scoreMap[rubric.id] = Math.min(score, max); // never exceed max
+      if (sec.includes('teaching feedback')) {
+        // Teaching Feedback is cumulative per-course; do not clamp to single-rubric max.
+        scoreMap[rubric.id] = score;
+      } else {
+        scoreMap[rubric.id] = Math.min(score, max); // never exceed max
+      }
     }
 
     // ── Upsert all 75 rows (including zeros) ──────────────────────────────

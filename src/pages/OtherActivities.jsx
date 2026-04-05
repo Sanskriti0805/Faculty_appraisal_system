@@ -32,9 +32,55 @@ const OtherActivities = () => {
   }
 
   const handleSave = async () => {
-    console.log('Saving data:', formData)
-    alert('Data saved successfully!')
-    return true
+    try {
+      const facultyId = user?.id || 1
+      const requests = []
+
+      if (formData.softwareDeveloped.trim()) {
+        const innovationPayload = new FormData()
+        innovationPayload.append('faculty_id', facultyId)
+        innovationPayload.append('description', formData.softwareDeveloped)
+        innovationPayload.append('impact', 'Submitted from Other Activities form')
+
+        requests.push(
+          fetch('http://localhost:5000/api/innovation/teaching', {
+            method: 'POST',
+            body: innovationPayload,
+          })
+        )
+      }
+
+      formData.institutionalVisits
+        .map(v => v.trim())
+        .filter(Boolean)
+        .forEach(visit => {
+          const visitPayload = new FormData()
+          visitPayload.append('faculty_id', facultyId)
+          visitPayload.append('contribution_type', 'Visit')
+          visitPayload.append('description', visit)
+          visitPayload.append('year', new Date().getFullYear())
+
+          requests.push(
+            fetch('http://localhost:5000/api/innovation/institutional', {
+              method: 'POST',
+              body: visitPayload,
+            })
+          )
+        })
+
+      if (requests.length === 0) {
+        alert('Please add at least one activity before saving.')
+        return false
+      }
+
+      await Promise.all(requests)
+      alert('Data saved successfully!')
+      return true
+    } catch (error) {
+      console.error('Error saving other activities:', error)
+      alert('Error saving data: ' + error.message)
+      return false
+    }
   }
 
   return (

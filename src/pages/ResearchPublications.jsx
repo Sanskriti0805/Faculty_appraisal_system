@@ -5,8 +5,11 @@ import './FormPages.css'
 import { publicationsService } from '../services/publicationsService'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
+import { useSubmission } from '../context/SubmissionContext'
 
 const ResearchPublications = ({ initialData, readOnly }) => {
+  const { submissionData, refetchSubmission } = useSubmission()
+  const savedPublications = !initialData && !readOnly && submissionData ? (submissionData.publications || []) : []
   const [publicationType, setPublicationType] = useState('')
   const [bookSubType, setBookSubType] = useState('')
   const [authors, setAuthors] = useState([{ first: '', middle: '', last: '' }])
@@ -277,7 +280,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     if (e && e.preventDefault) e.preventDefault()
     setLoading(true)
     try {
-      const facultyId = 1 // Replace with actual login ID
+      const facultyId = user?.id || 1;
       const publicationData = {
         faculty_id: facultyId,
         publication_type: publicationType,
@@ -297,6 +300,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         publicationData.authors = authors
 
         await publicationsService.createPublication(publicationData)
+        if (refetchSubmission) await refetchSubmission()
         alert('Journal publication saved successfully!')
         setLoading(false)
         setPublicationType('') // Reset
@@ -318,6 +322,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         publicationData.authors = authors
 
         await publicationsService.createPublication(publicationData)
+        if (refetchSubmission) await refetchSubmission()
         alert('Conference publication saved successfully!')
         setLoading(false)
         setPublicationType('') // Reset
@@ -342,6 +347,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           }
           alert('All books saved successfully!')
           setLoading(false)
+          if (refetchSubmission) await refetchSubmission()
           // Reset
           setPublicationType('')
           setBookChapterEntries([{
@@ -373,6 +379,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           }
           alert('All textbooks saved successfully!')
           setLoading(false)
+          if (refetchSubmission) await refetchSubmission()
           // Reset
           setPublicationType('')
           setTextbookEntries([{
@@ -392,6 +399,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         publicationData.details = otherDetails
 
         await publicationsService.createPublication(publicationData)
+        if (refetchSubmission) await refetchSubmission()
         alert('Other details saved successfully!')
         setLoading(false)
         setPublicationType('') // Reset
@@ -1405,6 +1413,22 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           )}
         </div>
       </div>
+
+      {/* Render previously saved publications if not in readOnly mode */}
+      {!readOnly && savedPublications.length > 0 && (
+        <div style={{ marginTop: '3rem' }}>
+          <h2 style={{ color: '#1e3a5f', marginBottom: '1.5rem', borderBottom: '2px solid #eee', paddingBottom: '0.5rem' }}>
+            Previously Saved Publications
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {savedPublications.map(pub => (
+              <div key={pub.id} className="mirror-component-wrapper" style={{ border: '1px solid #ddd', borderRadius: 8, padding: '1rem', background: '#fafafa' }}>
+                <ResearchPublications initialData={pub} readOnly={true} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

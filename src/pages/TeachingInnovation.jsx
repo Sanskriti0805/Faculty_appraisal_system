@@ -45,7 +45,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
   const handleSave = async () => {
     setLoading(true)
     try {
-      const facultyId = 1 // TODO: Actual faculty ID
+      const facultyId = user?.id || 1;
 
       const saveData = async (type, description, file) => {
         if (!description) return;

@@ -12,6 +12,9 @@ router.get('/', submissionsController.getAllSubmissions);
 // Get submission statistics
 router.get('/stats', submissionsController.getSubmissionStats);
 
+// Export bulk excel 
+router.get('/export/excel/:academic_year', authenticate, submissionsController.exportComprehensiveExcel);
+
 // Get submission by ID
 router.get('/:id', submissionsController.getSubmissionById);
 

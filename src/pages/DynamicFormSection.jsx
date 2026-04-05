@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useParams, useLocation } from 'react-router-dom';
 import { Plus, Trash2, AlertCircle } from 'lucide-react';
 import apiClient from '../services/api';
@@ -6,6 +7,7 @@ import './DynamicFormSection.css';
 import FormActions from '../components/FormActions';
 
 const DynamicFormSection = () => {
+  const { user } = useAuth();
   const { sectionId } = useParams();
   const location = useLocation();
   const [section, setSection] = useState(null);
@@ -82,7 +84,7 @@ const DynamicFormSection = () => {
       }));
 
       const res = await apiClient.post('/form-builder/responses', {
-        faculty_id: 1, // TODO: Use real faculty ID
+        faculty_id: user?.id || 1, // TODO: Use real faculty ID
         responses: responsePayload
       });
 

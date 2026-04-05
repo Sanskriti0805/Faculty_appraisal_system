@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { autoAllocateMarks } = require('../services/rubricMapper');
 const emailService = require('../services/emailService');
+const xlsx = require('xlsx');
 
 // GET /api/submissions/my — get or create draft submission for logged-in faculty
 exports.getMySubmission = async (req, res) => {
@@ -104,59 +105,66 @@ exports.getSubmissionById = async (req, res) => {
     }
 
     const sub = submission[0];
-    const facultyId = sub.faculty_id;
+    const user_id = sub.faculty_id;
     const academicYear = sub.academic_year;
 
+    // IMPORTANT: Map User ID to Faculty Information ID via email (some tables use one, some the other)
+    const [facInfoRow] = await db.query('SELECT id FROM faculty_information WHERE email = ?', [sub.email]);
+    const faculty_info_id = facInfoRow.length > 0 ? facInfoRow[0].id : null;
+    
+    // Choose appropriate ID for sub-queries (most reference faculty_information.id)
+    const fid = faculty_info_id; 
+    
     // Helper to get year from academic_year string (e.g. "2025-26" -> 2025)
     const yearNum = academicYear.split('-')[0];
 
     // Get faculty information
-    const [facultyInfo] = await db.query('SELECT * FROM faculty_information WHERE id = ?', [facultyId]);
+    const [facultyInfo] = await db.query('SELECT * FROM faculty_information WHERE id = ?', [fid]);
 
     // Get courses taught
-    const [courses] = await db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [facultyId]);
+    const [courses] = await db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [fid]);
 
     // Get publications - Filter by year if possible, but keep all as requested for now if no specific year matching logic exists
-    const [publications] = await db.query('SELECT * FROM research_publications WHERE faculty_id = ? AND year_of_publication >= ?', [facultyId, yearNum]);
+    const [publications] = await db.query('SELECT * FROM research_publications WHERE faculty_id = ? AND year_of_publication >= ?', [fid, yearNum]);
 
     // Get grants
-    const [grants] = await db.query('SELECT * FROM research_grants WHERE faculty_id = ?', [facultyId]);
+    const [grants] = await db.query('SELECT * FROM research_grants WHERE faculty_id = ?', [fid]);
 
     // Get patents
-    const [patents] = await db.query('SELECT * FROM patents WHERE faculty_id = ?', [facultyId]);
+    const [patents] = await db.query('SELECT * FROM patents WHERE faculty_id = ?', [fid]);
 
     // Get awards
-    const [awards] = await db.query('SELECT * FROM awards_honours WHERE faculty_id = ? AND year >= ?', [facultyId, yearNum]);
+    const [awards] = await db.query('SELECT * FROM awards_honours WHERE faculty_id = ?', [fid]);
 
     // Get new courses developed
-    const [newCourses] = await db.query('SELECT * FROM new_courses WHERE faculty_id = ?', [facultyId]);
+    const [newCourses] = await db.query('SELECT * FROM new_courses WHERE faculty_id = ?', [fid]);
 
     // Get submitted proposals
-    const [proposals] = await db.query('SELECT * FROM submitted_proposals WHERE faculty_id = ?', [facultyId]);
+    const [proposals] = await db.query('SELECT * FROM submitted_proposals WHERE faculty_id = ?', [fid]);
 
     // Get paper reviews
-    const [paperReviews] = await db.query('SELECT * FROM paper_reviews WHERE faculty_id = ?', [facultyId]);
+    const [paperReviews] = await db.query('SELECT * FROM paper_reviews WHERE faculty_id = ?', [fid]);
 
     // Get technology transfer
-    const [techTransfer] = await db.query('SELECT * FROM technology_transfer WHERE faculty_id = ?', [facultyId]);
+    const [techTransfer] = await db.query('SELECT * FROM technology_transfer WHERE faculty_id = ?', [fid]);
 
     // Get conference sessions
-    const [conferenceSessions] = await db.query('SELECT * FROM conference_sessions WHERE faculty_id = ?', [facultyId]);
+    const [conferenceSessions] = await db.query('SELECT * FROM conference_sessions WHERE faculty_id = ?', [fid]);
 
     // Get keynotes and talks
-    const [keynotesTalks] = await db.query('SELECT * FROM keynotes_talks WHERE faculty_id = ?', [facultyId]);
+    const [keynotesTalks] = await db.query('SELECT * FROM keynotes_talks WHERE faculty_id = ?', [fid]);
 
     // Get consultancy
-    const [consultancy] = await db.query('SELECT * FROM consultancy WHERE faculty_id = ? AND year >= ?', [facultyId, yearNum]);
+    const [consultancy] = await db.query('SELECT * FROM consultancy WHERE faculty_id = ? AND year >= ?', [fid, yearNum]);
 
     // Get teaching innovation
-    const [teachingInnovation] = await db.query('SELECT * FROM teaching_innovation WHERE faculty_id = ?', [facultyId]);
+    const [teachingInnovation] = await db.query('SELECT * FROM teaching_innovation WHERE faculty_id = ?', [fid]);
 
     // Get institutional contributions
-    const [institutionalContributions] = await db.query('SELECT * FROM institutional_contributions WHERE faculty_id = ?', [facultyId]);
+    const [institutionalContributions] = await db.query('SELECT * FROM institutional_contributions WHERE faculty_id = ?', [fid]);
 
     // Get Part B goals
-    const [goals] = await db.query('SELECT * FROM faculty_goals WHERE faculty_id = ?', [facultyId]);
+    const [goals] = await db.query('SELECT * FROM faculty_goals WHERE faculty_id = ?', [fid]);
 
     // Get review comments
     const [comments] = await db.query(`
@@ -402,6 +410,135 @@ exports.sendReminder = async (req, res) => {
     res.json({ success: true, message: `Reminder sent to ${sub.email}` });
   } catch (error) {
     console.error('Send reminder error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET /api/submissions/export/excel/:academic_year
+exports.exportComprehensiveExcel = async (req, res) => {
+  try {
+    const { academic_year } = req.params;
+    
+    let query = `
+      SELECT s.*, u.name as faculty_name, u.department, u.designation, u.email, f.id as faculty_info_id
+      FROM submissions s 
+      JOIN users u ON s.faculty_id = u.id
+      LEFT JOIN faculty_information f ON u.email = f.email
+    `;
+    const queryParams = [];
+
+    if (academic_year && academic_year !== 'all') {
+      query += ` WHERE s.academic_year = ?`;
+      queryParams.push(academic_year);
+    }
+    
+    query += ` ORDER BY u.department, u.name`;
+
+    const [submissions] = await db.query(query, queryParams);
+
+    if (submissions.length === 0) {
+      return res.status(404).json({ success: false, message: 'No records found for the selected academic year' });
+    }
+
+    // Prepare arrays for different sheets
+    const summaryData = [];
+    const publicationsData = [];
+    const coursesData = [];
+    const grantsData = [];
+    const patentsData = [];
+    const awardsData = [];
+
+    for (const sub of submissions) {
+      const yearNum = sub.academic_year.split('-')[0];
+      const fid = sub.faculty_info_id; // Mapping to faculty_information table ID
+      
+      // Basic summary mapping
+      summaryData.push({
+        'Faculty Name': sub.faculty_name,
+        'Department': sub.department,
+        'Designation': sub.designation,
+        'Email': sub.email,
+        'Academic Year': sub.academic_year,
+        'Form Type': sub.form_type,
+        'Status': sub.status,
+        'Submitted Date': sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : 'N/A',
+        'Total Score': sub.total_score
+      });
+
+      // Publications
+      const [publications] = await db.query('SELECT * FROM research_publications WHERE faculty_id = ? AND year_of_publication >= ?', [fid, yearNum]);
+      publications.forEach(p => publicationsData.push({
+        'Faculty Name': sub.faculty_name,
+        'Type': p.publication_type,
+        'Sub Type': p.sub_type,
+        'Title': p.title,
+        'Year': p.year_of_publication,
+        'Journal/Conference': p.journal_name || p.conference_name,
+        'Status': p.status
+      }));
+
+      // Courses
+      const [courses] = await db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [fid]); // Assuming courses are tied to the session/year somehow
+      courses.forEach(c => coursesData.push({
+        'Faculty Name': sub.faculty_name,
+        'Course Name': c.course_name,
+        'Course Code': c.course_code,
+        'Semester': c.semester,
+        'Program': c.program,
+        'Enrollment': c.enrollment,
+        'Feedback Score': c.feedback_score
+      }));
+
+      // Grants
+      const [grants] = await db.query('SELECT * FROM research_grants WHERE faculty_id = ?', [fid]);
+      grants.forEach(g => grantsData.push({
+        'Faculty Name': sub.faculty_name,
+        'Project Name': g.project_name,
+        'Funding Agency': g.funding_agency,
+        'Amount (Lakhs)': g.amount_in_lakhs,
+        'Role': g.role,
+        'Duration': g.duration
+      }));
+
+      // Patents
+      const [patents] = await db.query('SELECT * FROM patents WHERE faculty_id = ?', [fid]);
+      patents.forEach(p => patentsData.push({
+        'Faculty Name': sub.faculty_name,
+        'Patent Type': p.patent_type,
+        'Title': p.title,
+        'Agency': p.agency,
+        'Month': p.month ? p.month.toISOString().split('T')[0] : ''
+      }));
+
+      // Awards
+      const [awards] = await db.query('SELECT * FROM awards_honours WHERE faculty_id = ?', [fid]);
+      awards.forEach(a => awardsData.push({
+        'Faculty Name': sub.faculty_name,
+        'Award Name': a.award_name,
+        'Honor Type': a.honor_type,
+        'Description': a.description
+      }));
+    }
+
+    // Create workbook and append sheets
+    const workbook = xlsx.utils.book_new();
+    
+    xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(summaryData), 'Summary');
+    if (publicationsData.length > 0) xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(publicationsData), 'Publications');
+    if (coursesData.length > 0) xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(coursesData), 'Courses');
+    if (grantsData.length > 0) xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(grantsData), 'Grants');
+    if (patentsData.length > 0) xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(patentsData), 'Patents');
+    if (awardsData.length > 0) xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(awardsData), 'Awards & Honours');
+
+    // Generate buffer
+    const excelBuffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Appraisal_Export_${academic_year}.xlsx`);
+    res.send(excelBuffer);
+
+  } catch (error) {
+    console.error('Export Comprehensive Excel error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   User, Building2, Briefcase, Calendar, Hash,
-  CheckCircle, ChevronRight, AlertCircle, LogOut
+  CheckCircle, ChevronRight, AlertCircle, LogOut, X, Key
 } from 'lucide-react';
 import './Onboarding.css';
 
@@ -20,6 +20,7 @@ const Onboarding = () => {
   const [departments, setDepartments] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showPasswordPopup, setShowPasswordPopup] = useState(true);
 
   // Faculty form state
   const [facultyForm, setFacultyForm] = useState({
@@ -127,6 +128,67 @@ const Onboarding = () => {
     <div className="onboarding-root">
       {/* Background decoration */}
       <div className="onboarding-bg" />
+
+      {/* First-time Password Reminder Popup */}
+      {showPasswordPopup && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000, padding: 20, backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 20, padding: '40px',
+            maxWidth: 500, width: '100%', textAlign: 'center',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.2)', position: 'relative'
+          }}>
+            <button 
+              onClick={() => setShowPasswordPopup(false)}
+              style={{ position: 'absolute', top: 20, right: 20, border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8' }}
+            >
+              <X size={24} />
+            </button>
+            
+            <div style={{
+              width: 80, height: 80, background: '#eff6ff', color: '#1e40af',
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 24px'
+            }}>
+              <Key size={40} />
+            </div>
+            
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: 12 }}>
+              Account Security Notice
+            </h2>
+            
+            <p style={{ color: '#64748b', fontSize: '1.05rem', lineHeight: 1.6, marginBottom: 32 }}>
+              Okay now change your password first by going into account settings and then proceed for your security.
+            </p>
+            
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button
+                onClick={() => navigate('/settings')}
+                style={{
+                  padding: '12px 24px', borderRadius: 12, border: 'none',
+                  background: 'linear-gradient(135deg, #1e40af, #2563eb)',
+                  color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '1rem',
+                  display: 'flex', alignItems: 'center', gap: 8
+                }}
+              >
+                Go to Settings
+              </button>
+              <button
+                onClick={() => setShowPasswordPopup(false)}
+                style={{
+                  padding: '12px 24px', borderRadius: 12, border: '1px solid #e2e8f0',
+                  background: '#fff', color: '#64748b', fontWeight: 600, cursor: 'pointer', fontSize: '1rem'
+                }}
+              >
+                Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="onboarding-card">
         {/* Header */}

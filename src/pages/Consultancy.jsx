@@ -77,7 +77,7 @@ const Consultancy = ({ initialData, readOnly }) => {
     if (readOnly) return true;
     setLoading(true);
     try {
-      const facultyId = 1; // TODO: Actual faculty ID
+      const facultyId = user?.id || 1;; // TODO: Actual faculty ID
 
       const promises = consultancies.map(c => {
         const formData = new FormData();

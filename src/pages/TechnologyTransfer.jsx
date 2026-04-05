@@ -25,7 +25,7 @@ const TechnologyTransfer = () => {
 
     setLoading(true)
     try {
-      const facultyId = 1 // TODO: Actual faculty ID
+      const facultyId = user?.id || 1;
 
       const formDataObj = new FormData()
       formDataObj.append('faculty_id', facultyId)

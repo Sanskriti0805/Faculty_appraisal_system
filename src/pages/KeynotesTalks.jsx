@@ -58,7 +58,7 @@ const KeynotesTalks = () => {
 
     setLoading(true)
     try {
-      const facultyId = 1 // TODO: Actual faculty ID
+      const facultyId = user?.id || 1;
       const allTalks = [...submittedTalks]
       if (formData.title) {
         allTalks.push(formData)

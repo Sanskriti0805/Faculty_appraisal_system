@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
 // Public pages
+import { SubmissionProvider } from './context/SubmissionContext'
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
@@ -100,7 +101,9 @@ function App() {
             {/* ── Faculty Routes (with Layout) ── */}
             <Route path="/" element={
               <ProtectedRoute allowedRoles={['faculty']}>
-                <Layout />
+                <SubmissionProvider>
+                  <Layout />
+                </SubmissionProvider>
               </ProtectedRoute>
             }>
               <Route index element={<Dashboard />} />
@@ -155,6 +158,7 @@ function App() {
                 <Layout />
               </ProtectedRoute>
             }>
+              <Route index element={<DOFAOfficeDashboard />} />
               <Route path="dashboard" element={<DOFAOfficeDashboard />} />
               <Route path="rubrics" element={<RubricsManagement />} />
               <Route path="sheet1" element={<EvaluationSheet />} />

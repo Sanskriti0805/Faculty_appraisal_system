@@ -27,7 +27,7 @@ const PaperReview = () => {
 
     setLoading(true)
     try {
-      const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
+      const facultyId = user?.id || 1;
 
       const formDataObj = new FormData()
       formDataObj.append('faculty_id', facultyId)

@@ -6,6 +6,7 @@ import './PartB.css'
 import FormActions from '../components/FormActions'
 import { useAuth } from '../context/AuthContext'
 import FilePreviewButton from '../components/FilePreviewButton'
+import { useSubmission } from '../context/SubmissionContext'
 
 // ── Submission Success Popup ──────────────────────────────────────────────
 const SubmissionSuccessPopup = ({ academicYear, deadline, onClose }) => (
@@ -70,6 +71,7 @@ const SubmissionSuccessPopup = ({ academicYear, deadline, onClose }) => (
 
 const PartB = ({ initialData, readOnly }) => {
   const { user, token } = useAuth()
+  const { submissionData, refetchSubmission } = useSubmission()
   const [submissionId, setSubmissionId] = useState(null)
   const [submissionStatus, setSubmissionStatus] = useState(null)
   const [sessionDeadline, setSessionDeadline] = useState(null)
@@ -111,14 +113,15 @@ const PartB = ({ initialData, readOnly }) => {
   }, [user, token])
 
   useEffect(() => {
-    if (initialData && Array.isArray(initialData) && initialData.length > 0) {
-      setGoals(initialData.map(g => ({
+    const activeData = initialData || (submissionData && submissionData.goals ? submissionData.goals : null);
+    if (activeData && Array.isArray(activeData) && activeData.length > 0) {
+      setGoals(activeData.map(g => ({
         ...g,
         id: g.id || Math.random(),
         evidenceFile: g.evidence_file || null
       })))
     }
-  }, [initialData])
+  }, [initialData, submissionData])
 
   const semesterOptions = [
     'Odd Semester',
@@ -157,6 +160,20 @@ const PartB = ({ initialData, readOnly }) => {
 
   const handleSave = async (e, showSuccess = true) => {
     if (e && e.preventDefault) e.preventDefault();
+
+    // Validate that percentage fields only contain numbers
+    for (const goal of goals) {
+      if (
+        (goal.teaching && isNaN(Number(goal.teaching))) ||
+        (goal.research && isNaN(Number(goal.research))) ||
+        (goal.contribution && isNaN(Number(goal.contribution))) ||
+        (goal.outreach && isNaN(Number(goal.outreach)))
+      ) {
+        alert('Validation Error: Please ensure all time/effort percentage fields contain only valid numbers (e.g., 20 or 20.5), not letters or special characters.');
+        return false;
+      }
+    }
+
     try {
       const response = await fetch('http://localhost:5000/api/goals/save', {
         method: 'POST',
@@ -168,10 +185,16 @@ const PartB = ({ initialData, readOnly }) => {
       });
 
       const data = await response.json();
-      if (data.success && showSuccess) {
-        alert('Data saved successfully!');
+      if (data.success) {
+        if (showSuccess) {
+          if (refetchSubmission) await refetchSubmission();
+          alert('Data saved successfully!');
+        }
+        return true;
+      } else {
+        if (!showSuccess) alert('Failed to save data: ' + data.message);
+        return false;
       }
-      return data.success;
     } catch (error) {
       console.error('Error saving goals:', error);
       if (showSuccess) alert('Failed to save data. Error: ' + error.message);
@@ -204,7 +227,7 @@ const PartB = ({ initialData, readOnly }) => {
     // Save current goals first
     const saveSuccessful = await handleSave(null, false);
     if (!saveSuccessful) {
-      alert('Failed to save goals. Please try again before submitting.');
+      // The handleSave function already displays the exact error message
       return;
     }
 

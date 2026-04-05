@@ -59,7 +59,7 @@ const ConferenceSessions = () => {
 
     setLoading(true)
     try {
-      const facultyId = 1 // TODO: Actual faculty ID
+      const facultyId = user?.id || 1;
       const allSessions = [...submittedSessions]
       if (formData.eventTitle) {
         allSessions.push(formData)

@@ -26,7 +26,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
 
   const loadAwards = async () => {
     try {
-      const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
+      const facultyId = user?.id || 1;
       const data = await awardsService.getAwards(facultyId)
       setAwards(data)
     } catch (error) {
@@ -50,7 +50,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
 
     setLoading(true)
     try {
-      const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
+      const facultyId = user?.id || 1;
       const data = new FormData()
       data.append('faculty_id', facultyId)
       data.append('honor_type', formData.honorType)

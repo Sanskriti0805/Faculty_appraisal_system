@@ -10,9 +10,28 @@ CREATE TABLE `appraisal_sessions` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `created_by` (`created_by`),
-  KEY `idx_appraisal_sessions_status_workflow` (`status`),
   CONSTRAINT `appraisal_sessions_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== AUDIT_LOGS TABLE ===
+CREATE TABLE `audit_logs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL COMMENT 'User who performed the action',
+  `action` enum('CREATE','UPDATE','DELETE') NOT NULL COMMENT 'Type of action performed',
+  `table_name` varchar(100) NOT NULL COMMENT 'Which table was affected',
+  `record_id` int NOT NULL COMMENT 'ID of the affected record',
+  `changes` json DEFAULT NULL COMMENT 'Before and after values of changes',
+  `ip_address` varchar(45) DEFAULT NULL COMMENT 'IP address of user',
+  `user_agent` varchar(500) DEFAULT NULL COMMENT 'Browser/device information',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_table_name` (`table_name`),
+  KEY `idx_record_id` (`record_id`),
+  KEY `idx_action` (`action`),
+  KEY `idx_created_at` (`created_at`),
+  CONSTRAINT `audit_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Audit trail for all CRUD operations'
 
 === AUTHORS TABLE ===
 CREATE TABLE `authors` (
@@ -29,16 +48,16 @@ CREATE TABLE `authors` (
 === AWARDS_HONOURS TABLE ===
 CREATE TABLE `awards_honours` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `faculty_id` int DEFAULT NULL,
-  `award_name` varchar(255) DEFAULT NULL,
-  `awarding_agency` varchar(255) DEFAULT NULL,
-  `year` int DEFAULT NULL,
+  `faculty_id` int NOT NULL,
+  `honor_type` enum('National','International') NOT NULL,
+  `award_name` varchar(500) NOT NULL,
   `description` text,
+  `evidence_file` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `faculty_id` (`faculty_id`),
+  KEY `idx_awards_faculty` (`faculty_id`),
   CONSTRAINT `awards_honours_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === CONFERENCE_SESSIONS TABLE ===
 CREATE TABLE `conference_sessions` (
@@ -49,10 +68,12 @@ CREATE TABLE `conference_sessions` (
   `date` date DEFAULT NULL,
   `location` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `role` varchar(100) DEFAULT NULL,
+  `evidence_file` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `faculty_id` (`faculty_id`),
   CONSTRAINT `conference_sessions_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === CONSULTANCY TABLE ===
 CREATE TABLE `consultancy` (
@@ -60,6 +81,7 @@ CREATE TABLE `consultancy` (
   `faculty_id` int DEFAULT NULL,
   `organization` varchar(255) DEFAULT NULL,
   `project_title` varchar(500) DEFAULT NULL,
+  `role` varchar(255) DEFAULT NULL,
   `amount` decimal(15,2) DEFAULT NULL,
   `duration` varchar(100) DEFAULT NULL,
   `year` int DEFAULT NULL,
@@ -80,11 +102,166 @@ CREATE TABLE `courses_taught` (
   `program` varchar(100) DEFAULT NULL,
   `credits` int DEFAULT NULL,
   `enrollment` int DEFAULT NULL,
+  `status` enum('draft','submitted') DEFAULT 'draft',
+  `feedback_score` decimal(5,3) DEFAULT NULL COMMENT 'Student feedback score (0.000 to 99.999)',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_courses_faculty` (`faculty_id`),
+  KEY `idx_courses_feedback` (`feedback_score`),
+  KEY `idx_courses_status` (`status`),
   CONSTRAINT `courses_taught_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DEPARTMENTS TABLE ===
+CREATE TABLE `departments` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `code` varchar(20) NOT NULL,
+  `hod_email` varchar(255) DEFAULT NULL,
+  `hod_name` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_active` tinyint(1) DEFAULT '1',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `code` (`code`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DOFA_EVALUATION_REMARKS TABLE ===
+CREATE TABLE `dofa_evaluation_remarks` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `submission_id` int NOT NULL,
+  `remark` text,
+  `created_by` int DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DOFA_EVALUATION_SCORES TABLE ===
+CREATE TABLE `dofa_evaluation_scores` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `submission_id` int NOT NULL,
+  `rubric_id` int NOT NULL,
+  `score` decimal(10,2) DEFAULT '0.00',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_sub_rubric` (`submission_id`,`rubric_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=318 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DOFA_EVALUATION_SHEET2 TABLE ===
+CREATE TABLE `dofa_evaluation_sheet2` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `submission_id` int NOT NULL,
+  `research_remarks` text,
+  `overall_feedback` text,
+  `teaching_feedback` text,
+  `final_grade` varchar(10) DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `submission_id` (`submission_id`),
+  CONSTRAINT `dofa_evaluation_sheet2_ibfk_1` FOREIGN KEY (`submission_id`) REFERENCES `submissions` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DOFA_EVALUATION_SHEET3 TABLE ===
+CREATE TABLE `dofa_evaluation_sheet3` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `submission_id` int NOT NULL,
+  `increment_percentage` decimal(5,2) DEFAULT '0.00',
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `submission_id` (`submission_id`),
+  CONSTRAINT `dofa_evaluation_sheet3_ibfk_1` FOREIGN KEY (`submission_id`) REFERENCES `submissions` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DOFA_GRADE_INCREMENTS TABLE ===
+CREATE TABLE `dofa_grade_increments` (
+  `grade` varchar(10) NOT NULL,
+  `increment_percentage` decimal(5,2) NOT NULL,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`grade`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DOFA_GRADING_PARAMETERS TABLE ===
+CREATE TABLE `dofa_grading_parameters` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `condition_op` varchar(10) NOT NULL,
+  `threshold_value` decimal(10,2) NOT NULL,
+  `grade` varchar(10) NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DOFA_RUBRICS TABLE ===
+CREATE TABLE `dofa_rubrics` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `section_name` varchar(255) NOT NULL,
+  `sub_section` varchar(1000) DEFAULT NULL,
+  `max_marks` decimal(10,2) DEFAULT NULL,
+  `weightage` decimal(10,2) DEFAULT NULL,
+  `academic_year` varchar(20) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=76 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DOFA_SECTION_SCORES TABLE ===
+CREATE TABLE `dofa_section_scores` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `submission_id` int NOT NULL,
+  `section_name` varchar(255) NOT NULL,
+  `score` decimal(10,2) DEFAULT '0.00',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_sub_section` (`submission_id`,`section_name`(200))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DYNAMIC_FIELDS TABLE ===
+CREATE TABLE `dynamic_fields` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `section_id` int NOT NULL,
+  `field_type` enum('text','number','textarea','table','comment') NOT NULL,
+  `label` varchar(255) NOT NULL,
+  `config` json DEFAULT NULL,
+  `sequence` int DEFAULT '0',
+  `is_required` tinyint(1) DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `section_id` (`section_id`),
+  CONSTRAINT `dynamic_fields_ibfk_1` FOREIGN KEY (`section_id`) REFERENCES `dynamic_sections` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DYNAMIC_RESPONSES TABLE ===
+CREATE TABLE `dynamic_responses` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `faculty_id` int NOT NULL,
+  `field_id` int NOT NULL,
+  `submission_id` int DEFAULT NULL,
+  `value` json DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_resp` (`faculty_id`,`field_id`,`submission_id`),
+  KEY `field_id` (`field_id`),
+  KEY `submission_id` (`submission_id`),
+  CONSTRAINT `dynamic_responses_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `dynamic_responses_ibfk_2` FOREIGN KEY (`field_id`) REFERENCES `dynamic_fields` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `dynamic_responses_ibfk_3` FOREIGN KEY (`submission_id`) REFERENCES `submissions` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== DYNAMIC_SECTIONS TABLE ===
+CREATE TABLE `dynamic_sections` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `form_type` enum('A','B') DEFAULT 'A',
+  `sequence` int DEFAULT '0',
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === EDITORS TABLE ===
 CREATE TABLE `editors` (
@@ -102,18 +279,18 @@ CREATE TABLE `editors` (
 === FACULTY_GOALS TABLE ===
 CREATE TABLE `faculty_goals` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `faculty_id` int DEFAULT NULL,
+  `faculty_id` int NOT NULL,
   `semester` varchar(50) DEFAULT NULL,
-  `teaching` varchar(20) DEFAULT NULL,
-  `research` varchar(20) DEFAULT NULL,
-  `contribution` varchar(20) DEFAULT NULL,
-  `outreach` varchar(20) DEFAULT NULL,
+  `teaching` varchar(10) DEFAULT NULL,
+  `research` varchar(10) DEFAULT NULL,
+  `contribution` varchar(10) DEFAULT NULL,
+  `outreach` varchar(10) DEFAULT NULL,
   `description` text,
-  `evidence_file` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `faculty_id` (`faculty_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  KEY `faculty_id` (`faculty_id`),
+  CONSTRAINT `faculty_goals_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === FACULTY_INFORMATION TABLE ===
 CREATE TABLE `faculty_information` (
@@ -126,12 +303,36 @@ CREATE TABLE `faculty_information` (
   `phone` varchar(20) DEFAULT NULL,
   `date_of_joining` date DEFAULT NULL,
   `qualifications` text,
+  `status` enum('draft','submitted','approved','rejected') DEFAULT 'draft',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `submitted_at` timestamp NULL DEFAULT NULL,
+  `approved_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `employee_id` (`employee_id`),
+  KEY `idx_faculty_email` (`email`),
+  KEY `idx_faculty_status` (`status`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== FORM_FIELDS TABLE ===
+CREATE TABLE `form_fields` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `form_type` enum('A','B') NOT NULL COMMENT 'Which form this field belongs to',
+  `field_label` varchar(255) NOT NULL COMMENT 'Display label for the field',
+  `field_name` varchar(100) NOT NULL COMMENT 'Technical field name (generated from label)',
+  `field_type` enum('text','number','select','textarea','date','email') NOT NULL DEFAULT 'text',
+  `required` tinyint(1) DEFAULT '0' COMMENT 'Is this field mandatory',
+  `options` json DEFAULT NULL COMMENT 'Options for select fields (array of strings)',
+  `order_index` int NOT NULL DEFAULT '0' COMMENT 'Display order in form',
+  `is_deleted` tinyint(1) DEFAULT '0' COMMENT 'Soft delete flag',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `employee_id` (`employee_id`),
-  KEY `idx_faculty_email` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  UNIQUE KEY `unique_field_per_form` (`form_type`,`field_name`),
+  KEY `idx_form_type` (`form_type`),
+  KEY `idx_is_deleted` (`is_deleted`),
+  KEY `idx_order` (`order_index`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Dynamic form field definitions for Forms A and B'
 
 === INSTITUTIONAL_CONTRIBUTIONS TABLE ===
 CREATE TABLE `institutional_contributions` (
@@ -142,10 +343,11 @@ CREATE TABLE `institutional_contributions` (
   `description` text,
   `year` int DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `evidence_file` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `faculty_id` (`faculty_id`),
   CONSTRAINT `institutional_contributions_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === KEYNOTES_TALKS TABLE ===
 CREATE TABLE `keynotes_talks` (
@@ -157,10 +359,12 @@ CREATE TABLE `keynotes_talks` (
   `location` varchar(255) DEFAULT NULL,
   `audience_type` varchar(100) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `event_type` varchar(100) DEFAULT NULL,
+  `evidence_file` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `faculty_id` (`faculty_id`),
   CONSTRAINT `keynotes_talks_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === NEW_COURSES TABLE ===
 CREATE TABLE `new_courses` (
@@ -173,11 +377,13 @@ CREATE TABLE `new_courses` (
   `level` varchar(10) DEFAULT NULL,
   `remarks` text,
   `cif_file` varchar(255) DEFAULT NULL,
+  `status` enum('draft','submitted') DEFAULT 'draft',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `faculty_id` (`faculty_id`),
+  KEY `idx_new_courses_status` (`status`),
   CONSTRAINT `new_courses_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === PAPER_REVIEWS TABLE ===
 CREATE TABLE `paper_reviews` (
@@ -191,11 +397,15 @@ CREATE TABLE `paper_reviews` (
   `middle_name` varchar(100) DEFAULT NULL,
   `last_name` varchar(100) DEFAULT NULL,
   `month_of_review` date DEFAULT NULL,
+  `status` enum('draft','submitted') DEFAULT 'draft',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `tier` varchar(50) DEFAULT NULL,
+  `evidence_file` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `faculty_id` (`faculty_id`),
+  KEY `idx_reviews_status` (`status`),
   CONSTRAINT `paper_reviews_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === PATENTS TABLE ===
 CREATE TABLE `patents` (
@@ -207,11 +417,13 @@ CREATE TABLE `patents` (
   `month` date DEFAULT NULL,
   `certificate_file` varchar(255) DEFAULT NULL,
   `publication_id` varchar(100) DEFAULT NULL,
+  `status` enum('draft','submitted') DEFAULT 'draft',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_patents_faculty` (`faculty_id`),
+  KEY `idx_patents_status` (`status`),
   CONSTRAINT `patents_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === RESEARCH_GRANTS TABLE ===
 CREATE TABLE `research_grants` (
@@ -227,11 +439,13 @@ CREATE TABLE `research_grants` (
   `researchers` varchar(255) DEFAULT NULL,
   `role` varchar(50) DEFAULT NULL,
   `evidence_file` varchar(255) DEFAULT NULL,
+  `status` enum('draft','submitted') DEFAULT 'draft',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_grants_faculty` (`faculty_id`),
+  KEY `idx_grants_status` (`status`),
   CONSTRAINT `research_grants_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === RESEARCH_PUBLICATIONS TABLE ===
 CREATE TABLE `research_publications` (
@@ -258,11 +472,15 @@ CREATE TABLE `research_publications` (
   `title_of_book` varchar(255) DEFAULT NULL,
   `publication_id` varchar(100) DEFAULT NULL,
   `details` text,
+  `status` enum('draft','submitted') DEFAULT 'draft',
+  `evidence_file` varchar(255) DEFAULT NULL COMMENT 'Path to uploaded evidence file',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_publications_faculty` (`faculty_id`),
+  KEY `idx_publications_evidence` (`evidence_file`),
+  KEY `idx_publications_status` (`status`),
   CONSTRAINT `research_publications_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === REVIEW_COMMENTS TABLE ===
 CREATE TABLE `review_comments` (
@@ -273,11 +491,29 @@ CREATE TABLE `review_comments` (
   `comment` text NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
+  KEY `submission_id` (`submission_id`),
   KEY `reviewer_id` (`reviewer_id`),
-  KEY `idx_review_comments_submission_workflow` (`submission_id`),
   CONSTRAINT `review_comments_ibfk_1` FOREIGN KEY (`submission_id`) REFERENCES `submissions` (`id`) ON DELETE CASCADE,
   CONSTRAINT `review_comments_ibfk_2` FOREIGN KEY (`reviewer_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== RUBRICS TABLE ===
+CREATE TABLE `rubrics` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `category` varchar(255) NOT NULL COMMENT 'Rubric category name',
+  `description` text COMMENT 'Detailed description of the rubric',
+  `weightage` decimal(5,2) NOT NULL DEFAULT '0.00' COMMENT 'Percentage weight (e.g., 25.00 for 25%)',
+  `max_points` int NOT NULL DEFAULT '100' COMMENT 'Maximum points possible',
+  `form_type` enum('A','B') NOT NULL COMMENT 'Which form this rubric applies to',
+  `is_active` tinyint(1) DEFAULT '1' COMMENT 'Active status',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_form_type` (`form_type`),
+  KEY `idx_is_active` (`is_active`),
+  CONSTRAINT `chk_max_points` CHECK ((`max_points` > 0)),
+  CONSTRAINT `chk_weightage` CHECK (((`weightage` >= 0) and (`weightage` <= 100)))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Evaluation rubrics with weightage and scoring criteria'
 
 === SUBMISSION_LOCKS TABLE ===
 CREATE TABLE `submission_locks` (
@@ -292,29 +528,56 @@ CREATE TABLE `submission_locks` (
   KEY `locked_by` (`locked_by`),
   CONSTRAINT `submission_locks_ibfk_1` FOREIGN KEY (`submission_id`) REFERENCES `submissions` (`id`) ON DELETE CASCADE,
   CONSTRAINT `submission_locks_ibfk_2` FOREIGN KEY (`locked_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== SUBMISSION_SCORES TABLE ===
+CREATE TABLE `submission_scores` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `submission_id` int NOT NULL COMMENT 'Foreign key to submissions',
+  `rubric_id` int NOT NULL COMMENT 'Foreign key to rubrics',
+  `score` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'Score awarded',
+  `comments` text COMMENT 'Evaluator comments',
+  `evaluated_by` int DEFAULT NULL COMMENT 'User ID who scored (DOFA)',
+  `evaluated_at` timestamp NULL DEFAULT NULL COMMENT 'When the score was given',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_submission_rubric` (`submission_id`,`rubric_id`),
+  KEY `idx_submission_id` (`submission_id`),
+  KEY `idx_rubric_id` (`rubric_id`),
+  KEY `idx_evaluated_by` (`evaluated_by`),
+  CONSTRAINT `submission_scores_ibfk_1` FOREIGN KEY (`submission_id`) REFERENCES `submissions` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `submission_scores_ibfk_2` FOREIGN KEY (`rubric_id`) REFERENCES `rubrics` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `submission_scores_ibfk_3` FOREIGN KEY (`evaluated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_score` CHECK ((`score` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Individual rubric scores for submissions with evaluator tracking'
 
 === SUBMISSIONS TABLE ===
 CREATE TABLE `submissions` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `faculty_id` int NOT NULL,
-  `academic_year` varchar(20) NOT NULL,
-  `form_type` enum('A','B') DEFAULT 'A',
-  `status` enum('draft','submitted','under_review','approved','sent_back') DEFAULT 'draft',
-  `submitted_at` timestamp NULL DEFAULT NULL,
-  `approved_by` int DEFAULT NULL,
-  `approved_at` timestamp NULL DEFAULT NULL,
-  `locked` tinyint(1) DEFAULT '0',
+  `faculty_id` int NOT NULL COMMENT 'Foreign key to faculty table',
+  `form_type` enum('A','B') NOT NULL COMMENT 'Form A or Form B',
+  `status` enum('draft','submitted','under_review','approved','rejected') DEFAULT 'draft' COMMENT 'Submission status',
+  `submitted_at` timestamp NULL DEFAULT NULL COMMENT 'When the submission was submitted',
+  `locked` tinyint(1) DEFAULT '0' COMMENT 'Prevents editing when true (DOFA control)',
+  `total_score` decimal(10,2) DEFAULT '0.00' COMMENT 'Calculated total score',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `academic_year` varchar(20) DEFAULT '2025-26',
+  `approved_by` int DEFAULT NULL,
+  `approved_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `approved_by` (`approved_by`),
+  KEY `idx_faculty_id` (`faculty_id`),
+  KEY `idx_form_type` (`form_type`),
+  KEY `idx_status` (`status`),
+  KEY `idx_locked` (`locked`),
+  KEY `idx_submitted_at` (`submitted_at`),
+  KEY `idx_submissions_faculty` (`faculty_id`),
+  KEY `idx_submissions_status` (`status`),
   KEY `idx_submissions_faculty_workflow` (`faculty_id`),
   KEY `idx_submissions_status_workflow` (`status`),
-  KEY `idx_submissions_year_workflow` (`academic_year`),
-  CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `submissions_ibfk_2` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  CONSTRAINT `chk_total_score` CHECK ((`total_score` >= 0))
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Faculty form submissions with status and scoring'
 
 === SUBMITTED_PROPOSALS TABLE ===
 CREATE TABLE `submitted_proposals` (
@@ -329,11 +592,24 @@ CREATE TABLE `submitted_proposals` (
   `submission_date` date DEFAULT NULL,
   `status` varchar(100) DEFAULT NULL,
   `role` varchar(50) DEFAULT NULL,
+  `submission_status` enum('draft','submitted') DEFAULT 'draft',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `faculty_id` (`faculty_id`),
   CONSTRAINT `submitted_proposals_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+=== SYSTEM_SETTINGS TABLE ===
+CREATE TABLE `system_settings` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `setting_key` varchar(100) NOT NULL COMMENT 'Unique setting identifier',
+  `setting_value` text COMMENT 'Setting value (can be JSON)',
+  `description` text COMMENT 'What this setting controls',
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `setting_key` (`setting_key`),
+  KEY `idx_setting_key` (`setting_key`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='System-wide configuration settings'
 
 === TEACHING_INNOVATION TABLE ===
 CREATE TABLE `teaching_innovation` (
@@ -344,10 +620,11 @@ CREATE TABLE `teaching_innovation` (
   `implementation_date` date DEFAULT NULL,
   `impact` text,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `evidence_file` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `faculty_id` (`faculty_id`),
   CONSTRAINT `teaching_innovation_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === TECHNOLOGY_TRANSFER TABLE ===
 CREATE TABLE `technology_transfer` (
@@ -357,11 +634,13 @@ CREATE TABLE `technology_transfer` (
   `description` text,
   `agency` varchar(255) DEFAULT NULL,
   `date` date DEFAULT NULL,
+  `evidence_file` varchar(255) DEFAULT NULL COMMENT 'Path to uploaded evidence file',
+  `status` enum('draft','submitted') DEFAULT 'draft',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `faculty_id` (`faculty_id`),
   CONSTRAINT `technology_transfer_ibfk_1` FOREIGN KEY (`faculty_id`) REFERENCES `faculty_information` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 === USERS TABLE ===
 CREATE TABLE `users` (
@@ -369,14 +648,29 @@ CREATE TABLE `users` (
   `name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) DEFAULT NULL,
-  `role` enum('faculty','dofa','dofa_office') DEFAULT 'faculty',
-  `department` varchar(100) DEFAULT NULL,
-  `designation` varchar(100) DEFAULT NULL,
+  `role` enum('admin','faculty','hod','dofa','dofa_office') DEFAULT 'faculty',
+  `is_active` tinyint(1) DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `department` varchar(100) DEFAULT NULL,
+  `designation` varchar(100) DEFAULT NULL,
+  `employee_id` varchar(50) DEFAULT NULL,
+  `employment_type` enum('fixed','contractual') DEFAULT NULL,
+  `date_of_joining` date DEFAULT NULL,
+  `salutation` enum('Prof','Dr','Mr','Ms') DEFAULT NULL,
+  `department_id` int DEFAULT NULL,
+  `password_reset_token` varchar(255) DEFAULT NULL,
+  `password_reset_expires` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
+  KEY `idx_user_email` (`email`),
+  KEY `idx_user_role` (`role`),
+  KEY `idx_user_active` (`is_active`),
+  KEY `idx_users_email` (`email`),
+  KEY `idx_users_role` (`role`),
   KEY `idx_users_email_workflow` (`email`),
-  KEY `idx_users_role_workflow` (`role`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  KEY `idx_users_role_workflow` (`role`),
+  KEY `fk_users_department` (`department_id`),
+  CONSTRAINT `fk_users_department` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='User authentication and role-based access control'
 

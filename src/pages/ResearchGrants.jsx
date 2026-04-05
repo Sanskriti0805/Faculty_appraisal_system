@@ -146,7 +146,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
 
     setLoading(true)
     try {
-      const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
+      const facultyId = user?.id || 1;
 
       if (selectedType === 'grants') {
         // Save grants

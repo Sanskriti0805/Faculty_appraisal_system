@@ -42,6 +42,7 @@ exports.saveGoals = async (req, res) => {
         res.json({ success: true, message: 'Goals saved successfully' });
     } catch (error) {
         await connection.rollback();
+        console.error('Failed to save goals:', error);
         res.status(500).json({ success: false, message: error.message });
     } finally {
         connection.release();

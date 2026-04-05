@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext';
 import { Plus, Trash2, Upload, FileText, X, ExternalLink } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import apiClient from '../services/api';
 import './CoursesTaught.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
+import { useSubmission } from '../context/SubmissionContext';
 
 const CoursesTaught = ({ initialData, readOnly }) => {
+  const { user } = useAuth();
+  const { submissionData, loading, refetchSubmission } = useSubmission();
   const [selectedSection, setSelectedSection] = useState('courses')
   const [selectedSemester, setSelectedSemester] = useState('fall')
 
@@ -36,23 +40,30 @@ const CoursesTaught = ({ initialData, readOnly }) => {
   ])
 
   useEffect(() => {
-    if (initialData) {
-      const { courses, projects } = initialData;
-      if (courses) {
+    const activeData = initialData || (submissionData ? { courses: submissionData.courses || [], projects: submissionData.projects || [] } : null);
+    
+    if (activeData) {
+      const { courses, projects } = activeData;
+      if (courses && courses.length > 0) {
         setFallCourses(courses.filter(c => c.semester === 'Fall').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
-        })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
+          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment || '', feedback: c.feedback_score || '', remarks: c.remarks || '', evidence_file: c.evidence_file
+        })).concat(courses.filter(c => c.semester === 'Fall').length === 0 ? [{ id: Date.now(), title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }] : []));
 
         setSpringCourses(courses.filter(c => c.semester === 'Spring').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
-        })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
+          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment || '', feedback: c.feedback_score || '', remarks: c.remarks || '', evidence_file: c.evidence_file
+        })).concat(courses.filter(c => c.semester === 'Spring').length === 0 ? [{ id: Date.now(), title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }] : []));
 
         setSummerCourses(courses.filter(c => c.semester === 'Summer').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
-        })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
+          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment || '', feedback: c.feedback_score || '', remarks: c.remarks || '', evidence_file: c.evidence_file
+        })).concat(courses.filter(c => c.semester === 'Summer').length === 0 ? [{ id: Date.now(), title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }] : []));
+      }
+      
+      // Prevent emptying arrays if activeData exists but has no courses
+      if (!initialData && submissionData && (!courses || courses.length === 0)) {
+         // Keep the defaults
       }
     }
-  }, [initialData])
+  }, [initialData, submissionData])
 
   const handleInputChange = (semester, index, field, value) => {
     if (readOnly) return;
@@ -158,7 +169,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
       for (const course of allCourses) {
         if (course.title) {
           await apiClient.post('/courses', {
-            faculty_id: 1,
+            faculty_id: user?.id || 1,
             course_name: course.title,
             semester: course.semester,
             enrollment: course.students === '' ? null : parseInt(course.students),
@@ -169,6 +180,9 @@ const CoursesTaught = ({ initialData, readOnly }) => {
         }
       }
 
+      if (!initialData && refetchSubmission) {
+        await refetchSubmission();
+      }
       alert('Data saved successfully!');
       return true;
     } catch (error) {

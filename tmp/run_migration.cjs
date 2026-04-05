@@ -5,11 +5,11 @@ async function main() {
 
   const migrations = [
     // Add percentage column (% of course taught alone)
-    `ALTER TABLE courses_taught ADD COLUMN IF NOT EXISTS percentage VARCHAR(20) NULL COMMENT 'Percentage of course taught alone' AFTER enrollment`,
+    `ALTER TABLE courses_taught ADD COLUMN percentage VARCHAR(20) NULL COMMENT 'Percentage of course taught alone' AFTER enrollment`,
     // Add status column
-    `ALTER TABLE courses_taught ADD COLUMN IF NOT EXISTS status ENUM('draft', 'submitted') DEFAULT 'draft' AFTER percentage`,
+    `ALTER TABLE courses_taught ADD COLUMN status ENUM('draft', 'submitted') DEFAULT 'draft' AFTER percentage`,
     // Add feedback_score column
-    `ALTER TABLE courses_taught ADD COLUMN IF NOT EXISTS feedback_score DECIMAL(5,3) NULL COMMENT 'Student feedback score (0.000 to 99.999)' AFTER status`,
+    `ALTER TABLE courses_taught ADD COLUMN feedback_score DECIMAL(5,3) NULL COMMENT 'Student feedback score (0.000 to 99.999)' AFTER status`,
   ];
 
   for (const m of migrations) {

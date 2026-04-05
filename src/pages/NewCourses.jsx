@@ -80,7 +80,7 @@ const NewCourses = () => {
   const handleSave = async () => {
     setLoading(true)
     try {
-      const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
+      const facultyId = user?.id || 1;
       
       // Collect all courses from all sections
       const allCourses = [

@@ -47,7 +47,7 @@ const Patents = ({ initialData, readOnly }) => {
   const handleSave = async () => {
     setLoading(true)
     try {
-      const facultyId = 1 // TODO: Replace with actual logged-in faculty ID
+      const facultyId = user?.id || 1;
 
       // Save each patent type if it has content
       const promises = []
