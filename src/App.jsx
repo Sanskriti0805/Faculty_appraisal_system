@@ -43,6 +43,7 @@ const TeachingPlan = lazy(() => import('./pages/TeachingPlan'))
 const PartB = lazy(() => import('./pages/PartB'))
 const DynamicFormSection = lazy(() => import('./pages/DynamicFormSection'))
 const MySubmissionView = lazy(() => import('./pages/MySubmissionView'))
+const HelpCenter = lazy(() => import('./pages/HelpCenter'))
 
 // DOFA pages
 const DOFADashboard = lazy(() => import('./pages/DOFADashboard'))
@@ -131,6 +132,7 @@ function App() {
               <Route path="part-b" element={<PartB />} />
               <Route path="faculty/dynamic/:sectionId" element={<DynamicFormSection />} />
               <Route path="my-submission" element={<MySubmissionView />} />
+              <Route path="help" element={<HelpCenter />} />
             </Route>
 
             {/* ── DOFA Routes ── */}
@@ -170,6 +172,8 @@ function App() {
               <Route path="manage-users" element={<DOFARegistration />} />
               <Route path="form-release" element={<FormRelease />} />
               <Route path="review/:id" element={<DOFAReview />} />
+              <Route path="help" element={<HelpCenter />} />
+              <Route path="help" element={<HelpCenter />} />
             </Route>
 
             {/* ── Catch-all → login ── */}

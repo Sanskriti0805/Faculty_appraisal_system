@@ -236,6 +236,7 @@ const Sidebar = () => {
       { name: 'Sheet 3', path: '/dofa/sheet3' },
       { name: 'Form Builder', path: '/dofa-office/form-builder' },
       { name: 'Manage Users', path: '/dofa/manage-users' },
+      { name: 'Help Center', path: '/dofa/help' },
     ]
 
     const dofaOfficeNavItems = [
@@ -247,6 +248,7 @@ const Sidebar = () => {
       { name: 'Sheet 3', path: '/dofa-office/sheet3' },
       { name: 'Form Builder', path: '/dofa-office/form-builder' },
       { name: 'Manage Users', path: '/dofa-office/manage-users' },
+      { name: 'Help Center', path: '/dofa-office/help' },
     ]
 
     const navItems = isDOFAOfficeRoute ? dofaOfficeNavItems : dofaNavItems
@@ -364,6 +366,12 @@ const Sidebar = () => {
                 .map(s => renderNavLink(`/faculty/dynamic/${s.id}`, s.title, 'nav-item'))}
             </div>
           )}
+        </div>
+
+        <div className="nav-section">
+          <div className="nav-section-items">
+            {renderNavLink('/help', 'Help Center', 'nav-item')}
+          </div>
         </div>
           </>
         ) : (
