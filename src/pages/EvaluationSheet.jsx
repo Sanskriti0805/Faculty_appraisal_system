@@ -144,7 +144,7 @@ const EvaluationSheet = () => {
       {toast && <div className={`eval-toast eval-toast--${toast.type}`}>{toast.message}</div>}
       
       <div className="eval-header">
-        <h1>Evaluation Sheet — Sheet 1</h1>
+        <h1>Evaluation Sheet - Sheet 1</h1>
         <p>Faculty Appraisal Consolidated Scores</p>
       </div>
 
@@ -211,7 +211,7 @@ const EvaluationSheet = () => {
                     disabled={rerunning === sub.submission_id}
                     title="Re-run Auto-Allocation"
                   >
-                    {rerunning === sub.submission_id ? 'Running...' : '🔄 Re-calc'}
+                    {rerunning === sub.submission_id ? 'Running...' : 'Re-calculate'}
                   </button>
                 </td>
                 <td><div className="cell-content">{sub.designation || '—'}</div></td>
@@ -253,7 +253,7 @@ const EvaluationSheet = () => {
 
       <div className="eval-footer">
         <Link to="/dofa/sheet2" className="eval-next-btn">
-          Next — Sheet 2 &rarr;
+          Next - Sheet 2 &rarr;
         </Link>
       </div>
     </div>

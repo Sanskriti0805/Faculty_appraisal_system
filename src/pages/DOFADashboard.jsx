@@ -22,7 +22,7 @@ const DOFADashboard = () => {
   const [reviewingRequest, setReviewingRequest] = useState(null);
   const [approvedSections, setApprovedSections] = useState([]);
   const [dofaNote, setDofaNote] = useState('');
-  const [reviewLoading, setReviewLoading] = useState(null); // 'approved' | 'denied' | null
+  const [reviewLoading, setReviewLoading] = useState(null);
   const [filter, setFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -94,7 +94,7 @@ const DOFADashboard = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'approved',
-          approved_by: 1 // Mock DOFA user ID
+          approved_by: 1
         })
       });
 
@@ -114,13 +114,12 @@ const DOFADashboard = () => {
     if (!comment) return;
 
     try {
-      // Add comment
       await fetch(`${API}/review/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           submission_id: id,
-          reviewer_id: 1, // Mock DOFA user ID
+          reviewer_id: 1,
           reviewer_role: 'dofa',
           section_name: 'General',
           section_key: 'general',
@@ -128,7 +127,6 @@ const DOFADashboard = () => {
         })
       });
 
-      // Update status
       await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -168,7 +166,7 @@ const DOFADashboard = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
+    if (!dateString) return '—';
     return new Date(dateString).toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
@@ -176,7 +174,6 @@ const DOFADashboard = () => {
     });
   };
 
-  // Edit request handlers
   const startReview = (req) => {
     setReviewingRequest(req);
     setApprovedSections(req.requested_sections || []);
@@ -236,41 +233,41 @@ const DOFADashboard = () => {
       {/* Statistics Cards */}
       <div className="stats-grid">
         <div className="stat-card stat-card-primary">
-          <div className="stat-icon"><Users size={24} /></div>
+          <div className="stat-icon"><Users size={18} /></div>
           <div className="stat-content">
             <p className="stat-label">Total Faculty</p>
             <h3 className="stat-value">{stats.totalFaculty}</h3>
           </div>
         </div>
         <div className="stat-card stat-card-info">
-          <div className="stat-icon"><FileText size={24} /></div>
+          <div className="stat-icon"><FileText size={18} /></div>
           <div className="stat-content">
             <p className="stat-label">Total Submissions</p>
             <h3 className="stat-value">{stats.totalSubmissions}</h3>
           </div>
         </div>
         <div className="stat-card stat-card-warning">
-          <div className="stat-icon"><Clock size={24} /></div>
+          <div className="stat-icon"><Clock size={18} /></div>
           <div className="stat-content">
             <p className="stat-label">Pending Review</p>
             <h3 className="stat-value">{stats.pending}</h3>
           </div>
         </div>
         <div className="stat-card stat-card-success">
-          <div className="stat-icon"><CheckSquare size={24} /></div>
+          <div className="stat-icon"><CheckSquare size={18} /></div>
           <div className="stat-content">
             <p className="stat-label">Approved</p>
             <h3 className="stat-value">{stats.approved}</h3>
           </div>
         </div>
         {editRequests.length > 0 && (
-          <div className="stat-card" style={{ borderColor: '#f59e0b', background: 'linear-gradient(135deg,#fffbeb,#fef3c7)' }}>
-            <div className="stat-icon" style={{ background: 'linear-gradient(135deg,#d97706,#f59e0b)', color: '#fff' }}>
-              <Bell size={24} />
+          <div className="stat-card" style={{ borderColor: '#fcd34d' }}>
+            <div className="stat-icon" style={{ background: '#fef9c3', color: '#92400e' }}>
+              <Bell size={18} />
             </div>
             <div className="stat-content">
               <p className="stat-label">Edit Requests</p>
-              <h3 className="stat-value" style={{ color: '#d97706' }}>{editRequests.length} Pending</h3>
+              <h3 className="stat-value" style={{ color: '#92400e' }}>{editRequests.length}</h3>
             </div>
           </div>
         )}
@@ -278,19 +275,28 @@ const DOFADashboard = () => {
 
       {/* Edit Requests Panel */}
       {editRequests.length > 0 && (
-        <div className="submissions-card" style={{ marginBottom: 24, border: '2px solid #f59e0b' }}>
+        <div className="submissions-card" style={{ marginBottom: 20, borderColor: '#fcd34d' }}>
           <div
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: editRequestsOpen ? 16 : 0 }}
             onClick={() => setEditRequestsOpen(o => !o)}
           >
-            <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#d97706' }}>
-              <Bell size={20} />
+            <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#92400e', marginBottom: 0 }}>
+              <Bell size={15} />
               Edit Requests
-              <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 20, padding: '2px 10px', fontSize: '0.8rem', fontWeight: 700 }}>
-                {editRequests.length} Pending
+              <span style={{
+                background: '#fef3c7',
+                color: '#92400e',
+                border: '1px solid #fcd34d',
+                borderRadius: 4,
+                padding: '1px 8px',
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                letterSpacing: '0.3px'
+              }}>
+                {editRequests.length} PENDING
               </span>
             </h2>
-            {editRequestsOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            {editRequestsOpen ? <ChevronUp size={15} color="#94a3b8" /> : <ChevronDown size={15} color="#94a3b8" />}
           </div>
 
           {editRequestsOpen && (
@@ -319,11 +325,20 @@ const DOFADashboard = () => {
                       <td>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                           {req.requested_sections?.map(s => (
-                            <span key={s} style={{ background: '#eff6ff', color: '#1e40af', padding: '2px 8px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600 }}>{s}</span>
+                            <span key={s} style={{
+                              background: '#eff6ff',
+                              color: '#1e40af',
+                              border: '1px solid #bfdbfe',
+                              padding: '2px 7px',
+                              borderRadius: 4,
+                              fontSize: '0.7rem',
+                              fontWeight: 600,
+                              letterSpacing: '0.2px'
+                            }}>{s}</span>
                           ))}
                         </div>
                       </td>
-                      <td style={{ maxWidth: 200, fontSize: '0.85rem', color: '#475569' }}>{req.request_message || '—'}</td>
+                      <td style={{ maxWidth: 200, fontSize: '0.8125rem', color: '#64748b' }}>{req.request_message || '—'}</td>
                       <td>{formatDate(req.created_at)}</td>
                       <td>
                         <div className="action-buttons">
@@ -331,8 +346,9 @@ const DOFADashboard = () => {
                             className="action-btn btn-approve"
                             title="Review & Approve/Deny"
                             onClick={() => startReview(req)}
+                            style={{ gap: 5, paddingLeft: 10, paddingRight: 10 }}
                           >
-                            <Eye size={16} /> Review
+                            <Eye size={13} /> Review
                           </button>
                         </div>
                       </td>
@@ -345,99 +361,132 @@ const DOFADashboard = () => {
         </div>
       )}
 
-      {/* Inline Review Modal */}
+      {/* Review Modal */}
       {reviewingRequest && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)',
+          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 9999, padding: 24, backdropFilter: 'blur(4px)'
+          zIndex: 9999, padding: 24
         }}>
           <div style={{
-            background: '#fff', borderRadius: 20, padding: '32px',
-            maxWidth: 580, width: '100%',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.15)', animation: 'rqModalIn 0.3s ease-out'
+            background: '#fff',
+            borderRadius: 10,
+            padding: '28px 32px',
+            maxWidth: 560,
+            width: '100%',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            animation: 'rqModalIn 0.2s ease-out'
           }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', marginTop: 0, marginBottom: 4 }}>
-              Review Edit Request
-            </h2>
-            <p style={{ color: '#64748b', margin: '0 0 20px', fontSize: '0.88rem' }}>
-              <strong>{reviewingRequest.faculty_name}</strong> ({reviewingRequest.academic_year})
-            </p>
+            <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #f1f5f9' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: '0 0 4px' }}>
+                Review Edit Request
+              </h2>
+              <p style={{ color: '#64748b', margin: 0, fontSize: '0.8125rem' }}>
+                <strong style={{ color: '#334155' }}>{reviewingRequest.faculty_name}</strong>
+                <span style={{ margin: '0 6px', color: '#cbd5e1' }}>·</span>
+                {reviewingRequest.academic_year}
+              </p>
+            </div>
 
-            <p style={{ fontWeight: 700, fontSize: '0.88rem', color: '#334155', margin: '0 0 10px' }}>Select sections to approve:</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px,1fr))', gap: 8, marginBottom: 16 }}>
+            <p style={{ fontWeight: 600, fontSize: '0.8rem', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              Select sections to approve
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px,1fr))', gap: 6, marginBottom: 18 }}>
               {reviewingRequest.requested_sections?.map(s => (
                 <label key={s} style={{
                   display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '9px 12px', border: `1px solid ${approvedSections.includes(s) ? '#034da2' : '#e2e8f0'}`,
-                  borderRadius: 8, cursor: 'pointer',
-                  background: approvedSections.includes(s) ? '#eff6ff' : '#fff',
-                  transition: 'all 0.15s'
+                  padding: '8px 12px',
+                  border: `1px solid ${approvedSections.includes(s) ? '#93c5fd' : '#e2e8f0'}`,
+                  borderRadius: 6, cursor: 'pointer',
+                  background: approvedSections.includes(s) ? '#eff6ff' : '#fafafa',
+                  transition: 'all 0.12s'
                 }}>
                   <input
                     type="checkbox"
                     checked={approvedSections.includes(s)}
                     onChange={() => toggleSection(s)}
-                    style={{ accentColor: '#034da2' }}
+                    style={{ accentColor: '#1d4ed8' }}
                   />
-                  <span style={{ fontSize: '0.83rem', fontWeight: 600, color: '#334155' }}>{s}</span>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: '#334155' }}>{s}</span>
                 </label>
               ))}
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.85rem', color: '#334155', marginBottom: 6 }}>
-                Note to Faculty <span style={{ fontWeight: 400, color: '#94a3b8' }}>(optional)</span>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.8rem', color: '#475569', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                Note to Faculty <span style={{ fontWeight: 400, color: '#94a3b8', textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
               </label>
               <textarea
                 value={dofaNote}
                 onChange={e => setDofaNote(e.target.value)}
                 placeholder="e.g. Please only update the course names, not the marks or credit hours."
                 rows={3}
-                style={{ width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: '0.88rem', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                style={{
+                  width: '100%', padding: '9px 12px',
+                  border: '1px solid #e2e8f0', borderRadius: 6,
+                  fontSize: '0.8125rem', resize: 'vertical',
+                  boxSizing: 'border-box', fontFamily: 'inherit',
+                  color: '#334155', outline: 'none',
+                  background: '#fafafa'
+                }}
               />
             </div>
 
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
               <button
                 onClick={() => setReviewingRequest(null)}
                 disabled={!!reviewLoading}
-                style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', cursor: reviewLoading ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#475569', opacity: reviewLoading ? 0.5 : 1 }}
+                style={{
+                  padding: '8px 18px', borderRadius: 6,
+                  border: '1px solid #e2e8f0', background: '#fff',
+                  cursor: reviewLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '0.8125rem', fontWeight: 600,
+                  color: '#475569', opacity: reviewLoading ? 0.5 : 1
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleReviewSubmit('denied')}
                 disabled={!!reviewLoading}
-                style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#fef2f2', color: '#dc2626', cursor: reviewLoading ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 700, opacity: reviewLoading && reviewLoading !== 'denied' ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{
+                  padding: '8px 18px', borderRadius: 6,
+                  border: '1px solid #fecaca', background: '#fff5f5',
+                  color: '#b91c1c', cursor: reviewLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '0.8125rem', fontWeight: 600,
+                  opacity: reviewLoading && reviewLoading !== 'denied' ? 0.5 : 1,
+                  display: 'flex', alignItems: 'center', gap: 5
+                }}
               >
                 {reviewLoading === 'denied' ? (
-                  <>
-                    <span style={{ width: 14, height: 14, border: '2px solid #dc2626', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'rqSpin 0.7s linear infinite' }} />
-                    Denying...
-                  </>
+                  <><span style={{ width: 12, height: 12, border: '2px solid #b91c1c', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'rqSpin 0.7s linear infinite' }} />Denying...</>
                 ) : (
-                  <><XCircle size={15} /> Deny</>
+                  <><XCircle size={13} />Deny</>
                 )}
               </button>
               <button
                 onClick={() => handleReviewSubmit('approved')}
                 disabled={!!reviewLoading}
-                style={{ padding: '10px 24px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#034da2,#0466d6)', color: '#fff', cursor: reviewLoading ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 700, opacity: reviewLoading && reviewLoading !== 'approved' ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{
+                  padding: '8px 20px', borderRadius: 6,
+                  border: 'none', background: '#0f172a',
+                  color: '#fff', cursor: reviewLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '0.8125rem', fontWeight: 600,
+                  opacity: reviewLoading && reviewLoading !== 'approved' ? 0.5 : 1,
+                  display: 'flex', alignItems: 'center', gap: 5
+                }}
               >
                 {reviewLoading === 'approved' ? (
-                  <>
-                    <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'rqSpin 0.7s linear infinite' }} />
-                    Approving...
-                  </>
+                  <><span style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'rqSpin 0.7s linear infinite' }} />Approving...</>
                 ) : (
-                  <><CheckCircle size={15} /> Approve Selected</>
+                  <><CheckCircle size={13} />Approve Selected</>
                 )}
               </button>
             </div>
           </div>
           <style>{`
-            @keyframes rqModalIn { from{opacity:0;transform:scale(0.9) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
+            @keyframes rqModalIn { from{opacity:0;transform:scale(0.97) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
             @keyframes rqSpin { to { transform: rotate(360deg); } }
           `}</style>
         </div>
@@ -446,48 +495,38 @@ const DOFADashboard = () => {
       {/* Filters */}
       <div className="filters-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="filter-buttons">
-          <button
-            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-            onClick={() => setFilter('all')}
-          >
-            All
-          </button>
-          <button
-            className={`filter-btn ${filter === 'submitted' ? 'active' : ''}`}
-            onClick={() => setFilter('submitted')}
-          >
-            Submitted
-          </button>
-          <button
-            className={`filter-btn ${filter === 'under_review' ? 'active' : ''}`}
-            onClick={() => setFilter('under_review')}
-          >
-            Under Review
-          </button>
-          <button
-            className={`filter-btn ${filter === 'approved' ? 'active' : ''}`}
-            onClick={() => setFilter('approved')}
-          >
-            Approved
-          </button>
-          <button
-            className={`filter-btn ${filter === 'sent_back' ? 'active' : ''}`}
-            onClick={() => setFilter('sent_back')}
-          >
-            Sent Back
-          </button>
+          {['all', 'submitted', 'under_review', 'approved', 'sent_back'].map(f => (
+            <button
+              key={f}
+              className={`filter-btn ${filter === f ? 'active' : ''}`}
+              onClick={() => setFilter(f)}
+            >
+              {f === 'all' ? 'All' : f === 'under_review' ? 'Under Review' : f === 'sent_back' ? 'Sent Back' : f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
         </div>
-        <div className="year-filter">
-          <select 
-            value={yearFilter} 
+        <div>
+          <select
+            value={yearFilter}
             onChange={(e) => setYearFilter(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#fff', fontSize: '0.95rem', outline: 'none', cursor: 'pointer', minWidth: '150px' }}
+            style={{
+              padding: '7px 12px',
+              borderRadius: 6,
+              border: '1px solid #e2e8f0',
+              backgroundColor: '#fff',
+              fontSize: '0.8125rem',
+              outline: 'none',
+              cursor: 'pointer',
+              minWidth: 160,
+              color: '#334155',
+              fontFamily: 'inherit'
+            }}
           >
             <option value="all">All Academic Years</option>
-            <option value="2022-23">2022-23</option>
-            <option value="2023-24">2023-24</option>
-            <option value="2024-25">2024-25</option>
-            <option value="2025-26">2025-26</option>
+            <option value="2022-23">2022–23</option>
+            <option value="2023-24">2023–24</option>
+            <option value="2024-25">2024–25</option>
+            <option value="2025-26">2025–26</option>
           </select>
         </div>
       </div>
@@ -497,11 +536,9 @@ const DOFADashboard = () => {
         <h2 className="card-title">Faculty Submissions</h2>
 
         {loading ? (
-          <div className="loading-state">Loading submissions...</div>
+          <div className="loading-state">Loading submissions…</div>
         ) : submissions.length === 0 ? (
-          <div className="empty-state">
-            <p>No submissions found</p>
-          </div>
+          <div className="empty-state">No submissions found.</div>
         ) : (
           <div className="table-container">
             <table className="submissions-table">
@@ -524,7 +561,7 @@ const DOFADashboard = () => {
                         <span className="faculty-email">{submission.email}</span>
                       </div>
                     </td>
-                    <td>{submission.department || '-'}</td>
+                    <td>{submission.department || '—'}</td>
                     <td>{submission.academic_year}</td>
                     <td>{getStatusBadge(submission.status)}</td>
                     <td>{formatDate(submission.submitted_at)}</td>
@@ -535,26 +572,26 @@ const DOFADashboard = () => {
                           onClick={() => handleViewSubmission(submission.id)}
                           title="View Details"
                         >
-                          <Eye size={16} />
+                          <Eye size={13} />
                         </button>
-                        {submission.status === 'submitted' || submission.status === 'under_review' ? (
+                        {(submission.status === 'submitted' || submission.status === 'under_review') && (
                           <>
                             <button
                               className="action-btn btn-approve"
                               onClick={() => handleQuickApprove(submission.id)}
                               title="Approve"
                             >
-                              <CheckCircle size={16} />
+                              <CheckCircle size={13} />
                             </button>
                             <button
                               className="action-btn btn-reject"
                               onClick={() => handleSendBack(submission.id)}
                               title="Send Back"
                             >
-                              <XCircle size={16} />
+                              <XCircle size={13} />
                             </button>
                           </>
-                        ) : null}
+                        )}
                       </div>
                     </td>
                   </tr>

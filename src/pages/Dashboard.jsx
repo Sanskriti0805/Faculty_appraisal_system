@@ -74,59 +74,57 @@ const Dashboard = () => {
     if (isSubmitted) {
       return (
         <div className="dashboard">
-          {/* Status Banner */}
           {isEditGranted ? (
-            <div className="dashboard-banner" style={{ background: 'linear-gradient(135deg,#fff7ed,#fed7aa)', border: '1px solid #fb923c', marginBottom: 24 }}>
-              <div className="banner-icon-wrap" style={{ background: 'linear-gradient(135deg,#d97706,#f59e0b)', color: '#fff' }}>
-                <CheckCircle size={32} />
+            <div className="dashboard-banner" style={{ background: '#fffbeb', border: '1px solid #fde68a', borderLeft: '3px solid #f59e0b', marginBottom: 24 }}>
+              <div className="banner-icon-wrap" style={{ color: '#d97706' }}>
+                <CheckCircle size={20} />
               </div>
               <div className="banner-content">
-                <h1 className="dashboard-title">Edit Access Granted!</h1>
+                <h1 className="dashboard-title">Edit Access Granted</h1>
                 <p className="dashboard-description">
                   The DOFA office has approved your edit request for <strong>{session.academic_year}</strong>.
                   Navigate to the approved sections from the sidebar, make your changes, then re-submit from <strong>Part B</strong>.
-                  &nbsp;<strong>Deadline: {formatDate(session.deadline)}</strong>
+                  &nbsp;Deadline: <strong>{formatDate(session.deadline)}</strong>
                 </p>
               </div>
             </div>
           ) : (
             <div className="dashboard-banner dashboard-banner-active">
               <div className="banner-icon-wrap banner-icon-success">
-                <CheckCircle size={32} />
+                <CheckCircle size={20} />
               </div>
               <div className="banner-content">
-                <h1 className="dashboard-title">Appraisal Form Submitted!</h1>
+                <h1 className="dashboard-title">Appraisal Form Submitted</h1>
                 <p className="dashboard-description">
-                  You have successfully submitted your appraisal form for <strong>{session.academic_year}</strong>.
-                  You can view your submitted form or, if you wish to make changes, request section edits from the DOFA office before the deadline.
+                  Your appraisal form for <strong>{session.academic_year}</strong> has been submitted successfully.
+                  You may view the submitted form or request section edits from the DOFA office before the deadline.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Info Cards */}
           <div className="dashboard-info-grid">
             <div className="info-card info-card-primary">
-              <Calendar size={22} />
+              <Calendar size={18} />
               <div>
                 <span className="info-label">Academic Year</span>
                 <span className="info-value">{session.academic_year}</span>
               </div>
             </div>
             <div className={`info-card ${daysLeft !== null && daysLeft <= 3 ? 'info-card-danger' : 'info-card-warning'}`}>
-              <Clock size={22} />
+              <Clock size={18} />
               <div>
                 <span className="info-label">Submission Deadline</span>
                 <span className="info-value">{formatDate(session.deadline)}</span>
               </div>
             </div>
             <div className="info-card info-card-primary">
-              <CheckCircle size={22} />
+              <CheckCircle size={18} />
               <div>
                 <span className="info-label">Your Status</span>
                 <span className="info-value">
                   {isEditGranted ? 'Edit Access Granted'
-                    : lastSubmission.status === 'submitted' ? 'Submitted ✓'
+                    : lastSubmission.status === 'submitted' ? 'Submitted'
                       : lastSubmission.status}
                 </span>
               </div>
@@ -135,23 +133,22 @@ const Dashboard = () => {
 
           {daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
             <div className="dashboard-urgent-banner">
-              <AlertTriangle size={20} />
-              <span>Deadline approaching! <strong>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong> remaining.</span>
+              <AlertTriangle size={16} />
+              <span>Deadline approaching — <strong>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong> remaining.</span>
             </div>
           )}
 
-          {/* CTA Buttons */}
           <div className="dashboard-quick-links">
             <h2>Your Submission</h2>
-            <div className="quick-links-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+            <div className="quick-links-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
               <button
                 className="quick-link-card"
                 onClick={() => navigate('/my-submission')}
-                style={{ borderColor: '#034da2', background: '#eff6ff' }}
+                style={{ borderColor: '#1d4ed8', background: '#eff6ff', color: '#1d4ed8' }}
               >
-                <FileText size={26} style={{ color: '#034da2' }} />
-                <span style={{ color: '#034da2', fontWeight: 700 }}>View My Submitted Form</span>
-                <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Review what you submitted</span>
+                <FileText size={20} />
+                <span style={{ fontWeight: 600 }}>View Submitted Form</span>
+                <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 400 }}>Review what you submitted</span>
               </button>
 
               {!isEditGranted && daysLeft > 0 && (
@@ -159,30 +156,29 @@ const Dashboard = () => {
                   className="quick-link-card"
                   onClick={() => navigate('/my-submission')}
                 >
-                  <Send size={26} />
+                  <Send size={20} />
                   <span>Request Section Edits</span>
-                  <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Ask DOFA to unlock sections</span>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 400 }}>Ask DOFA to unlock sections</span>
                 </button>
               )}
             </div>
           </div>
 
-          {/* Edit shortcuts (only when edit is granted) */}
           {isEditGranted && (
             <div className="dashboard-quick-links" style={{ marginTop: 0 }}>
               <h2>Navigate to Edit</h2>
               <div className="quick-links-grid">
                 <button className="quick-link-card" onClick={() => navigate('/faculty-information')}>
-                  <FileText size={24} /><span>Faculty Information</span>
+                  <FileText size={18} /><span>Faculty Information</span>
                 </button>
                 <button className="quick-link-card" onClick={() => navigate('/courses-taught')}>
-                  <FileText size={24} /><span>Courses Taught</span>
+                  <FileText size={18} /><span>Courses Taught</span>
                 </button>
                 <button className="quick-link-card" onClick={() => navigate('/research-publications')}>
-                  <FileText size={24} /><span>Research Publications</span>
+                  <FileText size={18} /><span>Research Publications</span>
                 </button>
                 <button className="quick-link-card" onClick={() => navigate('/part-b')}>
-                  <FileText size={24} /><span>Part B — Re-submit Here</span>
+                  <FileText size={18} /><span>Part B — Re-submit</span>
                 </button>
               </div>
             </div>
@@ -191,42 +187,42 @@ const Dashboard = () => {
       )
     }
 
-    // ── Sub-case B: Not yet submitted — show fill forms dashboard ─
+    // ── Sub-case B: Not yet submitted ────────────────────────
     return (
       <div className="dashboard">
         <div className="dashboard-banner dashboard-banner-active">
           <div className="banner-icon-wrap banner-icon-success">
-            <CheckCircle size={32} />
+            <CheckCircle size={20} />
           </div>
           <div className="banner-content">
-            <h1 className="dashboard-title">Faculty Appraisal Forms Are Open!</h1>
+            <h1 className="dashboard-title">Appraisal Forms Are Open</h1>
             <p className="dashboard-description">
-              The appraisal forms for <strong>{session.academic_year}</strong> are available. Please fill out both Part A and Part B using the sidebar navigation.
+              The appraisal forms for <strong>{session.academic_year}</strong> are now available. Please complete Part A and Part B using the sidebar navigation and submit before the deadline.
             </p>
           </div>
         </div>
 
         <div className="dashboard-info-grid">
           <div className="info-card info-card-primary">
-            <Calendar size={22} />
+            <Calendar size={18} />
             <div>
               <span className="info-label">Academic Year</span>
               <span className="info-value">{session.academic_year}</span>
             </div>
           </div>
           <div className={`info-card ${daysLeft !== null && daysLeft <= 3 ? 'info-card-danger' : 'info-card-warning'}`}>
-            <Clock size={22} />
+            <Clock size={18} />
             <div>
               <span className="info-label">Submission Deadline</span>
               <span className="info-value">{formatDate(session.deadline)}</span>
             </div>
           </div>
           <div className={`info-card ${daysLeft !== null && daysLeft <= 3 ? 'info-card-danger' : 'info-card-primary'}`}>
-            <AlertTriangle size={22} />
+            <AlertTriangle size={18} />
             <div>
               <span className="info-label">Days Remaining</span>
               <span className="info-value">
-                {daysLeft !== null ? (daysLeft > 0 ? `${daysLeft} days` : 'Last day!') : '—'}
+                {daysLeft !== null ? (daysLeft > 0 ? `${daysLeft} days` : 'Last day') : '—'}
               </span>
             </div>
           </div>
@@ -234,8 +230,8 @@ const Dashboard = () => {
 
         {daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
           <div className="dashboard-urgent-banner">
-            <AlertTriangle size={20} />
-            <span>Deadline approaching! Please submit your forms within the next <strong>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>.</span>
+            <AlertTriangle size={16} />
+            <span>Deadline approaching — please submit within <strong>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>.</span>
           </div>
         )}
 
@@ -243,16 +239,16 @@ const Dashboard = () => {
           <h2>Quick Navigation</h2>
           <div className="quick-links-grid">
             <button className="quick-link-card" onClick={() => navigate('/faculty-information')}>
-              <FileText size={24} /><span>Faculty Information</span>
+              <FileText size={18} /><span>Faculty Information</span>
             </button>
             <button className="quick-link-card" onClick={() => navigate('/courses-taught')}>
-              <FileText size={24} /><span>Courses Taught</span>
+              <FileText size={18} /><span>Courses Taught</span>
             </button>
             <button className="quick-link-card" onClick={() => navigate('/research-publications')}>
-              <FileText size={24} /><span>Research Publications</span>
+              <FileText size={18} /><span>Research Publications</span>
             </button>
             <button className="quick-link-card" onClick={() => navigate('/part-b')}>
-              <FileText size={24} /><span>Part B</span>
+              <FileText size={18} /><span>Part B</span>
             </button>
           </div>
         </div>
@@ -266,12 +262,12 @@ const Dashboard = () => {
       <div className="dashboard">
         <div className="dashboard-banner dashboard-banner-expired">
           <div className="banner-icon-wrap banner-icon-danger">
-            <CalendarOff size={32} />
+            <CalendarOff size={20} />
           </div>
           <div className="banner-content">
             <h1 className="dashboard-title">Submission Deadline Has Passed</h1>
             <p className="dashboard-description">
-              The submission deadline for <strong>{session.academic_year}</strong> was <strong>{formatDate(session.deadline)}</strong>. 
+              The submission deadline for <strong>{session.academic_year}</strong> was <strong>{formatDate(session.deadline)}</strong>.
               Form submissions are no longer accepted. Please contact the DOFA office if you have any concerns.
             </p>
           </div>
@@ -279,19 +275,19 @@ const Dashboard = () => {
 
         {lastSubmission && (
           <div className="dashboard-last-submission">
-            <Archive size={20} />
+            <Archive size={18} />
             <div>
               <h3>Your Last Submission</h3>
               <p>
-                Academic Year: <strong>{lastSubmission.academic_year}</strong> • 
-                Status: <strong>{lastSubmission.status}</strong> • 
+                Academic Year: <strong>{lastSubmission.academic_year}</strong> &middot;
+                Status: <strong>{lastSubmission.status}</strong> &middot;
                 Submitted: <strong>{formatDate(lastSubmission.submitted_at)}</strong>
               </p>
               <button
                 onClick={() => navigate('/my-submission')}
-                style={{ marginTop: 10, padding: '8px 16px', background: '#034da2', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600 }}
+                style={{ marginTop: 10, padding: '7px 14px', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.83rem', fontWeight: 600 }}
               >
-                View Your Submitted Form
+                View Submitted Form
               </button>
             </div>
           </div>
@@ -305,13 +301,13 @@ const Dashboard = () => {
     <div className="dashboard">
       <div className="dashboard-banner dashboard-banner-waiting">
         <div className="banner-icon-wrap banner-icon-neutral">
-          <Clock size={32} />
+          <Clock size={20} />
         </div>
         <div className="banner-content">
           <h1 className="dashboard-title">Appraisal Forms Not Yet Available</h1>
           <p className="dashboard-description">
             {session
-              ? `The appraisal forms for ${session.academic_year} have not been released yet. You will receive an email notification once the forms are available for filling.`
+              ? `The appraisal forms for ${session.academic_year} have not been released yet. You will receive an email notification once forms are available.`
               : 'There is no active appraisal session at the moment. You will be notified via email when a new session is opened and forms are released.'}
           </p>
         </div>
@@ -319,17 +315,17 @@ const Dashboard = () => {
 
       <div className="dashboard-waiting-illustration">
         <div className="waiting-pulse"></div>
-        <p>Waiting for form release...</p>
-        <span>Check your email for updates</span>
+        <p>Awaiting form release</p>
+        <span>Check your email for updates from the DOFA office</span>
       </div>
 
       {lastSubmission && (
         <div className="dashboard-last-submission">
-          <Archive size={20} />
+          <Archive size={18} />
           <div>
-            <h3>Your Previous Submission</h3>
+            <h3>Previous Submission</h3>
             <p>
-              Academic Year: <strong>{lastSubmission.academic_year}</strong> • 
+              Academic Year: <strong>{lastSubmission.academic_year}</strong> &middot;
               Status: <strong>{lastSubmission.status}</strong>
             </p>
           </div>

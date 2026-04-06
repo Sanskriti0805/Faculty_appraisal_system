@@ -152,6 +152,7 @@ function App() {
               <Route path="registration" element={<DOFARegistration />} />
               <Route path="manage-users" element={<DOFARegistration />} />
               <Route path="form-release" element={<FormRelease />} />
+              <Route path="help" element={<HelpCenter />} />
             </Route>
 
             {/* ── DOFA Office Routes ── */}

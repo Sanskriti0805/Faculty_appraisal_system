@@ -825,7 +825,7 @@ const DOFARegistration = () => {
               <div className="admin-form-field">
                 <label className="admin-form-label">Invite as</label>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  {[{ value: 'faculty', label: '👨‍🏫 Faculty' }, { value: 'hod', label: '🏢 HOD' }].map(opt => (
+                  {[{ value: 'faculty', label: 'Faculty' }, { value: 'hod', label: 'HOD' }].map(opt => (
                     <button
                       key={opt.value}
                       type="button"

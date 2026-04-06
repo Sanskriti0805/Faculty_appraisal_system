@@ -257,7 +257,7 @@ const RubricsManagement = () => {
             onClick={handleSaveChanges}
             disabled={saving}
           >
-            {saving ? 'Saving...' : '💾 Save Changes'}
+            {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>

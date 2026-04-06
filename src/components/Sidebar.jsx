@@ -146,7 +146,7 @@ const Sidebar = () => {
   }
 
   const renderNavLink = (path, label, className = 'nav-item') => {
-    const editable = isPathEditable(path)
+    const editable = path === '/' ? true : isPathEditable(path)
     const active = location.pathname === path
     if (!editable) {
       return (
@@ -231,7 +231,7 @@ const Sidebar = () => {
       { name: 'Dashboard', path: '/dofa/dashboard' },
       { name: 'Form Release', path: '/dofa/form-release' },
       { name: 'Rubrics Management', path: '/dofa/rubrics' },
-      { name: 'Sheet 1 — Evaluation', path: '/dofa/sheet1' },
+      { name: 'Sheet 1 - Evaluation', path: '/dofa/sheet1' },
       { name: 'Sheet 2', path: '/dofa/sheet2' },
       { name: 'Sheet 3', path: '/dofa/sheet3' },
       { name: 'Form Builder', path: '/dofa-office/form-builder' },
@@ -243,7 +243,7 @@ const Sidebar = () => {
       { name: 'Dashboard', path: '/dofa-office/dashboard' },
       { name: 'Form Release', path: '/dofa-office/form-release' },
       { name: 'Rubrics Management', path: '/dofa-office/rubrics' },
-      { name: 'Sheet 1 — Evaluation', path: '/dofa-office/sheet1' },
+      { name: 'Sheet 1 - Evaluation', path: '/dofa-office/sheet1' },
       { name: 'Sheet 2', path: '/dofa-office/sheet2' },
       { name: 'Sheet 3', path: '/dofa-office/sheet3' },
       { name: 'Form Builder', path: '/dofa-office/form-builder' },
@@ -255,13 +255,13 @@ const Sidebar = () => {
 
     return (
       <aside className="sidebar">
-        <div className="logo-container">
+        {/* <div className="logo-container">
           <img
             src="/lnmiit-logo.svg"
             alt="LNMIIT - The LNM Institute of Information Technology"
             className="logo"
           />
-        </div>
+        </div> */}
         <nav className="sidebar-nav">
           <div className="nav-section">
             <div className="nav-section-header" style={{ cursor: 'default' }}>
@@ -287,15 +287,22 @@ const Sidebar = () => {
   // Faculty sidebar (default)
   return (
     <aside className="sidebar">
-      <div className="logo-container">
+      {/* <div className="logo-container">
         <img
           src="/lnmiit-logo.svg"
           alt="LNMIIT - The LNM Institute of Information Technology"
           className="logo"
         />
-      </div>
+      </div> */}
 
       <nav className="sidebar-nav">
+        
+        <div className="nav-section">
+          <div className="nav-section-items">
+            {renderNavLink('/', 'Dashboard', 'nav-item')}
+          </div>
+        </div>
+
         {formsReleased ? (
           <>
         {['submitted', 'under_review', 'approved'].includes(submissionStatus) && (
@@ -369,9 +376,9 @@ const Sidebar = () => {
         </div>
 
         <div className="nav-section">
-          <div className="nav-section-items">
+          {/* <div className="nav-section-items">
             {renderNavLink('/help', 'Help Center', 'nav-item')}
-          </div>
+          </div> */}
         </div>
           </>
         ) : (

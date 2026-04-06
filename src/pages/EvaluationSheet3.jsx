@@ -22,8 +22,6 @@ const EvaluationSheet3 = () => {
         setData(res.data || []);
         const activeGrades = res.availableGrades || [];
         setAvailableGrades(activeGrades);
-        
-        // Convert array to object mapping
         const incMap = {};
         (res.gradeIncrements || []).forEach(item => {
           if (activeGrades.includes(item.grade)) {
@@ -51,14 +49,11 @@ const EvaluationSheet3 = () => {
   const applyIncrements = async () => {
     try {
       setLoading(true);
-      // 1. Save mappings
       const incArray = availableGrades.map((grade) => ({
         grade,
         increment_percentage: gradeIncrements[grade] || 0
       }));
       await apiClient.post('/evaluation/grade-increments', { increments: incArray });
-      
-      // 2. Apply to all
       const res = await apiClient.post('/evaluation/apply-increments');
       if (res.success) {
         showToast('Increments applied successfully');
@@ -70,14 +65,14 @@ const EvaluationSheet3 = () => {
     }
   };
 
-  if (loading) return <div className="eval3-loading">Loading Sheet 3...</div>;
+  if (loading) return <div className="eval3-loading">Loading Sheet 3…</div>;
 
   return (
     <div className="eval3-container">
       {toast && <div className={`eval3-toast eval3-toast--${toast.type}`}>{toast.message}</div>}
 
       <div className="eval3-header">
-        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1>Evaluation — Sheet 3</h1>
             <p>Grade-based Salary Increments Summary</p>
@@ -91,7 +86,9 @@ const EvaluationSheet3 = () => {
       <div className="eval3-inc-config">
         <h2>Set Increment Percentage by Grade</h2>
         {availableGrades.length === 0 ? (
-          <p style={{color: '#ef4444'}}>No grades found in Sheet 2. Please finalize grades in Sheet 2 first.</p>
+          <p style={{ color: '#b91c1c', fontSize: '0.875rem', margin: 0 }}>
+            No grades found in Sheet 2. Please finalise grades in Sheet 2 first.
+          </p>
         ) : (
           <>
             <div className="inc-rules-grid">
@@ -99,10 +96,10 @@ const EvaluationSheet3 = () => {
                 <div key={grade} className="inc-rule-card">
                   <label>Grade {grade}</label>
                   <div className="inc-input-wrapper">
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       className="inc-input"
-                      placeholder="%"
+                      placeholder="0"
                       value={gradeIncrements[grade] || ''}
                       onChange={(e) => handleIncChange(grade, e.target.value)}
                     />
@@ -111,13 +108,18 @@ const EvaluationSheet3 = () => {
                 </div>
               ))}
             </div>
-            <button className="apply-inc-btn" onClick={applyIncrements}>Apply Increments to All Faculty</button>
+            <button className="apply-inc-btn" onClick={applyIncrements}>
+              Apply Increments to All Faculty
+            </button>
           </>
         )}
       </div>
 
       <div className="eval3-table-wrapper">
         <table className="eval3-table">
+          <colgroup>
+            <col /><col /><col /><col /><col /><col />
+          </colgroup>
           <thead>
             <tr>
               <th>S.No</th>
@@ -131,10 +133,12 @@ const EvaluationSheet3 = () => {
           <tbody>
             {data.map((item, idx) => (
               <tr key={item.submission_id}>
-                <td>{idx + 1}</td>
-                <td style={{fontWeight: 600}}>{item.faculty_name}</td>
-                <td>{item.department}</td>
-                <td style={{textAlign: 'center'}}>{item.total_score || 0}</td>
+                <td style={{ color: '#94a3b8', fontWeight: 500 }}>{idx + 1}</td>
+                <td style={{ fontWeight: 600, color: '#1e293b' }}>{item.faculty_name}</td>
+                <td style={{ color: '#64748b' }}>{item.department}</td>
+                <td style={{ textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
+                  {item.total_score || 0}
+                </td>
                 <td className="eval3-grade">{item.final_grade || '—'}</td>
                 <td className="eval3-increment">
                   {item.increment_percentage ? `${item.increment_percentage}%` : '0%'}

@@ -320,6 +320,18 @@
   gap: 8px;
 }
 
+.admin-archive-title {
+  margin-top: 20px;
+  margin-bottom: 14px;
+}
+
+.admin-archive-actions {
+  display: flex;
+  gap: 10px;
+  margin: 10px;
+  flex-wrap: wrap;
+}
+
 .admin-table-card {
   background: #fff;
   border-radius: 10px;

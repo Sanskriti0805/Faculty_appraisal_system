@@ -477,9 +477,9 @@ const HODDashboard = () => {
           )}
         </div>
 
-        <h2 className="admin-section-title" style={{ marginTop: '28px' }}><Archive size={20} /> Archived Faculty</h2>
+        <h2 className="admin-section-title admin-archive-title"><Archive size={20} /> Archived Faculty</h2>
         <div className="admin-table-card">
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+          <div className="admin-archive-actions">
             <button className="admin-btn-submit" onClick={() => handleArchiveExport('csv')} style={{ padding: '8px 12px', fontSize: '12px' }}>
               <Download size={14} /> Export CSV
             </button>

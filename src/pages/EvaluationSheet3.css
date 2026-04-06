@@ -1,161 +1,240 @@
 .eval3-container {
-  padding: 30px;
-  background-color: #f0f7ff;
-  min-height: calc(100vh - 80px);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  max-width: 1400px;
+  color: #1e293b;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .eval3-header {
-  margin-bottom: 30px;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .eval3-header h1 {
-  font-size: 2rem;
-  color: #1e3a8a;
-  margin-bottom: 8px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.2rem;
+  letter-spacing: -0.3px;
 }
 
 .eval3-header p {
-  color: #4b5563;
-  font-size: 1.1rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  margin: 0;
 }
 
-/* Increment Config Section */
+/* Increment Config */
 .eval3-inc-config {
-  background: white;
-  padding: 25px;
-  border-radius: 12px;
-  margin-bottom: 30px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  border-left: 5px solid #3b82f6;
+  background: #fff;
+  padding: 1.5rem 2rem;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+  border: 1px solid #e2e8f0;
 }
 
 .eval3-inc-config h2 {
-  font-size: 1.25rem;
-  margin-bottom: 20px;
-  color: #1e40af;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin: 0 0 1.25rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .inc-rules-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .inc-rule-card {
   background: #f8fafc;
-  padding: 15px;
-  border-radius: 8px;
+  padding: 12px 14px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .inc-rule-card label {
   font-weight: 600;
-  font-size: 0.9rem;
-  color: #475569;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .inc-input-wrapper {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: #64748b;
 }
 
 .inc-input {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  font-size: 1rem;
+  padding: 7px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #334155;
+  background: #fff;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.inc-input:focus {
+  border-color: #94a3b8;
 }
 
 .apply-inc-btn {
-  background: #2563eb;
-  color: white;
+  background: #0f172a;
+  color: #fff;
   border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
+  padding: 8px 20px;
+  border-radius: 6px;
   font-weight: 600;
+  font-size: 0.8125rem;
   cursor: pointer;
-  transition: background 0.2s;
+  font-family: inherit;
+  transition: opacity 0.15s;
 }
 
 .apply-inc-btn:hover {
-  background: #1d4ed8;
+  opacity: 0.85;
 }
 
-/* Table Styling */
+/* Table */
 .eval3-table-wrapper {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  overflow-x: auto;
+  background: #fff;
+  padding: 1.5rem 2rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
 }
 
 .eval3-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
+  font-size: 0.8125rem;
 }
 
-.eval3-table th, .eval3-table td {
-  padding: 15px;
-  text-align: left;
-  border-bottom: 1px solid #e2e8f0;
-}
+.eval3-table colgroup col:nth-child(1) { width: 6%; }
+.eval3-table colgroup col:nth-child(2) { width: 30%; }
+.eval3-table colgroup col:nth-child(3) { width: 30%; }
+.eval3-table colgroup col:nth-child(4) { width: 14%; }
+.eval3-table colgroup col:nth-child(5) { width: 10%; }
+.eval3-table colgroup col:nth-child(6) { width: 10%; }
 
 .eval3-table th {
-  background: #f1f5f9;
+  padding: 0.75rem 0.75rem;
+  text-align: left;
   font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eval3-table td {
+  padding: 0.875rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
   color: #334155;
-  font-size: 0.9rem;
+  vertical-align: middle;
+  overflow: hidden;
+}
+
+.eval3-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.eval3-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .eval3-grade {
   font-weight: 700;
-  color: #dc2626;
+  color: #15803d;
   text-align: center;
 }
 
 .eval3-increment {
   font-weight: 700;
-  color: #059669;
-  font-size: 1.1rem;
+  color: #0f172a;
+  font-size: 0.875rem;
 }
 
+/* Loading */
 .eval3-loading {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 200px;
-  font-size: 1.2rem;
-  color: #64748b;
+  font-size: 0.875rem;
+  color: #94a3b8;
 }
 
+/* Toast */
 .eval3-toast {
   position: fixed;
   top: 20px;
   right: 20px;
-  padding: 15px 25px;
-  border-radius: 8px;
-  color: white;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
   z-index: 1000;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.2s ease-out;
+  border: 1px solid transparent;
 }
 
-.eval3-toast--success { background-color: #10b981; }
-.eval3-toast--error { background-color: #ef4444; }
+.eval3-toast--success {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.eval3-toast--error {
+  background: #fff5f5;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
 
 .back-btn {
   text-decoration: none;
-  background: #e2e8f0;
+  background: #f8fafc;
   color: #475569;
-  padding: 10px 18px;
+  border: 1px solid #e2e8f0;
+  padding: 7px 16px;
   border-radius: 6px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.8125rem;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.back-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
 }
