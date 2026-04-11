@@ -113,8 +113,109 @@ const coerceSnapshotData = (data) => {
     otherActivities: data.otherActivities || null,
     researchPlan: data.researchPlan || null,
     teachingPlan: data.teachingPlan || null,
-    comments: Array.isArray(data.comments) ? data.comments : []
+    comments: Array.isArray(data.comments) ? data.comments : [],
+    dynamicData: Array.isArray(data.dynamicData) ? data.dynamicData : []
   };
+};
+
+const fetchDynamicSectionData = async ({ facultyIds = [], submissionId = null, formType = null }) => {
+  const ids = Array.from(new Set((facultyIds || []).map((id) => Number(id)).filter(Number.isFinite)));
+  if (ids.length === 0) return [];
+
+  const placeholders = ids.map(() => '?').join(',');
+  const sectionParams = [];
+  let sectionFilterSql = '';
+  if (formType) {
+    sectionFilterSql = " AND (ds.form_type IS NULL OR ds.form_type = '' OR LOWER(ds.form_type) = 'all' OR ds.form_type = ?)";
+    sectionParams.push(formType);
+  }
+
+  const responseParams = [...ids];
+  let responseFilterSql = '';
+  if (submissionId) {
+    responseFilterSql = ' AND (dr.submission_id = ? OR dr.submission_id IS NULL)';
+    responseParams.push(submissionId);
+  }
+
+  const [sectionRows] = await db.query(
+    `SELECT ds.id, ds.title, ds.form_type, ds.sequence,
+            df.id AS field_id, df.label AS field_label, df.field_type, df.config AS field_config, df.sequence AS field_sequence
+     FROM dynamic_sections ds
+     LEFT JOIN dynamic_fields df ON df.section_id = ds.id
+     WHERE ds.is_active = 1${sectionFilterSql}
+     ORDER BY ds.sequence, ds.id, df.sequence, df.id`,
+    sectionParams
+  );
+
+  const [responseRows] = await db.query(
+    `SELECT dr.field_id, dr.value
+     FROM dynamic_responses dr
+     WHERE dr.faculty_id IN (${placeholders})${responseFilterSql}`,
+    responseParams
+  );
+
+  const responseByField = {};
+  responseRows.forEach((row) => {
+    if (row.field_id === null || row.field_id === undefined) return;
+    if (Object.prototype.hasOwnProperty.call(responseByField, row.field_id)) return;
+    const raw = row.value;
+    if (typeof raw === 'string') {
+      try {
+        responseByField[row.field_id] = JSON.parse(raw);
+      } catch (_) {
+        responseByField[row.field_id] = raw;
+      }
+      return;
+    }
+    responseByField[row.field_id] = raw;
+  });
+
+  const sectionMap = new Map();
+  sectionRows.forEach((row) => {
+    if (!sectionMap.has(row.id)) {
+      sectionMap.set(row.id, {
+        section: {
+          id: row.id,
+          title: row.title,
+          form_type: row.form_type,
+          sequence: row.sequence
+        },
+        fields: []
+      });
+    }
+
+    if (!row.field_id) return;
+
+    const field = {
+      id: row.field_id,
+      label: row.field_label,
+      field_type: row.field_type,
+      sequence: row.field_sequence,
+      config: (() => {
+        if (row.field_config === null || row.field_config === undefined) return null;
+        if (typeof row.field_config === 'object') return row.field_config;
+        try {
+          return JSON.parse(row.field_config);
+        } catch (_) {
+          return null;
+        }
+      })(),
+      value: Object.prototype.hasOwnProperty.call(responseByField, row.field_id)
+        ? responseByField[row.field_id]
+        : null
+    };
+
+    sectionMap.get(row.id).fields.push(field);
+  });
+
+  return Array.from(sectionMap.values())
+    .map((entry) => ({
+      ...entry,
+      fields: entry.fields
+        .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
+    }))
+    .filter((entry) => entry.fields.some((f) => f.value !== null && f.value !== undefined && !(typeof f.value === 'string' && f.value.trim() === '')))
+    .sort((a, b) => (a.section.sequence || 0) - (b.section.sequence || 0));
 };
 
 const buildSubmissionSnapshotPayload = async (submissionId) => {
@@ -163,7 +264,8 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
     continuingEducation,
     otherActivities,
     researchPlan,
-    teachingPlan
+    teachingPlan,
+    dynamicData
   ] = await Promise.all([
     db.query('SELECT * FROM faculty_information WHERE id = ?', [fid]),
     db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [fid]),
@@ -193,7 +295,12 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
     fetchLegacySectionContent(user_id, academicYear, 'continuing_education'),
     fetchLegacySectionContent(user_id, academicYear, 'other_activities'),
     fetchLegacySectionContent(user_id, academicYear, 'research_plan'),
-    fetchLegacySectionContent(user_id, academicYear, 'teaching_plan')
+    fetchLegacySectionContent(user_id, academicYear, 'teaching_plan'),
+    fetchDynamicSectionData({
+      facultyIds: [sub.faculty_id, fid],
+      submissionId,
+      formType: sub.form_type || null
+    })
   ]);
 
   return {
@@ -219,7 +326,8 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
     otherActivities: otherActivities || null,
     researchPlan: researchPlan || null,
     teachingPlan: teachingPlan || null,
-    comments: comments[0] || []
+    comments: comments[0] || [],
+    dynamicData: dynamicData || []
   };
 };
 
@@ -431,6 +539,12 @@ exports.getSubmissionById = async (req, res) => {
       fetchLegacySectionContent(user_id, academicYear, 'teaching_plan'),
     ]);
 
+    const dynamicData = await fetchDynamicSectionData({
+      facultyIds: [sub.faculty_id, fid],
+      submissionId: id,
+      formType: sub.form_type || null
+    });
+
     // Get review comments
     const [comments] = await db.query(`
       SELECT rc.*, u.name as reviewer_name
@@ -465,7 +579,8 @@ exports.getSubmissionById = async (req, res) => {
         otherActivities: otherActivities || null,
         researchPlan: researchPlan || null,
         teachingPlan: teachingPlan || null,
-        comments: comments || []
+        comments: comments || [],
+        dynamicData: dynamicData || []
       }
     });
   } catch (error) {

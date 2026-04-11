@@ -170,8 +170,20 @@ const DOFAReview = () => {
 
   useEffect(() => { fetchSubmissionDetails(); }, [id]);
   useEffect(() => {
-    setSelectedCommentSection(TAB_TO_SECTION_KEY[activeTab] || 'faculty_info');
-  }, [activeTab]);
+    const mapped = TAB_TO_SECTION_KEY[activeTab];
+    if (mapped) {
+      setSelectedCommentSection(mapped);
+      return;
+    }
+
+    if (activeTab === 'dynamic') {
+      const source = (selectedVersionSnapshot || submissionData)?.dynamicData || [];
+      const firstSectionId = source?.[0]?.section?.id;
+      if (firstSectionId) {
+        setSelectedCommentSection(`dynamic_section_${firstSectionId}`);
+      }
+    }
+  }, [activeTab, selectedVersionSnapshot, submissionData]);
 
   const fetchSubmissionDetails = async () => {
     try {
@@ -268,7 +280,11 @@ const DOFAReview = () => {
     }
     if (!window.confirm('Are you sure you want to send back this submission?')) return;
     const sectionKey = selectedCommentSection || TAB_TO_SECTION_KEY[activeTab] || 'faculty_info';
-    const sectionName = SECTION_KEY_TO_LABEL[sectionKey] || 'General';
+    const sourceDynamicData = (selectedVersionSnapshot || submissionData)?.dynamicData || [];
+    const dynamicMatch = String(sectionKey || '').match(/^dynamic_section_(\d+)$/);
+    const sectionName = dynamicMatch
+      ? (sourceDynamicData.find((entry) => Number(entry?.section?.id) === Number(dynamicMatch[1]))?.section?.title || sectionKey)
+      : (SECTION_KEY_TO_LABEL[sectionKey] || 'General');
     try {
       if (hasDraftComment) {
         await fetch(`${API}/review/comment`, {
@@ -311,7 +327,11 @@ const DOFAReview = () => {
   const handleAddComment = async () => {
     if (!comment.trim()) { alert('Please enter a comment'); return; }
     const sectionKey = selectedCommentSection || TAB_TO_SECTION_KEY[activeTab] || 'faculty_info';
-    const sectionName = SECTION_KEY_TO_LABEL[sectionKey] || 'General';
+    const sourceDynamicData = (selectedVersionSnapshot || submissionData)?.dynamicData || [];
+    const dynamicMatch = String(sectionKey || '').match(/^dynamic_section_(\d+)$/);
+    const sectionName = dynamicMatch
+      ? (sourceDynamicData.find((entry) => Number(entry?.section?.id) === Number(dynamicMatch[1]))?.section?.title || sectionKey)
+      : (SECTION_KEY_TO_LABEL[sectionKey] || 'General');
     try {
       const res = await fetch(`${API}/review/comment`, {
         method: 'POST',
@@ -347,8 +367,18 @@ const DOFAReview = () => {
     awards, newCourses, proposals, paperReviews, techTransfer,
     conferenceSessions, keynotesTalks, consultancy, teachingInnovation,
     institutionalContributions, courseware, continuingEducation,
-    otherActivities, researchPlan, teachingPlan, goals
+    otherActivities, researchPlan, teachingPlan, goals,
+    dynamicData
   } = displayData;
+
+  const dynamicCommentSections = Array.isArray(dynamicData)
+    ? dynamicData.map((entry) => ({
+        key: `dynamic_section_${entry.section.id}`,
+        label: entry.section.title || `Dynamic Section ${entry.section.id}`
+      }))
+    : [];
+
+  const allCommentSections = [...COMMENT_SECTIONS, ...dynamicCommentSections];
 
   const pendingComments = comments.filter((c) => Number(c.is_resolved) !== 1);
   const resolvedComments = comments.filter((c) => Number(c.is_resolved) === 1);
@@ -446,6 +476,9 @@ const DOFAReview = () => {
     { id: 'innovation',  label: 'Innovation',    icon: <Lightbulb size={14} /> },
     { id: 'additional',  label: 'Additional',    icon: <FileText size={14} /> },
     { id: 'partb',       label: 'Part B',        icon: <CheckCircle size={14} /> },
+    ...(dynamicCommentSections.length > 0
+      ? [{ id: 'dynamic', label: 'Custom Sections', icon: <FileText size={14} />, count: dynamicCommentSections.length }]
+      : []),
   ];
 
   return (
@@ -896,6 +929,41 @@ const DOFAReview = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'dynamic' && (
+            <div className="section-card">
+              <h3 className="section-title">Custom Sections</h3>
+              {dynamicData && dynamicData.length > 0 ? (
+                <div className="legacy-section-stack">
+                  {dynamicData.map((entry, index) => (
+                    <CollapsibleSection
+                      key={entry?.section?.id || index}
+                      title={entry?.section?.title || `Dynamic Section ${index + 1}`}
+                      count={entry?.fields?.length || 0}
+                      defaultOpen={index === 0}
+                    >
+                      <div style={{ padding: '0.75rem 1rem' }}>
+                        {entry?.fields?.length > 0 ? (
+                          <div className="info-grid">
+                            {entry.fields.map((field) => (
+                              <div key={field.id} className="info-item">
+                                <label>{field.label || toLabel(field.field_type || 'field')}</label>
+                                {renderValue(field.value, field.field_type || field.label || 'value')}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="no-data">No submitted fields in this section.</p>
+                        )}
+                      </div>
+                    </CollapsibleSection>
+                  ))}
+                </div>
+              ) : (
+                <p className="no-data">No custom section responses available.</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Sidebar ── */}
@@ -915,7 +983,7 @@ const DOFAReview = () => {
                 onChange={(e) => setSelectedCommentSection(e.target.value)}
                 disabled={Boolean(selectedVersionNumber)}
               >
-                {COMMENT_SECTIONS.map((section) => (
+                {allCommentSections.map((section) => (
                   <option key={section.key} value={section.key}>{section.label}</option>
                 ))}
               </select>

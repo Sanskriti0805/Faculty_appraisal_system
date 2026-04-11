@@ -352,6 +352,21 @@ const DOFARegistration = () => {
       ${(proposals || []).map(p => `<tr><td>${p.title||''}</td><td>${p.funding_agency||''}</td><td>${p.grant_amount||0}</td><td>${p.status||''}</td></tr>`).join('')}
       </table>
 
+      ${((data?.dynamicData || []).length > 0 ? `
+      <h2>Custom Sections</h2>
+      ${(data.dynamicData || []).map(entry => {
+        const section = entry?.section || {};
+        const fields = entry?.fields || [];
+        const fieldsHtml = fields.map(f => {
+          const value = f.value;
+          if (!value) return '';
+          const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
+          return `<div style="margin:10px 0;"><strong>${f.label || f.field_type}:</strong> <span>${displayValue}</span></div>`;
+        }).join('');
+        return `<h3 style="color:#2d4373;margin-top:16px;font-size:1rem;border-bottom:1px solid #ddd;padding-bottom:4px;">${section.title || 'Custom Section'}</h3>${fieldsHtml}`;
+      }).join('')}
+      ` : '')}
+
       <p style="margin-top:40px;font-size:11px;color:#888">Generated on ${new Date().toLocaleString()}</p>
       </body></html>`;
 

@@ -55,6 +55,7 @@ const MySubmissionView = () => {
   const [commentView,    setCommentView]    = useState('pending');
   // Dynamic sections filled by this faculty
   const [dynamicData, setDynamicData] = useState([]); // [{section, fields, responses}]
+  const [dynamicSectionOptions, setDynamicSectionOptions] = useState([]);
   const [pdfDownloading, setPdfDownloading] = useState(false);
 
   const [selectedSections, setSelectedSections] = useState([]);
@@ -77,7 +78,10 @@ const MySubmissionView = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const detailData = await detailRes.json();
-      if (detailData.success) setSubmissionData(detailData.data);
+      if (detailData.success) {
+        setSubmissionData(detailData.data);
+        setDynamicData(Array.isArray(detailData.data?.dynamicData) ? detailData.data.dynamicData : []);
+      }
 
       const sessionRes = await fetch(`${API}/sessions/active`);
       const sessionJson = await sessionRes.json();
@@ -85,40 +89,31 @@ const MySubmissionView = () => {
 
       await fetchEditRequests(submission.id);
 
-      // ── Fetch dynamic sections data ──────────────────────────────────────────
+      // ── Fetch dynamic sections list for edit-request options ─────────────────
       try {
-        const [schemaRes, respRes] = await Promise.all([
-          fetch(`${API}/form-builder/schema`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API}/form-builder/responses?faculty_id=${user?.id}`, { headers: { Authorization: `Bearer ${token}` } }),
-        ]);
+        const schemaRes = await fetch(`${API}/form-builder/schema/flat`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         const schemaJson = await schemaRes.json();
-        const respJson   = await respRes.json();
 
-        if (schemaJson.success && respJson.success) {
-          // Build a map of field_id → value from responses
-          const respMap = {};
-          respJson.data.forEach(r => {
-            // value stored as JSON string in DB, parse if needed
-            respMap[r.field_id] = typeof r.value === 'string' ? JSON.parse(r.value) : r.value;
-          });
-
-          // Only keep sections/fields that have at least one response
-          const built = [];
-          const walkSections = (sections) => {
-            sections.forEach(sec => {
-              const fieldsWithData = (sec.fields || []).filter(f => respMap[f.id] !== undefined && respMap[f.id] !== null);
-              if (fieldsWithData.length > 0) {
-                built.push({ section: sec, fields: fieldsWithData, respMap });
-              }
-              // recurse into children (subsections)
-              if (sec.children?.length) walkSections(sec.children);
-            });
-          };
-          walkSections(schemaJson.data || []);
-          setDynamicData(built);
+        if (schemaJson.success) {
+          const currentFormType = submission.form_type || null;
+          const normalized = (schemaJson.data || [])
+            .filter((s) => !s.parent_id)
+            .filter((s) => {
+              if (!currentFormType) return true;
+              const ft = String(s.form_type || '').trim().toLowerCase();
+              if (!ft || ft === 'all') return true;
+              return ft === String(currentFormType).trim().toLowerCase();
+            })
+            .map((s) => ({
+              key: `dynamic_section_${s.id}`,
+              label: s.title || `Dynamic Section ${s.id}`
+            }));
+          setDynamicSectionOptions(normalized);
         }
       } catch (dynErr) {
-        console.warn('Could not load dynamic sections:', dynErr);
+        console.warn('Could not load dynamic section options:', dynErr);
       }
 
     } catch (err) {
@@ -219,6 +214,18 @@ const MySubmissionView = () => {
 
   const toLabel = (key) =>
     String(key || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const resolveSectionLabel = (sectionKey) => {
+    const base = EDITABLE_SECTIONS.find(e => e.key === sectionKey);
+    if (base) return base.label;
+    const knownDynamic = dynamicSectionOptions.find((s) => s.key === sectionKey);
+    if (knownDynamic) return knownDynamic.label;
+    const dynamicMatch = String(sectionKey || '').match(/^dynamic_section_(\d+)$/);
+    if (!dynamicMatch) return sectionKey;
+    const sectionId = Number(dynamicMatch[1]);
+    const dynamic = dynamicData.find((entry) => Number(entry?.section?.id) === sectionId);
+    return dynamic?.section?.title || sectionKey;
+  };
 
   const formatCellValue = (value, key) => {
     if (value === null || value === undefined || value === '')
@@ -360,6 +367,10 @@ const MySubmissionView = () => {
     institutionalContributions, goals, comments,
   } = submissionData;
 
+  const dynamicEditableSections = dynamicSectionOptions;
+
+  const editableSections = [...EDITABLE_SECTIONS, ...dynamicEditableSections];
+
   const statusLabel = STATUS_LABELS[submission?.status] || submission?.status;
 
   const tabs = [
@@ -371,12 +382,12 @@ const MySubmissionView = () => {
     { key: 'consultancy',  label: 'Consultancy',        icon: <Briefcase size={14} />, count: consultancy?.length },
     { key: 'innovation',   label: 'Innovation',         icon: <Lightbulb size={14} /> },
     { key: 'partb',        label: 'Part B',             icon: <CheckCircle size={14} /> },
-    // Only show the dynamic tab if there is any data
-    ...(dynamicData.length > 0 ? [{
+    // Show custom tab when dynamic sections exist for this form type
+    ...(dynamicEditableSections.length > 0 ? [{
       key: 'dynamic',
       label: 'Custom Sections',
       icon: <Layers size={14} />,
-      count: dynamicData.length
+      count: dynamicEditableSections.length
     }] : []),
   ];
 
@@ -463,7 +474,7 @@ const MySubmissionView = () => {
                   <Clock size={18} style={{ flexShrink: 0, marginTop: 2 }} />
                   <p>
                     <strong>Edit request pending review.</strong> Submitted on {formatDate(pendingRequest.created_at)}.{' '}
-                    Sections: <strong>{pendingRequest.requested_sections?.join(', ')}</strong>
+                    Sections: <strong>{(pendingRequest.requested_sections || []).map(resolveSectionLabel).join(', ')}</strong>
                   </p>
                 </div>
               )}
@@ -475,7 +486,7 @@ const MySubmissionView = () => {
                     <p><strong>Edit access granted for:</strong></p>
                     <ul>
                       {approvedRequest.approved_sections?.map(s => (
-                        <li key={s}>{EDITABLE_SECTIONS.find(e => e.key === s)?.label || s}</li>
+                        <li key={s}>{resolveSectionLabel(s)}</li>
                       ))}
                     </ul>
                     <p style={{ marginTop: 6, fontSize: '0.78rem', color: '#047857' }}>
@@ -489,7 +500,7 @@ const MySubmissionView = () => {
                 <>
                   <p className="msv-sections-label">Select sections you want to edit:</p>
                   <div className="msv-sections-grid">
-                    {EDITABLE_SECTIONS.map(section => (
+                    {editableSections.map(section => (
                       <label
                         key={section.key}
                         className={`msv-section-checkbox ${selectedSections.includes(section.key) ? 'checked' : ''}`}
@@ -552,8 +563,8 @@ const MySubmissionView = () => {
                         {req.status === 'pending' ? 'Pending' : req.status === 'approved' ? 'Approved' : 'Denied'}
                       </span>
                       <div className="msv-request-item-content">
-                        <p><strong>Requested:</strong> {req.requested_sections?.join(', ')}</p>
-                        {req.approved_sections && <p><strong>Approved:</strong> {req.approved_sections.join(', ')}</p>}
+                        <p><strong>Requested:</strong> {(req.requested_sections || []).map(resolveSectionLabel).join(', ')}</p>
+                        {req.approved_sections && <p><strong>Approved:</strong> {req.approved_sections.map(resolveSectionLabel).join(', ')}</p>}
                         {req.dofa_note && <p><strong>Note:</strong> {req.dofa_note}</p>}
                         <p style={{ color: '#94a3b8', fontSize: '0.72rem' }}>
                           {formatDate(req.created_at)}
@@ -667,7 +678,7 @@ const MySubmissionView = () => {
               <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.5rem' }}>
                 These sections were added by the DOFA office specifically for your college's appraisal form.
               </p>
-              {dynamicData.map(({ section, fields, respMap }) => (
+              {dynamicData.map(({ section, fields = [], respMap = {} }) => (
                 <div key={section.id} className="msv-data-section" style={{ marginBottom: '2rem' }}>
                   <h4 className="msv-subsection-title">
                     {section.title}
@@ -676,7 +687,9 @@ const MySubmissionView = () => {
                     </span>
                   </h4>
                   {fields.map(field => {
-                    const value = respMap[field.id];
+                    const value = Object.prototype.hasOwnProperty.call(respMap, field.id)
+                      ? respMap[field.id]
+                      : field.value;
 
                     // Table field — render as a proper table
                     if (field.field_type === 'table' && Array.isArray(value) && value.length > 0) {

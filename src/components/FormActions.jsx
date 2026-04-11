@@ -94,7 +94,11 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
     if (submissionStatus === 'sent_back') {
       if (!hasSectionRestrictions) return true;
       if (path === '/part-b') return true;
-      if (path.startsWith('/faculty/dynamic/')) return false;
+      if (path.startsWith('/faculty/dynamic/')) {
+        const idMatch = path.match(/^\/faculty\/dynamic\/(\d+)$/);
+        if (!idMatch) return false;
+        return approvedSections.includes(`dynamic_section_${idMatch[1]}`);
+      }
       const sectionKey = pathToSectionKey[path];
       return !!sectionKey && approvedSections.includes(sectionKey);
     }

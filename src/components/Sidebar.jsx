@@ -154,7 +154,11 @@ const Sidebar = () => {
       // Part B contains the final submit action and must remain reachable for re-submission.
       if (path === '/part-b') return true
 
-      if (path.startsWith('/faculty/dynamic/')) return false
+      if (path.startsWith('/faculty/dynamic/')) {
+        const idMatch = path.match(/^\/faculty\/dynamic\/(\d+)$/)
+        if (!idMatch) return false
+        return approvedSections.includes(`dynamic_section_${idMatch[1]}`)
+      }
       const sectionKey = pathToSectionKey[path]
       return !!sectionKey && approvedSections.includes(sectionKey)
     }

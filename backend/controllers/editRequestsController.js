@@ -26,6 +26,30 @@ const SECTION_LABELS = {
   part_b: 'Part B (Goal Setting)',
 };
 
+const resolveSectionLabels = async (sections = []) => {
+  const list = Array.isArray(sections) ? sections : [];
+  const dynamicIds = list
+    .map((s) => String(s || '').match(/^dynamic_section_(\d+)$/))
+    .filter(Boolean)
+    .map((m) => Number(m[1]))
+    .filter(Number.isFinite);
+
+  const dynamicMap = new Map();
+  if (dynamicIds.length > 0) {
+    const uniqueIds = Array.from(new Set(dynamicIds));
+    const placeholders = uniqueIds.map(() => '?').join(',');
+    const [rows] = await db.query(
+      `SELECT id, title FROM dynamic_sections WHERE id IN (${placeholders})`,
+      uniqueIds
+    );
+    rows.forEach((row) => {
+      dynamicMap.set(`dynamic_section_${row.id}`, row.title || `Dynamic Section ${row.id}`);
+    });
+  }
+
+  return list.map((s) => SECTION_LABELS[s] || dynamicMap.get(s) || s);
+};
+
 /**
  * POST /api/edit-requests
  * Faculty submits an edit request for specific sections
@@ -91,7 +115,7 @@ exports.createEditRequest = async (req, res) => {
 
     // Send email to DOFA
     try {
-      const sectionLabels = requested_sections.map(s => SECTION_LABELS[s] || s);
+      const sectionLabels = await resolveSectionLabels(requested_sections);
       await emailService.sendEditRequestNotificationToDOFA({
         facultyName: submission.faculty_name,
         facultyEmail: submission.faculty_email,
@@ -266,7 +290,7 @@ exports.reviewEditRequest = async (req, res) => {
 
       // Send approval email to faculty
       try {
-        const sectionLabels = approved_sections.map(s => SECTION_LABELS[s] || s);
+        const sectionLabels = await resolveSectionLabels(approved_sections);
         await emailService.sendEditRequestApprovedToFaculty({
           to: editRequest.faculty_email,
           facultyName: editRequest.faculty_name,
