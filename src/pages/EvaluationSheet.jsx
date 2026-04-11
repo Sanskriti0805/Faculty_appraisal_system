@@ -126,15 +126,37 @@ const EvaluationSheet = () => {
     }
   };
 
-  // Group rubrics by section_name
+  // Group rubrics by section_name and then sub-groups within sections
   const sections = [];
   rubrics.forEach(r => {
     let sec = sections.find(s => s.name === r.section_name);
     if (!sec) {
-      sec = { name: r.section_name, rubrics: [] };
+      sec = { name: r.section_name, rubrics: [], groups: [] };
       sections.push(sec);
     }
     sec.rubrics.push(r);
+
+    // Sub-group logic: Extract prefix before colon if it exists
+    let groupPrefix = "";
+    if (r.sub_section.includes(':')) {
+      groupPrefix = r.sub_section.split(':')[0].trim();
+      // Clean up common prefixes like "a)", "b)", etc. if present
+      groupPrefix = groupPrefix.replace(/^[a-z]\)\s*/i, '');
+
+      // Shorten specific long labels for cleaner UI
+      if (groupPrefix.toLowerCase().includes('greater than or equal to 50')) {
+        groupPrefix = "Students >= 50";
+      } else if (groupPrefix.toLowerCase().includes('less than 50')) {
+        groupPrefix = "Students < 50";
+      }
+    }
+
+    let lastGroup = sec.groups[sec.groups.length - 1];
+    if (lastGroup && lastGroup.name === groupPrefix) {
+      lastGroup.count++;
+    } else {
+      sec.groups.push({ name: groupPrefix, count: 1 });
+    }
   });
 
   if (loading) return <div className="eval-loading">Loading Evaluation Data...</div>;
@@ -153,11 +175,11 @@ const EvaluationSheet = () => {
           <thead>
             {/* Top Level Category Row */}
             <tr>
-              <th rowSpan={3} className="eval-sticky-left sno">S.No.</th>
-              <th rowSpan={3} className="eval-sticky-left faculty-name">Name of Faculty</th>
-              <th rowSpan={3}>Designation</th>
-              <th rowSpan={3}>Regular/ Visiting</th>
-              <th rowSpan={3}>Dept</th>
+              <th rowSpan={4} className="eval-sticky-left sno">S.No.</th>
+              <th rowSpan={4} className="eval-sticky-left faculty-name">Name of Faculty</th>
+              <th rowSpan={4}>Designation</th>
+              <th rowSpan={4}>Regular/ Visiting</th>
+              <th rowSpan={4}>Dept</th>
               
               {sections.map(sec => (
                 <th key={sec.name} colSpan={sec.rubrics.length} className="eval-section-header">
@@ -165,8 +187,23 @@ const EvaluationSheet = () => {
                 </th>
               ))}
               
-              <th rowSpan={3} className="eval-total-header">Grand Total</th>
-              <th rowSpan={3} className="eval-remarks-header">Remarks</th>
+              <th rowSpan={4} className="eval-total-header">Grand Total</th>
+              <th rowSpan={4} className="eval-remarks-header">Remarks</th>
+            </tr>
+
+            {/* Sub-group labels (e.g. "no. of students is greater than or equal to 50") */}
+            <tr>
+              {sections.map(sec => 
+                sec.groups.map((group, gIdx) => (
+                  <th 
+                    key={`${sec.name}-group-${gIdx}`} 
+                    colSpan={group.count} 
+                    className="eval-subgroup-header"
+                  >
+                    {group.name || ''}
+                  </th>
+                ))
+              )}
             </tr>
 
             {/* Sub-section headers (Rubric items) */}

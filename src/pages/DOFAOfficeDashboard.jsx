@@ -623,7 +623,10 @@ ${facultySections}
                         </td>
                         <td>{submission.department || '-'}</td>
                         <td>
-                          <span className="form-type-badge">Form {submission.form_type || 'A'}</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span className="form-type-badge" style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0' }}>Form A</span>
+                            <span className="form-type-badge" style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0' }}>Form B</span>
+                          </div>
                         </td>
                         <td>{getStatusBadge(submission.status)}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>{formatDate(submission.submitted_at)}</td>
