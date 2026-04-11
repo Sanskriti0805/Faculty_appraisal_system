@@ -1,5 +1,101 @@
 const db = require('../config/database');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
+const { evaluateRuleConfig } = require('./rubricRuleEngine');
+
+let ensuredRuleColumns = false;
+let bootstrappedTeachingRules = false;
+
+const ensureRuleDrivenColumns = async () => {
+  if (ensuredRuleColumns) return;
+
+  const ensureColumn = async (columnName, definitionSql) => {
+    const [rows] = await db.query(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dofa_rubrics' AND COLUMN_NAME = ?`,
+      [columnName]
+    );
+
+    if (rows.length === 0) {
+      await db.query(`ALTER TABLE dofa_rubrics ADD COLUMN ${definitionSql}`);
+      console.log(`  Migration: added dofa_rubrics.${columnName}`);
+    }
+  };
+
+  await ensureColumn('scoring_type', "scoring_type VARCHAR(20) NOT NULL DEFAULT 'manual'");
+  await ensureColumn('per_unit_marks', 'per_unit_marks DECIMAL(10,2) NULL');
+  await ensureColumn('dynamic_section_id', 'dynamic_section_id INT NULL');
+  await ensureColumn('rule_config', 'rule_config JSON NULL');
+  await ensureColumn('data_source', 'data_source VARCHAR(64) NULL');
+
+  ensuredRuleColumns = true;
+};
+
+const buildTeachingFeedbackFilters = (subSectionText = '') => {
+  const text = String(subSectionText || '').toLowerCase();
+  const compact = text.replace(/\s+/g, '');
+  const filters = [];
+
+  if (text.includes('greater than or equal to 50') || compact.includes('>=50')) {
+    filters.push({ field: 'enrollment', op: '>=', value: 50 });
+  } else if (text.includes('less than 50') || compact.includes('<50')) {
+    filters.push({ field: 'enrollment', op: '<', value: 50 });
+  }
+
+  const rangeMatch = text.match(/([0-9]+(?:\.[0-9]+)?)\s*<=?\s*feedback\s*<\s*([0-9]+(?:\.[0-9]+)?)/i);
+  if (rangeMatch) {
+    filters.push({ field: 'feedback_score', op: '>=', value: Number(rangeMatch[1]) });
+    filters.push({ field: 'feedback_score', op: '<', value: Number(rangeMatch[2]) });
+    return filters;
+  }
+
+  const gteMatch = text.match(/feedback\s*>=\s*([0-9]+(?:\.[0-9]+)?)/i)
+    || text.match(/([0-9]+(?:\.[0-9]+)?)\s*<=?\s*feedback/i);
+  if (gteMatch) {
+    filters.push({ field: 'feedback_score', op: '>=', value: Number(gteMatch[1]) });
+  }
+
+  const ltMatch = text.match(/feedback\s*<\s*([0-9]+(?:\.[0-9]+)?)/i);
+  if (ltMatch) {
+    filters.push({ field: 'feedback_score', op: '<', value: Number(ltMatch[1]) });
+  }
+
+  return filters;
+};
+
+const bootstrapTeachingFeedbackRuleConfigs = async () => {
+  if (bootstrappedTeachingRules) return;
+
+  const [rows] = await db.query(
+    `SELECT id, section_name, sub_section, max_marks, scoring_type, rule_config
+     FROM dofa_rubrics
+     WHERE LOWER(section_name) LIKE '%teaching feedback%'`
+  );
+
+  for (const row of rows) {
+    if (row.rule_config) continue;
+
+    const filters = buildTeachingFeedbackFilters(row.sub_section || '');
+    if (filters.length === 0) continue;
+
+    const ruleConfig = {
+      ruleType: 'count',
+      sourceTable: 'courses_taught',
+      filters,
+      scorePerMatch: 'MAX',
+      allowExceedMax: true
+    };
+
+    await db.query(
+      `UPDATE dofa_rubrics
+       SET scoring_type = 'rule', data_source = 'courses_taught', rule_config = ?
+       WHERE id = ?`,
+      [JSON.stringify(ruleConfig), row.id]
+    );
+  }
+
+  bootstrappedTeachingRules = true;
+};
 
 /**
  * Auto-allocates marks per rubric for a submitted faculty appraisal.
@@ -25,9 +121,14 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
     console.log(`\n=== Auto-Allocating Marks ===`);
     console.log(`  Submission: ${submissionId} | Faculty: ${facultyId} | Year: ${academicYear}`);
 
+    await ensureRuleDrivenColumns();
+    await bootstrapTeachingFeedbackRuleConfigs();
+
     // ── Fetch all rubrics ──────────────────────────────────────────────────
     const [rubrics] = await db.query(
-      'SELECT id, section_name, sub_section, max_marks FROM dofa_rubrics ORDER BY id ASC'
+      `SELECT id, section_name, sub_section, max_marks, scoring_type, per_unit_marks, dynamic_section_id, rule_config, data_source
+       FROM dofa_rubrics
+       ORDER BY id ASC`
     );
 
     // Resolve all possible faculty identifiers used across legacy/current tables.
@@ -75,17 +176,79 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       otherActivities = [];
     }
 
+    let dynamicResponses = [];
+    try {
+      const [rows] = await db.query(
+        `SELECT dr.*, df.section_id, df.label AS field_label, ds.title AS section_title
+         FROM dynamic_responses dr
+         JOIN dynamic_fields df ON df.id = dr.field_id
+         JOIN dynamic_sections ds ON ds.id = df.section_id
+         WHERE dr.faculty_id IN (${placeholders})
+           AND (dr.submission_id = ? OR dr.submission_id IS NULL)`,
+        [...facultyIds, submissionId]
+      );
+      dynamicResponses = rows;
+    } catch (_) {
+      dynamicResponses = [];
+    }
+
     // ── Helper: safely parse float ─────────────────────────────────────────
     const f = (v) => parseFloat(v) || 0;
     const norm = (v) => String(v || '').toLowerCase();
+    const parseResponseValue = (raw) => {
+      if (raw === null || raw === undefined) return null;
+      if (typeof raw === 'object') return raw;
+      if (typeof raw === 'string') {
+        try {
+          return JSON.parse(raw);
+        } catch (_) {
+          return raw;
+        }
+      }
+      return raw;
+    };
+
+    const hasMeaningfulValue = (value) => {
+      if (value === null || value === undefined) return false;
+      if (typeof value === 'string') return value.trim() !== '';
+      if (typeof value === 'number') return true;
+      if (typeof value === 'boolean') return value;
+      if (Array.isArray(value)) {
+        return value.some(row => hasMeaningfulValue(row));
+      }
+      if (typeof value === 'object') {
+        return Object.values(value).some(v => hasMeaningfulValue(v));
+      }
+      return false;
+    };
 
     // ── Build score map: rubricId → score ──────────────────────────────────
     const scoreMap = {};
 
+    const dataSources = {
+      research_publications: publications,
+      courses_taught: courses,
+      new_courses: newCourses,
+      research_grants: grants,
+      patents,
+      consultancy,
+      awards_honours: awards,
+      submitted_proposals: proposals,
+      technology_transfer: techTransfer,
+      paper_reviews: reviews,
+      keynotes_talks: talks,
+      conference_sessions: sessions,
+      institutional_contributions: contribs,
+      teaching_innovation: teachingInnovation,
+      research_guidance: guidance,
+      other_activities: otherActivities,
+      dynamic_responses: dynamicResponses
+    };
+
     // ── Pre-compute Teaching Feedback scores (IDs 1-6) ────────────────────
     // Get the 6 Teaching Feedback rubrics sorted by ID.
     const tfRubrics = rubrics
-      .filter(r => r.section_name.toLowerCase().includes('teaching feedback'))
+      .filter(r => r.section_name.toLowerCase().includes('teaching feedback') && String(r.scoring_type || 'manual').toLowerCase() !== 'rule')
       .sort((a, b) => a.id - b.id); // IDs 1→6 in order
 
     if (tfRubrics.length === 6) {
@@ -146,6 +309,48 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       const sub = (rubric.sub_section || '').toLowerCase();
       const max = f(rubric.max_marks);
       let score = 0;
+
+      const scoringType = String(rubric.scoring_type || 'manual').toLowerCase();
+      const linkedResponses = dynamicResponses.filter((resp) =>
+        rubric.dynamic_section_id
+          ? Number(resp.section_id) === Number(rubric.dynamic_section_id)
+          : false
+      );
+
+      if (scoringType === 'count_based') {
+        const nonEmptyCount = linkedResponses.filter((resp) => {
+          const value = parseResponseValue(resp.value);
+          return hasMeaningfulValue(value);
+        }).length;
+
+        const perUnit = f(rubric.per_unit_marks);
+        scoreMap[rubric.id] = Math.min(nonEmptyCount * perUnit, max);
+        continue;
+      }
+
+      if (scoringType === 'text_exists') {
+        const exists = linkedResponses.some((resp) => {
+          const value = parseResponseValue(resp.value);
+          return hasMeaningfulValue(value);
+        });
+
+        scoreMap[rubric.id] = exists ? max : 0;
+        continue;
+      }
+
+      const isRuleDriven = String(rubric.scoring_type || 'manual').toLowerCase() === 'rule' && rubric.rule_config;
+      if (isRuleDriven) {
+        const ruleEval = evaluateRuleConfig({
+          ruleConfig: rubric.rule_config,
+          dataSources,
+          rubric
+        });
+
+        if (ruleEval.applied) {
+          scoreMap[rubric.id] = Math.max(0, f(ruleEval.score));
+          continue;
+        }
+      }
 
       // ── 1. Teaching Feedback (IDs 1-6) ────────────────────────────────
       // Scores already computed and injected into scoreMap above.

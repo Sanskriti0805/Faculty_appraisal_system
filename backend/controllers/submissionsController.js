@@ -4,11 +4,27 @@ const emailService = require('../services/emailService');
 const xlsx = require('xlsx');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 
+async function getTargetAcademicYear() {
+  const [sessionRows] = await db.query(
+    `SELECT academic_year
+     FROM appraisal_sessions
+     WHERE status = 'open'
+     ORDER BY is_released DESC, created_at DESC, id DESC
+     LIMIT 1`
+  );
+
+  if (sessionRows.length > 0 && sessionRows[0].academic_year) {
+    return sessionRows[0].academic_year;
+  }
+
+  return getCurrentAcademicYear();
+}
+
 // GET /api/submissions/my — get or create draft submission for logged-in faculty
 exports.getMySubmission = async (req, res) => {
   try {
     const facultyId = req.user.id;
-    const academicYear = getCurrentAcademicYear();
+    const academicYear = await getTargetAcademicYear();
 
     // Find existing submission for this faculty + year
     const [rows] = await db.query(

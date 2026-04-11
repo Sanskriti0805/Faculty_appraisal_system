@@ -267,6 +267,11 @@ CREATE TABLE IF NOT EXISTS dofa_rubrics (
     sub_section VARCHAR(1000),
     max_marks DECIMAL(10, 2),
     weightage DECIMAL(10, 2) DEFAULT NULL,
+    scoring_type VARCHAR(20) NOT NULL DEFAULT 'manual',
+    per_unit_marks DECIMAL(10,2) DEFAULT NULL,
+    dynamic_section_id INT DEFAULT NULL,
+    data_source VARCHAR(64) DEFAULT NULL,
+    rule_config JSON DEFAULT NULL,
     academic_year VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

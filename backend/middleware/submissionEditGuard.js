@@ -11,6 +11,22 @@ function safeJsonParse(value) {
   }
 }
 
+async function getTargetAcademicYear() {
+  const [sessionRows] = await db.query(
+    `SELECT academic_year
+     FROM appraisal_sessions
+     WHERE status = 'open'
+     ORDER BY is_released DESC, created_at DESC, id DESC
+     LIMIT 1`
+  );
+
+  if (sessionRows.length > 0 && sessionRows[0].academic_year) {
+    return { academicYear: sessionRows[0].academic_year, fromSession: true };
+  }
+
+  return { academicYear: getCurrentAcademicYear(), fromSession: false };
+}
+
 function getCurrentAcademicYear() {
   const now = new Date();
   const month = now.getMonth() + 1;
@@ -46,7 +62,7 @@ function requireSectionEditAccess(sectionKey) {
         req.body.faculty_id = facultyId;
       }
 
-      const currentYear = getCurrentAcademicYear();
+      const { academicYear, fromSession } = await getTargetAcademicYear();
 
       // Prefer current academic year; fallback to latest submission if none in current year.
       let [rows] = await db.query(
@@ -55,10 +71,10 @@ function requireSectionEditAccess(sectionKey) {
          WHERE faculty_id = ? AND academic_year = ?
          ORDER BY id DESC
          LIMIT 1`,
-        [facultyId, currentYear]
+        [facultyId, academicYear]
       );
 
-      if (rows.length === 0) {
+      if (!fromSession && rows.length === 0) {
         [rows] = await db.query(
           `SELECT id, status, academic_year
            FROM submissions

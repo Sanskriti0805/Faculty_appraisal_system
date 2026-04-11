@@ -60,6 +60,17 @@ exports.runMigrations = async () => {
     await ensureColumn('research_publications', 'evidence_file', "evidence_file VARCHAR(255) NULL COMMENT 'Path to uploaded evidence file'");
     await ensureColumn('research_publications', 'status', "status ENUM('draft','submitted') DEFAULT 'draft'");
 
+    // Form builder v2 columns
+    await ensureColumn('dynamic_sections', 'parent_id', 'parent_id INT NULL');
+    await ensureColumn('dynamic_sections', 'description', 'description TEXT NULL');
+
+    // Rule-driven rubric columns
+    await ensureColumn('dofa_rubrics', 'scoring_type', "scoring_type VARCHAR(20) NOT NULL DEFAULT 'manual'");
+    await ensureColumn('dofa_rubrics', 'per_unit_marks', 'per_unit_marks DECIMAL(10,2) NULL');
+    await ensureColumn('dofa_rubrics', 'dynamic_section_id', 'dynamic_section_id INT NULL');
+    await ensureColumn('dofa_rubrics', 'data_source', 'data_source VARCHAR(64) NULL');
+    await ensureColumn('dofa_rubrics', 'rule_config', 'rule_config JSON NULL');
+
     console.log('✅ Migration: archive columns ensured');
   } catch (err) {
     console.log('ℹ️  Migration note:', err.message);

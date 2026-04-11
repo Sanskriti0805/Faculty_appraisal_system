@@ -6,6 +6,7 @@ import apiClient from '../services/api';
 
 const SCORING_TYPES = [
   { value: 'manual',      label: 'Manual',      desc: 'DOFA enters score manually' },
+  { value: 'rule',        label: 'Rule-Driven', desc: 'Calculated from rule configuration' },
   { value: 'count_based', label: 'Count-Based', desc: 'Rows × per-unit marks (auto)' },
   { value: 'text_exists', label: 'Text Exists', desc: 'Full marks if field is filled' },
 ];
@@ -63,7 +64,12 @@ const RubricsManagement = () => {
     try {
       const response = await apiClient.get('/rubrics');
       if (response.success) {
-        setRubrics(response.data.map(r => ({ ...r, _isNew: false })));
+        setRubrics(response.data.map(r => ({
+          ...r,
+          rule_config: r.rule_config || null,
+          data_source: r.data_source || null,
+          _isNew: false
+        })));
       }
     } catch (error) {
       console.error('Error fetching rubrics:', error);
@@ -99,6 +105,8 @@ const RubricsManagement = () => {
       scoring_type: 'manual',
       per_unit_marks: null,
       dynamic_section_id: null,
+      data_source: null,
+      rule_config: null,
     };
     setRubrics(prev => [...prev, newRow]);
   };
@@ -115,6 +123,8 @@ const RubricsManagement = () => {
       scoring_type: 'manual',
       per_unit_marks: null,
       dynamic_section_id: null,
+      data_source: null,
+      rule_config: null,
     };
     setRubrics(prev => [...prev, newRow]);
     setExpandedSections(prev => ({ ...prev, [sectionName]: true }));
@@ -176,6 +186,10 @@ const RubricsManagement = () => {
         showToast('Max marks must be a valid number', 'error');
         return;
       }
+      if ((row.scoring_type || '').toLowerCase() === 'rule' && !row.rule_config) {
+        showToast(`Rule config missing for "${row.sub_section || row.section_name}"`, 'error');
+        return;
+      }
     }
 
     setSaving(true);
@@ -197,6 +211,8 @@ const RubricsManagement = () => {
           scoring_type: row.scoring_type || 'manual',
           per_unit_marks: row.per_unit_marks !== null && row.per_unit_marks !== '' ? parseFloat(row.per_unit_marks) : null,
           dynamic_section_id: row.dynamic_section_id || null,
+          data_source: row.data_source || null,
+          rule_config: row.rule_config || null,
         };
 
         if (row._isNew) {
