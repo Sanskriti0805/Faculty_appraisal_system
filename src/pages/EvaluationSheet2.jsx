@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
 import './EvaluationSheet2.css';
 
 const EvaluationSheet2 = () => {
+  const location = useLocation();
+  const basePath = location.pathname.startsWith('/dofa-office') ? '/dofa-office' : '/dofa';
   const [data, setData] = useState([]);
   const [gradingParams, setGradingParams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +133,7 @@ const EvaluationSheet2 = () => {
             <h1>Evaluation - Sheet 2</h1>
             <p>Research, Teaching Feedback &amp; Consolidated Grading</p>
           </div>
-          <Link to="/dofa/sheet1" className="add-rule-btn" style={{ textDecoration: 'none' }}>
+          <Link to={`${basePath}/sheet1`} className="add-rule-btn" style={{ textDecoration: 'none' }}>
             &larr; Back to Sheet 1
           </Link>
         </div>
@@ -247,7 +249,7 @@ const EvaluationSheet2 = () => {
       </div>
 
       <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
-        <Link to="/dofa/sheet3" className="apply-grading-btn" style={{ textDecoration: 'none' }}>
+        <Link to={`${basePath}/sheet3`} className="apply-grading-btn" style={{ textDecoration: 'none' }}>
           Next - Sheet 3 &rarr;
         </Link>
       </div>

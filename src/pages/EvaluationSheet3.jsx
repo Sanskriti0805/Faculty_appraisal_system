@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
 import './EvaluationSheet3.css';
 
 const EvaluationSheet3 = () => {
+  const location = useLocation();
+  const basePath = location.pathname.startsWith('/dofa-office') ? '/dofa-office' : '/dofa';
   const [data, setData] = useState([]);
   const [gradeIncrements, setGradeIncrements] = useState({});
   const [availableGrades, setAvailableGrades] = useState([]);
@@ -77,7 +79,7 @@ const EvaluationSheet3 = () => {
             <h1>Evaluation — Sheet 3</h1>
             <p>Grade-based Salary Increments Summary</p>
           </div>
-          <Link to="/dofa/sheet2" className="back-btn">
+          <Link to={`${basePath}/sheet2`} className="back-btn">
             &larr; Back to Sheet 2
           </Link>
         </div>

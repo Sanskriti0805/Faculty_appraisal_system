@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
 import './EvaluationSheet.css';
 
 const EvaluationSheet = () => {
+  const location = useLocation();
+  const basePath = location.pathname.startsWith('/dofa-office') ? '/dofa-office' : '/dofa';
   const [rubrics, setRubrics] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [scores, setScores] = useState({});
@@ -289,7 +291,7 @@ const EvaluationSheet = () => {
       </div>
 
       <div className="eval-footer">
-        <Link to="/dofa/sheet2" className="eval-next-btn">
+        <Link to={`${basePath}/sheet2`} className="eval-next-btn">
           Next - Sheet 2 &rarr;
         </Link>
       </div>
