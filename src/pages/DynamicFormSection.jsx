@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
-import { Plus, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Cloud, CheckCircle2, Loader } from 'lucide-react';
 import apiClient from '../services/api';
 import './DynamicFormSection.css';
 import FormActions from '../components/FormActions';
@@ -15,10 +15,41 @@ const DynamicFormSection = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  // autosave: 'idle' | 'saving' | 'saved' | 'error'
+  const [autosaveStatus, setAutosaveStatus] = useState('idle');
+  const autosaveTimer = useRef(null);
+  const isFirstLoad = useRef(true); // don't autosave on initial data load
 
   useEffect(() => {
     fetchData();
   }, [sectionId, user]);
+
+  // ── Debounced autosave ──────────────────────────────────────────────────────
+  // Fires 2 seconds after the user stops making changes.
+  // Skipped on the very first load (when responses are populated from the DB).
+  useEffect(() => {
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      return;
+    }
+    if (Object.keys(responses).length === 0) return;
+
+    // Clear any pending timer
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+
+    autosaveTimer.current = setTimeout(async () => {
+      setAutosaveStatus('saving');
+      const success = await handleSave(true); // true = silent (no toast)
+      setAutosaveStatus(success ? 'saved' : 'error');
+      // Reset back to idle after 3s
+      setTimeout(() => setAutosaveStatus('idle'), 3000);
+    }, 2000);
+
+    // Cleanup on unmount or re-run
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+  }, [responses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     try {
@@ -76,10 +107,11 @@ const DynamicFormSection = () => {
     handleInputChange(fieldId, currentTable.filter((_, i) => i !== rowIndex));
   };
 
-  const handleSave = async () => {
+  // silent=true → skip toast (used by autosave)
+  const handleSave = async (silent = false) => {
     try {
       if (!user?.id) {
-        showToast('Unable to identify logged-in faculty. Please login again.', 'error');
+        if (!silent) showToast('Unable to identify logged-in faculty. Please login again.', 'error');
         return false;
       }
       setSaving(true);
@@ -94,12 +126,12 @@ const DynamicFormSection = () => {
       });
 
       if (res.success) {
-        showToast('Data saved successfully');
+        if (!silent) showToast('Data saved successfully');
         return true;
       }
       return false;
     } catch (error) {
-      showToast('Error saving data', 'error');
+      if (!silent) showToast('Error saving data', 'error');
       return false;
     } finally {
       setSaving(false);
@@ -108,6 +140,18 @@ const DynamicFormSection = () => {
 
   if (loading) return <div className="dfs-loading">Loading Section...</div>;
   if (!section) return <div className="dfs-error">Section not found</div>;
+
+  // ── Autosave indicator ─────────────────────────────────────────────────────
+  const AutosaveIndicator = () => {
+    if (autosaveStatus === 'idle') return null;
+    return (
+      <div className={`dfs-autosave dfs-autosave--${autosaveStatus}`}>
+        {autosaveStatus === 'saving' && <><Loader size={13} className="dfs-spin" /> Saving…</>}
+        {autosaveStatus === 'saved'  && <><CheckCircle2 size={13} /> Saved</>}
+        {autosaveStatus === 'error'  && <><AlertCircle size={13} /> Save failed</>}
+      </div>
+    );
+  };
 
   return (
     <div className="dynamic-form-section">
@@ -118,6 +162,7 @@ const DynamicFormSection = () => {
           <h1>{section.title}</h1>
           <p>Please provide the required information below.</p>
         </div>
+        <AutosaveIndicator />
       </div>
 
       <div className="dfs-content">

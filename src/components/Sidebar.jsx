@@ -57,18 +57,35 @@ const Sidebar = () => {
 
     const run = async () => {
       try {
-        const subRes = await fetch(`http://${window.location.hostname}:5000/api/submissions/my`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        const subData = await subRes.json()
-        if (!subData.success || !subData.data) {
+        // Step 1: find out which academic year the ACTIVE session is for
+        const sessionRes = await fetch(`http://${window.location.hostname}:5000/api/sessions/active`)
+        const sessionData = await sessionRes.json()
+        const activeYear = sessionData?.data?.academic_year
+
+        if (!activeYear) {
+          // No active session — unlock everything (nothing to submit)
           setSubmissionStatus(null)
           setApprovedSections([])
           setHasSectionRestrictions(false)
           return
         }
 
-        const submission = subData.data
+        // Step 2: fetch this faculty's submission for ONLY the active session year
+        const subRes = await fetch(
+          `http://${window.location.hostname}:5000/api/submissions?faculty_id=${user.id}&academic_year=${encodeURIComponent(activeYear)}&limit=1`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        const subData = await subRes.json()
+
+        if (!subData.success || !subData.data || subData.data.length === 0) {
+          // No submission for current year yet — treat as draft (all sections open)
+          setSubmissionStatus('draft')
+          setApprovedSections([])
+          setHasSectionRestrictions(false)
+          return
+        }
+
+        const submission = subData.data[0]
         setSubmissionStatus(submission.status)
 
         if (submission.status !== 'sent_back') {

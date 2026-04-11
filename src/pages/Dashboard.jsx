@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileText, Clock, AlertTriangle, CheckCircle, CalendarOff, Calendar, Archive, Send } from 'lucide-react'
 import './Dashboard.css'
@@ -10,17 +10,34 @@ const Dashboard = () => {
   const [sessionInfo, setSessionInfo] = useState(null)
   const [loading, setLoading] = useState(true)
   const [lastSubmission, setLastSubmission] = useState(null)
+  const [activeSessionYear, setActiveSessionYear] = useState(null)
 
   useEffect(() => {
     fetchSessionStatus()
-    fetchLastSubmission()
+
+    // Auto-poll every 30 s so the page updates when DOFA releases forms
+    // without requiring a manual refresh
+    const pollInterval = setInterval(() => {
+      fetchSessionStatus()
+    }, 30000)
+    return () => clearInterval(pollInterval)
   }, [])
+
+  // Once we know the active session year, fetch the submission for THAT year only
+  useEffect(() => {
+    if (activeSessionYear) fetchLastSubmission(activeSessionYear)
+  }, [activeSessionYear])
 
   const fetchSessionStatus = async () => {
     try {
       const res = await fetch(`${API}/sessions/active`)
       const data = await res.json()
-      if (data.success) setSessionInfo(data)
+      if (data.success) {
+        setSessionInfo(data)
+        if (data.data?.academic_year) {
+          setActiveSessionYear(data.data.academic_year)
+        }
+      }
     } catch (error) {
       console.error('Error fetching session status:', error)
     } finally {
@@ -28,14 +45,19 @@ const Dashboard = () => {
     }
   }
 
-  const fetchLastSubmission = async () => {
+  const fetchLastSubmission = async (academicYear) => {
     try {
       const user = JSON.parse(localStorage.getItem('auth_user') || '{}')
       if (!user.id) return
-      const res = await fetch(`${API}/submissions?faculty_id=${user.id}&limit=1`)
+      // Filter by the CURRENT session's academic year so a previous year's
+      // submission doesn't appear as "submitted" for the new session
+      const yearParam = academicYear ? `&academic_year=${encodeURIComponent(academicYear)}` : ''
+      const res = await fetch(`${API}/submissions?faculty_id=${user.id}&limit=1${yearParam}`)
       const data = await res.json()
       if (data.success && data.data && data.data.length > 0) {
         setLastSubmission(data.data[0])
+      } else {
+        setLastSubmission(null)   // no submission for this year yet
       }
     } catch (err) { /* silently fail */ }
   }

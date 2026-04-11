@@ -113,12 +113,38 @@
 
 /* Table tweaks for rubrics */
 .rubrics-table td {
-  vertical-align: top;
-  padding: 10px 14px;
+  vertical-align: middle;
+  padding: 8px 12px;
+  font-size: 0.85rem;
 }
 
 .rubrics-table th {
   white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+/* Scoring type + linked section selects */
+.rubric-scoring-select {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: #f8fafc;
+  color: #1e293b;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.rubric-scoring-select:focus {
+  border-color: #2563eb;
+  background: white;
+}
+
+.rubric-scoring-select:hover {
+  border-color: #93c5fd;
 }
 
 /* Recalculate Popup Modal */
@@ -174,3 +200,89 @@
 .rubric-modal-content .modal-suggestion p {
   margin: 0;
 }
+
+/* -- Section header row ----------------------------------------------- */
+
+.rubric-section-header-row {
+  background: linear-gradient(90deg, #e8edf7 0%, #eef1f8 100%);
+  border-top: 2px solid #c7d2e8;
+}
+
+.rubric-section-header-row td {
+  padding: 10px 14px;
+  vertical-align: middle;
+}
+
+/* Left cell: clickable expand area */
+.rubric-section-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rubric-chevron {
+  font-size: 0.72rem;
+  color: #64748b;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.rubric-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.rubric-item-count {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+/* Shared section input when renaming */
+.rubric-section-input {
+  font-weight: 700;
+  font-size: 0.95rem;
+  background: #fff;
+  border: 1.5px solid #3b82f6 !important;
+  border-radius: 5px;
+  padding: 4px 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Right cell: action buttons, aligned right */
+.rubric-section-actions-cell {
+  text-align: right;
+  white-space: nowrap;
+  width: 1%;
+  padding-right: 10px !important;
+}
+
+.rubric-sec-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 5px;
+  margin-left: 4px;
+  transition: background 0.15s;
+}
+
+.rubric-sec-btn--add  { color: #059669; }
+.rubric-sec-btn--add:hover  { background: #d1fae5; }
+
+.rubric-sec-btn--edit { color: #2563eb; }
+.rubric-sec-btn--edit:hover { background: #dbeafe; }
+
+.rubric-sec-btn--del  { color: #dc2626; }
+.rubric-sec-btn--del:hover  { background: #fee2e2; }

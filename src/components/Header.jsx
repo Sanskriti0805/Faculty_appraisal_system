@@ -60,15 +60,35 @@ const Header = ({ onLogout }) => {
     }
   }
 
+  // ── First-login password reminder toast ──────────────────────────────────
+  // Key is per-user so it only ever shows once per account, not per browser session.
+  const reminderKey = user ? `pwd_hint_seen_${user.id}` : null
+  const alreadySeen = reminderKey ? !!localStorage.getItem(reminderKey) : true
+  const [showReminder, setShowReminder] = useState(false)
+
+  React.useEffect(() => {
+    if (!reminderKey || alreadySeen) return
+    // Appear 1.5 s after page load so it doesn't clash with the initial render
+    const t = setTimeout(() => setShowReminder(true), 1500)
+    return () => clearTimeout(t)
+  }, [reminderKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const dismissReminder = () => {
+    setShowReminder(false)
+    if (reminderKey) localStorage.setItem(reminderKey, '1')
+  }
+
+  const openSettingsFromReminder = () => {
+    dismissReminder()
+    setShowSettings(true)
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   return (
     <>
       <header className="header">
         <div className="header-logo-container">
-          <img
-            src="/lnmiit-logo.png"
-            alt="LNMIIT"
-            className="header-logo"
-          />
+          <img src="/lnmiit-logo.png" alt="LNMIIT" className="header-logo" />
         </div>
         <h1 className="header-title">Faculty Appraisal System</h1>
         <div className="header-actions">
@@ -95,6 +115,31 @@ const Header = ({ onLogout }) => {
         </div>
       </header>
 
+      {/* ── First-login password reminder toast ─────────────────────────── */}
+      {showReminder && (
+        <div className="pwd-reminder-toast" role="alert">
+          <span className="pwd-reminder-icon">🔐</span>
+          <div className="pwd-reminder-body">
+            <p className="pwd-reminder-title">Update your default password</p>
+            <p className="pwd-reminder-sub">
+              You're using a system-assigned password. We recommend setting your own from Account Settings.
+            </p>
+            <div className="pwd-reminder-actions">
+              <button className="pwd-reminder-btn-primary" onClick={openSettingsFromReminder}>
+                Change Now
+              </button>
+              <button className="pwd-reminder-btn-dismiss" onClick={dismissReminder}>
+                Maybe later
+              </button>
+            </div>
+          </div>
+          <button className="pwd-reminder-close" onClick={dismissReminder} aria-label="Dismiss">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* ── Account Settings Modal ───────────────────────────────────────── */}
       {showSettings && (
         <div className="admin-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowSettings(false) }}>
           <div className="admin-modal" style={{ maxWidth: '400px' }}>
@@ -105,7 +150,7 @@ const Header = ({ onLogout }) => {
             <form onSubmit={handlePasswordSubmit}>
               <div className="admin-modal-body">
                 <h3 style={{ fontSize: '15px', color: '#2d3748', margin: '0 0 16px 0', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Change Password</h3>
-                
+
                 {message && (
                   <div className={isError ? "admin-form-error" : "admin-form-success"} style={{ margin: '0 0 16px 0' }}>
                     {isError ? <AlertCircle size={15} /> : <CheckCircle size={15} />}

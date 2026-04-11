@@ -4,8 +4,15 @@ import './RubricsManagement.css';
 
 import apiClient from '../services/api';
 
+const SCORING_TYPES = [
+  { value: 'manual',      label: 'Manual',      desc: 'DOFA enters score manually' },
+  { value: 'count_based', label: 'Count-Based', desc: 'Rows × per-unit marks (auto)' },
+  { value: 'text_exists', label: 'Text Exists', desc: 'Full marks if field is filled' },
+];
+
 const RubricsManagement = () => {
   const [rubrics, setRubrics] = useState([]);
+  const [dynamicSections, setDynamicSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editCell, setEditCell] = useState(null); // { rowIndex, field }
@@ -21,6 +28,7 @@ const RubricsManagement = () => {
 
   useEffect(() => {
     fetchRubrics();
+    fetchDynamicSections();
   }, []);
 
   useEffect(() => {
@@ -65,6 +73,15 @@ const RubricsManagement = () => {
     }
   };
 
+  const fetchDynamicSections = async () => {
+    try {
+      const res = await apiClient.get('/form-builder/schema/flat');
+      if (res.success) setDynamicSections(res.data || []);
+    } catch (e) {
+      console.error('Could not load dynamic sections', e);
+    }
+  };
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -78,7 +95,10 @@ const RubricsManagement = () => {
       sub_section: '',
       max_marks: 0,
       weightage: '',
-      academic_year: new Date().getFullYear().toString()
+      academic_year: new Date().getFullYear().toString(),
+      scoring_type: 'manual',
+      per_unit_marks: null,
+      dynamic_section_id: null,
     };
     setRubrics(prev => [...prev, newRow]);
   };
@@ -91,10 +111,12 @@ const RubricsManagement = () => {
       sub_section: '',
       max_marks: 0,
       weightage: '',
-      academic_year: new Date().getFullYear().toString()
+      academic_year: new Date().getFullYear().toString(),
+      scoring_type: 'manual',
+      per_unit_marks: null,
+      dynamic_section_id: null,
     };
     setRubrics(prev => [...prev, newRow]);
-    // Auto-expand this section when adding an item
     setExpandedSections(prev => ({ ...prev, [sectionName]: true }));
   };
 
@@ -171,7 +193,10 @@ const RubricsManagement = () => {
           sub_section: row.sub_section,
           max_marks: parseFloat(row.max_marks) || 0,
           weightage: row.weightage !== '' ? parseFloat(row.weightage) : null,
-          academic_year: row.academic_year
+          academic_year: row.academic_year,
+          scoring_type: row.scoring_type || 'manual',
+          per_unit_marks: row.per_unit_marks !== null && row.per_unit_marks !== '' ? parseFloat(row.per_unit_marks) : null,
+          dynamic_section_id: row.dynamic_section_id || null,
         };
 
         if (row._isNew) {
@@ -267,10 +292,13 @@ const RubricsManagement = () => {
           <table className="submissions-table rubrics-table">
             <thead>
               <tr>
-                <th style={{ width: '55%' }}>Sub Section</th>
-                <th style={{ width: '15%' }}>Max Marks</th>
-                <th style={{ width: '15%' }}>Weightage</th>
-                <th style={{ width: '15%', textAlign: 'center' }}>Actions</th>
+                <th style={{ width: '28%' }}>Sub Section</th>
+                <th style={{ width: '10%' }}>Max Marks</th>
+                <th style={{ width: '10%' }}>Weightage</th>
+                <th style={{ width: '14%' }}>Scoring Type</th>
+                <th style={{ width: '10%' }}>Per Unit</th>
+                <th style={{ width: '18%' }}>Linked Section</th>
+                <th style={{ width: '10%', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -290,55 +318,47 @@ const RubricsManagement = () => {
 
                   return Object.entries(grouped).map(([sectionName, items]) => (
                     <React.Fragment key={sectionName}>
-                      <tr style={{ backgroundColor: '#e2e8f0' }}>
-                        <td colSpan={4} style={{ fontWeight: 'bold', fontSize: '1.05rem', padding: '12px 16px' }}>
+                      <tr className="rubric-section-header-row">
+                        <td colSpan={6}>
                           {editingSection === sectionName ? (
                             <input
                               ref={sectionInputRef}
-                              className="rubric-inline-input"
-                              style={{ fontWeight: 'bold', fontSize: '1.05rem', padding: '4px', width: '100%', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                              className="rubric-inline-input rubric-section-input"
                               value={editSectionValue}
                               onChange={e => setEditSectionValue(e.target.value)}
                               onBlur={handleSectionBlur}
                               onKeyDown={handleSectionKeyDown}
                             />
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <div 
-                                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', flex: 1 }} 
-                                onClick={() => setExpandedSections(prev => prev[sectionName] ? { [sectionName]: false } : { [sectionName]: true })}
-                                title="Click to expand/collapse"
-                              >
-                                <span style={{ marginRight: '10px', color: '#64748b', fontSize: '0.8rem', userSelect: 'none' }}>
-                                  {expandedSections[sectionName] ? '▼' : '▶'}
-                                </span> 
-                                {sectionName}
-                              </div>
-                              <div style={{ display: 'flex', gap: '15px' }}>
-                                <button 
-                                  onClick={() => handleAddSubSection(sectionName)}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', fontSize: '0.85rem', fontWeight: 600 }}
-                                  title="Add Sub Section to this Section"
-                                >
-                                  + Add Item
-                                </button>
-                                <button 
-                                  onClick={() => { setEditingSection(sectionName); setEditSectionValue(sectionName); }}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: '0.85rem', fontWeight: 600 }}
-                                  title="Edit Section Name"
-                                >
-                                  ✎ Edit
-                                </button>
-                                <button 
-                                  onClick={() => handleDeleteSection(sectionName)}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.85rem', fontWeight: 600 }}
-                                  title="Delete Entire Section"
-                                >
-                                  🗑 Delete
-                                </button>
-                              </div>
+                            <div
+                              className="rubric-section-name-row"
+                              onClick={() => setExpandedSections(prev => ({ ...prev, [sectionName]: !prev[sectionName] }))}
+                              title="Click to expand/collapse"
+                            >
+                              <span className="rubric-chevron">
+                                {expandedSections[sectionName] ? '▼' : '▶'}
+                              </span>
+                              <span className="rubric-section-title">{sectionName}</span>
+                              <span className="rubric-item-count">{items.length} item{items.length !== 1 ? 's' : ''}</span>
                             </div>
                           )}
+                        </td>
+                        <td className="rubric-section-actions-cell">
+                          <button
+                            className="rubric-sec-btn rubric-sec-btn--add"
+                            onClick={e => { e.stopPropagation(); handleAddSubSection(sectionName); }}
+                            title="Add sub-section"
+                          >+ Add Item</button>
+                          <button
+                            className="rubric-sec-btn rubric-sec-btn--edit"
+                            onClick={e => { e.stopPropagation(); setEditingSection(sectionName); setEditSectionValue(sectionName); }}
+                            title="Rename section"
+                          >✎ Edit</button>
+                          <button
+                            className="rubric-sec-btn rubric-sec-btn--del"
+                            onClick={e => { e.stopPropagation(); handleDeleteSection(sectionName); }}
+                            title="Delete section"
+                          >🗑 Delete</button>
                         </td>
                       </tr>
                       {expandedSections[sectionName] && items.map(row => (
@@ -346,6 +366,65 @@ const RubricsManagement = () => {
                           <td style={{ paddingLeft: '32px' }}>{renderCell(row, row.originalIndex, 'sub_section')}</td>
                           <td>{renderCell(row, row.originalIndex, 'max_marks')}</td>
                           <td>{renderCell(row, row.originalIndex, 'weightage')}</td>
+                          <td>
+                            <select
+                              className="rubric-scoring-select"
+                              value={row.scoring_type || 'manual'}
+                              onChange={e => {
+                                setRubrics(prev => {
+                                  const updated = [...prev];
+                                  updated[row.originalIndex] = { ...updated[row.originalIndex], scoring_type: e.target.value };
+                                  return updated;
+                                });
+                              }}
+                              title={SCORING_TYPES.find(s => s.value === row.scoring_type)?.desc}
+                            >
+                              {SCORING_TYPES.map(st => (
+                                <option key={st.value} value={st.value}>{st.label}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            {row.scoring_type === 'count_based' ? (
+                              <input
+                                className="rubric-inline-input"
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                value={row.per_unit_marks ?? ''}
+                                onChange={e => {
+                                  setRubrics(prev => {
+                                    const updated = [...prev];
+                                    updated[row.originalIndex] = { ...updated[row.originalIndex], per_unit_marks: e.target.value };
+                                    return updated;
+                                  });
+                                }}
+                                placeholder="pts/row"
+                                style={{ width: '70px' }}
+                              />
+                            ) : <span style={{ color: '#cbd5e1' }}>—</span>}
+                          </td>
+                          <td>
+                            <select
+                              className="rubric-scoring-select"
+                              value={row.dynamic_section_id || ''}
+                              onChange={e => {
+                                const val = e.target.value ? Number(e.target.value) : null;
+                                setRubrics(prev => {
+                                  const updated = [...prev];
+                                  updated[row.originalIndex] = { ...updated[row.originalIndex], dynamic_section_id: val };
+                                  return updated;
+                                });
+                              }}
+                            >
+                              <option value="">— none —</option>
+                              {dynamicSections.map(ds => (
+                                <option key={ds.id} value={ds.id}>
+                                  {ds.parent_id ? `↳ ${ds.title}` : ds.title} [{ds.form_type}]
+                                </option>
+                              ))}
+                            </select>
+                          </td>
                           <td style={{ textAlign: 'center' }}>
                             <button
                               className="action-btn btn-reject"

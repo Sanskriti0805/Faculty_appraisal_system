@@ -48,24 +48,30 @@ exports.getAllRubrics = async (req, res) => {
 // POST create a new rubric
 exports.createRubric = async (req, res) => {
     try {
-        const { section_name, sub_section, max_marks, weightage, academic_year } = req.body;
+        const { section_name, sub_section, max_marks, weightage, academic_year, scoring_type, per_unit_marks, dynamic_section_id } = req.body;
 
         if (!section_name) {
             return res.status(400).json({ success: false, message: 'Section name is required' });
         }
 
         const query = `
-            INSERT INTO dofa_rubrics (section_name, sub_section, max_marks, weightage, academic_year)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO dofa_rubrics 
+              (section_name, sub_section, max_marks, weightage, academic_year, scoring_type, per_unit_marks, dynamic_section_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        const values = [section_name, sub_section, max_marks, weightage, academic_year];
+        const values = [
+            section_name, sub_section, max_marks, weightage, academic_year,
+            scoring_type || 'manual',
+            per_unit_marks || null,
+            dynamic_section_id || null
+        ];
 
         const [result] = await db.query(query, values);
 
         res.status(201).json({
             success: true,
             message: 'Rubric created successfully',
-            data: { id: result.insertId, section_name, sub_section, max_marks, weightage, academic_year }
+            data: { id: result.insertId, section_name, sub_section, max_marks, weightage, academic_year, scoring_type, per_unit_marks, dynamic_section_id }
         });
     } catch (error) {
         console.error('Error creating rubric:', error);
@@ -77,7 +83,7 @@ exports.createRubric = async (req, res) => {
 exports.updateRubric = async (req, res) => {
     try {
         const { id } = req.params;
-        const { section_name, sub_section, max_marks, weightage, academic_year } = req.body;
+        const { section_name, sub_section, max_marks, weightage, academic_year, scoring_type, per_unit_marks, dynamic_section_id } = req.body;
 
         if (!section_name) {
             return res.status(400).json({ success: false, message: 'Section name is required' });
@@ -85,10 +91,17 @@ exports.updateRubric = async (req, res) => {
 
         const query = `
             UPDATE dofa_rubrics 
-            SET section_name = ?, sub_section = ?, max_marks = ?, weightage = ?, academic_year = ?
+            SET section_name = ?, sub_section = ?, max_marks = ?, weightage = ?, academic_year = ?,
+                scoring_type = ?, per_unit_marks = ?, dynamic_section_id = ?
             WHERE id = ?
         `;
-        const values = [section_name, sub_section, max_marks, weightage, academic_year, id];
+        const values = [
+            section_name, sub_section, max_marks, weightage, academic_year,
+            scoring_type || 'manual',
+            per_unit_marks || null,
+            dynamic_section_id || null,
+            id
+        ];
 
         const [result] = await db.query(query, values);
 
@@ -96,10 +109,7 @@ exports.updateRubric = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Rubric not found' });
         }
 
-        res.status(200).json({
-            success: true,
-            message: 'Rubric updated successfully'
-        });
+        res.status(200).json({ success: true, message: 'Rubric updated successfully' });
     } catch (error) {
         console.error('Error updating rubric:', error);
         res.status(500).json({ success: false, message: 'Server Error', error: error.message });

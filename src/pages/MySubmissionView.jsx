@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, FileText, Send, CheckCircle, Clock,
   AlertTriangle, ChevronDown, ChevronUp, BookOpen, Award,
-  Briefcase, Lightbulb, User, RefreshCw, ExternalLink
+  Briefcase, Lightbulb, User, RefreshCw, ExternalLink,
+  Layers, Download, Loader
 } from 'lucide-react';
 import './MySubmissionView.css';
 import { useAuth } from '../context/AuthContext';
@@ -52,6 +53,9 @@ const MySubmissionView = () => {
   const [activeTab,      setActiveTab]      = useState('faculty');
   const [editPanelOpen,  setEditPanelOpen]  = useState(false);
   const [commentView,    setCommentView]    = useState('pending');
+  // Dynamic sections filled by this faculty
+  const [dynamicData, setDynamicData] = useState([]); // [{section, fields, responses}]
+  const [pdfDownloading, setPdfDownloading] = useState(false);
 
   const [selectedSections, setSelectedSections] = useState([]);
   const [requestMessage,   setRequestMessage]   = useState('');
@@ -80,6 +84,43 @@ const MySubmissionView = () => {
       if (sessionJson.success) setSessionInfo(sessionJson);
 
       await fetchEditRequests(submission.id);
+
+      // ── Fetch dynamic sections data ──────────────────────────────────────────
+      try {
+        const [schemaRes, respRes] = await Promise.all([
+          fetch(`${API}/form-builder/schema`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API}/form-builder/responses?faculty_id=${user?.id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        const schemaJson = await schemaRes.json();
+        const respJson   = await respRes.json();
+
+        if (schemaJson.success && respJson.success) {
+          // Build a map of field_id → value from responses
+          const respMap = {};
+          respJson.data.forEach(r => {
+            // value stored as JSON string in DB, parse if needed
+            respMap[r.field_id] = typeof r.value === 'string' ? JSON.parse(r.value) : r.value;
+          });
+
+          // Only keep sections/fields that have at least one response
+          const built = [];
+          const walkSections = (sections) => {
+            sections.forEach(sec => {
+              const fieldsWithData = (sec.fields || []).filter(f => respMap[f.id] !== undefined && respMap[f.id] !== null);
+              if (fieldsWithData.length > 0) {
+                built.push({ section: sec, fields: fieldsWithData, respMap });
+              }
+              // recurse into children (subsections)
+              if (sec.children?.length) walkSections(sec.children);
+            });
+          };
+          walkSections(schemaJson.data || []);
+          setDynamicData(built);
+        }
+      } catch (dynErr) {
+        console.warn('Could not load dynamic sections:', dynErr);
+      }
+
     } catch (err) {
       console.error('Error loading submission view:', err);
     } finally {
@@ -145,6 +186,30 @@ const MySubmissionView = () => {
   const canRequestEdits  =
     submissionData?.submission?.status === 'submitted' &&
     !isPastDeadline && !pendingRequest;
+
+  /* ── PDF download ── */
+  const handleDownloadPdf = async () => {
+    const subId = submissionData?.submission?.id;
+    if (!subId) return;
+    setPdfDownloading(true);
+    try {
+      const res = await fetch(`${API}/submissions/${subId}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('PDF generation failed');
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `Appraisal_${submissionData?.submission?.academic_year || 'report'}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Could not generate PDF: ' + err.message);
+    } finally {
+      setPdfDownloading(false);
+    }
+  };
 
   /* ── Helpers ── */
   const formatDate = (d) =>
@@ -306,6 +371,13 @@ const MySubmissionView = () => {
     { key: 'consultancy',  label: 'Consultancy',        icon: <Briefcase size={14} />, count: consultancy?.length },
     { key: 'innovation',   label: 'Innovation',         icon: <Lightbulb size={14} /> },
     { key: 'partb',        label: 'Part B',             icon: <CheckCircle size={14} /> },
+    // Only show the dynamic tab if there is any data
+    ...(dynamicData.length > 0 ? [{
+      key: 'dynamic',
+      label: 'Custom Sections',
+      icon: <Layers size={14} />,
+      count: dynamicData.length
+    }] : []),
   ];
 
   return (
@@ -320,9 +392,21 @@ const MySubmissionView = () => {
           <h1 className="msv-title">My Submitted Form</h1>
           <p className="msv-subtitle">Academic Year: {submission.academic_year}</p>
         </div>
-        <span className={`msv-status-badge badge-${submission.status}`}>
-          <CheckCircle size={12} /> {statusLabel}
-        </span>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <span className={`msv-status-badge badge-${submission.status}`}>
+            <CheckCircle size={12} /> {statusLabel}
+          </span>
+          <button
+            className="msv-pdf-btn"
+            onClick={handleDownloadPdf}
+            disabled={pdfDownloading}
+            title="Download full appraisal as PDF"
+          >
+            {pdfDownloading
+              ? <><Loader size={14} className="msv-pdf-spin" /> Generating PDF…</>
+              : <><Download size={14} /> Download PDF</>}
+          </button>
+        </div>
       </div>
 
       {/* ── Status Bar ── */}
@@ -573,6 +657,63 @@ const MySubmissionView = () => {
             <>
               <h3 className="msv-section-title"><CheckCircle size={17} /> Part B — Goal Setting</h3>
               {renderGoalsBySemester()}
+            </>
+          )}
+
+          {/* ── Dynamic / Custom Sections ── */}
+          {activeTab === 'dynamic' && (
+            <>
+              <h3 className="msv-section-title"><Layers size={17} /> Custom Sections</h3>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.5rem' }}>
+                These sections were added by the DOFA office specifically for your college's appraisal form.
+              </p>
+              {dynamicData.map(({ section, fields, respMap }) => (
+                <div key={section.id} className="msv-data-section" style={{ marginBottom: '2rem' }}>
+                  <h4 className="msv-subsection-title">
+                    {section.title}
+                    <span style={{ marginLeft: '0.5rem', padding: '0.1rem 0.45rem', background: '#e0e7ff', color: '#3730a3', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700 }}>
+                      Form {section.form_type}
+                    </span>
+                  </h4>
+                  {fields.map(field => {
+                    const value = respMap[field.id];
+
+                    // Table field — render as a proper table
+                    if (field.field_type === 'table' && Array.isArray(value) && value.length > 0) {
+                      const cols = field.config?.columns || [];
+                      return (
+                        <div key={field.id} style={{ marginBottom: '1rem' }}>
+                          <p style={{ fontWeight: 600, fontSize: '0.9rem', color: '#334155', marginBottom: '0.5rem' }}>{field.label}</p>
+                          <div className="msv-table-wrap">
+                            <table className="msv-table">
+                              <thead>
+                                <tr>{cols.map(c => <th key={c.key}>{c.header}</th>)}</tr>
+                              </thead>
+                              <tbody>
+                                {value.map((row, ri) => (
+                                  <tr key={ri}>
+                                    {cols.map(c => <td key={c.key}>{row[c.key] ?? '—'}</td>)}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Text / textarea / comment field
+                    return (
+                      <div key={field.id} className="msv-info-item" style={{ marginBottom: '0.75rem' }}>
+                        <label>{field.label}</label>
+                        <p style={{ whiteSpace: 'pre-wrap' }}>
+                          {Array.isArray(value) ? value.join(', ') : String(value ?? '—')}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </>
           )}
 

@@ -315,10 +315,6 @@ exports.getSheet3Data = async (req, res) => {
         SELECT MAX(e3x.id)
         FROM dofa_evaluation_sheet3 e3x
         WHERE e3x.submission_id = s.id
-          AND (
-            (e3x.final_grade = e2.final_grade)
-            OR (e2.final_grade IS NULL AND e3x.final_grade IS NULL)
-          )
       )
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
       ORDER BY u.name ASC
