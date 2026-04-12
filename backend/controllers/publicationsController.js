@@ -163,6 +163,7 @@ exports.createPublication = async (req, res) => {
       title_of_book,
       publication_id,
       details,
+      existing_evidence_file,
       authors,
       editors,
       status = 'draft'
@@ -180,9 +181,26 @@ exports.createPublication = async (req, res) => {
 
     const parsedAuthors = parseJsonArrayField(authors);
     const parsedEditors = parseJsonArrayField(editors);
+    const normalizedDateFrom = date_from && String(date_from).trim() !== '' ? date_from : null;
+    const normalizedDateTo = date_to && String(date_to).trim() !== '' ? date_to : null;
 
-    // Get uploaded file if exists
-    const evidence_file = req.file ? req.file.filename : null;
+    if (!publication_type) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Publication type is required.' });
+    }
+
+    if (publication_type === 'Conference' && (!normalizedDateFrom || !normalizedDateTo)) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Date From and Date To are required for conference publications.' });
+    }
+
+    if (publication_type === 'Monographs' && !sub_type) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Monograph sub-type is required.' });
+    }
+
+    // Preserve previous file when no new upload is provided.
+    const evidence_file = req.file ? req.file.filename : (existing_evidence_file || null);
 
     // Insert publication
     const [result] = await connection.query(
@@ -193,8 +211,8 @@ exports.createPublication = async (req, res) => {
        publication_id, details, evidence_file, status) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [facultyInfoId, publication_type, sub_type, title, year_of_publication, journal_name,
-        conference_name, abbreviation, volume, number, pages_from, pages_to, date_from,
-        date_to, type_of_conference, city, state, country, publication_agency, title_of_book,
+        conference_name, abbreviation, volume, number, pages_from, pages_to, normalizedDateFrom,
+        normalizedDateTo, type_of_conference, city, state, country, publication_agency, title_of_book,
         publication_id, details, evidence_file, status]
     );
 

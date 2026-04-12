@@ -39,6 +39,35 @@ const deleteIgnoringNotFound = async (deleteFn, ids) => {
   }
 }
 
+const mapGrantRow = (g) => ({
+  id: g.id,
+  projectName: g.project_name || '',
+  fundingAgency: g.funding_agency || '',
+  currency: g.currency || 'INR',
+  grantAmount: g.grant_amount || '',
+  amountInLakhs: g.amount_in_lakhs || '',
+  duration: g.duration || '',
+  researchers: g.researchers || '',
+  role: g.role || '',
+  evidence_file: g.evidence_file || null,
+  evidenceFile: null
+})
+
+const mapProposalRow = (p) => ({
+  id: p.id,
+  title: p.title || '',
+  fundingAgency: p.funding_agency || '',
+  currency: p.currency || 'INR',
+  grantAmount: p.grant_amount || '',
+  amountInLakhs: p.amount_in_lakhs || '',
+  duration: p.duration || '',
+  submissionDate: formatDateForInput(p.submission_date),
+  status: p.status || '',
+  role: p.role || '',
+  evidence_file: p.evidence_file || null,
+  evidenceFile: null
+})
+
 const ReadOnlyField = ({ value, readOnly, children }) => (
   readOnly
     ? <div className="readonly-table-text">{value === null || value === undefined || value === '' ? '—' : String(value)}</div>
@@ -87,35 +116,28 @@ const ResearchGrants = ({ initialData, readOnly }) => {
   useEffect(() => {
     if (initialData) {
       if (initialData.grants) {
-        setPersistedGrantIds(initialData.grants.map(g => g.id).filter(Boolean))
-        setGrants(initialData.grants.map(g => ({
-          id: g.id,
-          projectName: g.project_name,
-          fundingAgency: g.funding_agency,
-          currency: g.currency,
-          grantAmount: g.grant_amount,
-          amountInLakhs: g.amount_in_lakhs,
-          duration: g.duration,
-          researchers: g.researchers,
-          role: g.role,
-          evidence_file: g.evidence_file
-        })) || [{ id: 1, projectName: '', fundingAgency: '', currency: 'INR', grantAmount: '', amountInLakhs: '', duration: '', researchers: '', role: '', evidenceFile: null }])
+        const mappedGrants = Array.isArray(initialData.grants)
+          ? initialData.grants.map(mapGrantRow)
+          : []
+
+        setPersistedGrantIds(mappedGrants.map(g => g.id).filter(Boolean))
+        setGrants(
+          mappedGrants.length > 0
+            ? mappedGrants
+            : [{ id: 1, projectName: '', fundingAgency: '', currency: 'INR', grantAmount: '', amountInLakhs: '', duration: '', researchers: '', role: '', evidenceFile: null }]
+        )
       }
       if (initialData.proposals) {
-        setPersistedProposalIds(initialData.proposals.map(p => p.id).filter(Boolean))
-        setProposals(initialData.proposals.map(p => ({
-          id: p.id,
-          title: p.title,
-          fundingAgency: p.funding_agency,
-          currency: p.currency,
-          grantAmount: p.grant_amount,
-          amountInLakhs: p.amount_in_lakhs,
-          duration: p.duration,
-          submissionDate: formatDateForInput(p.submission_date),
-          status: p.status,
-          role: p.role,
-          evidence_file: p.evidence_file
-        })) || [{ id: 1, title: '', fundingAgency: '', currency: 'INR', grantAmount: '', amountInLakhs: '', duration: '', submissionDate: '', status: '', role: '', evidenceFile: null }])
+        const mappedProposals = Array.isArray(initialData.proposals)
+          ? initialData.proposals.map(mapProposalRow)
+          : []
+
+        setPersistedProposalIds(mappedProposals.map(p => p.id).filter(Boolean))
+        setProposals(
+          mappedProposals.length > 0
+            ? mappedProposals
+            : [{ id: 1, title: '', fundingAgency: '', currency: 'INR', grantAmount: '', amountInLakhs: '', duration: '', submissionDate: '', status: '', role: '', evidenceFile: null }]
+        )
       }
 
       if (Array.isArray(initialData.grants) && initialData.grants.length > 0) {
@@ -127,8 +149,17 @@ const ResearchGrants = ({ initialData, readOnly }) => {
   }, [initialData])
 
   useEffect(() => {
-    // For editable mode, hydrate form with already saved entries.
-    if (readOnly || initialData || !user?.id || hasHydratedEditable.current) return
+    // For editable mode, always hydrate from API when initialData has no saved rows.
+    if (readOnly || !user?.id || hasHydratedEditable.current) return
+
+    const hasInitialRows =
+      (Array.isArray(initialData?.grants) && initialData.grants.length > 0) ||
+      (Array.isArray(initialData?.proposals) && initialData.proposals.length > 0)
+
+    if (hasInitialRows) {
+      hasHydratedEditable.current = true
+      return
+    }
 
     const loadExisting = async () => {
       try {
@@ -142,38 +173,13 @@ const ResearchGrants = ({ initialData, readOnly }) => {
 
         if (fetchedGrants.length > 0) {
           setPersistedGrantIds(fetchedGrants.map(g => g.id).filter(Boolean))
-          setGrants(fetchedGrants.map(g => ({
-            id: g.id,
-            projectName: g.project_name || '',
-            fundingAgency: g.funding_agency || '',
-            currency: g.currency || 'INR',
-            grantAmount: g.grant_amount || '',
-            amountInLakhs: g.amount_in_lakhs || '',
-            duration: g.duration || '',
-            researchers: g.researchers || '',
-            role: g.role || '',
-            evidence_file: g.evidence_file || null,
-            evidenceFile: null
-          })))
+          setGrants(fetchedGrants.map(mapGrantRow))
           setSelectedType('grants')
         }
 
         if (fetchedProposals.length > 0) {
           setPersistedProposalIds(fetchedProposals.map(p => p.id).filter(Boolean))
-          setProposals(fetchedProposals.map(p => ({
-            id: p.id,
-            title: p.title || '',
-            fundingAgency: p.funding_agency || '',
-            currency: p.currency || 'INR',
-            grantAmount: p.grant_amount || '',
-            amountInLakhs: p.amount_in_lakhs || '',
-            duration: p.duration || '',
-            submissionDate: formatDateForInput(p.submission_date),
-            status: p.status || '',
-            role: p.role || '',
-            evidence_file: p.evidence_file || null,
-            evidenceFile: null
-          })))
+          setProposals(fetchedProposals.map(mapProposalRow))
           if (fetchedGrants.length === 0) {
             setSelectedType('proposals')
           }
@@ -279,6 +285,31 @@ const ResearchGrants = ({ initialData, readOnly }) => {
         return false
       }
 
+      const refreshBothTypes = async () => {
+        const [grantsResp, proposalsResp] = await Promise.all([
+          grantsService.getGrantsByFaculty(facultyId),
+          grantsService.getProposalsByFaculty(facultyId)
+        ])
+
+        const fetchedGrants = Array.isArray(grantsResp?.data) ? grantsResp.data : []
+        const fetchedProposals = Array.isArray(proposalsResp?.data) ? proposalsResp.data : []
+
+        setPersistedGrantIds(fetchedGrants.map(g => g.id).filter(Boolean))
+        setPersistedProposalIds(fetchedProposals.map(p => p.id).filter(Boolean))
+
+        setGrants(
+          fetchedGrants.length > 0
+            ? fetchedGrants.map(mapGrantRow)
+            : [{ id: 1, projectName: '', fundingAgency: '', currency: 'INR', grantAmount: '', amountInLakhs: '', duration: '', researchers: '', role: '', evidenceFile: null }]
+        )
+
+        setProposals(
+          fetchedProposals.length > 0
+            ? fetchedProposals.map(mapProposalRow)
+            : [{ id: 1, title: '', fundingAgency: '', currency: 'INR', grantAmount: '', amountInLakhs: '', duration: '', submissionDate: '', status: '', role: '', evidenceFile: null }]
+        )
+      }
+
       if (selectedType === 'grants') {
         const nextPersistedIds = []
         const currentIds = new Set()
@@ -299,7 +330,8 @@ const ResearchGrants = ({ initialData, readOnly }) => {
             duration: grant.duration,
             researchers: grant.researchers,
             role: grant.role,
-            evidence_file: grant.evidenceFile
+            evidence_file: grant.evidenceFile,
+            existing_evidence_file: grant.evidence_file || null
           }
 
           if (persistedGrantIds.includes(grant.id)) {
@@ -321,7 +353,6 @@ const ResearchGrants = ({ initialData, readOnly }) => {
         }
 
         setPersistedGrantIds(nextPersistedIds)
-        setPersistedProposalIds([])
       } else if (selectedType === 'proposals') {
         const nextPersistedIds = []
         const currentIds = new Set()
@@ -342,7 +373,8 @@ const ResearchGrants = ({ initialData, readOnly }) => {
             submission_date: proposal.submissionDate,
             status: proposal.status,
             role: proposal.role,
-            evidence_file: proposal.evidenceFile
+            evidence_file: proposal.evidenceFile,
+            existing_evidence_file: proposal.evidence_file || null
           }
 
           if (persistedProposalIds.includes(proposal.id)) {
@@ -364,8 +396,9 @@ const ResearchGrants = ({ initialData, readOnly }) => {
         }
 
         setPersistedProposalIds(nextPersistedIds)
-        setPersistedGrantIds([])
       }
+
+      await refreshBothTypes()
 
       alert('Data saved successfully!')
       return true

@@ -7,28 +7,98 @@ import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
 
+const isNotFoundError = (error) => error?.response?.status === 404
+
+const deleteIgnoringNotFound = async (deleteFn, ids) => {
+  const validIds = (ids || []).filter((id) => Number.isFinite(Number(id)))
+  const results = await Promise.allSettled(validIds.map((id) => deleteFn(id)))
+
+  const firstRealError = results.find(
+    (result) => result.status === 'rejected' && !isNotFoundError(result.reason)
+  )
+
+  if (firstRealError) {
+    throw firstRealError.reason
+  }
+}
+
+const getEmptyAuthor = () => ({ first: '', middle: '', last: '' })
+
+const getEmptyBookChapterEntry = () => ({
+  authors: [getEmptyAuthor()],
+  yearOfPublication: '2026',
+  titleOfBook: '',
+  pagesFrom: '',
+  pagesTo: '',
+  publicationAgency: '',
+  editors: [getEmptyAuthor()],
+  evidenceFile: null,
+  evidence_file: null
+})
+
+const getEmptyTextbookEntry = () => ({
+  authors: [getEmptyAuthor()],
+  titleOfBook: '',
+  yearOfPublication: '2026',
+  publicationAgency: '',
+  city: '',
+  state: '',
+  country: '',
+  evidenceFile: null,
+  evidence_file: null
+})
+
+const byLatest = (a, b) => {
+  const bTs = b?.created_at ? new Date(b.created_at).getTime() : Number(b?.id || 0)
+  const aTs = a?.created_at ? new Date(a.created_at).getTime() : Number(a?.id || 0)
+  return bTs - aTs
+}
+
+const normalizePeople = (value) => {
+  const parsed = typeof value === 'string'
+    ? (() => {
+        try {
+          const json = JSON.parse(value)
+          return Array.isArray(json) ? json : []
+        } catch (_) {
+          return []
+        }
+      })()
+    : (Array.isArray(value) ? value : [])
+
+  const normalized = parsed.map((person) => ({
+    first: person?.first ?? person?.firstName ?? person?.first_name ?? '',
+    middle: person?.middle ?? person?.middleName ?? person?.middle_name ?? '',
+    last: person?.last ?? person?.lastName ?? person?.last_name ?? ''
+  }))
+
+  return normalized.length > 0 ? normalized : [{ first: '', middle: '', last: '' }]
+}
+
 const ResearchPublications = ({ initialData, readOnly }) => {
   const { user } = useAuth()
   const [publicationId, setPublicationId] = useState(null) // Track if editing existing publication
+  const [allPublications, setAllPublications] = useState([])
   const [publicationType, setPublicationType] = useState('')
   const [bookSubType, setBookSubType] = useState('')
-  const [authors, setAuthors] = useState([{ first: '', middle: '', last: '' }])
-  const [editors, setEditors] = useState([{ first: '', middle: '', last: '' }])
+  const [authors, setAuthors] = useState([getEmptyAuthor()])
+  const [editors, setEditors] = useState([getEmptyAuthor()])
   const [loading, setLoading] = useState(false)
 
-  const hydrateFromPublication = (data) => {
+  const hydrateFromPublication = (data, options = { updateSelectors: false }) => {
     if (!data) return
 
     setPublicationId(data.id || null) // Store ID to prevent duplicate creation
-    setPublicationType(data.publication_type || '')
-    setBookSubType(data.sub_type || '')
+    if (options.updateSelectors) {
+      setPublicationType(data.publication_type || '')
+      setBookSubType(data.sub_type || '')
+    }
 
-    if (data.authors) {
-      setAuthors(typeof data.authors === 'string' ? JSON.parse(data.authors) : data.authors)
-    }
-    if (data.editors) {
-      setEditors(typeof data.editors === 'string' ? JSON.parse(data.editors) : data.editors)
-    }
+    setAuthors(normalizePeople(data.authors))
+    setEditors(normalizePeople(data.editors))
+
+    setPersistedEvidenceFile(data.evidence_file || '')
+    setEvidenceFile(null)
 
     if (data.publication_type === 'Journal') {
       setJournalData({
@@ -59,8 +129,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     } else if (data.publication_type === 'Monographs') {
       if (data.sub_type === 'Book Chapter') {
         setBookChapterEntries([{
-          authors: typeof data.authors === 'string' ? JSON.parse(data.authors) : (data.authors || [{ first: '', middle: '', last: '' }]),
-          editors: typeof data.editors === 'string' ? JSON.parse(data.editors) : (data.editors || [{ first: '', middle: '', last: '' }]),
+          authors: normalizePeople(data.authors),
+          editors: normalizePeople(data.editors),
           titleOfBook: data.title || '',
           yearOfPublication: data.year_of_publication || '2026',
           publicationAgency: data.publication_agency || '',
@@ -70,7 +140,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         }])
       } else if (data.sub_type === 'Book') {
         setTextbookEntries([{
-          authors: typeof data.authors === 'string' ? JSON.parse(data.authors) : (data.authors || [{ first: '', middle: '', last: '' }]),
+          authors: normalizePeople(data.authors),
           titleOfBook: data.title || '',
           yearOfPublication: data.year_of_publication || '2026',
           publicationAgency: data.publication_agency || '',
@@ -86,28 +156,26 @@ const ResearchPublications = ({ initialData, readOnly }) => {
   }
 
   useEffect(() => {
-    if (initialData) {
-      hydrateFromPublication(initialData)
-    }
+    if (!initialData) return
+    const rows = Array.isArray(initialData) ? initialData : [initialData]
+    setAllPublications(rows)
   }, [initialData])
 
   useEffect(() => {
     // For editable mode, show latest saved publication to avoid blank form after sent_back unlock.
     if (readOnly || initialData || !user?.id) return
 
-    const loadLatestPublication = async () => {
+    const loadAllPublications = async () => {
       try {
         const res = await publicationsService.getPublicationsByFaculty(user.id)
         const publications = Array.isArray(res?.data) ? res.data : []
-        if (publications.length > 0) {
-          hydrateFromPublication(publications[0])
-        }
+        setAllPublications(publications)
       } catch (error) {
         console.error('Failed to load existing publications:', error)
       }
     }
 
-    loadLatestPublication()
+    loadAllPublications()
   }, [initialData, readOnly, user])
 
   const [journalData, setJournalData] = useState({
@@ -136,33 +204,135 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     publicationAgency: ''
   })
 
-  const [bookChapterEntries, setBookChapterEntries] = useState([
-    {
-      authors: [{ first: '', middle: '', last: '' }],
-      yearOfPublication: '2026',
-      titleOfBook: '',
-      pagesFrom: '',
-      pagesTo: '',
-      publicationAgency: '',
-      editors: [{ first: '', middle: '', last: '' }],
-      evidenceFile: null
-    }
-  ])
-  const [textbookEntries, setTextbookEntries] = useState([
-    {
-      authors: [{ first: '', middle: '', last: '' }],
-      titleOfBook: '',
-      yearOfPublication: '2026',
-      publicationAgency: '',
-      city: '',
-      state: '',
-      country: '',
-      evidenceFile: null
-    }
-  ])
+  const [bookChapterEntries, setBookChapterEntries] = useState([getEmptyBookChapterEntry()])
+  const [textbookEntries, setTextbookEntries] = useState([getEmptyTextbookEntry()])
 
   const [otherDetails, setOtherDetails] = useState('')
   const [evidenceFile, setEvidenceFile] = useState(null)
+  const [persistedEvidenceFile, setPersistedEvidenceFile] = useState('')
+
+  useEffect(() => {
+    if (!publicationType) {
+      setPublicationId(null)
+      return
+    }
+
+    const rows = Array.isArray(allPublications) ? allPublications : []
+
+    if (publicationType === 'Journal') {
+      const match = [...rows].filter((p) => p.publication_type === 'Journal').sort(byLatest)[0]
+      if (match) {
+        hydrateFromPublication(match, { updateSelectors: false })
+      } else {
+        setPublicationId(null)
+        setAuthors([getEmptyAuthor()])
+        setEditors([getEmptyAuthor()])
+        setJournalData({
+          titleOfPaper: '', quartile: '', yearOfPublication: '2026', nameOfJournal: '', volume: '', number: '', pagesFrom: '', pagesTo: ''
+        })
+        setEvidenceFile(null)
+        setPersistedEvidenceFile('')
+      }
+      return
+    }
+
+    if (publicationType === 'Conference') {
+      const match = [...rows].filter((p) => p.publication_type === 'Conference').sort(byLatest)[0]
+      if (match) {
+        hydrateFromPublication(match, { updateSelectors: false })
+      } else {
+        setPublicationId(null)
+        setAuthors([getEmptyAuthor()])
+        setEditors([getEmptyAuthor()])
+        setConferenceData({
+          titleOfPaper: '', fullNameOfConference: '', abbreviation: '', dateFrom: '', dateTo: '', typeOfConference: 'International', pagesFrom: '', pagesTo: '', city: '', state: '', country: '', publicationAgency: ''
+        })
+        setEvidenceFile(null)
+        setPersistedEvidenceFile('')
+      }
+      return
+    }
+
+    if (publicationType === 'Any Other') {
+      const match = [...rows]
+        .filter((p) => p.publication_type === 'Any Other' || p.sub_type === 'Other')
+        .sort(byLatest)[0]
+      if (match) {
+        hydrateFromPublication(match, { updateSelectors: false })
+      } else {
+        setPublicationId(null)
+        setOtherDetails('')
+        setEvidenceFile(null)
+        setPersistedEvidenceFile('')
+      }
+      return
+    }
+
+    if (publicationType === 'Monographs') {
+      setPublicationId(null)
+      setEvidenceFile(null)
+      setPersistedEvidenceFile('')
+      if (!bookSubType) return
+
+      const monographs = rows.filter(
+        (p) => p.publication_type === 'Monographs' && p.sub_type === bookSubType
+      )
+
+      if (bookSubType === 'Book Chapter') {
+        setBookChapterEntries(
+          monographs.length > 0
+            ? monographs.map((entry) => ({
+                authors: normalizePeople(entry.authors),
+                editors: normalizePeople(entry.editors),
+                titleOfBook: entry.title || '',
+                yearOfPublication: entry.year_of_publication || '2026',
+                publicationAgency: entry.publication_agency || '',
+                pagesFrom: entry.pages_from || '',
+                pagesTo: entry.pages_to || '',
+                evidenceFile: null,
+                evidence_file: entry.evidence_file || null
+              }))
+            : [getEmptyBookChapterEntry()]
+        )
+      }
+
+      if (bookSubType === 'Book') {
+        setTextbookEntries(
+          monographs.length > 0
+            ? monographs.map((entry) => ({
+                authors: normalizePeople(entry.authors),
+                titleOfBook: entry.title || '',
+                yearOfPublication: entry.year_of_publication || '2026',
+                publicationAgency: entry.publication_agency || '',
+                city: entry.city || '',
+                state: entry.state || '',
+                country: entry.country || '',
+                evidenceFile: null,
+                evidence_file: entry.evidence_file || null
+              }))
+            : [getEmptyTextbookEntry()]
+        )
+      }
+    }
+  }, [publicationType, bookSubType, allPublications])
+
+  const resolveEvidencePayload = (fileValue, existingFileValue = '') => {
+    if (typeof File !== 'undefined' && fileValue instanceof File) {
+      return {
+        evidence_file: fileValue,
+        existing_evidence_file: null
+      }
+    }
+
+    const existing = typeof fileValue === 'string' && fileValue.trim()
+      ? fileValue
+      : (existingFileValue || '')
+
+    return {
+      evidence_file: null,
+      existing_evidence_file: existing || null
+    }
+  }
 
   const addAuthor = (bookIndex = null, textbookIndex = null) => {
     if (bookIndex !== null) {
@@ -306,6 +476,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     if (e && e.preventDefault) e.preventDefault()
 
     setLoading(true)
+    const createdIds = []
     try {
       const facultyId = user?.id
       if (!facultyId) {
@@ -313,17 +484,68 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         return false
       }
 
-      if (publicationId) {
-        await publicationsService.deletePublication(publicationId)
+      if (publicationType === 'Conference' && (!conferenceData.dateFrom || !conferenceData.dateTo)) {
+        alert('Date From and Date To are required for conference publications.')
+        return false
       }
+
+      if (publicationType === 'Monographs' && !bookSubType) {
+        alert('Please select a monograph sub-type before saving.')
+        return false
+      }
+
+      const refreshPublications = async () => {
+        const res = await publicationsService.getPublicationsByFaculty(facultyId)
+        setAllPublications(Array.isArray(res?.data) ? res.data : [])
+      }
+
+      const createAndTrack = async (payload) => {
+        const response = await publicationsService.createPublication(payload)
+        const createdId = response?.data?.id
+        if (Number.isFinite(Number(createdId))) {
+          createdIds.push(createdId)
+        }
+        return response
+      }
+
+      const hasAuthorValue = (list = []) => list.some((p) => p.first || p.middle || p.last)
+
+      const matchesCurrentSelection = (row) => {
+        if (!row) return false
+        if (publicationType === 'Journal') return row.publication_type === 'Journal'
+        if (publicationType === 'Conference') return row.publication_type === 'Conference'
+        if (publicationType === 'Any Other') {
+          return row.publication_type === 'Any Other' || row.sub_type === 'Other'
+        }
+        if (publicationType === 'Monographs') {
+          return row.publication_type === 'Monographs' && row.sub_type === bookSubType
+        }
+        return false
+      }
+
+      if (!publicationType) {
+        alert('Please select a publication type.')
+        return false
+      }
+
+      const idsToDelete = (Array.isArray(allPublications) ? allPublications : [])
+        .filter(matchesCurrentSelection)
+        .map((row) => row.id)
+        .filter(Boolean)
 
       const publicationData = {
         faculty_id: facultyId,
         publication_type: publicationType,
-        status: 'submitted'
+        status: 'draft'
       }
 
       if (publicationType === 'Journal') {
+        if (!hasAuthorValue(authors) || !journalData.titleOfPaper || !journalData.nameOfJournal || !journalData.yearOfPublication) {
+          alert('Please complete required Journal fields: Authors, Title, Journal Name, Year of Publication.')
+          return false
+        }
+
+        const evidencePayload = resolveEvidencePayload(evidenceFile, persistedEvidenceFile)
         publicationData.sub_type = 'Journal'
         publicationData.title = journalData.titleOfPaper
         publicationData.journal_name = journalData.nameOfJournal
@@ -334,20 +556,28 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         publicationData.year_of_publication = journalData.yearOfPublication
         publicationData.quartile = journalData.quartile
         publicationData.authors = authors
+        publicationData.evidence_file = evidencePayload.evidence_file
+        publicationData.existing_evidence_file = evidencePayload.existing_evidence_file
 
-        const response = await publicationsService.createPublication(publicationData)
-        alert('Journal publication saved successfully!')
+        const response = await createAndTrack(publicationData)
+        await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
+        await refreshPublications()
+        alert('Journal draft saved successfully!')
         setPublicationId(response?.data?.id || null)
-        setLoading(false)
-        setPublicationType('') // Reset
         return true
       } else if (publicationType === 'Conference') {
+        if (!hasAuthorValue(authors) || !conferenceData.titleOfPaper || !conferenceData.fullNameOfConference) {
+          alert('Please complete required Conference fields: Authors, Title, Full Conference Name.')
+          return false
+        }
+
+        const evidencePayload = resolveEvidencePayload(evidenceFile, persistedEvidenceFile)
         publicationData.sub_type = 'Conference'
         publicationData.title = conferenceData.titleOfPaper
         publicationData.conference_name = conferenceData.fullNameOfConference
         publicationData.abbreviation = conferenceData.abbreviation
-        publicationData.date_from = conferenceData.dateFrom
-        publicationData.date_to = conferenceData.dateTo
+        publicationData.date_from = conferenceData.dateFrom || null
+        publicationData.date_to = conferenceData.dateTo || null
         publicationData.type_of_conference = conferenceData.typeOfConference
         publicationData.pages_from = conferenceData.pagesFrom
         publicationData.pages_to = conferenceData.pagesTo
@@ -356,18 +586,30 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         publicationData.country = conferenceData.country
         publicationData.publication_agency = conferenceData.publicationAgency
         publicationData.authors = authors
+        publicationData.evidence_file = evidencePayload.evidence_file
+        publicationData.existing_evidence_file = evidencePayload.existing_evidence_file
 
-        const response = await publicationsService.createPublication(publicationData)
-        alert('Conference publication saved successfully!')
+        const response = await createAndTrack(publicationData)
+        await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
+        await refreshPublications()
+        alert('Conference draft saved successfully!')
         setPublicationId(response?.data?.id || null)
-        setLoading(false)
-        setPublicationType('') // Reset
         return true
       } else if (publicationType === 'Monographs') {
+        if (!bookSubType) {
+          alert('Please select a monograph sub-type before saving.')
+          return false
+        }
+
         publicationData.sub_type = bookSubType
         if (bookSubType === 'Book Chapter') {
-          // Save multiple books
           for (const entry of bookChapterEntries) {
+            if (!hasAuthorValue(entry.authors) || !entry.titleOfBook || !entry.yearOfPublication || !entry.publicationAgency) {
+              alert('Please complete required Book Chapter fields in every entry: Authors, Title, Year, Publication Agency.')
+              return false
+            }
+
+            const evidencePayload = resolveEvidencePayload(entry.evidenceFile, entry.evidence_file)
             const entryData = {
               ...publicationData,
               authors: entry.authors,
@@ -377,29 +619,24 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               pages_to: entry.pagesTo,
               publication_agency: entry.publicationAgency,
               editors: entry.editors,
-              evidence_file: entry.evidenceFile
+              evidence_file: evidencePayload.evidence_file,
+              existing_evidence_file: evidencePayload.existing_evidence_file
             }
-            await publicationsService.createPublication(entryData)
+            await createAndTrack(entryData)
           }
-          alert('All books saved successfully!')
+          await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
+          await refreshPublications()
+          alert('Book chapter drafts saved successfully!')
           setPublicationId(null)
-          setLoading(false)
-          // Reset
-          setPublicationType('')
-          setBookChapterEntries([{
-            authors: [{ first: '', middle: '', last: '' }],
-            yearOfPublication: '2026',
-            titleOfBook: '',
-            pagesFrom: '',
-            pagesTo: '',
-            publicationAgency: '',
-            editors: [{ first: '', middle: '', last: '' }],
-            evidence_file: null
-          }])
           return true
         } else if (bookSubType === 'Book') {
-          // Save multiple text books
           for (const entry of textbookEntries) {
+            if (!hasAuthorValue(entry.authors) || !entry.titleOfBook || !entry.yearOfPublication || !entry.publicationAgency || !entry.city || !entry.state || !entry.country) {
+              alert('Please complete required Book fields in every entry: Authors, Title, Year, Publication Agency, City, State, Country.')
+              return false
+            }
+
+            const evidencePayload = resolveEvidencePayload(entry.evidenceFile, entry.evidence_file)
             const entryData = {
               ...publicationData,
               authors: entry.authors,
@@ -409,39 +646,40 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               city: entry.city,
               state: entry.state,
               country: entry.country,
-              evidence_file: entry.evidenceFile
+              evidence_file: evidencePayload.evidence_file,
+              existing_evidence_file: evidencePayload.existing_evidence_file
             }
-            await publicationsService.createPublication(entryData)
+            await createAndTrack(entryData)
           }
-          alert('All textbooks saved successfully!')
+          await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
+          await refreshPublications()
+          alert('Book drafts saved successfully!')
           setPublicationId(null)
-          setLoading(false)
-          // Reset
-          setPublicationType('')
-          setTextbookEntries([{
-            authors: [{ first: '', middle: '', last: '' }],
-            yearOfPublication: '2026',
-            titleOfBook: '',
-            publicationAgency: '',
-            city: '',
-            state: '',
-            country: '',
-            evidenceFile: null
-          }])
           return true
         }
       } else if (publicationType === 'Any Other') {
+        if (!otherDetails || !otherDetails.trim()) {
+          alert('Please provide details for Any Other publication type.')
+          return false
+        }
+
+        const evidencePayload = resolveEvidencePayload(evidenceFile, persistedEvidenceFile)
         publicationData.sub_type = 'Other'
         publicationData.details = otherDetails
+        publicationData.evidence_file = evidencePayload.evidence_file
+        publicationData.existing_evidence_file = evidencePayload.existing_evidence_file
 
-        const response = await publicationsService.createPublication(publicationData)
-        alert('Other details saved successfully!')
+        const response = await createAndTrack(publicationData)
+        await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
+        await refreshPublications()
+        alert('Draft saved successfully!')
         setPublicationId(response?.data?.id || null)
-        setLoading(false)
-        setPublicationType('') // Reset
         return true
       }
     } catch (error) {
+      if (createdIds.length > 0) {
+        await Promise.allSettled(createdIds.map((id) => publicationsService.deletePublication(id)))
+      }
       console.error('Error saving publication:', error)
       alert('Failed to save publication. Error: ' + error.message)
       return false
@@ -746,19 +984,20 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             >
               <Upload size={32} color="#5b8fc7" />
               <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-                {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+                {evidenceFile?.name || persistedEvidenceFile || 'Click to upload or drag and drop'}
               </span>
               <span style={{ fontSize: '0.85rem', color: '#666' }}>
                 PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
               </span>
-              <FilePreviewButton file={evidenceFile} style={{ width: '32px', height: '32px' }} />
-              {evidenceFile && (
+              <FilePreviewButton file={evidenceFile || persistedEvidenceFile} style={{ width: '32px', height: '32px' }} />
+              {(evidenceFile || persistedEvidenceFile) && (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
                     setEvidenceFile(null)
+                    setPersistedEvidenceFile('')
                   }}
                   title="Remove uploaded document"
                   style={{
@@ -976,19 +1215,20 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             >
               <Upload size={32} color="#5b8fc7" />
               <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-                {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+                {evidenceFile?.name || persistedEvidenceFile || 'Click to upload or drag and drop'}
               </span>
               <span style={{ fontSize: '0.85rem', color: '#666' }}>
                 PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
               </span>
-              <FilePreviewButton file={evidenceFile} style={{ width: '32px', height: '32px' }} />
-              {evidenceFile && (
+              <FilePreviewButton file={evidenceFile || persistedEvidenceFile} style={{ width: '32px', height: '32px' }} />
+              {(evidenceFile || persistedEvidenceFile) && (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
                     setEvidenceFile(null)
+                    setPersistedEvidenceFile('')
                   }}
                   title="Remove uploaded document"
                   style={{
@@ -1131,10 +1371,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 >
                   <Upload size={24} color="#5b8fc7" />
                   <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
-                    {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
+                    {entry.evidenceFile?.name || entry.evidence_file || 'Click to upload'}
                   </span>
-                  <FilePreviewButton file={entry.evidenceFile} style={{ width: '32px', height: '32px' }} />
-                  {entry.evidenceFile && (
+                  <FilePreviewButton file={entry.evidenceFile || entry.evidence_file} style={{ width: '32px', height: '32px' }} />
+                  {(entry.evidenceFile || entry.evidence_file) && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -1326,10 +1566,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 >
                   <Upload size={24} color="#5b8fc7" />
                   <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
-                    {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
+                    {entry.evidenceFile?.name || entry.evidence_file || 'Click to upload'}
                   </span>
-                  <FilePreviewButton file={entry.evidenceFile} style={{ width: '32px', height: '32px' }} />
-                  {entry.evidenceFile && (
+                  <FilePreviewButton file={entry.evidenceFile || entry.evidence_file} style={{ width: '32px', height: '32px' }} />
+                  {(entry.evidenceFile || entry.evidence_file) && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -1451,19 +1691,20 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             >
               <Upload size={32} color="#5b8fc7" />
               <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-                {evidenceFile ? evidenceFile.name : 'Click to upload or drag and drop'}
+                {evidenceFile?.name || persistedEvidenceFile || 'Click to upload or drag and drop'}
               </span>
               <span style={{ fontSize: '0.85rem', color: '#666' }}>
                 PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
               </span>
-              <FilePreviewButton file={evidenceFile} style={{ width: '32px', height: '32px' }} />
-              {evidenceFile && (
+              <FilePreviewButton file={evidenceFile || persistedEvidenceFile} style={{ width: '32px', height: '32px' }} />
+              {(evidenceFile || persistedEvidenceFile) && (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
                     setEvidenceFile(null)
+                    setPersistedEvidenceFile('')
                   }}
                   title="Remove uploaded document"
                   style={{
@@ -1550,8 +1791,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 disabled={readOnly}
               >
                 <option value="">-- Select Sub-Type --</option>
-                <option value="Book Chapter">Book Published</option>
-                <option value="Book">Research Monographs / Textbook Published</option>
+                <option value="Book">Book Published</option>
+                <option value="Book Chapter">Book Chapter</option>
               </select>
             </div>
           )}

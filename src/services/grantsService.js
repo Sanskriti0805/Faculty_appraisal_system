@@ -3,7 +3,7 @@ import apiClient from './api';
 export const grantsService = {
   // Get grants by faculty
   getGrantsByFaculty: async (facultyId) => {
-    return await apiClient.get(`/grants/faculty/${facultyId}`);
+    return await apiClient.get(`/grants/faculty/${facultyId}?t=${Date.now()}`);
   },
 
   // Create grant (with file upload)
@@ -43,7 +43,7 @@ export const grantsService = {
 
   // Get proposals by faculty
   getProposalsByFaculty: async (facultyId) => {
-    return await apiClient.get(`/grants/proposals/faculty/${facultyId}`);
+    return await apiClient.get(`/grants/proposals/faculty/${facultyId}?t=${Date.now()}`);
   },
 
   // Create proposal

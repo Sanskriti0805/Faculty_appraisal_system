@@ -3,7 +3,7 @@ import apiClient from './api';
 export const publicationsService = {
   // Get publications by faculty
   getPublicationsByFaculty: async (facultyId) => {
-    return await apiClient.get(`/publications/faculty/${facultyId}`);
+    return await apiClient.get(`/publications/faculty/${facultyId}?t=${Date.now()}`);
   },
 
   // Create publication

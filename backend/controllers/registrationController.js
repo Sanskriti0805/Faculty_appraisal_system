@@ -68,6 +68,10 @@ exports.runMigrations = async () => {
     await ensureColumn('research_publications', 'evidence_file', "evidence_file VARCHAR(255) NULL COMMENT 'Path to uploaded evidence file'");
     await ensureColumn('research_publications', 'status', "status ENUM('draft','submitted') DEFAULT 'draft'");
 
+    // Ensure research grants/proposals upload columns exist for evidence persistence.
+    await ensureColumn('research_grants', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
+    await ensureColumn('submitted_proposals', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
+
     // Form builder v2 columns
     await ensureColumn('dynamic_sections', 'parent_id', 'parent_id INT NULL');
     await ensureColumn('dynamic_sections', 'description', 'description TEXT NULL');
