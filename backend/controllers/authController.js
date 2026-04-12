@@ -21,7 +21,22 @@ exports.login = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email, password, and role are required' });
     }
 
-    const [users] = await db.query('SELECT * FROM users WHERE email = ? AND role = ?', [email, role]);
+    const [users] = await db.query(
+      `SELECT u.*, COALESCE(
+          u.date_of_joining,
+          (
+            SELECT fi.date_of_joining
+            FROM faculty_information fi
+            WHERE fi.email = u.email
+            ORDER BY fi.id DESC
+            LIMIT 1
+          ),
+          DATE(u.created_at)
+        ) AS effective_date_of_joining
+       FROM users u
+       WHERE u.email = ? AND u.role = ?`,
+      [email, role]
+    );
     if (users.length === 0) {
       return res.status(401).json({ success: false, message: 'Invalid email or role' });
     }
@@ -68,7 +83,7 @@ exports.login = async (req, res) => {
         designation: user.designation,
         salutation: user.salutation,
         employee_id: user.employee_id,
-        date_of_joining: user.date_of_joining,
+        date_of_joining: user.effective_date_of_joining || user.date_of_joining || null,
         onboarding_complete: user.onboarding_complete
       }
     });

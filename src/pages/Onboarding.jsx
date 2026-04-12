@@ -5,6 +5,7 @@ import {
   User, Building2, Briefcase, Calendar, Hash,
   CheckCircle, ChevronRight, AlertCircle, LogOut, X, Key
 } from 'lucide-react';
+import { confirmLogout } from '../utils/appDialogs';
 import './Onboarding.css';
 
 const API_BASE = `http://${window.location.hostname}:5000/api`;
@@ -119,6 +120,12 @@ const Onboarding = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleLogout = async () => {
+    const shouldLogout = await confirmLogout();
+    if (!shouldLogout) return;
+    logout();
   };
 
   const isFaculty = user?.role === 'faculty';
@@ -381,7 +388,7 @@ const Onboarding = () => {
 
         {/* Logout link */}
         <div className="onboarding-footer">
-          <button className="ob-logout" onClick={logout}>
+          <button className="ob-logout" onClick={handleLogout}>
             <LogOut size={13} /> Log out
           </button>
         </div>

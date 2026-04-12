@@ -3,13 +3,17 @@ import { Outlet, useNavigate } from 'react-router-dom'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import { useAuth } from '../context/AuthContext'
+import { confirmLogout } from '../utils/appDialogs'
 import './Layout.css'
 
 const Layout = () => {
   const navigate = useNavigate()
   const { logout } = useAuth()
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const shouldLogout = await confirmLogout()
+    if (!shouldLogout) return
+
     logout()
     navigate('/login')
   }

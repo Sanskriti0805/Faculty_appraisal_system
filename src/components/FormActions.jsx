@@ -136,6 +136,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
   const isPathEditable = React.useCallback((path) => {
     if (user?.role !== 'faculty') return true;
+    if (path === '/faculty-information') return true;
     if (!submissionStatus || submissionStatus === 'draft') return true;
     if (['submitted', 'under_review', 'approved'].includes(submissionStatus)) return false;
 

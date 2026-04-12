@@ -16,13 +16,27 @@ const FacultyInformation = () => {
     dateOfJoining: '',
   })
 
+  const formatDate = (value) => {
+    if (!value) return ''
+
+    const raw = String(value)
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    const dt = m
+      ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+      : new Date(raw)
+
+    return Number.isNaN(dt.getTime())
+      ? ''
+      : dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
   useEffect(() => {
     if (user) {
       setFacultyData({
         name: user.name || '',
         designation: user.designation || 'Faculty',
         department: user.department || '',
-        dateOfJoining: user.date_of_joining ? new Date(user.date_of_joining).toLocaleDateString() : '',
+        dateOfJoining: formatDate(user.date_of_joining),
       })
     }
   }, [user])

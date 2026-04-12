@@ -44,3 +44,13 @@ export const showPrompt = async (input) => {
 
   return typeof result === 'string' ? result : null
 }
+
+export const confirmLogout = async () => {
+  return showConfirm({
+    title: 'Log Out Confirmation',
+    message: 'Please save your data before logging out. If you are filling any form, unsaved changes may be lost. Do you want to log out now?',
+    confirmText: 'Log Out',
+    cancelText: 'Stay Logged In',
+    danger: true
+  })
+}

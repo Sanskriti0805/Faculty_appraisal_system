@@ -17,7 +17,24 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const [users] = await db.query('SELECT id, name, email, role, department, department_id, designation, salutation, employee_id, date_of_joining, is_archived FROM users WHERE id = ?', [decoded.id]);
+    const [users] = await db.query(
+      `SELECT u.id, u.name, u.email, u.role, u.department, u.department_id, u.designation, u.salutation, u.employee_id,
+              COALESCE(
+                u.date_of_joining,
+                (
+                  SELECT fi.date_of_joining
+                  FROM faculty_information fi
+                  WHERE fi.email = u.email
+                  ORDER BY fi.id DESC
+                  LIMIT 1
+                ),
+                DATE(u.created_at)
+              ) AS date_of_joining,
+              u.is_archived
+       FROM users u
+       WHERE u.id = ?`,
+      [decoded.id]
+    );
     if (users.length === 0) {
       return res.status(401).json({ success: false, message: 'User not found' });
     }

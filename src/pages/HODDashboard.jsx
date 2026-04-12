@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Archive, RotateCcw, Eye, Download, X, Settings, Lock, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { showConfirm } from '../utils/appDialogs';
+import { confirmLogout, showConfirm } from '../utils/appDialogs';
 import './HODDashboard.css';
 
 const API_BASE = `http://${window.location.hostname}:5000/api`;
@@ -68,7 +68,13 @@ const HODDashboard = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const handleLogout = async () => {
+    const shouldLogout = await confirmLogout();
+    if (!shouldLogout) return;
+
+    logout();
+    navigate('/login');
+  };
   const formatDate = (d) => {
     if (!d) return '—';
 
@@ -213,7 +219,7 @@ const HODDashboard = () => {
       <main className="admin-main">
         {/* Welcome + Dept Info */}
         <div className="admin-welcome">
-          <h1>Welcome, {user?.name?.split(' ')[0]} 👋</h1>
+          <h1>Welcome, {user?.name || 'HOD'} 👋</h1>
           <p>View and manage faculty members registered in your department.</p>
         </div>
 

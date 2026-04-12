@@ -145,6 +145,9 @@ const Sidebar = () => {
     const isFacultyRoute = !location.pathname.startsWith('/dofa')
     if (!isFacultyRoute) return true
 
+    // Faculty should always be able to open the profile data sheet in read/view mode.
+    if (path === '/faculty-information') return true
+
     if (!submissionStatus || submissionStatus === 'draft') return true
     if (['submitted', 'under_review', 'approved'].includes(submissionStatus)) return false
 
