@@ -3,6 +3,7 @@ import './DOFADashboard.css';
 import './RubricsManagement.css';
 
 import apiClient from '../services/api';
+import { showConfirm } from '../utils/appDialogs';
 
 const SCORING_TYPES = [
   { value: 'manual',      label: 'Manual',      desc: 'DOFA enters score manually' },
@@ -139,8 +140,8 @@ const RubricsManagement = () => {
     if (editCell?.rowIndex === index) setEditCell(null);
   };
 
-  const handleDeleteSection = (sectionName) => {
-    if (!window.confirm(`Are you sure you want to delete the entire section "${sectionName}"?`)) return;
+  const handleDeleteSection = async (sectionName) => {
+    if (!(await showConfirm(`Are you sure you want to delete the entire section "${sectionName}"?`))) return;
 
     const rowsToDelete = rubrics.filter(r => r.section_name === sectionName);
     const idsToDelete = rowsToDelete.filter(r => !r._isNew).map(r => r.id);

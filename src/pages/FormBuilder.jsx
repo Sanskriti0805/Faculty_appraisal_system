@@ -26,6 +26,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import apiClient from '../services/api';
+import { showConfirm } from '../utils/appDialogs';
 import './FormBuilder.css';
 
 // ─── Sortable Field Card ──────────────────────────────────────────────────────
@@ -583,7 +584,7 @@ const FormBuilder = () => {
   };
 
   const handleDeleteField = async (fieldId) => {
-    if (!window.confirm('Remove this field from the section?')) return;
+    if (!(await showConfirm('Remove this field from the section?'))) return;
     try {
       await apiClient.delete(`/form-builder/fields/${fieldId}`);
     } catch (e) { /* ignore, update UI anyway */ }
@@ -644,7 +645,7 @@ const FormBuilder = () => {
   };
 
   const handleDeleteSection = async (sectionId) => {
-    if (!window.confirm('Delete this section and ALL its fields? This cannot be undone.')) return;
+    if (!(await showConfirm('Delete this section and ALL its fields? This cannot be undone.'))) return;
     try {
       await apiClient.delete(`/form-builder/sections/${sectionId}`);
       showToast('Section deleted');

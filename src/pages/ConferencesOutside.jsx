@@ -47,6 +47,7 @@ const formatVenue = (conf) => {
 
 const ConferencesOutside = () => {
   const { user } = useAuth()
+  const [toast, setToast] = useState(null)
   const initialState = {
     eventType: 'Conference',
     eventMode: 'Offline',
@@ -65,6 +66,12 @@ const ConferencesOutside = () => {
 
   const [submittedConferences, setSubmittedConferences] = useState([])
   const [formData, setFormData] = useState(initialState)
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type })
+    window.clearTimeout(window.__conferencesOutsideToastTimer)
+    window.__conferencesOutsideToastTimer = window.setTimeout(() => setToast(null), 3500)
+  }
 
   useEffect(() => {
     if (!user?.id) return
@@ -109,12 +116,12 @@ const ConferencesOutside = () => {
     // Only save NEW conference data if form has content
     // Don't re-save submittedConferences as they're already in database
     if (!formData.eventTitle && submittedConferences.length === 0) {
-      alert('Please add at least one conference')
+      showToast('Please add at least one conference')
       return false
     }
 
     if (!user?.id) {
-      alert('Unable to identify logged-in faculty. Please login again.')
+      showToast('Unable to identify logged-in faculty. Please login again.')
       return false
     }
 
@@ -132,11 +139,11 @@ const ConferencesOutside = () => {
       }
       
       await legacySectionsService.saveSection('conferences_outside', dataToSave)
-      alert('All data saved successfully!')
+      showToast('All data saved successfully!', 'success')
       return true
     } catch (error) {
       console.error('Failed to save conferences outside data:', error)
-      alert('Failed to save data. Please try again.')
+      showToast('Failed to save data. Please try again.')
       return false
     }
   }
@@ -144,13 +151,13 @@ const ConferencesOutside = () => {
   const handleAddConference = (e) => {
     e.preventDefault()
     if (!formData.eventTitle) {
-      alert('Please fill in at least the Event Title.')
+      showToast('Please fill in at least the Event Title.')
       return
     }
 
     setSubmittedConferences(prev => [...prev, formData])
     setFormData(initialState)
-    alert('Conference added to list. You can now add another.')
+    showToast('Conference added to list. You can now add another.', 'success')
   }
 
   const handleRemoveConference = (index) => {
@@ -169,6 +176,12 @@ const ConferencesOutside = () => {
 
   return (
     <div className="conferences-outside form-page">
+      {toast && (
+        <div role="alert" style={{ position: 'fixed', right: '1rem', bottom: '5.5rem', zIndex: 9999, background: toast.type === 'success' ? '#276749' : '#c53030', color: '#fff', padding: '0.9rem 1rem', borderRadius: '10px', boxShadow: '0 12px 24px rgba(0,0,0,0.18)', minWidth: '280px', maxWidth: '420px', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+          <span>{toast.message}</span>
+          <button type="button" onClick={() => setToast(null)} style={{ border: 'none', background: 'transparent', color: '#fff', fontSize: '1.1rem', cursor: 'pointer' }}>×</button>
+        </div>
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title">Conferences Outside LNMIIT</h1>
@@ -177,7 +190,7 @@ const ConferencesOutside = () => {
       </div>
 
       <div className="form-card">
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSave} noValidate>
           {/* Row 1 */}
           <div className="form-row">
             <div className="form-group">

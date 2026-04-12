@@ -5,6 +5,7 @@ import {
   FileText, Award, Briefcase, ExternalLink, Lightbulb, ChevronDown
 } from 'lucide-react';
 import './DOFAReview.css';
+import { showConfirm } from '../utils/appDialogs';
 
 // Import Mirror Mode components
 import ResearchPublications from './ResearchPublications';
@@ -231,7 +232,7 @@ const DOFAReview = () => {
       }
     } catch (error) {
       console.error('Error loading submission version:', error);
-      alert('Failed to load selected version.');
+      window.appToast('Failed to load selected version.');
     } finally {
       setVersionLoading(false);
     }
@@ -252,7 +253,7 @@ const DOFAReview = () => {
   };
 
   const handleApprove = async () => {
-    if (!window.confirm('Are you sure you want to approve this submission?')) return;
+    if (!(await showConfirm('Are you sure you want to approve this submission?'))) return;
     try {
       const response = await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
@@ -263,11 +264,11 @@ const DOFAReview = () => {
         body: JSON.stringify({ status: 'approved', approved_by: 1 })
       });
       const data = await response.json();
-      if (data.success) { alert('Submission approved successfully'); navigate(backPath); }
-      else alert(`Error: ${data.message || 'Failed to approve submission'}`);
+      if (data.success) { window.appToast('Submission approved successfully'); navigate(backPath); }
+      else window.appToast(`Error: ${data.message || 'Failed to approve submission'}`);
     } catch (error) {
       console.error('Error approving submission:', error);
-      alert('Error approving submission');
+      window.appToast('Error approving submission');
     }
   };
 
@@ -275,10 +276,10 @@ const DOFAReview = () => {
     const hasDraftComment = Boolean(comment.trim());
     const hasExistingPendingComment = comments.some((c) => Number(c.is_resolved) !== 1);
     if (!hasDraftComment && !hasExistingPendingComment) {
-      alert('Please add at least one comment before sending back');
+      window.appToast('Please add at least one comment before sending back');
       return;
     }
-    if (!window.confirm('Are you sure you want to send back this submission?')) return;
+    if (!(await showConfirm('Are you sure you want to send back this submission?'))) return;
     const sectionKey = selectedCommentSection || TAB_TO_SECTION_KEY[activeTab] || 'faculty_info';
     const sourceDynamicData = (selectedVersionSnapshot || submissionData)?.dynamicData || [];
     const dynamicMatch = String(sectionKey || '').match(/^dynamic_section_(\d+)$/);
@@ -314,18 +315,18 @@ const DOFAReview = () => {
       const statusData = await statusRes.json();
       if (statusData.success) {
         setComment('');
-        alert('Submission sent back successfully');
+        window.appToast('Submission sent back successfully');
         navigate(backPath);
       }
-      else alert(`Error: ${statusData.message || 'Failed to send back submission'}`);
+      else window.appToast(`Error: ${statusData.message || 'Failed to send back submission'}`);
     } catch (error) {
       console.error('Error sending back submission:', error);
-      alert('Error sending back submission');
+      window.appToast('Error sending back submission');
     }
   };
 
   const handleAddComment = async () => {
-    if (!comment.trim()) { alert('Please enter a comment'); return; }
+    if (!comment.trim()) { window.appToast('Please enter a comment'); return; }
     const sectionKey = selectedCommentSection || TAB_TO_SECTION_KEY[activeTab] || 'faculty_info';
     const sourceDynamicData = (selectedVersionSnapshot || submissionData)?.dynamicData || [];
     const dynamicMatch = String(sectionKey || '').match(/^dynamic_section_(\d+)$/);
@@ -349,11 +350,11 @@ const DOFAReview = () => {
         })
       });
       const data = await res.json();
-      if (data.success) { setComment(''); fetchSubmissionDetails(); alert('Comment added successfully'); }
-      else alert(`Error: ${data.message || 'Failed to add comment'}`);
+      if (data.success) { setComment(''); fetchSubmissionDetails(); window.appToast('Comment added successfully'); }
+      else window.appToast(`Error: ${data.message || 'Failed to add comment'}`);
     } catch (error) {
       console.error('Error adding comment:', error);
-      alert('Error adding comment');
+      window.appToast('Error adding comment');
     }
   };
 

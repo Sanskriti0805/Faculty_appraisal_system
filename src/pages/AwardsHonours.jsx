@@ -5,10 +5,12 @@ import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { awardsService } from '../services/awardsService'
 import { useAuth } from '../context/AuthContext'
+import { showConfirm } from '../utils/appDialogs'
 
 const AwardsHonours = ({ initialData, readOnly }) => {
   const { user } = useAuth()
   const [awards, setAwards] = useState([])
+  const [toast, setToast] = useState(null)
   const [formData, setFormData] = useState({
     honorType: 'National',
     awardName: '',
@@ -16,6 +18,12 @@ const AwardsHonours = ({ initialData, readOnly }) => {
     evidenceFile: null
   })
   const [loading, setLoading] = useState(false)
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type })
+    window.clearTimeout(window.__awardsToastTimer)
+    window.__awardsToastTimer = window.setTimeout(() => setToast(null), 3500)
+  }
 
   useEffect(() => {
     if (readOnly && initialData) {
@@ -49,7 +57,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
 
     if (!awardName) {
       if (requireAwardName) {
-        alert('Please enter the award name')
+        showToast('Please enter the award name')
         return false
       }
       return true
@@ -61,7 +69,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
     )
 
     if (isDuplicate) {
-      alert('This award has already been saved. Please enter a different award or edit the existing one.')
+      showToast('This award has already been saved. Please enter a different award or edit the existing one.')
       return false
     }
 
@@ -69,7 +77,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
     try {
       const facultyId = user?.id
       if (!facultyId) {
-        alert('Unable to identify logged-in faculty. Please login again.')
+        showToast('Unable to identify logged-in faculty. Please login again.')
         return false
       }
 
@@ -93,12 +101,12 @@ const AwardsHonours = ({ initialData, readOnly }) => {
 
       await loadAwards()
       if (showSuccessAlert) {
-        alert('Award added successfully!')
+        showToast('Award added successfully!', 'success')
       }
       return true
     } catch (error) {
       console.error('Error adding award:', error)
-      alert('Error adding award: ' + (error.response?.data?.message || error.message))
+      showToast('Error adding award: ' + (error.response?.data?.message || error.message))
       return false
     } finally {
       setLoading(false)
@@ -110,17 +118,17 @@ const AwardsHonours = ({ initialData, readOnly }) => {
   }
 
   const handleDeleteAward = async (id) => {
-    if (!confirm('Are you sure you want to delete this award?')) {
+    if (!(await showConfirm({ message: 'Are you sure you want to delete this award?', danger: true, confirmText: 'Delete' }))) {
       return
     }
 
     try {
       await awardsService.deleteAward(id)
       await loadAwards()
-      alert('Award deleted successfully!')
+      showToast('Award deleted successfully!', 'success')
     } catch (error) {
       console.error('Error deleting award:', error)
-      alert('Error deleting award: ' + (error.response?.data?.message || error.message))
+      showToast('Error deleting award: ' + (error.response?.data?.message || error.message))
     }
   }
 
@@ -131,6 +139,12 @@ const AwardsHonours = ({ initialData, readOnly }) => {
 
   return (
     <div className={`form-page ${readOnly ? 'read-only-mode' : ''}`}>
+      {toast && (
+        <div role="alert" style={{ position: 'fixed', right: '1rem', bottom: '5.5rem', zIndex: 9999, background: toast.type === 'success' ? '#276749' : '#c53030', color: '#fff', padding: '0.9rem 1rem', borderRadius: '10px', boxShadow: '0 12px 24px rgba(0,0,0,0.18)', minWidth: '280px', maxWidth: '420px', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+          <span>{toast.message}</span>
+          <button type="button" onClick={() => setToast(null)} style={{ border: 'none', background: 'transparent', color: '#fff', fontSize: '1.1rem', cursor: 'pointer' }}>×</button>
+        </div>
+      )}
       {!readOnly && (
         <div className="page-header">
           <div>

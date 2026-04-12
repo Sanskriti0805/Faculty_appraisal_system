@@ -69,7 +69,7 @@ const TechnologyTransfer = () => {
     try {
       const facultyId = user?.id
       if (!facultyId || !token) {
-        alert('Unable to identify logged-in faculty. Please login again.')
+        window.appToast('Unable to identify logged-in faculty. Please login again.')
         return false
       }
 
@@ -81,7 +81,7 @@ const TechnologyTransfer = () => {
       }
 
       if (!formData.technologyInfo.trim()) {
-        alert('Data saved successfully!')
+        window.appToast('Data saved successfully!')
         return true
       }
 
@@ -109,14 +109,14 @@ const TechnologyTransfer = () => {
         if (evidenceFile) {
           setPersistedEvidenceFile(evidenceFile.name)
         }
-        alert('Data saved successfully!')
+        window.appToast('Data saved successfully!')
         return true
       } else {
         throw new Error(data.message || 'Failed to save')
       }
     } catch (error) {
       console.error('Error saving tech transfer:', error)
-      alert('Error saving data: ' + error.message)
+      window.appToast('Error saving data: ' + error.message)
       return false
     } finally {
       setLoading(false)

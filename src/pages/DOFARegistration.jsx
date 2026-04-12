@@ -5,6 +5,7 @@ import {
   RefreshCw, Mail, Hash, Briefcase, Calendar, Send, Loader, Archive, RotateCcw, Eye, Download
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { showConfirm } from '../utils/appDialogs';
 import './DOFARegistration.css';
 
 const API_BASE = `http://${window.location.hostname}:5000/api`;
@@ -178,7 +179,7 @@ const DOFARegistration = () => {
       : dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const withConfirm = (message) => window.confirm(message);
+  const withConfirm = async (message) => showConfirm(message);
 
   const runAction = async (url, method = 'PUT', body = null) => {
     const options = { method, headers };
@@ -188,7 +189,7 @@ const DOFARegistration = () => {
   };
 
   const handleArchiveFaculty = async (faculty) => {
-    if (!withConfirm('Are you sure you want to delete this faculty?')) return;
+    if (!(await withConfirm('Are you sure you want to delete this faculty?'))) return;
     try {
       const data = await runAction(`${API_BASE}/register/faculty/${faculty.id}/archive`, 'PUT', { reason: 'Archived from Manage Users' });
       if (data.success) {
@@ -203,7 +204,7 @@ const DOFARegistration = () => {
   };
 
   const handleRestoreFaculty = async (faculty) => {
-    if (!withConfirm('Are you sure you want to add this faculty back into the appraisal system?')) return;
+    if (!(await withConfirm('Are you sure you want to add this faculty back into the appraisal system?'))) return;
     try {
       const data = await runAction(`${API_BASE}/register/faculty/${faculty.id}/restore`);
       if (data.success) {
@@ -218,7 +219,7 @@ const DOFARegistration = () => {
   };
 
   const handleArchiveDepartment = async (department) => {
-    if (!withConfirm('Are you sure you want to delete this department?')) return;
+    if (!(await withConfirm('Are you sure you want to delete this department?'))) return;
     try {
       const data = await runAction(`${API_BASE}/register/departments/${department.id}/archive`, 'PUT', { reason: 'Archived from Manage Users' });
       if (data.success) {
@@ -233,7 +234,7 @@ const DOFARegistration = () => {
   };
 
   const handleRestoreDepartment = async (department) => {
-    if (!withConfirm('Are you sure you want to restore this department to the appraisal system?')) return;
+    if (!(await withConfirm('Are you sure you want to restore this department to the appraisal system?'))) return;
     try {
       const data = await runAction(`${API_BASE}/register/departments/${department.id}/restore`);
       if (data.success) {

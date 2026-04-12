@@ -107,18 +107,18 @@ const PaperReview = () => {
     const draftEntry = { ...formData, evidenceFile, evidence_file: persistedEvidenceFile }
 
     if (!hasReviewContent(draftEntry)) {
-      alert('Please fill in the current section before adding another one.')
+      window.appToast('Please fill in the current section before adding another one.')
       return
     }
 
     if (!hasRequiredReviewFields(draftEntry)) {
-      alert('Please complete Tier, Type of Paper, and Review details before adding another section.')
+      window.appToast('Please complete Tier, Type of Paper, and Review details before adding another section.')
       return
     }
 
     setSubmittedReviews((prev) => [...prev, normalizeDraftEntry(draftEntry)])
     resetDraft()
-    alert('Section added. You can now enter another review.')
+    window.appToast('Section added. You can now enter another review.')
   }
 
   const handleRemoveSection = (index) => {
@@ -130,7 +130,7 @@ const PaperReview = () => {
     try {
       const facultyId = user?.id
       if (!facultyId || !token) {
-        alert('Unable to identify logged-in faculty. Please login again.')
+        window.appToast('Unable to identify logged-in faculty. Please login again.')
         return false
       }
 
@@ -138,7 +138,7 @@ const PaperReview = () => {
       const draftHasContent = hasReviewContent(draftEntry)
 
       if (draftHasContent && !hasRequiredReviewFields(draftEntry)) {
-        alert('Please complete Tier, Type of Paper, and Review details before saving.')
+        window.appToast('Please complete Tier, Type of Paper, and Review details before saving.')
         return false
       }
 
@@ -148,7 +148,7 @@ const PaperReview = () => {
       }
 
       if (entriesToSave.length === 0) {
-        alert('Data saved successfully!')
+        window.appToast('Data saved successfully!')
         return true
       }
 
@@ -216,11 +216,11 @@ const PaperReview = () => {
       setPersistedReviewIds(createdIds)
       setSubmittedReviews(entriesToSave)
       resetDraft()
-      alert('Data saved successfully!')
+      window.appToast('Data saved successfully!')
       return true
     } catch (error) {
       console.error('Error saving review:', error)
-      alert('Error saving data: ' + error.message)
+      window.appToast('Error saving data: ' + error.message)
       return false
     } finally {
       setLoading(false)

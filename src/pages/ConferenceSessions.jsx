@@ -1,6 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Trash2, Plus, X } from 'lucide-react'
-import { useEffect } from 'react'
 import './ConferenceSessions.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
@@ -34,6 +33,9 @@ const formatStoredFileName = (name) => {
 
 const ConferenceSessions = () => {
   const { user, token } = useAuth()
+  const fileInputRef = useRef(null)
+  const [fileInputKey, setFileInputKey] = useState(0)
+  const [toast, setToast] = useState(null)
   const [persistedSessionIds, setPersistedSessionIds] = useState([])
   const initialState = {
     eventType: 'Conference',
@@ -54,6 +56,36 @@ const ConferenceSessions = () => {
 
   const [submittedSessions, setSubmittedSessions] = useState([])
   const [formData, setFormData] = useState(initialState)
+
+  const resetDraftForm = () => {
+    setFormData({
+      eventType: 'Conference',
+      sponsoringAgency: '',
+      eventTitle: '',
+      abbreviation: '',
+      organizer: '',
+      role: '',
+      certificateFile: null,
+      venue: {
+        city: '',
+        state: '',
+        country: ''
+      },
+      fromDate: '',
+      toDate: ''
+    })
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+    setFileInputKey((prev) => prev + 1)
+  }
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type })
+    window.clearTimeout(window.__conferenceSessionsToastTimer)
+    window.__conferenceSessionsToastTimer = window.setTimeout(() => setToast(null), 3500)
+  }
 
   useEffect(() => {
     if (!user?.id) return
@@ -138,7 +170,7 @@ const ConferenceSessions = () => {
     try {
       const facultyId = user?.id
       if (!facultyId || !token) {
-        alert('Unable to identify logged-in faculty. Please login again.')
+        showToast('Unable to identify logged-in faculty. Please login again.')
         return false
       }
       
@@ -149,11 +181,15 @@ const ConferenceSessions = () => {
       const allSessions = [...submittedSessions]
       
       if (formData.eventTitle) {
+        if (!formData.certificateFile && !formData.evidence_file) {
+          showToast('Please upload an evidence file before saving this session.')
+          return false
+        }
         allSessions.push(formData)
       }
 
       if (allSessions.length === 0) {
-        alert('Please add at least one session')
+        showToast('Please add at least one session')
         return false
       }
 
@@ -215,13 +251,13 @@ const ConferenceSessions = () => {
       }
 
       setPersistedSessionIds(createdIds)
-      alert('Data saved successfully!')
+      showToast('Data saved successfully!', 'success')
       setSubmittedSessions([])
-      setFormData(initialState)
+      resetDraftForm()
       return true
     } catch (error) {
       console.error('Error saving sessions:', error)
-      alert('Error saving data: ' + error.message)
+      showToast('Error saving data: ' + error.message)
       return false
     } finally {
       setLoading(false)
@@ -231,13 +267,21 @@ const ConferenceSessions = () => {
   const handleAddConference = (e) => {
     e.preventDefault()
     if (!formData.eventTitle) {
-      alert('Please fill in at least the Title.')
+      showToast('Please fill in at least the Title.')
       return
     }
 
-    setSubmittedSessions(prev => [...prev, formData])
-    setFormData(initialState)
-    alert('Session added to list. You can now add another.')
+    if (!formData.certificateFile && !formData.evidence_file) {
+      showToast('Please upload an evidence file before adding the session.')
+      return
+    }
+
+    setSubmittedSessions(prev => [...prev, {
+      ...formData,
+      venue: { ...formData.venue }
+    }])
+    resetDraftForm()
+    showToast('Session added to list. You can now add another.', 'success')
   }
 
   const handleRemoveSession = (index) => {
@@ -246,6 +290,10 @@ const ConferenceSessions = () => {
 
   const clearDraftEvidence = () => {
     setFormData(prev => ({ ...prev, certificateFile: null }))
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+    setFileInputKey((prev) => prev + 1)
   }
 
   const clearSessionEvidence = (index) => {
@@ -258,6 +306,12 @@ const ConferenceSessions = () => {
 
   return (
     <div className="conference-sessions form-page">
+      {toast && (
+        <div role="alert" style={{ position: 'fixed', right: '1rem', bottom: '5.5rem', zIndex: 9999, background: toast.type === 'success' ? '#276749' : '#c53030', color: '#fff', padding: '0.9rem 1rem', borderRadius: '10px', boxShadow: '0 12px 24px rgba(0,0,0,0.18)', minWidth: '280px', maxWidth: '420px', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+          <span>{toast.message}</span>
+          <button type="button" onClick={() => setToast(null)} style={{ border: 'none', background: 'transparent', color: '#fff', fontSize: '1.1rem', cursor: 'pointer' }}>×</button>
+        </div>
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title">Conference Sessions Chaired, if any</h1>
@@ -266,7 +320,7 @@ const ConferenceSessions = () => {
       </div>
 
       <div className="form-card">
-        <form onSubmit={handleSave} autoComplete="off">
+        <form onSubmit={handleSave} autoComplete="off" noValidate>
           {/* Row 1 */}
           <div className="form-row">
             <div className="form-group">
@@ -299,6 +353,7 @@ const ConferenceSessions = () => {
                 name="eventTitle"
                 value={formData.eventTitle}
                 onChange={handleInputChange}
+                  required
               />
             </div>
             <div className="form-group">
@@ -321,6 +376,7 @@ const ConferenceSessions = () => {
                 name="organizer"
                 value={formData.organizer}
                 onChange={handleInputChange}
+                  required
               />
             </div>
             <div className="form-group">
@@ -331,6 +387,7 @@ const ConferenceSessions = () => {
                 value={formData.role}
                 onChange={handleInputChange}
                 placeholder="e.g. Session Chair, Speaker"
+                  required
               />
             </div>
           </div>
@@ -340,8 +397,11 @@ const ConferenceSessions = () => {
               <label>Upload Evidence<span className="required-star">*</span></label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <input
+                  key={fileInputKey}
+                  ref={fileInputRef}
                   type="file"
                   onChange={handleFileChange}
+                    required
                 />
                 <FilePreviewButton file={formData.certificateFile} />
                 {formData.certificateFile && (
@@ -380,6 +440,7 @@ const ConferenceSessions = () => {
                   value={formData.venue.city}
                   onChange={handleVenueChange}
                   autoComplete="off"
+                    required
                 />
               </div>
               <div className="form-group">
@@ -390,6 +451,7 @@ const ConferenceSessions = () => {
                   value={formData.venue.state}
                   onChange={handleVenueChange}
                   autoComplete="off"
+                    required
                 />
               </div>
               <div className="form-group">
@@ -400,6 +462,7 @@ const ConferenceSessions = () => {
                   value={formData.venue.country}
                   onChange={handleVenueChange}
                   autoComplete="off"
+                    required
                 />
               </div>
             </div>
@@ -414,6 +477,7 @@ const ConferenceSessions = () => {
                 name="fromDate"
                 value={formData.fromDate}
                 onChange={handleInputChange}
+                  required
               />
             </div>
             <div className="form-group">
@@ -423,6 +487,7 @@ const ConferenceSessions = () => {
                 name="toDate"
                 value={formData.toDate}
                 onChange={handleInputChange}
+                  required
               />
             </div>
           </div>

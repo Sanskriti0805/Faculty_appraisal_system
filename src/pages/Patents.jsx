@@ -99,7 +99,7 @@ const Patents = ({ initialData, readOnly }) => {
     try {
       const facultyId = user?.id
       if (!facultyId) {
-        alert('Unable to identify logged-in faculty. Please login again.')
+        window.appToast('Unable to identify logged-in faculty. Please login again.')
         return false
       }
 
@@ -157,17 +157,17 @@ const Patents = ({ initialData, readOnly }) => {
       }
 
       if (createPromises.length === 0) {
-        alert('Data saved successfully!')
+        window.appToast('Data saved successfully!')
         return true
       }
 
       await Promise.all(createPromises)
 
-      alert('Data saved successfully!')
+      window.appToast('Data saved successfully!')
       return true
     } catch (error) {
       console.error('Error saving patents:', error)
-      alert('Error saving data: ' + (error.response?.data?.message || error.message))
+      window.appToast('Error saving data: ' + (error.response?.data?.message || error.message))
       return false
     } finally {
       setLoading(false)

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Lock, Unlock, Mail, Download, Users, FileText, Clock, CheckSquare, Eye, CheckCircle, XCircle, Calendar, FileCode, Table, X, ChevronDown, LayoutList } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import './DOFAOfficeDashboard.css';
+import { showConfirm } from '../utils/appDialogs';
 
 const API = `http://${window.location.hostname}:5000/api`;
 
@@ -80,7 +81,7 @@ const DOFAOfficeDashboard = () => {
 
   const handleToggleLock = async (id, currentlyLocked) => {
     const action = currentlyLocked ? 'unlock' : 'lock';
-    if (!window.confirm(`Are you sure you want to ${action} this submission?`)) return;
+    if (!(await showConfirm(`Are you sure you want to ${action} this submission?`))) return;
 
     try {
       await fetch(`${API}/submissions/${id}/lock`, {
@@ -88,7 +89,7 @@ const DOFAOfficeDashboard = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locked: !currentlyLocked, locked_by: 1 })
       });
-      alert(`Submission ${action}ed successfully`);
+      window.appToast(`Submission ${action}ed successfully`);
       fetchSubmissions();
     } catch (error) {
       console.error(`Error ${action}ing submission:`, error);
@@ -96,7 +97,7 @@ const DOFAOfficeDashboard = () => {
   };
 
   const handleSendReminder = async (submissionId, email, name) => {
-    if (!window.confirm(`Send deadline reminder to ${name} (${email})?`)) return;
+    if (!(await showConfirm(`Send deadline reminder to ${name} (${email})?`))) return;
     try {
       const res = await fetch(`${API}/submissions/${submissionId}/reminder`, {
         method: 'POST',
@@ -104,19 +105,19 @@ const DOFAOfficeDashboard = () => {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`✅ Reminder sent to ${email}`);
+        window.appToast(`✅ Reminder sent to ${email}`);
       } else {
-        alert(`⚠️ ${data.message || 'Failed to send reminder'}`);
+        window.appToast(`⚠️ ${data.message || 'Failed to send reminder'}`);
       }
     } catch (e) {
       console.error('Reminder error:', e);
-      alert('Error sending reminder. Check if email is configured in .env');
+      window.appToast('Error sending reminder. Check if email is configured in .env');
     }
   };
 
   const handleUpdateStatus = async (submissionId, status, facultyName) => {
     const labels = { approved: 'Approve', sent_back: 'Send Back', under_review: 'Mark Under Review' };
-    if (!window.confirm(`${labels[status] || status} submission for ${facultyName}?`)) return;
+    if (!(await showConfirm(`${labels[status] || status} submission for ${facultyName}?`))) return;
     try {
       const res = await fetch(`${API}/submissions/${submissionId}/status`, {
         method: 'PUT',
@@ -125,14 +126,14 @@ const DOFAOfficeDashboard = () => {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`✅ Status updated to "${status}"`);
+        window.appToast(`✅ Status updated to "${status}"`);
         fetchSubmissions();
         fetchStats();
       } else {
-        alert(`⚠️ ${data.message}`);
+        window.appToast(`⚠️ ${data.message}`);
       }
     } catch (e) {
-      alert('Error updating status');
+      window.appToast('Error updating status');
     }
   };
 
@@ -150,7 +151,7 @@ const DOFAOfficeDashboard = () => {
     setDownloadingFormat('json');
     try {
       const data = await fetchSubmissionData(submission.id);
-      if (!data) return alert('Could not fetch submission data');
+      if (!data) return window.appToast('Could not fetch submission data');
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -196,7 +197,7 @@ const DOFAOfficeDashboard = () => {
     setDownloadingFormat('pdf');
     try {
       const data = await fetchSubmissionData(submission.id);
-      if (!data) return alert('Could not fetch submission data');
+      if (!data) return window.appToast('Could not fetch submission data');
 
       const { submission: sub, facultyInfo, publications, courses, grants, patents, awards, proposals, newCourses } = data;
 
@@ -364,7 +365,7 @@ const DOFAOfficeDashboard = () => {
       const subs = yearFilter === 'all' ? submissions : submissions.filter(s => s.academic_year === yearFilter);
 
       if (subs.length === 0) {
-        alert('No submissions found for the selected academic year.');
+        window.appToast('No submissions found for the selected academic year.');
         return;
       }
 

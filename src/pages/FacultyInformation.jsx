@@ -38,7 +38,7 @@ const FacultyInformation = () => {
     // simulate delay
     return new Promise((resolve) => {
       setTimeout(() => {
-        alert('Data saved successfully!')
+        window.appToast('Data saved successfully!')
         resolve(true)
       }, 500)
     })

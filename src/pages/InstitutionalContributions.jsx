@@ -260,7 +260,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
     try {
       const facultyId = user?.id
       if (!facultyId || !token) {
-        alert('Unable to identify logged-in faculty. Please login again.')
+        window.appToast('Unable to identify logged-in faculty. Please login again.')
         return false
       }
 
@@ -326,11 +326,11 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
         otherResponsibility: savedRows[6]?.id || prev.otherResponsibility,
       }))
 
-      alert('Data saved successfully!')
+      window.appToast('Data saved successfully!')
       return true
     } catch (error) {
       console.error('Error saving contributions:', error)
-      alert('Failed to save data. Error: ' + error.message)
+      window.appToast('Failed to save data. Error: ' + error.message)
       return false
     } finally {
       setLoading(false)

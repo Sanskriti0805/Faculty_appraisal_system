@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
+import AppAlertHost from './components/AppAlertHost'
+import AppDialogHost from './components/AppDialogHost'
 
 // Public pages
 import { SubmissionProvider } from './context/SubmissionContext'
@@ -76,6 +78,8 @@ function App() {
   return (
     <AuthProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AppAlertHost />
+        <AppDialogHost />
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
             {/* ── Public Routes ── */}

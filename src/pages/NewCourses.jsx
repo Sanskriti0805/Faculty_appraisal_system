@@ -177,7 +177,7 @@ const NewCourses = () => {
       const authUser = JSON.parse(localStorage.getItem('auth_user') || '{}')
       const facultyId = authUser?.id
       if (!facultyId) {
-        alert('Session expired. Please login again.')
+        window.appToast('Session expired. Please login again.')
         return false
       }
       
@@ -232,12 +232,12 @@ const NewCourses = () => {
 
       setPersistedCourseIds(createdIds)
       
-      alert('Data saved successfully!')
+      window.appToast('Data saved successfully!')
       console.log('Saved courses to database')
       return true
     } catch (error) {
       console.error('Error saving courses:', error)
-      alert('Error saving data: ' + (error.response?.data?.message || error.message))
+      window.appToast('Error saving data: ' + (error.response?.data?.message || error.message))
       return false
     } finally {
       setLoading(false)

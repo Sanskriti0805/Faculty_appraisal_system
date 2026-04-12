@@ -480,17 +480,17 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     try {
       const facultyId = user?.id
       if (!facultyId) {
-        alert('Unable to identify logged-in faculty. Please login again.')
+        window.appToast('Unable to identify logged-in faculty. Please login again.')
         return false
       }
 
       if (publicationType === 'Conference' && (!conferenceData.dateFrom || !conferenceData.dateTo)) {
-        alert('Date From and Date To are required for conference publications.')
+        window.appToast('Date From and Date To are required for conference publications.')
         return false
       }
 
       if (publicationType === 'Monographs' && !bookSubType) {
-        alert('Please select a monograph sub-type before saving.')
+        window.appToast('Please select a monograph sub-type before saving.')
         return false
       }
 
@@ -524,7 +524,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       }
 
       if (!publicationType) {
-        alert('Please select a publication type.')
+        window.appToast('Please select a publication type.')
         return false
       }
 
@@ -541,7 +541,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
       if (publicationType === 'Journal') {
         if (!hasAuthorValue(authors) || !journalData.titleOfPaper || !journalData.nameOfJournal || !journalData.yearOfPublication) {
-          alert('Please complete required Journal fields: Authors, Title, Journal Name, Year of Publication.')
+          window.appToast('Please complete required Journal fields: Authors, Title, Journal Name, Year of Publication.')
           return false
         }
 
@@ -562,12 +562,12 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         const response = await createAndTrack(publicationData)
         await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
         await refreshPublications()
-        alert('Journal draft saved successfully!')
+        window.appToast('Journal draft saved successfully!')
         setPublicationId(response?.data?.id || null)
         return true
       } else if (publicationType === 'Conference') {
         if (!hasAuthorValue(authors) || !conferenceData.titleOfPaper || !conferenceData.fullNameOfConference) {
-          alert('Please complete required Conference fields: Authors, Title, Full Conference Name.')
+          window.appToast('Please complete required Conference fields: Authors, Title, Full Conference Name.')
           return false
         }
 
@@ -592,12 +592,12 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         const response = await createAndTrack(publicationData)
         await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
         await refreshPublications()
-        alert('Conference draft saved successfully!')
+        window.appToast('Conference draft saved successfully!')
         setPublicationId(response?.data?.id || null)
         return true
       } else if (publicationType === 'Monographs') {
         if (!bookSubType) {
-          alert('Please select a monograph sub-type before saving.')
+          window.appToast('Please select a monograph sub-type before saving.')
           return false
         }
 
@@ -605,7 +605,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         if (bookSubType === 'Book Chapter') {
           for (const entry of bookChapterEntries) {
             if (!hasAuthorValue(entry.authors) || !entry.titleOfBook || !entry.yearOfPublication || !entry.publicationAgency) {
-              alert('Please complete required Book Chapter fields in every entry: Authors, Title, Year, Publication Agency.')
+              window.appToast('Please complete required Book Chapter fields in every entry: Authors, Title, Year, Publication Agency.')
               return false
             }
 
@@ -626,13 +626,13 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           }
           await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
           await refreshPublications()
-          alert('Book chapter drafts saved successfully!')
+          window.appToast('Book chapter drafts saved successfully!')
           setPublicationId(null)
           return true
         } else if (bookSubType === 'Book') {
           for (const entry of textbookEntries) {
             if (!hasAuthorValue(entry.authors) || !entry.titleOfBook || !entry.yearOfPublication || !entry.publicationAgency || !entry.city || !entry.state || !entry.country) {
-              alert('Please complete required Book fields in every entry: Authors, Title, Year, Publication Agency, City, State, Country.')
+              window.appToast('Please complete required Book fields in every entry: Authors, Title, Year, Publication Agency, City, State, Country.')
               return false
             }
 
@@ -653,13 +653,13 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           }
           await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
           await refreshPublications()
-          alert('Book drafts saved successfully!')
+          window.appToast('Book drafts saved successfully!')
           setPublicationId(null)
           return true
         }
       } else if (publicationType === 'Any Other') {
         if (!otherDetails || !otherDetails.trim()) {
-          alert('Please provide details for Any Other publication type.')
+          window.appToast('Please provide details for Any Other publication type.')
           return false
         }
 
@@ -672,7 +672,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         const response = await createAndTrack(publicationData)
         await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
         await refreshPublications()
-        alert('Draft saved successfully!')
+        window.appToast('Draft saved successfully!')
         setPublicationId(response?.data?.id || null)
         return true
       }
@@ -681,7 +681,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         await Promise.allSettled(createdIds.map((id) => publicationsService.deletePublication(id)))
       }
       console.error('Error saving publication:', error)
-      alert('Failed to save publication. Error: ' + error.message)
+      window.appToast('Failed to save publication. Error: ' + error.message)
       return false
     } finally {
       setLoading(false)

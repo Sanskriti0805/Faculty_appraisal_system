@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Send, PlayCircle, StopCircle, Timer, CheckCircle2, XCircle, Loader2, CalendarClock, Rocket, Ban } from 'lucide-react';
+import { showConfirm } from '../utils/appDialogs';
 import './FormRelease.css';
 
 const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`;
@@ -89,7 +90,7 @@ const FormRelease = () => {
 
   const handleReleaseNow = async () => {
     if (!activeSession) return;
-    if (!window.confirm('Are you sure you want to release the appraisal forms now? Notification emails will be sent to all faculty members.')) return;
+    if (!(await showConfirm('Are you sure you want to release the appraisal forms now? Notification emails will be sent to all faculty members.'))) return;
     setActionLoading(true);
     try {
       const response = await fetch(`${API}/sessions/release`, {
@@ -128,7 +129,7 @@ const FormRelease = () => {
 
   const handleCancelSchedule = async () => {
     if (!activeSession) return;
-    if (!window.confirm('Cancel the scheduled form release?')) return;
+    if (!(await showConfirm('Cancel the scheduled form release?'))) return;
     setActionLoading(true);
     try {
       const response = await fetch(`${API}/sessions/cancel-schedule`, {
@@ -161,7 +162,7 @@ const FormRelease = () => {
 
   const handleUnrelease = async () => {
     if (!activeSession) return;
-    if (!window.confirm('Close form access? Faculty will no longer be able to fill forms.')) return;
+    if (!(await showConfirm('Close form access? Faculty will no longer be able to fill forms.'))) return;
     setActionLoading(true);
     try {
       const response = await fetch(`${API}/sessions/unrelease`, {
@@ -176,7 +177,7 @@ const FormRelease = () => {
   };
 
   const handleCloseSession = async (id) => {
-    if (!window.confirm('Are you sure you want to close this session?')) return;
+    if (!(await showConfirm('Are you sure you want to close this session?'))) return;
     setActionLoading(true);
     try {
       const response = await fetch(`${API}/sessions/${id}/status`, {

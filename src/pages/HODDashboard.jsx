@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Archive, RotateCcw, Eye, Download, X, Settings, Lock, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { showConfirm } from '../utils/appDialogs';
 import './HODDashboard.css';
 
 const API_BASE = `http://${window.location.hostname}:5000/api`;
@@ -82,7 +83,7 @@ const HODDashboard = () => {
   };
 
   const handleArchiveFaculty = async (f) => {
-    if (!window.confirm('Are you sure you want to delete this faculty?')) return;
+    if (!(await showConfirm('Are you sure you want to delete this faculty?'))) return;
     try {
       const res = await fetch(`${API_BASE}/register/faculty/${f.id}/archive`, {
         method: 'PUT',
@@ -90,22 +91,22 @@ const HODDashboard = () => {
         body: JSON.stringify({ reason: 'Archived by HOD' })
       });
       const data = await res.json();
-      if (!data.success) alert(data.message || 'Failed to archive faculty');
+      if (!data.success) window.appToast(data.message || 'Failed to archive faculty');
       loadData();
     } catch {
-      alert('Failed to archive faculty');
+      window.appToast('Failed to archive faculty');
     }
   };
 
   const handleRestoreFaculty = async (f) => {
-    if (!window.confirm('Are you sure you want to add this faculty back into the appraisal system?')) return;
+    if (!(await showConfirm('Are you sure you want to add this faculty back into the appraisal system?'))) return;
     try {
       const res = await fetch(`${API_BASE}/register/faculty/${f.id}/restore`, { method: 'PUT', headers });
       const data = await res.json();
-      if (!data.success) alert(data.message || 'Failed to restore faculty');
+      if (!data.success) window.appToast(data.message || 'Failed to restore faculty');
       loadData();
     } catch {
-      alert('Failed to restore faculty');
+      window.appToast('Failed to restore faculty');
     }
   };
 
@@ -123,7 +124,7 @@ const HODDashboard = () => {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      alert('Failed to export archive data');
+      window.appToast('Failed to export archive data');
     }
   };
 

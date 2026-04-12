@@ -5,6 +5,7 @@ import './PartB.css'
 import FormActions from '../components/FormActions'
 import { useAuth } from '../context/AuthContext'
 import FilePreviewButton from '../components/FilePreviewButton'
+import { showConfirm } from '../utils/appDialogs'
 
 const API_BASE = `http://${window.location.hostname}:5000/api`
 
@@ -299,13 +300,13 @@ const PartB = ({ initialData, readOnly }) => {
         } catch (err) {
           console.error('Failed to update Part B draft after save:', err)
         }
-        alert('Data saved successfully!');
+        window.appToast('Data saved successfully!');
       }
 
       return returnMeta ? result : result.success;
     } catch (error) {
       console.error('Error saving goals:', error);
-      if (showSuccess) alert('Failed to save data. Error: ' + error.message);
+      if (showSuccess) window.appToast('Failed to save data. Error: ' + error.message);
       const fallback = { success: false, status: 0, code: 'NETWORK_ERROR', message: error.message };
       return returnMeta ? fallback : false;
     }
@@ -315,12 +316,12 @@ const PartB = ({ initialData, readOnly }) => {
     if (e && e.preventDefault) e.preventDefault();
 
     if (!user || !token) {
-      alert('You must be logged in to submit.');
+      window.appToast('You must be logged in to submit.');
       return;
     }
 
     if (!submissionId) {
-      alert('Submission record not found. Please try again.');
+      window.appToast('Submission record not found. Please try again.');
       return;
     }
 
@@ -329,7 +330,7 @@ const PartB = ({ initialData, readOnly }) => {
       ? 'Are you sure you want to re-submit your updated appraisal? This will send the latest version for review.'
       : 'Are you sure you want to submit the complete appraisal? This will lock the form for review.'
 
-    if (!window.confirm(confirmMsg)) {
+    if (!(await showConfirm(confirmMsg))) {
       return;
     }
 
@@ -341,11 +342,11 @@ const PartB = ({ initialData, readOnly }) => {
       saveResult.code === 'SECTION_LOCKED';
 
     if (isPartBLockedDuringResubmit) {
-      alert('Part B is currently locked for edits in this cycle. Proceeding with re-submission of your approved section updates.');
+      window.appToast('Part B is currently locked for edits in this cycle. Proceeding with re-submission of your approved section updates.');
     }
 
     if (!saveResult.success && !isPartBLockedDuringResubmit) {
-      alert('Failed to save goals. Please try again before submitting.');
+      window.appToast('Failed to save goals. Please try again before submitting.');
       return;
     }
 
@@ -364,18 +365,18 @@ const PartB = ({ initialData, readOnly }) => {
           console.error('Failed to clear Part B draft after submit:', err)
         }
         if (isResubmitting) {
-          alert('✅ Appraisal re-submitted successfully! Your updated form has been sent for review.');
+          window.appToast('✅ Appraisal re-submitted successfully! Your updated form has been sent for review.');
           window.location.href = '/';
         } else {
           // Show the styled popup for first-time submission
           setShowSuccessPopup(true);
         }
       } else {
-        alert('Submission failed: ' + data.message);
+        window.appToast('Submission failed: ' + data.message);
       }
     } catch (error) {
       console.error('Error submitting appraisal:', error);
-      alert('Failed to submit appraisal. Error: ' + error.message);
+      window.appToast('Failed to submit appraisal. Error: ' + error.message);
     }
   }
 

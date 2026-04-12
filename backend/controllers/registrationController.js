@@ -68,9 +68,16 @@ exports.runMigrations = async () => {
     await ensureColumn('research_publications', 'evidence_file', "evidence_file VARCHAR(255) NULL COMMENT 'Path to uploaded evidence file'");
     await ensureColumn('research_publications', 'status', "status ENUM('draft','submitted') DEFAULT 'draft'");
 
-    // Ensure research grants/proposals upload columns exist for evidence persistence.
+    // Ensure evidence/certificate upload columns exist for legacy activity tables.
     await ensureColumn('research_grants', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
     await ensureColumn('submitted_proposals', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
+    await ensureColumn('technology_transfer', 'evidence_file', "evidence_file VARCHAR(255) NULL COMMENT 'Path to uploaded evidence file'");
+    await ensureColumn('paper_reviews', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
+    await ensureColumn('conference_sessions', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
+    await ensureColumn('keynotes_talks', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
+    await ensureColumn('awards_honours', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
+    await ensureColumn('patents', 'certificate_file', 'certificate_file VARCHAR(255) NULL');
+    await ensureColumn('consultancy', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
 
     // Paper review entries now store Tier 1 / Tier 2 explicitly.
     await ensureColumn('paper_reviews', 'tier', 'tier VARCHAR(50) NULL AFTER review_type');

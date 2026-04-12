@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, CheckCircle, XCircle, MessageSquare, FileText, Users, Clock, CheckSquare, Bell, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import './DOFADashboard.css';
+import { showConfirm, showPrompt } from '../utils/appDialogs';
 
 const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`;
 
@@ -84,7 +85,7 @@ const DOFADashboard = () => {
   };
 
   const handleQuickApprove = async (id) => {
-    if (!window.confirm('Are you sure you want to approve this submission?')) {
+    if (!(await showConfirm('Are you sure you want to approve this submission?'))) {
       return;
     }
 
@@ -100,7 +101,7 @@ const DOFADashboard = () => {
 
       const data = await response.json();
       if (data.success) {
-        alert('Submission approved successfully');
+        window.appToast('Submission approved successfully');
         fetchStats();
         fetchSubmissions();
       }
@@ -110,7 +111,12 @@ const DOFADashboard = () => {
   };
 
   const handleSendBack = async (id) => {
-    const comment = window.prompt('Please provide a reason for sending back:');
+    const comment = await showPrompt({
+      title: 'Send Back Submission',
+      message: 'Please provide a reason for sending back:',
+      placeholder: 'Enter reason',
+      confirmText: 'Send Back'
+    });
     if (!comment) return;
 
     try {
@@ -133,7 +139,7 @@ const DOFADashboard = () => {
         body: JSON.stringify({ status: 'sent_back' })
       });
 
-      alert('Submission sent back successfully');
+      window.appToast('Submission sent back successfully');
       fetchStats();
       fetchSubmissions();
     } catch (error) {
@@ -188,7 +194,7 @@ const DOFADashboard = () => {
 
   const handleReviewSubmit = async (status) => {
     if (status === 'approved' && approvedSections.length === 0) {
-      alert('Please select at least one section to approve.');
+      window.appToast('Please select at least one section to approve.');
       return;
     }
     setReviewLoading(status);
@@ -205,17 +211,17 @@ const DOFADashboard = () => {
       });
       const data = await res.json();
       if (data.success) {
-        alert(data.message);
+        window.appToast(data.message);
         setReviewingRequest(null);
         setApprovedSections([]);
         setDofaNote('');
         fetchEditRequests();
         fetchSubmissions();
       } else {
-        alert('Error: ' + data.message);
+        window.appToast('Error: ' + data.message);
       }
     } catch (err) {
-      alert('Request failed: ' + err.message);
+      window.appToast('Request failed: ' + err.message);
     } finally {
       setReviewLoading(null);
     }

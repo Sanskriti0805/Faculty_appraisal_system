@@ -144,7 +144,7 @@ const MySubmissionView = () => {
 
   const handleSubmitEditRequest = async () => {
     if (selectedSections.length === 0) {
-      alert('Please select at least one section to request edits for.');
+      window.appToast('Please select at least one section to request edits for.');
       return;
     }
     setSubmitting(true);
@@ -160,16 +160,16 @@ const MySubmissionView = () => {
       });
       const data = await res.json();
       if (data.success) {
-        alert('✅ Your edit request has been submitted! DOFA has been notified.');
+        window.appToast('✅ Your edit request has been submitted! DOFA has been notified.');
         setSelectedSections([]);
         setRequestMessage('');
         setEditPanelOpen(false);
         await fetchEditRequests(submissionData.submission.id);
       } else {
-        alert('❌ ' + (data.message || 'Failed to submit edit request.'));
+        window.appToast('❌ ' + (data.message || 'Failed to submit edit request.'));
       }
     } catch (err) {
-      alert('Error submitting request: ' + err.message);
+      window.appToast('Error submitting request: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -200,7 +200,7 @@ const MySubmissionView = () => {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert('Could not generate PDF: ' + err.message);
+      window.appToast('Could not generate PDF: ' + err.message);
     } finally {
       setPdfDownloading(false);
     }

@@ -273,7 +273,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
 
   const handleSave = async () => {
     if (!selectedType) {
-      alert('Please select a type first')
+      window.appToast('Please select a type first')
       return false
     }
 
@@ -281,7 +281,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
     try {
       const facultyId = user?.id
       if (!facultyId) {
-        alert('Unable to identify logged-in faculty. Please login again.')
+        window.appToast('Unable to identify logged-in faculty. Please login again.')
         return false
       }
 
@@ -400,11 +400,11 @@ const ResearchGrants = ({ initialData, readOnly }) => {
 
       await refreshBothTypes()
 
-      alert('Data saved successfully!')
+      window.appToast('Data saved successfully!')
       return true
     } catch (error) {
       console.error(`Error saving ${selectedType}:`, error)
-      alert('Error saving data: ' + (error.response?.data?.message || error.message))
+      window.appToast('Error saving data: ' + (error.response?.data?.message || error.message))
       return false
     } finally {
       setLoading(false)

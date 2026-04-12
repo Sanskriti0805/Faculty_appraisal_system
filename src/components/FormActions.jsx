@@ -18,6 +18,54 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
   const [submissionStatus, setSubmissionStatus] = React.useState(null);
   const [approvedSections, setApprovedSections] = React.useState([]);
   const [hasSectionRestrictions, setHasSectionRestrictions] = React.useState(false);
+  const [toast, setToast] = React.useState(null);
+
+  const validateMandatoryFields = React.useCallback(() => {
+    const formRoot = document.querySelector('.form-page form') || document.querySelector('form');
+    if (!formRoot) return true;
+
+    const getFieldFromLabel = (label) => {
+      const container = label.closest('.form-group, .form-field, .venue-row, .section-fieldset, .form-row, li, .dynamic-section-card, .section-card, .added-sessions-list') || label.parentElement;
+      if (!container) return null;
+      return container.querySelector('input, select, textarea');
+    };
+
+    const markInvalid = (field) => {
+      if (field && typeof field.focus === 'function') {
+        field.focus();
+      }
+    };
+
+    const requiredNativeFields = Array.from(formRoot.querySelectorAll('[required]')).filter((field) => {
+      if (field.type === 'hidden') return false;
+      if (field.type === 'file') return !(field.files && field.files.length > 0);
+      return !String(field.value || '').trim();
+    });
+
+    if (requiredNativeFields.length > 0) {
+      markInvalid(requiredNativeFields[0]);
+      setToast('Please fill out all compulsory fields.');
+      return false;
+    }
+
+    const requiredLabels = Array.from(formRoot.querySelectorAll('label')).filter((label) => label.querySelector('.required-star'));
+    for (const label of requiredLabels) {
+      const field = getFieldFromLabel(label);
+      if (!field) continue;
+
+      const hasValue = field.type === 'file'
+        ? Boolean(field.files && field.files.length > 0)
+        : Boolean(String(field.value || '').trim());
+
+      if (!hasValue) {
+        markInvalid(field);
+        setToast('Please fill out all compulsory fields.');
+        return false;
+      }
+    }
+
+    return true;
+  }, []);
 
   const pathToSectionKey = React.useMemo(() => ({
     '/faculty-information': 'faculty_info',
@@ -137,6 +185,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
   const handleSaveOnly = async () => {
     try {
+      if (!validateMandatoryFields()) return;
       await onSave();
     } catch (error) {
       console.error('Save failed:', error);
@@ -145,6 +194,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
   const handleSaveAndNext = async () => {
     try {
+      if (!validateMandatoryFields()) return;
       if (nextLabel === 'Submit for Review' && onSubmit) {
         await onSubmit();
         return;
@@ -157,7 +207,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
           navigate(effectiveNextPath);
           window.scrollTo(0, 0);
         } else if (submissionStatus === 'sent_back' && hasSectionRestrictions) {
-          alert('No more editable sections are available in this cycle.');
+          window.appToast('No more editable sections are available in this cycle.');
         }
       }
     } catch (error) {
@@ -187,9 +237,49 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
       zIndex: 10,
       border: '1px solid #eee'
     }}>
+      {toast && (
+        <div
+          role="alert"
+          style={{
+            position: 'fixed',
+            right: '1.25rem',
+            bottom: '6.25rem',
+            zIndex: 9999,
+            backgroundColor: '#c53030',
+            color: '#fff',
+            padding: '0.9rem 1.1rem',
+            borderRadius: '10px',
+            boxShadow: '0 12px 24px rgba(0,0,0,0.18)',
+            minWidth: '280px',
+            maxWidth: '420px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem'
+          }}
+        >
+          <span>{toast}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: '#fff',
+              fontSize: '1.1rem',
+              cursor: 'pointer',
+              lineHeight: 1
+            }}
+            aria-label="Dismiss validation message"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: '1rem' }}>
         {showPrevious && effectivePrevPath && (
           <button
+            type="button"
             onClick={handlePrevious}
             className="btn-secondary"
             style={{
@@ -213,6 +303,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
       <div style={{ display: 'flex', gap: '1rem' }}>
         <button
+          type="button"
           onClick={handleSaveOnly}
           disabled={loading}
           style={{
@@ -235,6 +326,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
         {(effectiveNextPath || nextLabel !== 'Save and Next') && (
           <button
+            type="button"
             onClick={handleSaveAndNext}
             disabled={loading}
             style={{

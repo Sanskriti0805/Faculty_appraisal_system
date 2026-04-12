@@ -46,7 +46,7 @@ const Courseware = () => {
 
   const handleSave = async () => {
     if (!user?.id) {
-      alert('Unable to identify logged-in faculty. Please login again.')
+      window.appToast('Unable to identify logged-in faculty. Please login again.')
       return false
     }
 
@@ -57,11 +57,11 @@ const Courseware = () => {
         link: formData.link,
         labManualFile: formData.labManualFile?.name || null,
       })
-      alert('Data saved successfully!')
+      window.appToast('Data saved successfully!')
       return true
     } catch (error) {
       console.error('Failed to save courseware data:', error)
-      alert('Failed to save data. Please try again.')
+      window.appToast('Failed to save data. Please try again.')
       return false
     }
   }

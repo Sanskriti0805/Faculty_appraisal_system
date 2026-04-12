@@ -27,6 +27,7 @@ const formatStoredFileName = (name) => {
 const KeynotesTalks = () => {
   const { user, token } = useAuth()
   const [persistedTalkIds, setPersistedTalkIds] = useState([])
+  const [toast, setToast] = useState(null)
   const initialState = {
     category: 'Keynote',
     title: '',
@@ -44,6 +45,12 @@ const KeynotesTalks = () => {
 
   const [submittedTalks, setSubmittedTalks] = useState([])
   const [formData, setFormData] = useState(initialState)
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type })
+    window.clearTimeout(window.__keynotesTalksToastTimer)
+    window.__keynotesTalksToastTimer = window.setTimeout(() => setToast(null), 3500)
+  }
 
   useEffect(() => {
     if (!user?.id) return
@@ -121,7 +128,7 @@ const KeynotesTalks = () => {
     try {
       const facultyId = user?.id
       if (!facultyId || !token) {
-        alert('Unable to identify logged-in faculty. Please login again.')
+        showToast('Unable to identify logged-in faculty. Please login again.')
         return false
       }
       
@@ -136,7 +143,7 @@ const KeynotesTalks = () => {
       }
 
       if (allTalks.length === 0) {
-        alert('Please add at least one talk')
+        showToast('Please add at least one talk')
         return false
       }
 
@@ -199,13 +206,13 @@ const KeynotesTalks = () => {
       }
 
       setPersistedTalkIds(createdIds)
-      alert('Data saved successfully!')
+      showToast('Data saved successfully!', 'success')
       setSubmittedTalks([])
       setFormData(initialState)
       return true
     } catch (error) {
       console.error('Error saving talks:', error)
-      alert('Error saving data: ' + error.message)
+      showToast('Error saving data: ' + error.message)
       return false
     } finally {
       setLoading(false)
@@ -215,7 +222,7 @@ const KeynotesTalks = () => {
   const handleAddDate = (e) => {
     e.preventDefault()
     if (!formData.date) {
-      alert('Please select a date first.')
+      showToast('Please select a date first.')
       return
     }
 
@@ -242,7 +249,7 @@ const KeynotesTalks = () => {
   const handleAddTalk = (e) => {
     e.preventDefault()
     if (!formData.title) {
-      alert('Please fill in at least the Title.')
+      showToast('Please fill in at least the Title.')
       return
     }
 
@@ -252,13 +259,13 @@ const KeynotesTalks = () => {
     }
 
     if (normalizedDates.length === 0) {
-      alert('Please add at least one date.')
+      showToast('Please add at least one date.')
       return
     }
 
     setSubmittedTalks(prev => [...prev, { ...formData, dates: normalizedDates, date: normalizedDates[0] }])
     setFormData(initialState)
-    alert('Talk added to list. You can now add another.')
+    showToast('Talk added to list. You can now add another.', 'success')
   }
 
   const handleRemoveTalk = (index) => {
@@ -277,6 +284,12 @@ const KeynotesTalks = () => {
 
   return (
     <div className="keynotes-talks form-page">
+      {toast && (
+        <div role="alert" style={{ position: 'fixed', right: '1rem', bottom: '5.5rem', zIndex: 9999, background: toast.type === 'success' ? '#276749' : '#c53030', color: '#fff', padding: '0.9rem 1rem', borderRadius: '10px', boxShadow: '0 12px 24px rgba(0,0,0,0.18)', minWidth: '280px', maxWidth: '420px', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+          <span>{toast.message}</span>
+          <button type="button" onClick={() => setToast(null)} style={{ border: 'none', background: 'transparent', color: '#fff', fontSize: '1.1rem', cursor: 'pointer' }}>×</button>
+        </div>
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title">Keynotes, Seminars and Invited Talks (outside LNMIIT)</h1>
@@ -285,7 +298,7 @@ const KeynotesTalks = () => {
       </div>
 
       <div className="form-card">
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSave} noValidate>
 
           {/* Row 1: Category & Title */}
           <div className="form-row">

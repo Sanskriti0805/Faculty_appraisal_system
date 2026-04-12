@@ -353,7 +353,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
       const authUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
       const facultyId = authUser?.id;
       if (!facultyId) {
-        alert('Session expired. Please login again.');
+        window.appToast('Session expired. Please login again.');
         return false;
       }
 
@@ -438,12 +438,12 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
       setPersistedCourseIds(createdIds)
 
-      alert('Data saved successfully!');
+      window.appToast('Data saved successfully!');
       return true;
     } catch (error) {
       console.error('Error saving courses:', error);
       const message = error?.response?.data?.message || error.message || 'Please check the entered values.';
-      alert(`Failed to save data. ${message}`);
+      window.appToast(`Failed to save data. ${message}`);
       return false;
     }
   }
