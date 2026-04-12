@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useEffect } from 'react'
-import { Plus, Trash2, Upload } from 'lucide-react'
+import { Plus, Trash2, Upload, X } from 'lucide-react'
 import './FormPages.css'
 import { coursesService } from '../services/coursesService'
 import FormActions from '../components/FormActions'
@@ -21,6 +21,18 @@ const deleteIgnoringNotFound = async (deleteFn, ids) => {
   if (firstRealError) {
     throw firstRealError.reason
   }
+}
+
+const hasNewCourseRowData = (course) => {
+  if (!course) return false
+  return Boolean(
+    (course.course_name && String(course.course_name).trim()) ||
+    (course.course_code && String(course.course_code).trim()) ||
+    (course.level && String(course.level).trim()) ||
+    (course.remarks && String(course.remarks).trim()) ||
+    course.cif_file ||
+    course.existing_cif_file
+  )
 }
 
 const NewCourses = () => {
@@ -142,6 +154,23 @@ const NewCourses = () => {
     updateCourse(section, id, 'cifFile', file)
   }
 
+  const clearUploadedFile = (section, id) => {
+    const clearArray = (courses) =>
+      courses.map((course) =>
+        course.id === id
+          ? { ...course, cifFile: null, cif_file: null }
+          : course
+      )
+
+    if (section === 'ug') {
+      setUgCourses(clearArray(ugCourses))
+    } else if (section === 'masters') {
+      setMastersCourses(clearArray(mastersCourses))
+    } else if (section === 'doctoral') {
+      setDoctoralCourses(clearArray(doctoralCourses))
+    }
+  }
+
   const handleSave = async () => {
     setLoading(true)
     try {
@@ -162,7 +191,8 @@ const NewCourses = () => {
           course_code: course.courseCode,
           level: course.level,
           remarks: course.remarks,
-          cif_file: course.cifFile
+          cif_file: course.cifFile,
+          existing_cif_file: course.cif_file || null
         })),
         ...mastersCourses.map(course => ({
           faculty_id: facultyId,
@@ -172,7 +202,8 @@ const NewCourses = () => {
           course_code: course.courseCode,
           level: course.level,
           remarks: course.remarks,
-          cif_file: course.cifFile
+          cif_file: course.cifFile,
+          existing_cif_file: course.cif_file || null
         })),
         ...doctoralCourses.map(course => ({
           faculty_id: facultyId,
@@ -182,7 +213,8 @@ const NewCourses = () => {
           course_code: course.courseCode,
           level: course.level,
           remarks: course.remarks,
-          cif_file: course.cifFile
+          cif_file: course.cifFile,
+          existing_cif_file: course.cif_file || null
         }))
       ]
 
@@ -190,7 +222,7 @@ const NewCourses = () => {
       await deleteIgnoringNotFound((id) => apiClient.delete(`/courses/new/${id}`), persistedCourseIds)
 
       const promises = allCourses
-        .filter(course => course.course_name && course.course_code)
+        .filter(course => hasNewCourseRowData(course))
         .map(course => coursesService.createNewCourse(course))
 
       const createdResponses = await Promise.all(promises)
@@ -300,7 +332,7 @@ const NewCourses = () => {
                   }}>
                     <Upload size={16} />
                     <span style={{ fontSize: '0.875rem' }}>
-                      {course.cifFile ? course.cifFile.name : 'Choose file'}
+                      {course.cifFile ? course.cifFile.name : (course.cif_file || 'Choose file')}
                     </span>
                     <input
                       type="file"
@@ -310,9 +342,30 @@ const NewCourses = () => {
                     />
                   </label>
                   <FilePreviewButton
-                    file={course.cifFile}
+                    file={course.cifFile || course.cif_file}
                     style={{ width: '32px', height: '32px', marginLeft: '0.5rem' }}
                   />
+                  {(course.cifFile || course.cif_file) && (
+                    <button
+                      type="button"
+                      onClick={() => clearUploadedFile(section, course.id)}
+                      title="Remove uploaded document"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        marginLeft: '0.5rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: '#fff',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
                 </td>
                 <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                   <button

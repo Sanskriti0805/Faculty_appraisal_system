@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useEffect } from 'react'
-import { Trash2, Plus } from 'lucide-react'
+import { Trash2, Plus, X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import './ConferencesOutside.css'
@@ -155,6 +155,16 @@ const ConferencesOutside = () => {
 
   const handleRemoveConference = (index) => {
     setSubmittedConferences(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const clearDraftEvidence = () => {
+    setFormData(prev => ({ ...prev, posterFile: null }))
+  }
+
+  const clearConferenceEvidence = (index) => {
+    setSubmittedConferences(prev => prev.map((conf, i) => (
+      i === index ? { ...conf, posterFile: null } : conf
+    )))
   }
 
   return (
@@ -313,6 +323,26 @@ const ConferencesOutside = () => {
                   onChange={handleFileChange}
                 />
                 <FilePreviewButton file={formData.posterFile} />
+                {formData.posterFile && (
+                  <button
+                    type="button"
+                    onClick={clearDraftEvidence}
+                    title="Remove uploaded document"
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '1px solid #d1d8e0',
+                      borderRadius: '6px',
+                      background: '#fff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -358,6 +388,24 @@ const ConferencesOutside = () => {
                             File: {typeof conf.posterFile === 'string' ? formatStoredFileName(conf.posterFile) : conf.posterFile?.name}
                           </span>
                           <FilePreviewButton file={conf.posterFile} style={{ width: '28px', height: '28px' }} />
+                          <button
+                            type="button"
+                            onClick={() => clearConferenceEvidence(index)}
+                            title="Remove uploaded document"
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              border: '1px solid #d1d8e0',
+                              borderRadius: '6px',
+                              background: '#fff',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <X size={13} />
+                          </button>
                         </span>
                       )}
                     </div>

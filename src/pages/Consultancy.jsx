@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Upload, Plus, Trash2, ExternalLink } from 'lucide-react'
+import { Upload, Plus, Trash2, ExternalLink, X } from 'lucide-react'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
@@ -121,6 +121,13 @@ const Consultancy = ({ initialData, readOnly }) => {
     if (readOnly) return;
     setConsultancies(consultancies.map(c =>
       c.id === id ? { ...c, evidenceFile: file } : c
+    ))
+  }
+
+  const handleClearFile = (id) => {
+    if (readOnly) return;
+    setConsultancies(consultancies.map(c =>
+      c.id === id ? { ...c, evidenceFile: null, evidence_file: null } : c
     ))
   }
 
@@ -248,6 +255,26 @@ const Consultancy = ({ initialData, readOnly }) => {
             <Upload size={18} />
           </label>
           <FilePreviewButton file={consultancy.evidenceFile || consultancy.evidence_file} />
+          {(consultancy.evidenceFile || consultancy.evidence_file) && (
+            <button
+              type="button"
+              onClick={() => handleClearFile(consultancy.id)}
+              title="Remove uploaded document"
+              style={{
+                width: '30px',
+                height: '30px',
+                border: '1px solid #d1d8e0',
+                borderRadius: '6px',
+                background: '#fff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={13} />
+            </button>
+          )}
         </div>
       </>
     );

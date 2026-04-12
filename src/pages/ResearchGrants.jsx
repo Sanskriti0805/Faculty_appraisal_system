@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Plus, Trash2, ExternalLink, Upload } from 'lucide-react'
+import { Plus, Trash2, ExternalLink, Upload, X } from 'lucide-react'
 import './CoursesTaught.css'
 import { grantsService } from '../services/grantsService'
 import FormActions from '../components/FormActions'
@@ -220,6 +220,20 @@ const ResearchGrants = ({ initialData, readOnly }) => {
     const updated = [...grants]
     updated[index].evidenceFile = file
     setGrants(updated)
+  }
+
+  const clearGrantFile = (index) => {
+    const updated = [...grants]
+    updated[index].evidenceFile = null
+    updated[index].evidence_file = null
+    setGrants(updated)
+  }
+
+  const clearProposalFile = (index) => {
+    const updated = [...proposals]
+    updated[index].evidenceFile = null
+    updated[index].evidence_file = null
+    setProposals(updated)
   }
 
   const addProposal = () => {
@@ -601,6 +615,30 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                               {grant.evidenceFile ? grant.evidenceFile.name : 'Choose file'}
                             </span>
                             <FilePreviewButton file={grant.evidenceFile || grant.evidence_file} style={{ width: '28px', height: '28px' }} />
+                            {(grant.evidenceFile || grant.evidence_file) && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  clearGrantFile(index)
+                                }}
+                                title="Remove uploaded document"
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  border: '1px solid #d1d8e0',
+                                  borderRadius: '6px',
+                                  background: '#fff',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <X size={12} />
+                              </button>
+                            )}
                             <input
                               type="file"
                               onChange={(e) => handleFileUpload(index, e.target.files[0])}
@@ -814,6 +852,30 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                               {proposal.evidenceFile ? proposal.evidenceFile.name : 'Choose file'}
                             </span>
                             <FilePreviewButton file={proposal.evidenceFile || proposal.evidence_file} style={{ width: '28px', height: '28px' }} />
+                            {(proposal.evidenceFile || proposal.evidence_file) && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  clearProposalFile(index)
+                                }}
+                                title="Remove uploaded document"
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  border: '1px solid #d1d8e0',
+                                  borderRadius: '6px',
+                                  background: '#fff',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <X size={12} />
+                              </button>
+                            )}
                             <input
                               type="file"
                               onChange={(e) => {

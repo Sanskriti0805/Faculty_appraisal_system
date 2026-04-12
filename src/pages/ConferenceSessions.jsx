@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Trash2, Plus } from 'lucide-react'
+import { Trash2, Plus, X } from 'lucide-react'
 import { useEffect } from 'react'
 import './ConferenceSessions.css'
 import FormActions from '../components/FormActions'
@@ -244,6 +244,18 @@ const ConferenceSessions = () => {
     setSubmittedSessions(prev => prev.filter((_, i) => i !== index))
   }
 
+  const clearDraftEvidence = () => {
+    setFormData(prev => ({ ...prev, certificateFile: null }))
+  }
+
+  const clearSessionEvidence = (index) => {
+    setSubmittedSessions(prev => prev.map((session, i) => (
+      i === index
+        ? { ...session, certificateFile: null, evidence_file: null }
+        : session
+    )))
+  }
+
   return (
     <div className="conference-sessions form-page">
       <div className="page-header">
@@ -332,6 +344,26 @@ const ConferenceSessions = () => {
                   onChange={handleFileChange}
                 />
                 <FilePreviewButton file={formData.certificateFile} />
+                {formData.certificateFile && (
+                  <button
+                    type="button"
+                    onClick={clearDraftEvidence}
+                    title="Remove uploaded document"
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '1px solid #d1d8e0',
+                      borderRadius: '6px',
+                      background: '#fff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -428,6 +460,24 @@ const ConferenceSessions = () => {
                             File: {session.certificateFile?.name || formatStoredFileName(session.evidence_file)}
                           </span>
                           <FilePreviewButton file={session.certificateFile || session.evidence_file} style={{ width: '28px', height: '28px' }} />
+                          <button
+                            type="button"
+                            onClick={() => clearSessionEvidence(index)}
+                            title="Remove uploaded document"
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              border: '1px solid #d1d8e0',
+                              borderRadius: '6px',
+                              background: '#fff',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <X size={13} />
+                          </button>
                         </span>
                       )}
                     </div>

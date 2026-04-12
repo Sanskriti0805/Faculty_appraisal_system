@@ -8,7 +8,7 @@ const { requireSectionEditAccess } = require('../middleware/submissionEditGuard'
 
 // Courses taught routes with caching
 router.get('/faculty/:facultyId', cacheMiddleware(180), coursesController.getCoursesByFaculty);
-router.post('/', authenticate, requireSectionEditAccess('courses_taught'), coursesController.createCourse);
+router.post('/', authenticate, requireSectionEditAccess('courses_taught'), uploadSingle('evidence_file'), coursesController.createCourse);
 router.put('/:id', authenticate, requireSectionEditAccess('courses_taught'), coursesController.updateCourse);
 router.delete('/:id', authenticate, requireSectionEditAccess('courses_taught'), coursesController.deleteCourse);
 

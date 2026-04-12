@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Calendar, Plus, Trash2 } from 'lucide-react'
+import { Calendar, Plus, Trash2, X } from 'lucide-react'
 import { useEffect } from 'react'
 import './KeynotesTalks.css'
 import FormActions from '../components/FormActions'
@@ -265,6 +265,16 @@ const KeynotesTalks = () => {
     setSubmittedTalks(prev => prev.filter((_, i) => i !== index))
   }
 
+  const clearDraftEvidence = () => {
+    setFormData(prev => ({ ...prev, certificateFile: null }))
+  }
+
+  const clearTalkEvidence = (index) => {
+    setSubmittedTalks(prev => prev.map((talk, i) => (
+      i === index ? { ...talk, certificateFile: null, evidence_file: null } : talk
+    )))
+  }
+
   return (
     <div className="keynotes-talks form-page">
       <div className="page-header">
@@ -371,6 +381,26 @@ const KeynotesTalks = () => {
                   onChange={handleFileChange}
                 />
                 <FilePreviewButton file={formData.certificateFile} />
+                {formData.certificateFile && (
+                  <button
+                    type="button"
+                    onClick={clearDraftEvidence}
+                    title="Remove uploaded document"
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '1px solid #d1d8e0',
+                      borderRadius: '6px',
+                      background: '#fff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -447,6 +477,24 @@ const KeynotesTalks = () => {
                             File: {talk.certificateFile?.name || formatStoredFileName(talk.evidence_file)}
                           </span>
                           <FilePreviewButton file={talk.certificateFile || talk.evidence_file} style={{ width: '28px', height: '28px' }} />
+                          <button
+                            type="button"
+                            onClick={() => clearTalkEvidence(index)}
+                            title="Remove uploaded document"
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              border: '1px solid #d1d8e0',
+                              borderRadius: '6px',
+                              background: '#fff',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <X size={13} />
+                          </button>
                         </span>
                       )}
                     </div>

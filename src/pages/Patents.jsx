@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Upload, ExternalLink } from 'lucide-react'
+import { Upload, ExternalLink, X } from 'lucide-react'
 import './FormPages.css'
 import { patentsService } from '../services/patentsService'
 import FormActions from '../components/FormActions'
@@ -247,6 +247,30 @@ const Patents = ({ initialData, readOnly }) => {
                     PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
                   </span>
                   <FilePreviewButton file={certificateFiles.granted} style={{ width: '32px', height: '32px' }} />
+                  {certificateFiles.granted && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setCertificateFiles({ ...certificateFiles, granted: null })
+                      }}
+                      title="Remove uploaded document"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '1px solid #d1d8e0',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </label>
               </div>
             )}
@@ -312,6 +336,30 @@ const Patents = ({ initialData, readOnly }) => {
                     PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
                   </span>
                   <FilePreviewButton file={certificateFiles.published} style={{ width: '32px', height: '32px' }} />
+                  {certificateFiles.published && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setCertificateFiles({ ...certificateFiles, published: null })
+                      }}
+                      title="Remove uploaded document"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '1px solid #d1d8e0',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </label>
               </div>
             )}
@@ -377,6 +425,30 @@ const Patents = ({ initialData, readOnly }) => {
                     PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
                   </span>
                   <FilePreviewButton file={certificateFiles.applied} style={{ width: '32px', height: '32px' }} />
+                  {certificateFiles.applied && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setCertificateFiles({ ...certificateFiles, applied: null })
+                      }}
+                      title="Remove uploaded document"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '1px solid #d1d8e0',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </label>
               </div>
             )}

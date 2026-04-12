@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Upload, ExternalLink } from 'lucide-react'
+import { Upload, ExternalLink, X } from 'lucide-react'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
@@ -200,6 +200,30 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                       {formData.onCampusFile && formData.onCampusFile.name ? formData.onCampusFile.name : formData.onCampusFile || 'Upload Supporting Document'}
                     </span>
                     <FilePreviewButton file={formData.onCampusFile} style={{ width: '32px', height: '32px' }} />
+                    {formData.onCampusFile && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleFileUpload('onCampusFile', null)
+                        }}
+                        title="Remove uploaded document"
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          border: '1px solid #d1d8e0',
+                          borderRadius: '6px',
+                          background: '#fff',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                     <input
                       type="file"
                       onChange={(e) => handleFileUpload('onCampusFile', e.target.files[0])}
@@ -257,6 +281,30 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                       {formData.onlineFile && formData.onlineFile.name ? formData.onlineFile.name : formData.onlineFile || 'Upload Supporting Document'}
                     </span>
                     <FilePreviewButton file={formData.onlineFile} style={{ width: '32px', height: '32px' }} />
+                    {formData.onlineFile && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleFileUpload('onlineFile', null)
+                        }}
+                        title="Remove uploaded document"
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          border: '1px solid #d1d8e0',
+                          borderRadius: '6px',
+                          background: '#fff',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                     <input
                       type="file"
                       onChange={(e) => handleFileUpload('onlineFile', e.target.files[0])}
@@ -314,6 +362,30 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                       {formData.evaluationFile && formData.evaluationFile.name ? formData.evaluationFile.name : formData.evaluationFile || 'Upload Supporting Document'}
                     </span>
                     <FilePreviewButton file={formData.evaluationFile} style={{ width: '32px', height: '32px' }} />
+                    {formData.evaluationFile && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleFileUpload('evaluationFile', null)
+                        }}
+                        title="Remove uploaded document"
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          border: '1px solid #d1d8e0',
+                          borderRadius: '6px',
+                          background: '#fff',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                     <input
                       type="file"
                       onChange={(e) => handleFileUpload('evaluationFile', e.target.files[0])}

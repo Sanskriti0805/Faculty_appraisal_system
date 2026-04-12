@@ -52,6 +52,14 @@ exports.runMigrations = async () => {
 
     // Ensure legacy appraisal tables have workflow columns expected by controllers.
     await ensureColumn('courses_taught', 'percentage', 'percentage VARCHAR(20) NULL');
+    await ensureColumn('courses_taught', 'remarks', 'remarks TEXT NULL');
+    await ensureColumn('courses_taught', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
+    await ensureColumn('courses_taught', 'project_title', 'project_title VARCHAR(500) NULL');
+    await ensureColumn('courses_taught', 'project_type', 'project_type VARCHAR(100) NULL');
+    await ensureColumn('courses_taught', 'project_role', 'project_role VARCHAR(100) NULL');
+    await ensureColumn('courses_taught', 'student_name', 'student_name VARCHAR(255) NULL');
+    await ensureColumn('courses_taught', 'project_duration', 'project_duration VARCHAR(100) NULL');
+    await ensureColumn('courses_taught', 'project_outcome', 'project_outcome TEXT NULL');
     await ensureColumn('courses_taught', 'status', "status ENUM('draft','submitted') DEFAULT 'draft'");
     await ensureColumn('courses_taught', 'feedback_score', 'feedback_score DECIMAL(5,3) NULL');
     await ensureColumn('new_courses', 'status', "status ENUM('draft','submitted') DEFAULT 'draft'");

@@ -567,10 +567,13 @@ const PartB = ({ initialData, readOnly }) => {
                           file={goal.evidenceFile || goal.evidence_file}
                           style={{ width: '32px', height: '32px', marginLeft: '0.5rem' }}
                         />
-                        {goal.evidenceFile && (
+                        {(goal.evidenceFile || goal.evidence_file) && (
                           <button
                             className="compact-remove-btn"
-                            onClick={() => handleInputChange(goal.id, 'evidenceFile', null)}
+                            onClick={() => {
+                              handleInputChange(goal.id, 'evidenceFile', null)
+                              handleInputChange(goal.id, 'evidence_file', null)
+                            }}
                             title="Remove file"
                           >
                             <X size={14} />

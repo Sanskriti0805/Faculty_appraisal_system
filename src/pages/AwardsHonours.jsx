@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Upload, FileText } from 'lucide-react'
+import { Plus, Trash2, Upload, FileText, X } from 'lucide-react'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
@@ -237,6 +237,30 @@ const AwardsHonours = ({ initialData, readOnly }) => {
                     file={formData.evidenceFile}
                     style={{ width: '32px', height: '32px', marginTop: '0.25rem' }}
                   />
+                  {formData.evidenceFile && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setFormData({ ...formData, evidenceFile: null })
+                      }}
+                      title="Remove uploaded document"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '1px solid #d1d8e0',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </label>
               </div>
             </div>

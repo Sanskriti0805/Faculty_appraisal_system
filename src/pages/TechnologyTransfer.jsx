@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useEffect } from 'react'
-import { Upload } from 'lucide-react'
+import { Upload, X } from 'lucide-react'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
@@ -182,6 +182,31 @@ const TechnologyTransfer = () => {
                   file={evidenceFile || persistedEvidenceFile}
                   style={{ width: '32px', height: '32px', marginTop: '0.25rem' }}
                 />
+                {(evidenceFile || persistedEvidenceFile) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setEvidenceFile(null)
+                      setPersistedEvidenceFile('')
+                    }}
+                    title="Remove uploaded document"
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '1px solid #d1d8e0',
+                      borderRadius: '6px',
+                      background: '#fff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </label>
             </div>
           </div>

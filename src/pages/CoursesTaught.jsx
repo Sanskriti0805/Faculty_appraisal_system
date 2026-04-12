@@ -27,6 +27,34 @@ const ReadOnlyField = ({ value, readOnly, children }) => (
     : children
 )
 
+const hasCourseRowData = (course) => {
+  if (!course) return false
+  return Boolean(
+    (course.title && String(course.title).trim()) ||
+    (course.percentage && String(course.percentage).trim()) ||
+    (course.students !== '' && course.students !== null && course.students !== undefined) ||
+    (course.feedback !== '' && course.feedback !== null && course.feedback !== undefined) ||
+    (course.remarks && String(course.remarks).trim()) ||
+    course.feedbackFile ||
+    course.evidence_file
+  )
+}
+
+const hasProjectRowData = (project) => {
+  if (!project) return false
+  return Boolean(
+    (project.projectTitle && String(project.projectTitle).trim()) ||
+    (project.projectType && String(project.projectType).trim()) ||
+    (project.role && String(project.role).trim()) ||
+    (project.studentName && String(project.studentName).trim()) ||
+    (project.duration && String(project.duration).trim()) ||
+    (project.outcome && String(project.outcome).trim()) ||
+    (project.remarks && String(project.remarks).trim()) ||
+    project.certificateFile ||
+    project.evidence_file
+  )
+}
+
 const CoursesTaught = ({ initialData, readOnly }) => {
   const { user } = useAuth()
   const [selectedSection, setSelectedSection] = useState('courses')
@@ -60,20 +88,66 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
   useEffect(() => {
     if (initialData) {
-      const { courses, projects } = initialData;
+      const { courses } = initialData;
       if (courses) {
-        setPersistedCourseIds(courses.map(c => c.id).filter(Boolean))
-        setFallCourses(courses.filter(c => c.semester === 'Fall').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
+        const allRows = courses || []
+        const courseRows = allRows.filter(c => (c.section || 'courses') !== 'projects')
+        const projectRows = allRows.filter(c => c.section === 'projects')
+
+        setPersistedCourseIds(allRows.map(c => c.id).filter(Boolean))
+        setFallCourses(courseRows.filter(c => c.semester === 'Fall').map(c => ({
+          id: c.id,
+          title: c.course_name || '',
+          percentage: c.percentage || '',
+          students: c.enrollment,
+          feedback: c.feedback_score,
+          remarks: c.remarks || '',
+          evidence_file: c.evidence_file || null,
+          feedbackFile: null
         })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
 
-        setSpringCourses(courses.filter(c => c.semester === 'Spring').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
+        setSpringCourses(courseRows.filter(c => c.semester === 'Spring').map(c => ({
+          id: c.id,
+          title: c.course_name || '',
+          percentage: c.percentage || '',
+          students: c.enrollment,
+          feedback: c.feedback_score,
+          remarks: c.remarks || '',
+          evidence_file: c.evidence_file || null,
+          feedbackFile: null
         })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
 
-        setSummerCourses(courses.filter(c => c.semester === 'Summer').map(c => ({
-          id: c.id, title: c.course_name, percentage: c.percentage || '', students: c.enrollment, feedback: c.feedback_score, remarks: c.remarks || '', evidence_file: c.evidence_file
+        setSummerCourses(courseRows.filter(c => c.semester === 'Summer').map(c => ({
+          id: c.id,
+          title: c.course_name || '',
+          percentage: c.percentage || '',
+          students: c.enrollment,
+          feedback: c.feedback_score,
+          remarks: c.remarks || '',
+          evidence_file: c.evidence_file || null,
+          feedbackFile: null
         })) || [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }]);
+
+        const mapProject = (p) => ({
+          id: p.id,
+          projectTitle: p.project_title || '',
+          projectType: p.project_type || '',
+          role: p.project_role || '',
+          studentName: p.student_name || '',
+          duration: p.project_duration || '',
+          outcome: p.project_outcome || '',
+          remarks: p.remarks || '',
+          evidence_file: p.evidence_file || null,
+          certificateFile: null
+        })
+
+        const fallProjectsRows = projectRows.filter(p => p.semester === 'Fall').map(mapProject)
+        const springProjectsRows = projectRows.filter(p => p.semester === 'Spring').map(mapProject)
+        const summerProjectsRows = projectRows.filter(p => p.semester === 'Summer').map(mapProject)
+
+        setFallProjects(fallProjectsRows.length ? fallProjectsRows : [{ id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null }])
+        setSpringProjects(springProjectsRows.length ? springProjectsRows : [{ id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null }])
+        setSummerProjects(summerProjectsRows.length ? summerProjectsRows : [{ id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null }])
       }
     }
   }, [initialData])
@@ -90,10 +164,13 @@ const CoursesTaught = ({ initialData, readOnly }) => {
         const subDetails = await apiClient.get(`/submissions/${mySub.data.id}`)
         if (!subDetails?.success) return
 
-        const existingCourses = Array.isArray(subDetails.data?.courses) ? subDetails.data.courses : []
-        if (existingCourses.length === 0) return
+        const existingRows = Array.isArray(subDetails.data?.courses) ? subDetails.data.courses : []
+        if (existingRows.length === 0) return
 
-        setPersistedCourseIds(existingCourses.map(c => c.id).filter(Boolean))
+        const existingCourses = existingRows.filter(c => (c.section || 'courses') !== 'projects')
+        const existingProjects = existingRows.filter(c => c.section === 'projects')
+
+        setPersistedCourseIds(existingRows.map(c => c.id).filter(Boolean))
 
         const mapCourse = (c) => ({
           id: c.id,
@@ -110,9 +187,30 @@ const CoursesTaught = ({ initialData, readOnly }) => {
         const spring = existingCourses.filter(c => c.semester === 'Spring').map(mapCourse)
         const summer = existingCourses.filter(c => c.semester === 'Summer').map(mapCourse)
 
+        const mapProject = (p) => ({
+          id: p.id,
+          projectTitle: p.project_title || '',
+          projectType: p.project_type || '',
+          role: p.project_role || '',
+          studentName: p.student_name || '',
+          duration: p.project_duration || '',
+          outcome: p.project_outcome || '',
+          remarks: p.remarks || '',
+          evidence_file: p.evidence_file || null,
+          certificateFile: null
+        })
+
+        const fallProjectsRows = existingProjects.filter(p => p.semester === 'Fall').map(mapProject)
+        const springProjectsRows = existingProjects.filter(p => p.semester === 'Spring').map(mapProject)
+        const summerProjectsRows = existingProjects.filter(p => p.semester === 'Summer').map(mapProject)
+
         setFallCourses(fall.length ? fall : [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }])
         setSpringCourses(spring.length ? spring : [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }])
         setSummerCourses(summer.length ? summer : [{ id: 1, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null }])
+
+        setFallProjects(fallProjectsRows.length ? fallProjectsRows : [{ id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null }])
+        setSpringProjects(springProjectsRows.length ? springProjectsRows : [{ id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null }])
+        setSummerProjects(summerProjectsRows.length ? summerProjectsRows : [{ id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null }])
 
         if (fall.length > 0) setSelectedSemester('fall')
         else if (spring.length > 0) setSelectedSemester('spring')
@@ -149,6 +247,39 @@ const CoursesTaught = ({ initialData, readOnly }) => {
       } else if (semester === 'summer') {
         setSummerProjects(updateItems(summerProjects))
       }
+    }
+  }
+
+  const clearUploadedFile = (semester, index, sectionType = 'courses') => {
+    if (readOnly) return
+
+    const clearAtIndex = (items, fileField) => {
+      const updated = [...items]
+      updated[index] = {
+        ...updated[index],
+        [fileField]: null,
+        evidence_file: null
+      }
+      return updated
+    }
+
+    if (sectionType === 'courses') {
+      if (semester === 'fall') {
+        setFallCourses(clearAtIndex(fallCourses, 'feedbackFile'))
+      } else if (semester === 'spring') {
+        setSpringCourses(clearAtIndex(springCourses, 'feedbackFile'))
+      } else if (semester === 'summer') {
+        setSummerCourses(clearAtIndex(summerCourses, 'feedbackFile'))
+      }
+      return
+    }
+
+    if (semester === 'fall') {
+      setFallProjects(clearAtIndex(fallProjects, 'certificateFile'))
+    } else if (semester === 'spring') {
+      setSpringProjects(clearAtIndex(springProjects, 'certificateFile'))
+    } else if (semester === 'summer') {
+      setSummerProjects(clearAtIndex(summerProjects, 'certificateFile'))
     }
   }
 
@@ -237,18 +368,69 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
       const createdIds = []
       for (const course of allCourses) {
-        if (!course.title) continue;
-        
-        const created = await apiClient.post('/courses', {
-          faculty_id: facultyId,
-          course_name: course.title,
-          semester: course.semester,
-          enrollment: course.students === '' ? null : parseInt(course.students),
-          percentage: course.percentage === '' ? null : course.percentage,
-          feedback_score: course.feedback === '' ? null : parseFloat(course.feedback),
-          status: 'submitted'
-        });
+        if (!hasCourseRowData(course)) continue;
 
+        const formData = new FormData()
+        formData.append('faculty_id', String(facultyId))
+        formData.append('section', 'courses')
+        formData.append('course_name', course.title)
+        formData.append('semester', course.semester)
+        formData.append('status', 'submitted')
+
+        if (course.students !== '' && course.students !== null && course.students !== undefined) {
+          formData.append('enrollment', String(parseInt(course.students)))
+        }
+
+        if (course.percentage !== '' && course.percentage !== null && course.percentage !== undefined) {
+          formData.append('percentage', String(course.percentage))
+        }
+
+        if (course.feedback !== '' && course.feedback !== null && course.feedback !== undefined) {
+          formData.append('feedback_score', String(parseFloat(course.feedback)))
+        }
+
+        if (course.feedbackFile instanceof File) {
+          formData.append('evidence_file', course.feedbackFile)
+        } else if (course.evidence_file) {
+          formData.append('existing_evidence_file', course.evidence_file)
+        }
+
+        const created = await apiClient.post('/courses', formData);
+
+        if (Number.isFinite(Number(created?.data?.id))) {
+          createdIds.push(created.data.id)
+        }
+      }
+
+      const allProjects = [
+        ...fallProjects.map(p => ({ ...p, semester: 'Fall' })),
+        ...springProjects.map(p => ({ ...p, semester: 'Spring' })),
+        ...summerProjects.map(p => ({ ...p, semester: 'Summer' }))
+      ]
+
+      for (const project of allProjects) {
+        if (!hasProjectRowData(project)) continue
+
+        const formData = new FormData()
+        formData.append('faculty_id', String(facultyId))
+        formData.append('section', 'projects')
+        formData.append('semester', project.semester)
+        formData.append('project_title', project.projectTitle || '')
+        formData.append('project_type', project.projectType || '')
+        formData.append('project_role', project.role || '')
+        formData.append('student_name', project.studentName || '')
+        formData.append('project_duration', project.duration || '')
+        formData.append('project_outcome', project.outcome || '')
+        formData.append('remarks', project.remarks || '')
+        formData.append('status', 'submitted')
+
+        if (project.certificateFile instanceof File) {
+          formData.append('evidence_file', project.certificateFile)
+        } else if (project.evidence_file) {
+          formData.append('existing_evidence_file', project.evidence_file)
+        }
+
+        const created = await apiClient.post('/courses', formData)
         if (Number.isFinite(Number(created?.data?.id))) {
           createdIds.push(created.data.id)
         }
@@ -401,6 +583,26 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                         {course.feedbackFile ? <FileText size={18} /> : <Upload size={18} />}
                       </label>
                       <FilePreviewButton file={course.feedbackFile || course.evidence_file} style={{ width: '32px', height: '32px' }} />
+                      {(course.feedbackFile || course.evidence_file) && (
+                        <button
+                          type="button"
+                          onClick={() => clearUploadedFile(semester, index, 'courses')}
+                          title="Remove uploaded document"
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: '#fff',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -509,6 +711,26 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                       {project.certificateFile ? <FileText size={18} /> : <Upload size={18} />}
                     </label>
                     <FilePreviewButton file={project.certificateFile || project.evidence_file} style={{ width: '32px', height: '32px' }} />
+                    {(project.certificateFile || project.evidence_file) && (
+                      <button
+                        type="button"
+                        onClick={() => clearUploadedFile(semester, index, 'projects')}
+                        title="Remove uploaded document"
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: '#fff',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
                   </div>
                 )}
               </td>

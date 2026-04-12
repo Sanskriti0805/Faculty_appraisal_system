@@ -18,6 +18,8 @@ const toNumberOrNull = (value) => {
   return Number.isFinite(num) ? num : null;
 };
 
+const hasText = (value) => typeof value === 'string' && value.trim() !== '';
+
 const resolveFacultyInfoId = async ({ facultyId, email }) => {
   const numericFacultyId = toNumberOrNull(facultyId);
 
@@ -100,13 +102,53 @@ exports.createCourse = async (req, res) => {
       semester,
       course_code,
       course_name,
+      remarks,
+      project_title,
+      project_type,
+      project_role,
+      student_name,
+      project_duration,
+      project_outcome,
       program,
       credits,
       enrollment,
       percentage,
       feedback_score,
+      existing_evidence_file,
       status = 'draft'
     } = req.body;
+    const evidence_file = req.file ? req.file.filename : (existing_evidence_file || null);
+
+    const parsedFeedback = feedback_score === undefined || feedback_score === null || feedback_score === ''
+      ? null
+      : Number(feedback_score);
+
+    if (parsedFeedback !== null && (!Number.isFinite(parsedFeedback) || parsedFeedback < 0 || parsedFeedback > 5)) {
+      return res.status(400).json({ success: false, message: 'Feedback score must be between 0 and 5.' });
+    }
+
+    const hasMeaningfulPayload = Boolean(
+      hasText(course_name) ||
+      hasText(course_code) ||
+      hasText(program) ||
+      hasText(semester) ||
+      hasText(remarks) ||
+      hasText(project_title) ||
+      hasText(project_type) ||
+      hasText(project_role) ||
+      hasText(student_name) ||
+      hasText(project_duration) ||
+      hasText(project_outcome) ||
+      credits !== undefined ||
+      enrollment !== undefined ||
+      percentage !== undefined ||
+      parsedFeedback !== null ||
+      evidence_file
+    );
+
+    if (!hasMeaningfulPayload) {
+      return res.status(400).json({ success: false, message: 'Empty course row was ignored.' });
+    }
 
     const facultyInfoId = await resolveFacultyInfoId({
       facultyId: faculty_id || req.user?.id,
@@ -147,7 +189,47 @@ exports.createCourse = async (req, res) => {
 
     if (availableColumns.has('feedback_score')) {
       insertColumns.push('feedback_score');
-      insertValues.push(feedback_score || null);
+      insertValues.push(parsedFeedback);
+    }
+
+    if (availableColumns.has('remarks')) {
+      insertColumns.push('remarks');
+      insertValues.push(remarks || null);
+    }
+
+    if (availableColumns.has('project_title')) {
+      insertColumns.push('project_title');
+      insertValues.push(project_title || null);
+    }
+
+    if (availableColumns.has('project_type')) {
+      insertColumns.push('project_type');
+      insertValues.push(project_type || null);
+    }
+
+    if (availableColumns.has('project_role')) {
+      insertColumns.push('project_role');
+      insertValues.push(project_role || null);
+    }
+
+    if (availableColumns.has('student_name')) {
+      insertColumns.push('student_name');
+      insertValues.push(student_name || null);
+    }
+
+    if (availableColumns.has('project_duration')) {
+      insertColumns.push('project_duration');
+      insertValues.push(project_duration || null);
+    }
+
+    if (availableColumns.has('project_outcome')) {
+      insertColumns.push('project_outcome');
+      insertValues.push(project_outcome || null);
+    }
+
+    if (availableColumns.has('evidence_file')) {
+      insertColumns.push('evidence_file');
+      insertValues.push(evidence_file);
     }
 
     if (availableColumns.has('status')) {
@@ -216,8 +298,32 @@ exports.updateCourse = async (req, res) => {
 // Create new course developed with draft/submit support
 exports.createNewCourse = async (req, res) => {
   try {
-    const { faculty_id, level_type, program, course_name, course_code, level, remarks, status = 'draft' } = req.body;
-    const cif_file = req.file ? req.file.filename : null;
+    const {
+      faculty_id,
+      level_type,
+      program,
+      course_name,
+      course_code,
+      level,
+      remarks,
+      existing_cif_file,
+      status = 'draft'
+    } = req.body;
+    const cif_file = req.file ? req.file.filename : (existing_cif_file || null);
+
+    const hasMeaningfulPayload = Boolean(
+      hasText(level_type) ||
+      hasText(program) ||
+      hasText(course_name) ||
+      hasText(course_code) ||
+      hasText(level) ||
+      hasText(remarks) ||
+      cif_file
+    );
+
+    if (!hasMeaningfulPayload) {
+      return res.status(400).json({ success: false, message: 'Empty new-course row was ignored.' });
+    }
 
     const facultyInfoId = await resolveFacultyInfoId({
       facultyId: faculty_id || req.user?.id,

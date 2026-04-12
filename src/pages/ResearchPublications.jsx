@@ -752,6 +752,30 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
               </span>
               <FilePreviewButton file={evidenceFile} style={{ width: '32px', height: '32px' }} />
+              {evidenceFile && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setEvidenceFile(null)
+                  }}
+                  title="Remove uploaded document"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '1px solid #d1d8e0',
+                    borderRadius: '6px',
+                    background: '#fff',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
             </label>
           </div>
         </div>
@@ -958,6 +982,30 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
               </span>
               <FilePreviewButton file={evidenceFile} style={{ width: '32px', height: '32px' }} />
+              {evidenceFile && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setEvidenceFile(null)
+                  }}
+                  title="Remove uploaded document"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '1px solid #d1d8e0',
+                    borderRadius: '6px',
+                    background: '#fff',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
             </label>
           </div>
         </div>
@@ -1086,6 +1134,31 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                     {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
                   </span>
                   <FilePreviewButton file={entry.evidenceFile} style={{ width: '32px', height: '32px' }} />
+                  {entry.evidenceFile && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        updateBookEntryField(index, 'evidenceFile', null)
+                        updateBookEntryField(index, 'evidence_file', null)
+                      }}
+                      title="Remove uploaded document"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '1px solid #d1d8e0',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </label>
               </div>
             </div>
@@ -1256,6 +1329,31 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                     {entry.evidenceFile ? entry.evidenceFile.name : 'Click to upload'}
                   </span>
                   <FilePreviewButton file={entry.evidenceFile} style={{ width: '32px', height: '32px' }} />
+                  {entry.evidenceFile && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        updateTextbookEntryField(index, 'evidenceFile', null)
+                        updateTextbookEntryField(index, 'evidence_file', null)
+                      }}
+                      title="Remove uploaded document"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '1px solid #d1d8e0',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </label>
               </div>
             </div>
@@ -1359,6 +1457,30 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
               </span>
               <FilePreviewButton file={evidenceFile} style={{ width: '32px', height: '32px' }} />
+              {evidenceFile && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setEvidenceFile(null)
+                  }}
+                  title="Remove uploaded document"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '1px solid #d1d8e0',
+                    borderRadius: '6px',
+                    background: '#fff',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
             </label>
           </div>
         </div>

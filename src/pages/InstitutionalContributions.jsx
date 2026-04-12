@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Upload, ExternalLink } from 'lucide-react'
+import { Upload, ExternalLink, X } from 'lucide-react'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
@@ -227,6 +227,30 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
       <Upload size={16} color={files[field] ? '#28a745' : '#666'} />
       <span style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{files[field] ? 'Uploaded' : 'Evidence'}</span>
       <FilePreviewButton file={files[field]} style={{ width: '30px', height: '30px' }} />
+      {files[field] && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            handleFileChange(field, null)
+          }}
+          title="Remove uploaded document"
+          style={{
+            width: '30px',
+            height: '30px',
+            border: '1px solid #d1d8e0',
+            borderRadius: '6px',
+            background: '#fff',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <X size={13} />
+        </button>
+      )}
       <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange(field, e.target.files[0])} />
     </label>
   )
