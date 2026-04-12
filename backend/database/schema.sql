@@ -155,6 +155,7 @@ CREATE TABLE IF NOT EXISTS paper_reviews (
     id INT PRIMARY KEY AUTO_INCREMENT,
     faculty_id INT,
     review_type VARCHAR(50),
+    tier VARCHAR(50),
     journal_name VARCHAR(255),
     abbreviation VARCHAR(100),
     number_of_papers INT,
@@ -162,6 +163,7 @@ CREATE TABLE IF NOT EXISTS paper_reviews (
     middle_name VARCHAR(100),
     last_name VARCHAR(100),
     month_of_review DATE,
+    evidence_file VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (faculty_id) REFERENCES faculty_information(id) ON DELETE CASCADE
 );

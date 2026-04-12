@@ -1,22 +1,63 @@
-import React, { useState } from 'react'
-import { useEffect } from 'react'
-import { Upload, X } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { Plus, Trash2, Upload, X } from 'lucide-react'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import apiClient from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
+const getEmptyReviewEntry = () => ({
+  tier: '',
+  paperType: '',
+  reviewDetails: ''
+})
+
+const hasReviewContent = (entry) => Boolean(
+  String(entry?.tier || '').trim() ||
+  String(entry?.paperType || '').trim() ||
+  String(entry?.reviewDetails || '').trim() ||
+  entry?.evidenceFile ||
+  entry?.evidence_file
+)
+
+const hasRequiredReviewFields = (entry) => Boolean(
+  String(entry?.tier || '').trim() &&
+  String(entry?.paperType || '').trim() &&
+  String(entry?.reviewDetails || '').trim()
+)
+
+const normalizeDraftEntry = (entry) => ({
+  tier: String(entry?.tier || '').trim(),
+  paperType: String(entry?.paperType || '').trim(),
+  reviewDetails: String(entry?.reviewDetails || '').trim(),
+  evidenceFile: entry?.evidenceFile || null,
+  evidence_file: entry?.evidence_file || ''
+})
+
+const mapStoredReview = (row) => ({
+  id: row?.id || null,
+  tier: row?.tier || '',
+  paperType: row?.review_type || '',
+  reviewDetails: row?.journal_name || '',
+  evidenceFile: null,
+  evidence_file: row?.evidence_file || ''
+})
+
+const formatReviewSummary = (entry) => {
+  const parts = []
+  if (entry?.tier) parts.push(`Tier ${entry.tier}`)
+  if (entry?.paperType) parts.push(entry.paperType)
+  return parts.length > 0 ? parts.join(' · ') : 'Untitled Review'
+}
+
 const PaperReview = () => {
   const { user, token } = useAuth()
-  const [reviewId, setReviewId] = useState(null) // Track if editing existing review
-  const [formData, setFormData] = useState({
-    tier: '',
-    paperType: '',
-    reviewDetails: '',
-  })
+  const [formData, setFormData] = useState(getEmptyReviewEntry())
+  const [submittedReviews, setSubmittedReviews] = useState([])
+  const [persistedReviewIds, setPersistedReviewIds] = useState([])
   const [evidenceFile, setEvidenceFile] = useState(null)
   const [persistedEvidenceFile, setPersistedEvidenceFile] = useState('')
+  const [fileInputKey, setFileInputKey] = useState(0)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -29,27 +70,20 @@ const PaperReview = () => {
 
         const details = await apiClient.get(`/submissions/${mySub.data.id}`)
         const rows = Array.isArray(details?.data?.paperReviews) ? details.data.paperReviews : []
-        if (rows.length === 0) {
-          setPersistedEvidenceFile('')
-          return
-        }
+        const mappedRows = rows
+          .slice()
+          .sort((a, b) => {
+            const aTs = a?.created_at ? new Date(a.created_at).getTime() : Number(a?.id || 0)
+            const bTs = b?.created_at ? new Date(b.created_at).getTime() : Number(b?.id || 0)
+            return aTs - bTs
+          })
+          .map(mapStoredReview)
 
-        const first = [...rows].sort((a, b) => {
-          const bTs = b?.created_at ? new Date(b.created_at).getTime() : Number(b?.id || 0)
-          const aTs = a?.created_at ? new Date(a.created_at).getTime() : Number(a?.id || 0)
-          return bTs - aTs
-        })[0]
-        const detailsText = first.journal_name || ''
-
-        setFormData({
-          tier: first.tier || '',
-          paperType: first.review_type || '',
-          reviewDetails: detailsText
-        })
-        
-        // Store ID to prevent duplicate creation
-        setReviewId(first.id || null)
-        setPersistedEvidenceFile(first.evidence_file || '')
+        setSubmittedReviews(mappedRows)
+        setPersistedReviewIds(rows.map((row) => row?.id).filter((id) => Number.isFinite(Number(id))))
+        setFormData(getEmptyReviewEntry())
+        setEvidenceFile(null)
+        setPersistedEvidenceFile('')
       } catch (error) {
         console.error('Failed to prefill paper reviews:', error)
       }
@@ -62,6 +96,35 @@ const PaperReview = () => {
     setFormData({ ...formData, [field]: value })
   }
 
+  const resetDraft = () => {
+    setFormData(getEmptyReviewEntry())
+    setEvidenceFile(null)
+    setPersistedEvidenceFile('')
+    setFileInputKey((prev) => prev + 1)
+  }
+
+  const handleAddSection = () => {
+    const draftEntry = { ...formData, evidenceFile, evidence_file: persistedEvidenceFile }
+
+    if (!hasReviewContent(draftEntry)) {
+      alert('Please fill in the current section before adding another one.')
+      return
+    }
+
+    if (!hasRequiredReviewFields(draftEntry)) {
+      alert('Please complete Tier, Type of Paper, and Review details before adding another section.')
+      return
+    }
+
+    setSubmittedReviews((prev) => [...prev, normalizeDraftEntry(draftEntry)])
+    resetDraft()
+    alert('Section added. You can now enter another review.')
+  }
+
+  const handleRemoveSection = (index) => {
+    setSubmittedReviews((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleSave = async () => {
     setLoading(true)
     try {
@@ -71,49 +134,90 @@ const PaperReview = () => {
         return false
       }
 
-      if (reviewId) {
-        await fetch(`http://localhost:5000/api/activities/paper-reviews/${reviewId}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` }
-        })
+      const draftEntry = { ...formData, evidenceFile, evidence_file: persistedEvidenceFile }
+      const draftHasContent = hasReviewContent(draftEntry)
+
+      if (draftHasContent && !hasRequiredReviewFields(draftEntry)) {
+        alert('Please complete Tier, Type of Paper, and Review details before saving.')
+        return false
       }
 
-      if (!formData.reviewDetails.trim()) {
+      const entriesToSave = [...submittedReviews]
+      if (draftHasContent) {
+        entriesToSave.push(normalizeDraftEntry(draftEntry))
+      }
+
+      if (entriesToSave.length === 0) {
         alert('Data saved successfully!')
         return true
       }
 
-      const formDataObj = new FormData()
-      formDataObj.append('faculty_id', facultyId)
-      formDataObj.append('review_type', formData.paperType || 'Journal')
-      formDataObj.append('journal_name', formData.reviewDetails.trim().substring(0, 255))
-      formDataObj.append('tier', formData.tier)
-      formDataObj.append('number_of_papers', 1) // Default to 1 for this form
-      formDataObj.append('month_of_review', new Date().toISOString().split('T')[0])
+      await Promise.all(persistedReviewIds.map((id) => fetch(`http://localhost:5000/api/activities/paper-reviews/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      })))
 
-      if (evidenceFile) {
-        formDataObj.append('evidence_file', evidenceFile)
-      } else if (persistedEvidenceFile) {
-        formDataObj.append('existing_evidence_file', persistedEvidenceFile)
-      }
+      const responses = await Promise.all(entriesToSave.map((entry) => {
+        const formDataObj = new FormData()
+        formDataObj.append('faculty_id', facultyId)
+        formDataObj.append('review_type', entry.paperType || 'Journal')
+        formDataObj.append('journal_name', String(entry.reviewDetails || '').trim().substring(0, 255))
+        formDataObj.append('tier', entry.tier)
+        formDataObj.append('number_of_papers', 1)
+        formDataObj.append('month_of_review', new Date().toISOString().split('T')[0])
 
-      const response = await fetch('http://localhost:5000/api/activities/paper-reviews', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formDataObj
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        setReviewId(data.id || null)
-        if (evidenceFile) {
-          setPersistedEvidenceFile(evidenceFile.name)
+        if (entry.evidenceFile) {
+          formDataObj.append('evidence_file', entry.evidenceFile)
+        } else if (entry.evidence_file) {
+          formDataObj.append('existing_evidence_file', entry.evidence_file)
         }
-        alert('Data saved successfully!')
-        return true
-      } else {
-        throw new Error(data.message || 'Failed to save')
+
+        return fetch('http://localhost:5000/api/activities/paper-reviews', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formDataObj
+        })
+      }))
+
+      const settled = await Promise.all(responses.map(async (response) => {
+        let payload = null
+        try {
+          payload = await response.json()
+        } catch {
+          payload = null
+        }
+
+        if (!response.ok) {
+          return {
+            ok: false,
+            message: payload?.message || `Failed to save paper review (HTTP ${response.status})`
+          }
+        }
+
+        return {
+          ok: true,
+          id: payload?.id || payload?.data?.id || null
+        }
+      }))
+
+      const failed = settled.find((item) => !item.ok)
+      if (failed) {
+        throw new Error(failed.message)
       }
+
+      const createdIds = settled
+        .map((item) => item.id)
+        .filter((id) => Number.isFinite(Number(id)))
+
+      if (entriesToSave.length > 0 && createdIds.length === 0) {
+        throw new Error('Paper reviews were not saved. Please try again.')
+      }
+
+      setPersistedReviewIds(createdIds)
+      setSubmittedReviews(entriesToSave)
+      resetDraft()
+      alert('Data saved successfully!')
+      return true
     } catch (error) {
       console.error('Error saving review:', error)
       alert('Error saving data: ' + error.message)
@@ -221,6 +325,7 @@ const PaperReview = () => {
                     </button>
                   )}
                   <input
+                    key={fileInputKey}
                     type="file"
                     style={{ display: 'none' }}
                     onChange={(e) => setEvidenceFile(e.target.files[0])}
@@ -230,6 +335,95 @@ const PaperReview = () => {
               </div>
             </div>
           </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginTop: '1.25rem' }}>
+            <p style={{ margin: 0, color: '#5b6472', fontSize: '0.95rem' }}>
+              Add another section to keep multiple Tier 1 or Tier 2 reviews in this submission.
+            </p>
+            <button
+              type="button"
+              onClick={handleAddSection}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1rem',
+                border: '1px solid #cfd8e3',
+                borderRadius: '8px',
+                background: '#fff',
+                color: '#22314f',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <Plus size={16} />
+              Add Section
+            </button>
+          </div>
+
+          {submittedReviews.length > 0 && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <h3 style={{ marginBottom: '0.75rem', fontSize: '1.05rem', color: '#22314f' }}>
+                Added Sections ({submittedReviews.length})
+              </h3>
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                {submittedReviews.map((entry, index) => (
+                  <div
+                    key={`${entry.id || 'draft'}-${index}`}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: '1rem',
+                      alignItems: 'flex-start',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px',
+                      padding: '1rem',
+                      background: '#fafbfd'
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: '#1f2937', marginBottom: '0.25rem' }}>
+                        {formatReviewSummary(entry)}
+                      </div>
+                      <div style={{ color: '#5b6472', marginBottom: '0.25rem' }}>
+                        {entry.reviewDetails || 'No details entered'}
+                      </div>
+                      {(entry.evidenceFile || entry.evidence_file) && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', color: '#5b6472' }}>
+                          <span>
+                            File: {entry.evidenceFile?.name || entry.evidence_file}
+                          </span>
+                          <FilePreviewButton
+                            file={entry.evidenceFile || entry.evidence_file}
+                            style={{ width: '28px', height: '28px' }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSection(index)}
+                      title="Remove section"
+                      style={{
+                        width: '34px',
+                        height: '34px',
+                        border: '1px solid #d1d8e0',
+                        borderRadius: '8px',
+                        background: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        flexShrink: 0
+                      }}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
     </div>

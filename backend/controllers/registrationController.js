@@ -72,6 +72,10 @@ exports.runMigrations = async () => {
     await ensureColumn('research_grants', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
     await ensureColumn('submitted_proposals', 'evidence_file', 'evidence_file VARCHAR(255) NULL');
 
+    // Paper review entries now store Tier 1 / Tier 2 explicitly.
+    await ensureColumn('paper_reviews', 'tier', 'tier VARCHAR(50) NULL AFTER review_type');
+    await ensureColumn('paper_reviews', 'evidence_file', 'evidence_file VARCHAR(255) NULL AFTER month_of_review');
+
     // Form builder v2 columns
     await ensureColumn('dynamic_sections', 'parent_id', 'parent_id INT NULL');
     await ensureColumn('dynamic_sections', 'description', 'description TEXT NULL');
