@@ -17,7 +17,7 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const [users] = await db.query('SELECT id, name, email, role, department, department_id, designation, salutation, employee_id, is_archived FROM users WHERE id = ?', [decoded.id]);
+    const [users] = await db.query('SELECT id, name, email, role, department, department_id, designation, salutation, employee_id, date_of_joining, is_archived FROM users WHERE id = ?', [decoded.id]);
     if (users.length === 0) {
       return res.status(401).json({ success: false, message: 'User not found' });
     }

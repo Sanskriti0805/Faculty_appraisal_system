@@ -68,6 +68,7 @@ exports.login = async (req, res) => {
         designation: user.designation,
         salutation: user.salutation,
         employee_id: user.employee_id,
+        date_of_joining: user.date_of_joining,
         onboarding_complete: user.onboarding_complete
       }
     });
