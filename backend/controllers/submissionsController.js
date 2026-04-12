@@ -464,7 +464,11 @@ exports.getSubmissionById = async (req, res) => {
       return res.status(403).json({ success: false, message: 'You can only view your own submission.' });
     }
 
-    if (!['faculty', 'dofa', 'dofa_office', 'admin', 'hod'].includes(req.user?.role)) {
+    if (req.user?.role === 'hod') {
+      return res.status(403).json({ success: false, message: 'HOD cannot access submitted form details.' });
+    }
+
+    if (!['faculty', 'dofa', 'dofa_office', 'admin'].includes(req.user?.role)) {
       return res.status(403).json({ success: false, message: 'Insufficient permissions to view submission.' });
     }
 

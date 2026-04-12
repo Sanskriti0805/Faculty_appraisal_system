@@ -37,6 +37,6 @@ router.get('/archive', authenticate, requireRole('admin', 'hod', 'dofa', 'dofa_o
 router.get('/archive/export', authenticate, requireRole('admin', 'hod', 'dofa', 'dofa_office'), registrationController.exportArchiveData);
 
 // Historical submissions per faculty
-router.get('/faculty/:id/submissions', authenticate, requireRole('admin', 'hod', 'dofa', 'dofa_office'), registrationController.getFacultySubmissionHistory);
+router.get('/faculty/:id/submissions', authenticate, requireRole('admin', 'dofa', 'dofa_office'), registrationController.getFacultySubmissionHistory);
 
 module.exports = router;

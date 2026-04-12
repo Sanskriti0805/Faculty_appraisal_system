@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Archive, RotateCcw, Eye, Download, X, Settings, Lock, EyeOff, AlertCircle, CheckCircle, FileText, FileCode, Table } from 'lucide-react';
+import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Archive, RotateCcw, Eye, Download, X, Settings, Lock, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './HODDashboard.css';
 
@@ -15,10 +15,6 @@ const HODDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [archiveFaculty, setArchiveFaculty] = useState([]);
-  const [historyModal, setHistoryModal] = useState({ open: false, faculty: null, submissions: [], loading: false });
-  const [downloadModal, setDownloadModal] = useState({ open: false, submission: null });
-  const [downloadingFormat, setDownloadingFormat] = useState(null);
-  const [previewingSubmissionId, setPreviewingSubmissionId] = useState(null);
 
   const [showSettings, setShowSettings] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -72,7 +68,18 @@ const HODDashboard = () => {
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const formatDate = (d) => {
+    if (!d) return '—';
+
+    // Avoid timezone offset for DATE values returned as YYYY-MM-DD.
+    const value = String(d);
+    const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const dt = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(value);
+
+    return Number.isNaN(dt.getTime())
+      ? '—'
+      : dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   const handleArchiveFaculty = async (f) => {
     if (!window.confirm('Are you sure you want to delete this faculty?')) return;
@@ -177,191 +184,6 @@ const HODDashboard = () => {
     }
   };
 
-  const fetchSubmissionData = async (id) => {
-    const res = await fetch(`${API_BASE}/submissions/${id}`, { headers });
-    const data = await res.json();
-    return data.success ? data.data : null;
-  };
-
-  const getSubmissionFilenameBase = (submission) => {
-    const safeName = (submission.faculty_name || 'faculty')
-      .replace(/[^a-zA-Z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '');
-    const safeYear = (submission.academic_year || 'year').replace(/[^a-zA-Z0-9-]+/g, '_');
-    return `${safeName || 'faculty'}_${safeYear}_appraisal`;
-  };
-
-  const buildSubmissionHtml = (data) => {
-    const { submission: sub, facultyInfo, publications, courses, grants, patents, awards, proposals, newCourses } = data;
-
-    return `<!DOCTYPE html><html><head><title>${sub.faculty_name || 'Faculty'} - Appraisal ${sub.academic_year || ''}</title>
-      <style>
-        body{font-family:Arial,sans-serif;margin:30px;color:#222}
-        h1{color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:8px}
-        h2{color:#2d4373;margin-top:24px;font-size:1.1rem;border-bottom:1px solid #ddd;padding-bottom:4px}
-        table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
-        th{background:#f5f7fa;padding:8px;text-align:left;border:1px solid #ddd}
-        td{padding:8px;border:1px solid #ddd}
-        .meta{display:flex;gap:2rem;background:#f9fafb;padding:12px;border-radius:6px;margin-bottom:12px;flex-wrap:wrap}
-        .meta-item label{font-size:11px;color:#777;display:block}
-        .meta-item span{font-weight:600}
-      </style></head><body>
-      <h1>Annual Performance Appraisal - Form ${sub.form_type || 'A'}</h1>
-      <div class="meta">
-        <div class="meta-item"><label>Name</label><span>${sub.faculty_name || ''}</span></div>
-        <div class="meta-item"><label>Department</label><span>${sub.department || 'N/A'}</span></div>
-        <div class="meta-item"><label>Academic Year</label><span>${sub.academic_year || ''}</span></div>
-        <div class="meta-item"><label>Status</label><span>${sub.status || ''}</span></div>
-        <div class="meta-item"><label>Designation</label><span>${facultyInfo?.designation || sub.designation || 'N/A'}</span></div>
-      </div>
-
-      <h2>Part A - Courses Taught (${courses?.length || 0})</h2>
-      <table><tr><th>Course Name</th><th>Code</th><th>Semester</th><th>Program</th><th>Enrollment</th></tr>
-      ${(courses || []).map(c => `<tr><td>${c.course_name || ''}</td><td>${c.course_code || ''}</td><td>${c.semester || ''}</td><td>${c.program || ''}</td><td>${c.enrollment || ''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Research Publications (${publications?.length || 0})</h2>
-      <table><tr><th>Type</th><th>Sub Type</th><th>Title</th><th>Year</th><th>Journal/Conference</th></tr>
-      ${(publications || []).map(p => `<tr><td>${p.publication_type || ''}</td><td>${p.sub_type || ''}</td><td>${p.title || ''}</td><td>${p.year_of_publication || ''}</td><td>${p.journal_name || p.conference_name || ''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Research Grants (${grants?.length || 0})</h2>
-      <table><tr><th>Project Name</th><th>Agency</th><th>Amount (Lakhs)</th><th>Role</th></tr>
-      ${(grants || []).map(g => `<tr><td>${g.project_name || ''}</td><td>${g.funding_agency || ''}</td><td>${g.amount_in_lakhs || 0}</td><td>${g.role || ''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Patents (${patents?.length || 0})</h2>
-      <table><tr><th>Type</th><th>Title</th><th>Agency</th></tr>
-      ${(patents || []).map(p => `<tr><td>${p.patent_type || ''}</td><td>${p.title || ''}</td><td>${p.agency || ''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Awards and Honours (${awards?.length || 0})</h2>
-      <table><tr><th>Award</th><th>Agency</th><th>Year</th></tr>
-      ${(awards || []).map(a => `<tr><td>${a.award_name || ''}</td><td>${a.awarding_agency || ''}</td><td>${a.year || ''}</td></tr>`).join('')}
-      </table>
-
-      <h2>New Courses Developed (${newCourses?.length || 0})</h2>
-      <table><tr><th>Course Name</th><th>Code</th><th>Level</th><th>Program</th></tr>
-      ${(newCourses || []).map(c => `<tr><td>${c.course_name || ''}</td><td>${c.course_code || ''}</td><td>${c.level || ''}</td><td>${c.program || ''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Submitted Proposals (${proposals?.length || 0})</h2>
-      <table><tr><th>Title</th><th>Agency</th><th>Amount</th><th>Status</th></tr>
-      ${(proposals || []).map(p => `<tr><td>${p.title || ''}</td><td>${p.funding_agency || ''}</td><td>${p.grant_amount || 0}</td><td>${p.status || ''}</td></tr>`).join('')}
-      </table>
-
-      <p style="margin-top:40px;font-size:11px;color:#888">Generated on ${new Date().toLocaleString()}</p>
-      </body></html>`;
-  };
-
-  const handlePreviewSubmission = async (submission) => {
-    setPreviewingSubmissionId(submission.id);
-    try {
-      const data = await fetchSubmissionData(submission.id);
-      if (!data) {
-        alert('Could not fetch submission data');
-        return;
-      }
-
-      const win = window.open('', '_blank');
-      if (!win) {
-        alert('Popup blocked. Please allow popups and try again.');
-        return;
-      }
-      win.document.write(buildSubmissionHtml(data));
-      win.document.close();
-    } catch {
-      alert('Failed to preview submission');
-    } finally {
-      setPreviewingSubmissionId(null);
-    }
-  };
-
-  const handleDownloadJSON = async (submission) => {
-    setDownloadingFormat('json');
-    try {
-      const data = await fetchSubmissionData(submission.id);
-      if (!data) {
-        alert('Could not fetch submission data');
-        return;
-      }
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${getSubmissionFilenameBase(submission)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setDownloadModal({ open: false, submission: null });
-    } finally {
-      setDownloadingFormat(null);
-    }
-  };
-
-  const handleDownloadCSV = async (submission) => {
-    setDownloadingFormat('csv');
-    try {
-      const csvHeaders = ['Faculty Name', 'Department', 'Email', 'Designation', 'Academic Year', 'Form Type', 'Status', 'Submitted Date'];
-      const csvRow = [
-        submission.faculty_name || historyModal.faculty?.name || '',
-        deptInfo?.name || '',
-        historyModal.faculty?.email || '',
-        historyModal.faculty?.designation || '',
-        submission.academic_year || '',
-        submission.form_type || 'A',
-        submission.status || '',
-        submission.updated_at ? new Date(submission.updated_at).toLocaleDateString('en-IN') : ''
-      ];
-      const csvContent = [csvHeaders.join(','), csvRow.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${getSubmissionFilenameBase(submission)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setDownloadModal({ open: false, submission: null });
-    } finally {
-      setDownloadingFormat(null);
-    }
-  };
-
-  const handleDownloadPDF = async (submission) => {
-    setDownloadingFormat('pdf');
-    try {
-      const data = await fetchSubmissionData(submission.id);
-      if (!data) {
-        alert('Could not fetch submission data');
-        return;
-      }
-
-      const win = window.open('', '_blank');
-      if (!win) {
-        alert('Popup blocked. Please allow popups and try again.');
-        return;
-      }
-      win.document.write(buildSubmissionHtml(data));
-      win.document.close();
-      setTimeout(() => {
-        win.print();
-      }, 350);
-      setDownloadModal({ open: false, submission: null });
-    } finally {
-      setDownloadingFormat(null);
-    }
-  };
-
-  const openSubmissionHistory = async (facultyItem) => {
-    setHistoryModal({ open: true, faculty: facultyItem, submissions: [], loading: true });
-    try {
-      const res = await fetch(`${API_BASE}/register/faculty/${facultyItem.id}/submissions`, { headers });
-      const data = await res.json();
-      setHistoryModal({ open: true, faculty: facultyItem, submissions: data.success ? data.data : [], loading: false });
-    } catch {
-      setHistoryModal({ open: true, faculty: facultyItem, submissions: [], loading: false });
-    }
-  };
-
   return (
     <div className="admin-page">
       {/* Top Nav */}
@@ -463,8 +285,8 @@ const HODDashboard = () => {
                     </td>
                     <td>{formatDate(f.date_of_joining)}</td>
                     <td style={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-                      <button className="admin-btn-cancel" onClick={() => openSubmissionHistory(f)} style={{ padding: '6px 10px', fontSize: '12px', marginRight: '6px' }}>
-                        <Eye size={12} /> View
+                      <button className="admin-btn-cancel" onClick={() => setSelected(f)} style={{ padding: '6px 10px', fontSize: '12px', marginRight: '6px' }}>
+                        <Eye size={12} /> Details
                       </button>
                       <button className="admin-btn-cancel" onClick={() => handleArchiveFaculty(f)} style={{ padding: '6px 10px', fontSize: '12px' }}>
                         <Archive size={12} /> Archive
@@ -566,116 +388,6 @@ const HODDashboard = () => {
             </div>
             <div className="admin-modal-footer">
               <button className="admin-btn-cancel" onClick={() => setSelected(null)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {historyModal.open && (
-        <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setHistoryModal({ open: false, faculty: null, submissions: [], loading: false }); }}>
-          <div className="admin-modal history-modal" style={{ maxWidth: '760px' }}>
-            <div className="admin-modal-header">
-              <h2 className="admin-modal-title">Submission History: {historyModal.faculty?.name}</h2>
-              <button className="admin-modal-close" onClick={() => setHistoryModal({ open: false, faculty: null, submissions: [], loading: false })}><X size={16} /></button>
-            </div>
-            <div className="admin-modal-body">
-              {historyModal.loading ? (
-                <div className="admin-empty">Loading submission history...</div>
-              ) : historyModal.submissions.length === 0 ? (
-                <div className="admin-empty">No submissions found for this faculty member.</div>
-              ) : (
-                <table className="admin-table admin-table-history">
-                  <thead>
-                    <tr>
-                      <th>Academic Year</th>
-                      <th>Calendar Year</th>
-                      <th>Form</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {historyModal.submissions.map(s => (
-                      <tr key={s.id}>
-                        <td>{s.academic_year}</td>
-                        <td>{s.calendar_year || '—'}</td>
-                        <td>{s.form_type}</td>
-                        <td>{s.status}</td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                            <button
-                              className="admin-btn-submit"
-                              style={{ padding: '6px 10px', fontSize: '12px' }}
-                              onClick={() => handlePreviewSubmission({ ...s, faculty_name: historyModal.faculty?.name })}
-                              disabled={previewingSubmissionId === s.id}
-                            >
-                              <Eye size={12} /> {previewingSubmissionId === s.id ? 'Opening...' : 'Preview'}
-                            </button>
-                            <button
-                              className="admin-btn-cancel"
-                              style={{ padding: '6px 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                              onClick={() => setDownloadModal({ open: true, submission: { ...s, faculty_name: historyModal.faculty?.name } })}
-                            >
-                              <Download size={12} /> Download
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <div className="admin-modal-footer">
-              <button className="admin-btn-cancel" onClick={() => setHistoryModal({ open: false, faculty: null, submissions: [], loading: false })}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {downloadModal.open && downloadModal.submission && (
-        <div className="admin-modal-overlay" onClick={() => setDownloadModal({ open: false, submission: null })}>
-          <div className="admin-modal" style={{ maxWidth: '560px' }} onClick={e => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <h2 className="admin-modal-title">Export Appraisal Form</h2>
-              <button className="admin-modal-close" onClick={() => setDownloadModal({ open: false, submission: null })}><X size={16} /></button>
-            </div>
-            <div className="admin-modal-body">
-              <p style={{ marginTop: 0, marginBottom: '16px', color: '#4a5568', fontSize: '14px' }}>
-                {downloadModal.submission.faculty_name} - {downloadModal.submission.academic_year}
-              </p>
-
-              <div style={{ display: 'grid', gap: '10px' }}>
-                <button
-                  className="admin-btn-cancel"
-                  onClick={() => handleDownloadPDF(downloadModal.submission)}
-                  disabled={downloadingFormat !== null}
-                  style={{ width: '100%', justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}
-                >
-                  <FileText size={16} /> {downloadingFormat === 'pdf' ? 'Preparing PDF...' : 'Download PDF'}
-                </button>
-
-                <button
-                  className="admin-btn-cancel"
-                  onClick={() => handleDownloadJSON(downloadModal.submission)}
-                  disabled={downloadingFormat !== null}
-                  style={{ width: '100%', justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}
-                >
-                  <FileCode size={16} /> {downloadingFormat === 'json' ? 'Preparing JSON...' : 'Download JSON'}
-                </button>
-
-                <button
-                  className="admin-btn-cancel"
-                  onClick={() => handleDownloadCSV(downloadModal.submission)}
-                  disabled={downloadingFormat !== null}
-                  style={{ width: '100%', justifyContent: 'flex-start', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}
-                >
-                  <Table size={16} /> {downloadingFormat === 'csv' ? 'Preparing CSV...' : 'Download CSV'}
-                </button>
-              </div>
-            </div>
-            <div className="admin-modal-footer">
-              <button className="admin-btn-cancel" onClick={() => setDownloadModal({ open: false, submission: null })}>Close</button>
             </div>
           </div>
         </div>

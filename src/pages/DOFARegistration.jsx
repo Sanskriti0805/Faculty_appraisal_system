@@ -113,8 +113,8 @@ const DOFARegistration = () => {
 
   const handleFacultySubmit = async (e) => {
     e.preventDefault();
-    if (!facultyForm.name || !facultyForm.email || !facultyForm.department_id) {
-      setFacError('Name, email, and department are required'); return;
+    if (!facultyForm.name || !facultyForm.email || !facultyForm.department_id || !facultyForm.date_of_joining) {
+      setFacError('Name, email, date of joining, and department are required'); return;
     }
     setSubmitting(true); setFacError(''); setFacSuccess('');
     try {
@@ -165,7 +165,18 @@ const DOFARegistration = () => {
     }
   };
 
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const formatDate = (d) => {
+    if (!d) return '—';
+
+    // Avoid timezone offset for DATE values returned as YYYY-MM-DD.
+    const value = String(d);
+    const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const dt = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(value);
+
+    return Number.isNaN(dt.getTime())
+      ? '—'
+      : dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   const withConfirm = (message) => window.confirm(message);
 
@@ -796,8 +807,9 @@ const DOFARegistration = () => {
 
                 <div className="admin-form-row">
                   <div className="admin-form-field">
-                    <label className="admin-form-label">Date of Joining</label>
+                    <label className="admin-form-label">Date of Joining <span>*</span></label>
                     <input className="admin-form-input" type="date" value={facultyForm.date_of_joining}
+                      required
                       onChange={e => setFacultyForm(p => ({ ...p, date_of_joining: e.target.value }))} />
                   </div>
                   <div className="admin-form-field">

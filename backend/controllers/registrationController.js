@@ -90,6 +90,19 @@ const getBoolean = (value) => {
   return 0;
 };
 
+const normalizeOptionalDate = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+
+  // Keep canonical YYYY-MM-DD values untouched.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+    return String(value);
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+};
+
 const toSafeCsv = (value) => {
   if (value === null || value === undefined) return '';
   return String(value).replace(/"/g, '""');
@@ -200,9 +213,10 @@ exports.registerDepartment = async (req, res) => {
 exports.registerFaculty = async (req, res) => {
   try {
     const { salutation, name, designation, email, employee_id, employment_type, date_of_joining, department_id } = req.body;
+    const normalizedDateOfJoining = normalizeOptionalDate(date_of_joining);
 
-    if (!name || !email || !department_id) {
-      return res.status(400).json({ success: false, message: 'Name, email, and department are required' });
+    if (!name || !email || !department_id || !normalizedDateOfJoining) {
+      return res.status(400).json({ success: false, message: 'Name, email, date of joining, and department are required' });
     }
 
     // Check if email already exists
@@ -223,7 +237,7 @@ exports.registerFaculty = async (req, res) => {
     const [result] = await db.query(
       `INSERT INTO users (name, email, password, role, department, department_id, designation, salutation, employee_id, employment_type, date_of_joining, onboarding_complete)
        VALUES (?, ?, ?, 'faculty', ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [name, email, hashedPassword, deptName, department_id, designation, salutation, employee_id, employment_type, date_of_joining]
+      [name, email, hashedPassword, deptName, department_id, designation, salutation, employee_id, employment_type, normalizedDateOfJoining]
     );
 
     // Also create a record in faculty_information table if it doesn't exist
@@ -232,7 +246,7 @@ exports.registerFaculty = async (req, res) => {
       await db.query(
         `INSERT INTO faculty_information (name, email, department, designation, employee_id, date_of_joining) 
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [name, email, deptName, designation, employee_id, date_of_joining]
+        [name, email, deptName, designation, employee_id, normalizedDateOfJoining]
       );
     }
 
@@ -358,6 +372,7 @@ exports.completeOnboarding = async (req, res) => {
 
     if (userRole === 'faculty') {
       const { salutation, name, designation, employee_id, employment_type, date_of_joining, department_id } = req.body;
+      const normalizedDateOfJoining = normalizeOptionalDate(date_of_joining);
 
       if (!name || !department_id) {
         return res.status(400).json({ success: false, message: 'Name and department are required' });
@@ -373,7 +388,7 @@ exports.completeOnboarding = async (req, res) => {
           employment_type = ?, date_of_joining = ?, department = ?, department_id = ?,
           onboarding_complete = 1
          WHERE id = ?`,
-        [name, salutation, designation, employee_id, employment_type, date_of_joining, deptName, department_id, userId]
+        [name, salutation, designation, employee_id, employment_type, normalizedDateOfJoining, deptName, department_id, userId]
       );
 
       // Upsert faculty_information
@@ -382,12 +397,12 @@ exports.completeOnboarding = async (req, res) => {
         await db.query(
           `INSERT INTO faculty_information (name, email, department, designation, employee_id, date_of_joining) 
            VALUES (?, ?, ?, ?, ?, ?)`,
-          [name, req.user.email, deptName, designation, employee_id, date_of_joining]
+          [name, req.user.email, deptName, designation, employee_id, normalizedDateOfJoining]
         );
       } else {
         await db.query(
           `UPDATE faculty_information SET name=?, department=?, designation=?, employee_id=?, date_of_joining=? WHERE email=?`,
-          [name, deptName, designation, employee_id, date_of_joining, req.user.email]
+          [name, deptName, designation, employee_id, normalizedDateOfJoining, req.user.email]
         );
       }
 
@@ -498,15 +513,25 @@ exports.getDepartmentFaculty = async (req, res) => {
     const targetDepartmentName = depts.length > 0 ? depts[0].name : null;
 
     const [faculty] = await db.query(`
-      SELECT id, name, email, designation, salutation, employee_id, employment_type, date_of_joining, created_at,
-             archived_at, archived_by, archive_reason
-      FROM users 
-      WHERE role = 'faculty' AND COALESCE(is_archived, 0) = ?
+      SELECT u.id, u.name, u.email, u.designation, u.salutation, u.employee_id, u.employment_type,
+             COALESCE(u.date_of_joining,
+               (
+                 SELECT fi.date_of_joining
+                 FROM faculty_information fi
+                 WHERE fi.email = u.email
+                 ORDER BY fi.id DESC
+                 LIMIT 1
+               ),
+               DATE(u.created_at)
+             ) AS date_of_joining,
+             u.created_at, u.archived_at, u.archived_by, u.archive_reason
+      FROM users u
+      WHERE u.role = 'faculty' AND COALESCE(u.is_archived, 0) = ?
         AND (
-          department_id = ?
-          OR (department_id IS NULL AND ? <> '' AND department = ?)
+          u.department_id = ?
+          OR (u.department_id IS NULL AND ? <> '' AND u.department = ?)
         )
-      ORDER BY name
+      ORDER BY u.name
     `, [includeArchived, targetDepartmentId, targetDepartmentName || '', targetDepartmentName || '']);
 
     res.json({ success: true, data: faculty });
@@ -524,7 +549,18 @@ exports.getAllUsers = async (req, res) => {
   try {
     const includeArchived = getBoolean(req.query.include_archived);
     const [users] = await db.query(`
-      SELECT u.id, u.name, u.email, u.role, u.department, u.designation, u.salutation, u.employee_id, u.employment_type, u.date_of_joining, u.created_at, u.onboarding_complete,
+      SELECT u.id, u.name, u.email, u.role, u.department, u.designation, u.salutation, u.employee_id, u.employment_type,
+        COALESCE(u.date_of_joining,
+          (
+            SELECT fi.date_of_joining
+            FROM faculty_information fi
+            WHERE fi.email = u.email
+            ORDER BY fi.id DESC
+            LIMIT 1
+          ),
+          DATE(u.created_at)
+        ) AS date_of_joining,
+        u.created_at, u.onboarding_complete,
         u.archived_at, u.archived_by, u.archive_reason,
         d.name as department_name, d.code as department_code
       FROM users u
@@ -818,6 +854,10 @@ exports.exportArchiveData = async (req, res) => {
 
 exports.getFacultySubmissionHistory = async (req, res) => {
   try {
+    if (req.user?.role === 'hod') {
+      return res.status(403).json({ success: false, message: 'HOD cannot access submission history.' });
+    }
+
     const submissionsExists = await hasTable('submissions');
     const reviewCommentsExists = await hasTable('review_comments');
     const facultyId = Number(req.params.id);
