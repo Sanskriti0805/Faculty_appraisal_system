@@ -30,6 +30,37 @@ const resolveFacultyInfoId = async ({ facultyId, email }) => {
     }
   }
 
+  // Self-heal legacy accounts: if user exists as faculty but has no
+  // faculty_information row yet, create one on demand.
+  if (numericFacultyId !== null) {
+    const [facultyUsers] = await db.query(
+      `SELECT id, name, email, department, designation, employee_id, date_of_joining
+       FROM users
+       WHERE id = ? AND role = 'faculty'
+       LIMIT 1`,
+      [numericFacultyId]
+    );
+
+    if (facultyUsers.length > 0) {
+      const u = facultyUsers[0];
+
+      if (u.email) {
+        const [existingByEmail] = await db.query('SELECT id FROM faculty_information WHERE email = ? LIMIT 1', [u.email]);
+        if (existingByEmail.length > 0) {
+          return existingByEmail[0].id;
+        }
+      }
+
+      const [insertResult] = await db.query(
+        `INSERT INTO faculty_information (name, email, department, designation, employee_id, date_of_joining)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [u.name || null, u.email || null, u.department || null, u.designation || null, u.employee_id || null, u.date_of_joining || null]
+      );
+
+      return insertResult.insertId;
+    }
+  }
+
   return null;
 };
 
