@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Migration script: Fix email system DB issues
  * - Add 'hod' to role enum
  * - Add missing columns to users table
@@ -22,7 +22,7 @@ async function run() {
     // 1. Fix role enum
     console.log('1. Fixing role enum to include hod (keeping admin)...');
     await conn.query(
-      "ALTER TABLE users MODIFY COLUMN role ENUM('admin','faculty','hod','dofa','dofa_office') DEFAULT 'faculty'"
+      "ALTER TABLE users MODIFY COLUMN role ENUM('admin','faculty','hod','Dofa','Dofa_office') DEFAULT 'faculty'"
     );
     console.log('   Done.\n');
 
@@ -82,3 +82,4 @@ async function run() {
 }
 
 run().catch(e => { console.error('Migration failed:', e.message); process.exit(1); });
+

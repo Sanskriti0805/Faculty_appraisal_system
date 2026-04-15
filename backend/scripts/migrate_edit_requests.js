@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Migration: Create edit_requests table for faculty section edit request workflow
  * Run: node backend/scripts/migrate_edit_requests.js
  */
@@ -18,7 +18,7 @@ async function migrate() {
         \`approved_sections\` json DEFAULT NULL COMMENT 'Array of section keys approved for edit',
         \`reviewed_by\` int DEFAULT NULL,
         \`reviewed_at\` timestamp NULL DEFAULT NULL,
-        \`dofa_note\` text DEFAULT NULL,
+        \`Dofa_note\` text DEFAULT NULL,
         \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
         \`updated_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (\`id\`),
@@ -30,13 +30,14 @@ async function migrate() {
         CONSTRAINT \`edit_requests_ibfk_3\` FOREIGN KEY (\`reviewed_by\`) REFERENCES \`users\` (\`id\`) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     `);
-    console.log('✅ edit_requests table created (or already exists)');
+    console.log('âœ… edit_requests table created (or already exists)');
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Migration failed:', error.message);
+    console.error('âŒ Migration failed:', error.message);
     process.exit(1);
   }
 }
 
 migrate();
+

@@ -1,4 +1,4 @@
-const db = require('../config/database');
+﻿const db = require('../config/database');
 
 async function run() {
   try {
@@ -16,8 +16,8 @@ async function run() {
     // Verify scores
     const [scores] = await db.query(`
       SELECT s.submission_id, r.section_name, r.sub_section, s.score, r.max_marks
-      FROM dofa_evaluation_scores s
-      JOIN dofa_rubrics r ON s.rubric_id = r.id
+      FROM Dofa_evaluation_scores s
+      JOIN Dofa_rubrics r ON s.rubric_id = r.id
       WHERE s.submission_id IN (SELECT id FROM submissions WHERE faculty_id = 9)
     `);
     console.log('\nAllocated scores:');
@@ -30,3 +30,4 @@ async function run() {
   }
 }
 run();
+

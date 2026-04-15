@@ -1,5 +1,5 @@
-/**
- * Registration Controller — Department and Faculty registration by DOFA
+﻿/**
+ * Registration Controller - Department and Faculty registration by Dofa
  * Sends temp password via email (LNMIIT template)
  */
 const bcrypt = require('bcryptjs');
@@ -35,7 +35,7 @@ exports.runMigrations = async () => {
       );
       if (rows.length === 0) {
         await db.query(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
-        console.log(`✅ Migration: added ${table}.${column}`);
+        console.log(`âœ… Migration: added ${table}.${column}`);
       }
     };
 
@@ -88,15 +88,15 @@ exports.runMigrations = async () => {
     await ensureColumn('dynamic_sections', 'description', 'description TEXT NULL');
 
     // Rule-driven rubric columns
-    await ensureColumn('dofa_rubrics', 'scoring_type', "scoring_type VARCHAR(20) NOT NULL DEFAULT 'manual'");
-    await ensureColumn('dofa_rubrics', 'per_unit_marks', 'per_unit_marks DECIMAL(10,2) NULL');
-    await ensureColumn('dofa_rubrics', 'dynamic_section_id', 'dynamic_section_id INT NULL');
-    await ensureColumn('dofa_rubrics', 'data_source', 'data_source VARCHAR(64) NULL');
-    await ensureColumn('dofa_rubrics', 'rule_config', 'rule_config JSON NULL');
+    await ensureColumn('Dofa_rubrics', 'scoring_type', "scoring_type VARCHAR(20) NOT NULL DEFAULT 'manual'");
+    await ensureColumn('Dofa_rubrics', 'per_unit_marks', 'per_unit_marks DECIMAL(10,2) NULL');
+    await ensureColumn('Dofa_rubrics', 'dynamic_section_id', 'dynamic_section_id INT NULL');
+    await ensureColumn('Dofa_rubrics', 'data_source', 'data_source VARCHAR(64) NULL');
+    await ensureColumn('Dofa_rubrics', 'rule_config', 'rule_config JSON NULL');
 
-    console.log('✅ Migration: archive columns ensured');
+    console.log('âœ… Migration: archive columns ensured');
   } catch (err) {
-    console.log('ℹ️  Migration note:', err.message);
+    console.log('â„¹ï¸  Migration note:', err.message);
   }
 };
 
@@ -116,6 +116,43 @@ const normalizeOptionalDate = (value) => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed.toISOString().slice(0, 10);
+};
+
+const resolveHodDepartmentContext = async (user) => {
+  const deptId = Number(user?.department_id || 0);
+  const deptName = String(user?.department || '').trim();
+
+  if (deptId <= 0 && !deptName) return null;
+
+  if (deptId > 0) {
+    const [byIdRows] = await db.query('SELECT id, name FROM departments WHERE id = ? LIMIT 1', [deptId]);
+    if (byIdRows.length > 0) {
+      return {
+        id: Number(byIdRows[0].id),
+        name: byIdRows[0].name,
+        nameNorm: String(byIdRows[0].name || '').trim().toLowerCase()
+      };
+    }
+  }
+
+  if (!deptName) return null;
+
+  const [rows] = await db.query(
+    `SELECT id, name
+     FROM departments
+     WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+     ORDER BY id ASC`,
+    [deptName]
+  );
+
+  // Name-only fallback must resolve to exactly one department.
+  if (rows.length !== 1) return null;
+
+  return {
+    id: Number(rows[0].id),
+    name: rows[0].name,
+    nameNorm: String(rows[0].name || '').trim().toLowerCase()
+  };
 };
 
 const toSafeCsv = (value) => {
@@ -149,27 +186,41 @@ const hasTable = async (tableName) => {
 
 /**
  * POST /api/register/department
- * DOFA registers a new department + HOD
+ * Dofa registers a new department + HOD
  * Body: { name, code, hod_email, hod_name }
  */
 exports.registerDepartment = async (req, res) => {
   try {
     const { name, code, hod_email, hod_name } = req.body;
+    const normalizedName = String(name || '').trim();
+    const normalizedCode = String(code || '').trim().toUpperCase();
 
-    if (!name || !code || !hod_email) {
+    if (!normalizedName || !normalizedCode || !hod_email) {
       return res.status(400).json({ success: false, message: 'Department name, code, and HOD email are required' });
     }
 
     // Check if code already exists
-    const [existing] = await db.query('SELECT id FROM departments WHERE code = ?', [code]);
+    const [existing] = await db.query('SELECT id FROM departments WHERE UPPER(TRIM(code)) = ?', [normalizedCode]);
     if (existing.length > 0) {
       return res.status(400).json({ success: false, message: 'Department code already exists' });
+    }
+
+    // Check if name already exists (case-insensitive)
+    const [existingByName] = await db.query(
+      'SELECT id, code FROM departments WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1',
+      [normalizedName]
+    );
+    if (existingByName.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Department name already exists (code: ${existingByName[0].code}). Use a unique department name.`
+      });
     }
 
     // Create department
     const [deptResult] = await db.query(
       'INSERT INTO departments (name, code, hod_email, hod_name) VALUES (?, ?, ?, ?)',
-      [name, code, hod_email, hod_name || '']
+      [normalizedName, normalizedCode, hod_email, hod_name || '']
     );
 
     const departmentId = deptResult.insertId;
@@ -185,7 +236,7 @@ exports.registerDepartment = async (req, res) => {
       await db.query(
         `INSERT INTO users (name, email, password, role, department, department_id, onboarding_complete) 
          VALUES (?, ?, ?, 'hod', ?, ?, 1)`,
-        [hod_name || 'HOD', hod_email, hashedPassword, name, departmentId]
+        [hod_name || 'HOD', hod_email, hashedPassword, normalizedName, departmentId]
       );
 
       // Send temp password email
@@ -200,19 +251,19 @@ exports.registerDepartment = async (req, res) => {
       } catch (emailErr) {
         console.error('Email error:', emailErr);
       }
-      console.log(`🔑 HOD temp password for ${hod_email}: ${tempPassword}`);
+      console.log(`ðŸ”‘ HOD temp password for ${hod_email}: ${tempPassword}`);
     } else {
       // Update existing user to have HOD role and link to department
       await db.query(
         'UPDATE users SET role = ?, department = ?, department_id = ? WHERE email = ?',
-        ['hod', name, departmentId, hod_email]
+        ['hod', normalizedName, departmentId, hod_email]
       );
     }
 
     res.json({
       success: true,
       message: 'Department registered successfully. Temporary password email sent to HOD.',
-      department: { id: departmentId, name, code, hod_email, hod_name }
+      department: { id: departmentId, name: normalizedName, code: normalizedCode, hod_email, hod_name }
     });
   } catch (error) {
     console.error('Register department error:', error);
@@ -222,7 +273,7 @@ exports.registerDepartment = async (req, res) => {
 
 /**
  * POST /api/register/faculty
- * DOFA registers a new faculty member
+ * Dofa registers a new faculty member
  * Body: { salutation, name, designation, email, employee_id, employment_type, date_of_joining, department_id }
  */
 exports.registerFaculty = async (req, res) => {
@@ -248,7 +299,7 @@ exports.registerFaculty = async (req, res) => {
     const tempPassword = generateTempPassword();
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-    // Create user — fully filled, so onboarding_complete = 1
+    // Create user - fully filled, so onboarding_complete = 1
     const [result] = await db.query(
       `INSERT INTO users (name, email, password, role, department, department_id, designation, salutation, employee_id, employment_type, date_of_joining, onboarding_complete)
        VALUES (?, ?, ?, 'faculty', ?, ?, ?, ?, ?, ?, ?, 1)`,
@@ -277,7 +328,7 @@ exports.registerFaculty = async (req, res) => {
     } catch (emailErr) {
       console.error('Email error:', emailErr);
     }
-    console.log(`🔑 Faculty temp password for ${email}: ${tempPassword}`);
+    console.log(`ðŸ”‘ Faculty temp password for ${email}: ${tempPassword}`);
 
     res.json({
       success: true,
@@ -292,7 +343,7 @@ exports.registerFaculty = async (req, res) => {
 
 /**
  * POST /api/register/bulk-invite
- * DOFA sends invite emails to multiple faculty/HOD emails at once.
+ * Dofa sends invite emails to multiple faculty/HOD emails at once.
  * Body: { role: 'faculty'|'hod', emails: ['a@x.com', 'b@x.com', ...] }
  * 
  * Creates placeholder accounts (onboarding_complete = 0) and emails each person
@@ -329,7 +380,7 @@ exports.bulkInvite = async (req, res) => {
         const tempPassword = generateTempPassword();
         const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-        // Create placeholder account — onboarding_complete = 0 so wizard is shown
+        // Create placeholder account - onboarding_complete = 0 so wizard is shown
         await db.query(
           `INSERT INTO users (name, email, password, role, onboarding_complete)
            VALUES (?, ?, ?, ?, 0)`,
@@ -345,11 +396,11 @@ exports.bulkInvite = async (req, res) => {
             role: role === 'hod' ? 'HOD' : 'Faculty',
             loginUrl: FRONTEND_URL
           });
-          console.log(`📧 Bulk invite sent to ${email} (${role}) — temp: ${tempPassword}`);
+          console.log(`ðŸ“§ Bulk invite sent to ${email} (${role}) - temp: ${tempPassword}`);
           results.push({ email, status: 'sent', message: 'Invitation sent' });
         } catch (emailErr) {
           console.error(`Email error for ${email}:`, emailErr.message);
-          console.log(`🔑 (console fallback) ${email} temp password: ${tempPassword}`);
+          console.log(`ðŸ”‘ (console fallback) ${email} temp password: ${tempPassword}`);
           results.push({ email, status: 'sent_no_email', message: 'Account created; email delivery failed' });
         }
       } catch (dbErr) {
@@ -378,7 +429,7 @@ exports.bulkInvite = async (req, res) => {
  * Faculty or HOD completes their profile on first login.
  * 
  * Faculty body: { salutation, name, designation, employee_id, employment_type, date_of_joining, department_id }
- * HOD body: { salutation, name, dept_name, dept_code }  ← creates department if needed
+ * HOD body: { salutation, name, dept_name, dept_code }  â† creates department if needed
  */
 exports.completeOnboarding = async (req, res) => {
   try {
@@ -509,23 +560,28 @@ exports.getDepartmentFaculty = async (req, res) => {
     const { id } = req.params;
     const includeArchived = getBoolean(req.query.include_archived);
     let targetDepartmentId = Number(id);
+    let targetDepartmentName = null;
 
     if (req.user.role === 'hod') {
-      const hodDeptId = Number(req.user.department_id || 0);
-      if (hodDeptId > 0 && targetDepartmentId !== hodDeptId) {
+      const hodDept = await resolveHodDepartmentContext(req.user);
+      if (!hodDept) {
+        return res.status(403).json({ success: false, message: 'HOD department mapping is missing' });
+      }
+      if (targetDepartmentId > 0 && targetDepartmentId !== hodDept.id) {
         return res.status(403).json({ success: false, message: 'HOD can only view faculty from own department' });
       }
-      if (hodDeptId > 0) {
-        targetDepartmentId = hodDeptId;
-      }
+      targetDepartmentId = hodDept.id;
+      targetDepartmentName = hodDept.name;
     }
 
     if (!targetDepartmentId || Number.isNaN(targetDepartmentId)) {
       return res.status(400).json({ success: false, message: 'Valid department id is required' });
     }
 
-    const [depts] = await db.query('SELECT name FROM departments WHERE id = ?', [targetDepartmentId]);
-    const targetDepartmentName = depts.length > 0 ? depts[0].name : null;
+    if (!targetDepartmentName) {
+      const [depts] = await db.query('SELECT name FROM departments WHERE id = ?', [targetDepartmentId]);
+      targetDepartmentName = depts.length > 0 ? depts[0].name : null;
+    }
 
     const [faculty] = await db.query(`
       SELECT u.id, u.name, u.email, u.designation, u.salutation, u.employee_id, u.employment_type,
@@ -544,7 +600,7 @@ exports.getDepartmentFaculty = async (req, res) => {
       WHERE u.role = 'faculty' AND COALESCE(u.is_archived, 0) = ?
         AND (
           u.department_id = ?
-          OR (u.department_id IS NULL AND ? <> '' AND u.department = ?)
+          OR (u.department_id IS NULL AND ? <> '' AND LOWER(TRIM(u.department)) = LOWER(TRIM(?)))
         )
       ORDER BY u.name
     `, [includeArchived, targetDepartmentId, targetDepartmentName || '', targetDepartmentName || '']);
@@ -558,7 +614,7 @@ exports.getDepartmentFaculty = async (req, res) => {
 
 /**
  * GET /api/register/users
- * DOFA: list all registered users
+ * Dofa: list all registered users
  */
 exports.getAllUsers = async (req, res) => {
   try {
@@ -596,7 +652,7 @@ exports.softDeleteFaculty = async (req, res) => {
     const { reason } = req.body || {};
 
     const [rows] = await db.query(
-      'SELECT id, role, department_id, is_archived FROM users WHERE id = ? AND role = \"faculty\"',
+      'SELECT id, role, department, department_id, is_archived FROM users WHERE id = ? AND role = "faculty"',
       [facultyId]
     );
     if (rows.length === 0) {
@@ -608,8 +664,20 @@ exports.softDeleteFaculty = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Faculty is already archived' });
     }
 
-    if (req.user.role === 'hod' && Number(req.user.department_id) !== Number(faculty.department_id)) {
-      return res.status(403).json({ success: false, message: 'HOD can only archive faculty from own department' });
+    if (req.user.role === 'hod') {
+      const hodDept = await resolveHodDepartmentContext(req.user);
+      if (!hodDept) {
+        return res.status(403).json({ success: false, message: 'HOD department mapping is missing' });
+      }
+
+      const facultyDeptId = Number(faculty.department_id || 0);
+      const sameDeptById = facultyDeptId > 0 && facultyDeptId === hodDept.id;
+      const sameDeptByName = facultyDeptId <= 0
+        && String(faculty.department || '').trim().toLowerCase() === hodDept.nameNorm;
+
+      if (!sameDeptById && !sameDeptByName) {
+        return res.status(403).json({ success: false, message: 'HOD can only archive faculty from own department' });
+      }
     }
 
     await db.query(
@@ -629,7 +697,7 @@ exports.restoreFaculty = async (req, res) => {
     const facultyId = Number(req.params.id);
 
     const [rows] = await db.query(
-      'SELECT id, role, department_id, is_archived FROM users WHERE id = ? AND role = \"faculty\"',
+      'SELECT id, role, department, department_id, is_archived FROM users WHERE id = ? AND role = "faculty"',
       [facultyId]
     );
     if (rows.length === 0) {
@@ -641,8 +709,20 @@ exports.restoreFaculty = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Faculty is already active' });
     }
 
-    if (req.user.role === 'hod' && Number(req.user.department_id) !== Number(faculty.department_id)) {
-      return res.status(403).json({ success: false, message: 'HOD can only restore faculty from own department' });
+    if (req.user.role === 'hod') {
+      const hodDept = await resolveHodDepartmentContext(req.user);
+      if (!hodDept) {
+        return res.status(403).json({ success: false, message: 'HOD department mapping is missing' });
+      }
+
+      const facultyDeptId = Number(faculty.department_id || 0);
+      const sameDeptById = facultyDeptId > 0 && facultyDeptId === hodDept.id;
+      const sameDeptByName = facultyDeptId <= 0
+        && String(faculty.department || '').trim().toLowerCase() === hodDept.nameNorm;
+
+      if (!sameDeptById && !sameDeptByName) {
+        return res.status(403).json({ success: false, message: 'HOD can only restore faculty from own department' });
+      }
     }
 
     await db.query(
@@ -723,8 +803,13 @@ exports.getArchiveData = async (req, res) => {
     let facultyWhere = 'WHERE u.role = \"faculty\" AND COALESCE(u.is_archived, 0) = 1';
 
     if (isHod) {
-      facultyWhere += ' AND u.department_id = ?';
-      params.push(req.user.department_id);
+      const hodDept = await resolveHodDepartmentContext(req.user);
+      if (!hodDept) {
+        return res.status(403).json({ success: false, message: 'HOD department mapping is missing' });
+      }
+
+      facultyWhere += ' AND (u.department_id = ? OR (u.department_id IS NULL AND ? <> "" AND LOWER(TRIM(u.department)) = LOWER(TRIM(?))))';
+      params.push(hodDept.id, hodDept.name, hodDept.name);
     }
 
     const [facultyRows] = await db.query(`
@@ -777,8 +862,13 @@ exports.exportArchiveData = async (req, res) => {
       const params = [];
       let where = 'WHERE u.role = \"faculty\" AND COALESCE(u.is_archived, 0) = 1';
       if (isHod) {
-        where += ' AND u.department_id = ?';
-        params.push(req.user.department_id);
+        const hodDept = await resolveHodDepartmentContext(req.user);
+        if (!hodDept) {
+          return res.status(403).json({ success: false, message: 'HOD department mapping is missing' });
+        }
+
+        where += ' AND (u.department_id = ? OR (u.department_id IS NULL AND ? <> "" AND LOWER(TRIM(u.department)) = LOWER(TRIM(?))))';
+        params.push(hodDept.id, hodDept.name, hodDept.name);
       }
 
       if (submissionsExists) {
@@ -911,3 +1001,4 @@ exports.getFacultySubmissionHistory = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+

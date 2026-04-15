@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import './DOFADashboard.css';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import './DofaDashboard.css';
 import './RubricsManagement.css';
 
 import apiClient from '../services/api';
 import { showConfirm } from '../utils/appDialogs';
 
 const SCORING_TYPES = [
-  { value: 'manual',      label: 'Manual',      desc: 'DOFA enters score manually' },
+  { value: 'manual',      label: 'Manual',      desc: 'Dofa enters score manually' },
   { value: 'rule',        label: 'Rule-Driven', desc: 'Calculated from rule configuration' },
-  { value: 'count_based', label: 'Count-Based', desc: 'Rows × per-unit marks (auto)' },
+  { value: 'count_based', label: 'Count-Based', desc: 'Rows x per-unit marks (auto)' },
   { value: 'text_exists', label: 'Text Exists', desc: 'Full marks if field is filled' },
 ];
 
@@ -270,14 +270,14 @@ const RubricsManagement = () => {
 
   if (loading) {
     return (
-      <div className="dofa-dashboard">
+      <div className="Dofa-dashboard">
         <div className="loading-state">Loading rubrics...</div>
       </div>
     );
   }
 
   return (
-    <div className="dofa-dashboard">
+    <div className="Dofa-dashboard">
       {/* Toast */}
       {toast && (
         <div className={`rubric-toast rubric-toast--${toast.type}`}>
@@ -353,7 +353,7 @@ const RubricsManagement = () => {
                               title="Click to expand/collapse"
                             >
                               <span className="rubric-chevron">
-                                {expandedSections[sectionName] ? '▼' : '▶'}
+                                {expandedSections[sectionName] ? 'â–¼' : 'â–¶'}
                               </span>
                               <span className="rubric-section-title">{sectionName}</span>
                               <span className="rubric-item-count">{items.length} item{items.length !== 1 ? 's' : ''}</span>
@@ -370,12 +370,12 @@ const RubricsManagement = () => {
                             className="rubric-sec-btn rubric-sec-btn--edit"
                             onClick={e => { e.stopPropagation(); setEditingSection(sectionName); setEditSectionValue(sectionName); }}
                             title="Rename section"
-                          >✎ Edit</button>
+                          >âœŽ Edit</button>
                           <button
                             className="rubric-sec-btn rubric-sec-btn--del"
                             onClick={e => { e.stopPropagation(); handleDeleteSection(sectionName); }}
                             title="Delete section"
-                          >🗑 Delete</button>
+                          >ðŸ—‘ Delete</button>
                         </td>
                       </tr>
                       {expandedSections[sectionName] && items.map(row => (
@@ -419,7 +419,7 @@ const RubricsManagement = () => {
                                 placeholder="pts/row"
                                 style={{ width: '70px' }}
                               />
-                            ) : <span style={{ color: '#cbd5e1' }}>—</span>}
+                            ) : <span style={{ color: '#cbd5e1' }}>-</span>}
                           </td>
                           <td>
                             <select
@@ -434,10 +434,10 @@ const RubricsManagement = () => {
                                 });
                               }}
                             >
-                              <option value="">— none —</option>
+                              <option value="">- none -</option>
                               {dynamicSections.map(ds => (
                                 <option key={ds.id} value={ds.id}>
-                                  {ds.parent_id ? `↳ ${ds.title}` : ds.title} [{ds.form_type}]
+                                  {ds.parent_id ? `â†³ ${ds.title}` : ds.title} [{ds.form_type}]
                                 </option>
                               ))}
                             </select>
@@ -448,7 +448,7 @@ const RubricsManagement = () => {
                               onClick={() => handleDeleteRow(row.originalIndex)}
                               title="Delete row"
                             >
-                              🗑
+                              ðŸ—‘
                             </button>
                           </td>
                         </tr>
@@ -488,3 +488,4 @@ const RubricsManagement = () => {
 };
 
 export default RubricsManagement;
+

@@ -1,7 +1,7 @@
-# 📋 Faculty Appraisal System — LNMIIT
+﻿# [doc] Faculty Appraisal System - LNMIIT
 ### A Full-Stack Web Application for End-to-End Annual Faculty Performance Appraisal Management
 
-## 📌 Table of Contents
+## ðŸ“Œ Table of Contents
 
 1. [Project Overview](#1-project-overview)
 2. [Technology Stack](#2-technology-stack)
@@ -9,8 +9,8 @@
 4. [User Roles & Access Control](#4-user-roles--access-control)
 5. [Authentication & Onboarding](#5-authentication--onboarding)
 6. [Faculty Dashboard & Forms](#6-faculty-dashboard--forms)
-7. [DOFA Office Dashboard](#7-dofa-office-dashboard)
-8. [DOFA Reviewer Dashboard](#8-dofa-reviewer-dashboard)
+7. [Dofa Office Dashboard](#7-Dofa-office-dashboard)
+8. [Dofa Reviewer Dashboard](#8-Dofa-reviewer-dashboard)
 9. [HOD Dashboard](#9-hod-dashboard)
 10. [Form Builder Module](#10-form-builder-module)
 11. [Rubrics Management](#11-rubrics-management)
@@ -33,10 +33,10 @@ The **Faculty Appraisal System** is a purpose-built web application designed for
 Previously managed through paper forms and spreadsheets, the system now provides:
 
 - A **guided multi-section form** for faculty to self-report their academic activities
-- A **review dashboard** for DOFA (Dean of Faculty Affairs) to evaluate, score, and grade submissions
-- An **administration panel** for DOFA Office to manage users, sessions, rubrics, and custom form sections
+- A **review dashboard** for Dofa (Dean of Faculty Affairs) to evaluate, score, and grade submissions
+- An **administration panel** for Dofa Office to manage users, sessions, rubrics, and custom form sections
 - **Automated rubric-based scoring** that assigns marks the moment a faculty member submits
-- **PDF download** for every submission — LNMIIT-branded, A4 layout, ready for print
+- **PDF download** for every submission - LNMIIT-branded, A4 layout, ready for print
 - A **dynamic form builder** so new appraisal sections can be added without writing code
 
 ---
@@ -50,8 +50,8 @@ Previously managed through paper forms and spreadsheets, the system now provides
 | Vite | 5.x | Build tool & dev server |
 | React Router DOM | 6.x | Client-side routing |
 | Lucide React | latest | Icon library |
-| Vanilla CSS | — | Styling (no Tailwind, full custom design system) |
-| Google Fonts (Inter/Outfit) | — | Typography |
+| Vanilla CSS | - | Styling (no Tailwind, full custom design system) |
+| Google Fonts (Inter/Outfit) | - | Typography |
 
 ### Backend
 | Technology | Version | Purpose |
@@ -79,42 +79,42 @@ Previously managed through paper forms and spreadsheets, the system now provides
 ## 3. System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         BROWSER (React SPA)                     │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
-│  │ Faculty  │  │  DOFA    │  │   HOD    │  │ DOFA Office  │   │
-│  │Dashboard │  │Dashboard │  │Dashboard │  │  Dashboard   │   │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └──────┬───────┘   │
-└───────┼─────────────┼─────────────┼────────────────┼───────────┘
-        │             │             │                │
-        └─────────────┴─────────────┴────────────────┘
-                              │ HTTPS REST API
-                    ┌─────────▼────────────┐
-                    │   Express.js Server   │
-                    │    (Port 5000)        │
-                    │  ┌─────────────────┐ │
-                    │  │ JWT Middleware   │ │
-                    │  │ Role Guards     │ │
-                    │  │ Multer Upload   │ │
-                    │  └─────────────────┘ │
-                    │  22 Controllers       │
-                    │  21 Route Files      │
-                    └─────────┬────────────┘
-                              │
-                    ┌─────────▼────────────┐
-                    │      MySQL 8.x        │
-                    │   30+ Tables          │
-                    │   InnoDB Engine       │
-                    └──────────────────────┘
++-----------------------------------------------------------------+
+|                         BROWSER (React SPA)                     |
+|  +----------+  +----------+  +----------+  +--------------+   |
+|  | Faculty  |  |  Dofa    |  |   HOD    |  | Dofa Office  |   |
+|  |Dashboard |  |Dashboard |  |Dashboard |  |  Dashboard   |   |
+|  +----+-----+  +----+-----+  +----+-----+  +------+-------+   |
++-------+-------------+-------------+----------------+-----------+
+        |             |             |                |
+        +-------------â”´-------------â”´----------------+
+                              | HTTPS REST API
+                    +---------â–¼------------+
+                    |   Express.js Server   |
+                    |    (Port 5000)        |
+                    |  +-----------------+ |
+                    |  | JWT Middleware   | |
+                    |  | Role Guards     | |
+                    |  | Multer Upload   | |
+                    |  +-----------------+ |
+                    |  22 Controllers       |
+                    |  21 Route Files      |
+                    +---------+------------+
+                              |
+                    +---------â–¼------------+
+                    |      MySQL 8.x        |
+                    |   30+ Tables          |
+                    |   InnoDB Engine       |
+                    +----------------------+
 ```
 
 ### Request Flow
-1. User logs in → receives JWT token → stored in `localStorage`
+1. User logs in -> receives JWT token -> stored in `localStorage`
 2. All subsequent API calls include `Authorization: Bearer <token>` header
 3. `authMiddleware.js` verifies token and attaches `req.user`
 4. Role-specific guards check `req.user.role` for protected operations
-5. Controller queries MySQL → returns JSON response
-6. React updates state → UI re-renders
+5. Controller queries MySQL -> returns JSON response
+6. React updates state -> UI re-renders
 
 ---
 
@@ -125,17 +125,17 @@ The system has **5 distinct roles**, each with a completely separate dashboard a
 | Role | Route Prefix | Description |
 |---|---|---|
 | `faculty` | `/` | Fills annual appraisal forms |
-| `dofa` | `/dofa` | Reviews & grades submissions |
-| `dofa_office` | `/dofa-office` | Administers the system (sessions, users, rubrics, form builder) |
+| `Dofa` | `/Dofa` | Reviews & grades submissions |
+| `Dofa_office` | `/Dofa-office` | Administers the system (sessions, users, rubrics, form builder) |
 | `hod` | `/hod` | Views department-level summary |
-| `admin` | (mixed) | System-level access (same as dofa_office) |
+| `admin` | (mixed) | System-level access (same as Dofa_office) |
 
 ### Role-based Route Protection
 ```
 ProtectedRoute component (src/components/ProtectedRoute.jsx)
-  → reads JWT from localStorage
-  → checks req.user.role against allowedRoles[]
-  → redirects to /login if mismatch
+  -> reads JWT from localStorage
+  -> checks req.user.role against allowedRoles[]
+  -> redirects to /login if mismatch
 ```
 
 ---
@@ -144,16 +144,16 @@ ProtectedRoute component (src/components/ProtectedRoute.jsx)
 
 ### Login (`/login`)
 - Email + password form with a premium dark-themed design
-- On success: receives `{ token, user }` → stores in `localStorage`
+- On success: receives `{ token, user }` -> stores in `localStorage`
 - Role detection routes the user to their correct dashboard prefix
 - "Forgot Password" link triggers the password reset flow
 
 ### Forgot Password (`/forgot-password`)
-- Faculty enters email → backend sends a reset link with JWT token (15min expiry)
+- Faculty enters email -> backend sends a reset link with JWT token (15min expiry)
 - Link: `/reset-password/:token`
 
 ### Reset Password (`/reset-password/:token`)
-- Token is verified → user sets new password
+- Token is verified -> user sets new password
 - bcryptjs hashes before DB storage
 
 ### Onboarding (`/onboarding`)
@@ -165,9 +165,9 @@ ProtectedRoute component (src/components/ProtectedRoute.jsx)
 - On completion: creates/updates `faculty_information` record
 - Guards faculty from accessing any form page until onboarding is done
 
-### Password Reset for DOFA Accounts
-- `backend/reset-dofa.js` — admin utility script to reset DOFA passwords directly in DB
-- `backend/update-dofa-role.js` — admin utility to promote users to DOFA roles
+### Password Reset for Dofa Accounts
+- `backend/reset-Dofa.js` - admin utility script to reset Dofa passwords directly in DB
+- `backend/update-Dofa-role.js` - admin utility to promote users to Dofa roles
 
 ---
 
@@ -176,39 +176,39 @@ ProtectedRoute component (src/components/ProtectedRoute.jsx)
 ### Faculty Dashboard (`/`)
 The landing page for faculty. Shows different states depending on session status:
 
-**State 1 — Forms Open (deadline not yet passed, not submitted)**
+**State 1 - Forms Open (deadline not yet passed, not submitted)**
 - Green banner: "Appraisal Forms Are Open"
 - Info cards: Academic Year | Submission Deadline | Days Remaining
-- Urgent warning if ≤ 3 days remain
+- Urgent warning if â‰¤ 3 days remain
 - Quick-navigation grid: Faculty Information, Courses Taught, Research Publications, Part B
 
-**State 2 — Already Submitted**
+**State 2 - Already Submitted**
 - Blue banner: "Appraisal Form Submitted"
 - Status card showing current submission status
-- Button: "View Submitted Form" → `MySubmissionView`
+- Button: "View Submitted Form" -> `MySubmissionView`
 - Button: "Request Section Edits" if deadline not passed
 
-**State 3 — Edit Access Granted (`sent_back` status)**
+**State 3 - Edit Access Granted (`sent_back` status)**
 - Yellow banner: "Edit Access Granted"
-- Shows which sections were unlocked by DOFA
+- Shows which sections were unlocked by Dofa
 - Navigation shortcuts to those sections
 - Must re-submit from Part B
 
-**State 4 — Deadline Passed**
+**State 4 - Deadline Passed**
 - Red banner: "Submission Deadline Has Passed"
 - Shows last submission details
 - No editing allowed
 
-**State 5 — No Active Session**
+**State 5 - No Active Session**
 - Grey banner: "Appraisal Forms Not Yet Available"
 - Pulsing animation indicator
 - Message to await email notification
 
-### Form A — Academic Contributions (Part A)
+### Form A - Academic Contributions (Part A)
 All Part A sections are accessible via the left sidebar. Each section follows the same pattern:
 1. Load existing data from DB on mount
 2. Local state tracks edits
-3. "Save and Next" button → calls backend API → navigates to next section
+3. "Save and Next" button -> calls backend API -> navigates to next section
 
 #### 6.1 Faculty Information (`/faculty-information`)
 - Fields: Name, Employee ID, Department, Designation, Email, Phone, Date of Joining, Qualifications
@@ -238,7 +238,7 @@ All Part A sections are accessible via the left sidebar. Each section follows th
 - Stored in: `teaching_innovation` table
 
 #### 6.6 Research Publications (`/research-publications`)
-- Most complex form in the system — multi-type publications
+- Most complex form in the system - multi-type publications
 - Publication Types: Journal Article, Conference Paper, Book Chapter, Book, Patent (view only)
 - Per journal: Journal Name, Abbreviation, Volume, Pages, Year, ISSN, Authors list
 - Per conference: Conference Name, City, Country, Type of Conference, Dates
@@ -252,7 +252,7 @@ All Part A sections are accessible via the left sidebar. Each section follows th
 - Evidence file upload
 - Stored in: `research_grants` table
 
-#### 6.8 Submitted Proposals (`/research-grants` — sub-section)
+#### 6.8 Submitted Proposals (`/research-grants` - sub-section)
 - Research proposals pending approval
 - Fields: Title, Funding Agency, Amount, Duration, Submission Date, Status
 - Stored in: `submitted_proposals` table
@@ -310,16 +310,16 @@ All Part A sections are accessible via the left sidebar. Each section follows th
 
 ---
 
-### Form B — Goal Setting (Part B)
+### Form B - Goal Setting (Part B)
 Route: `/part-b`
 
 - **Semester-wise goal table**: Faculty sets targets for Teaching, Research, Contribution, Outreach
 - Each row: Semester, Teaching Grade Target, Research Grade Target, Contribution Target, Outreach Target, Description
-- Final **Submit for Review** button — changes submission status from `draft` → `submitted`
+- Final **Submit for Review** button - changes submission status from `draft` -> `submitted`
 - On submit:
   1. Creates a versioned snapshot of ALL submission data
-  2. Triggers `autoAllocateMarks()` — scores are calculated from rubrics
-  3. Marks previous DOFA comments as resolved
+  2. Triggers `autoAllocateMarks()` - scores are calculated from rubrics
+  3. Marks previous Dofa comments as resolved
   4. Sends email confirmation to faculty
 
 **Research Plan** (`/research-plan`) & **Teaching Plan** (`/teaching-plan`)
@@ -345,9 +345,9 @@ After submitting, faculty can view their complete submission in a tabbed interfa
 | Custom Sections | Dynamic sections filled via Form Builder (appears only if data exists) |
 
 **Actions available:**
-- **Download PDF** button — calls Puppeteer API, streams LNMIIT-branded A4 PDF
-- **Request Section Edits** panel — select sections, add reason, submit edit request to DOFA
-- **View DOFA Comments** — pending and resolved comment history from reviewers
+- **Download PDF** button - calls Puppeteer API, streams LNMIIT-branded A4 PDF
+- **Request Section Edits** panel - select sections, add reason, submit edit request to Dofa
+- **View Dofa Comments** - pending and resolved comment history from reviewers
 
 ---
 
@@ -356,21 +356,21 @@ For custom sections created via Form Builder:
 
 - Loads field schema from `dynamic_sections` + `dynamic_fields`
 - Renders fields dynamically: text input, textarea, or interactive table with add/remove rows
-- **Debounced Autosave**: 2 seconds after the user stops typing → silent background save
-  - Shows animated indicator in header: `⟳ Saving…` → `✓ Saved` (fades after 3s)
+- **Debounced Autosave**: 2 seconds after the user stops typing -> silent background save
+  - Shows animated indicator in header: `âŸ³ Saving...` -> `âœ“ Saved` (fades after 3s)
 - `isFirstLoad` guard prevents autosave on initial data population
 - Responses stored in: `dynamic_responses` table (JSON value column)
 
 ---
 
-## 7. DOFA Office Dashboard
+## 7. Dofa Office Dashboard
 
-Route: `/dofa-office`  
-Role: `dofa_office`
+Route: `/Dofa-office`  
+Role: `Dofa_office`
 
 The administrative hub of the entire system. Contains 7 major sub-modules:
 
-### 7.1 Dashboard Overview (`/dofa-office/dashboard`)
+### 7.1 Dashboard Overview (`/Dofa-office/dashboard`)
 Real-time statistics displayed in cards:
 - Total Faculty registered
 - Total Submissions this year
@@ -378,10 +378,10 @@ Real-time statistics displayed in cards:
 - Year filter dropdown for historical data
 - Pie/bar chart of submission status distribution
 - List of recent submissions with quick-action buttons (View, Send Reminder)
-- **Bulk Data Export** button → downloads comprehensive Excel workbook (`.xlsx`) with all submissions for selected academic year, one sheet per section
+- **Bulk Data Export** button -> downloads comprehensive Excel workbook (`.xlsx`) with all submissions for selected academic year, one sheet per section
 
-### 7.2 User & Faculty Registration (`/dofa-office/registration` & `/dofa-office/manage-users`)
-Same component: `DOFARegistration.jsx` — a full user management panel:
+### 7.2 User & Faculty Registration (`/Dofa-office/registration` & `/Dofa-office/manage-users`)
+Same component: `DofaRegistration.jsx` - a full user management panel:
 
 **Tabs:**
 - **Register Faculty**: Multi-step form
@@ -404,67 +404,67 @@ Same component: `DOFARegistration.jsx` — a full user management panel:
 - Close session at year-end
 - Stored in: `appraisal_sessions` table
 
-### 7.4 Form Release (`/dofa-office/form-release`)
+### 7.4 Form Release (`/Dofa-office/form-release`)
 - Controls **when** forms become visible to faculty
-- Toggle switch — when released:
+- Toggle switch - when released:
   - All faculty see the "Forms Open" dashboard state
   - Email notification sent to all active faculty
 - Deadline management (date picker)
 - Automatic deadline reminder emails via `node-cron`
 
-### 7.5 Form Builder (`/dofa-office/form-builder`)
+### 7.5 Form Builder (`/Dofa-office/form-builder`)
 See [Section 10](#10-form-builder-module) for full details.
 
-### 7.6 Rubrics Management (`/dofa-office/rubrics`)
+### 7.6 Rubrics Management (`/Dofa-office/rubrics`)
 See [Section 11](#11-rubrics-management) for full details.
 
-### 7.7 Evaluation Sheets (`/dofa-office/sheet1`, `/sheet2`, `/sheet3`)
+### 7.7 Evaluation Sheets (`/Dofa-office/sheet1`, `/sheet2`, `/sheet3`)
 See [Section 12](#12-evaluation-sheets) for full details.
 
 ---
 
-## 8. DOFA Reviewer Dashboard
+## 8. Dofa Reviewer Dashboard
 
-Route: `/dofa`  
-Role: `dofa`
+Route: `/Dofa`  
+Role: `Dofa`
 
-The reviewing and grading interface for DOFA reviewers.
+The reviewing and grading interface for Dofa reviewers.
 
-### 8.1 DOFA Dashboard (`/dofa/dashboard`)
-- Same stats overview as DOFA Office but read-only
+### 8.1 Dofa Dashboard (`/Dofa/dashboard`)
+- Same stats overview as Dofa Office but read-only
 - Submissions table with status badges
-- Click any submission → opens the full review page
+- Click any submission -> opens the full review page
 
-### 8.2 Review Panel (`/dofa/review/:submissionId`)
-The core review interface — `DOFAReview.jsx`:
+### 8.2 Review Panel (`/Dofa/review/:submissionId`)
+The core review interface - `DofaReview.jsx`:
 
-**Left Panel — Submission Navigator**
+**Left Panel - Submission Navigator**
 - Accordion sections for every Part A and Part B section
-- Click section → right panel shows data for that section
+- Click section -> right panel shows data for that section
 - Progress indicator (how many sections have comments)
 
-**Right Panel — Review Content**
+**Right Panel - Review Content**
 - Tabbed display of faculty submission data
 - Section-by-section tables showing exactly what was submitted
 - Evidence file links (opens upload in new tab)
 
 **Commenting System**
-- Add section-specific comment → stored in `review_comments`
+- Add section-specific comment -> stored in `review_comments`
 - Comment stays "pending" until faculty re-submits (then auto-resolved)
 - Past comments shown with pending/resolved status
 
 **Actions**
-- **Send Back** — status → `sent_back`, email sent to faculty with all pending comments
-- **Approve** — status → `approved`, triggers final score lock
+- **Send Back** - status -> `sent_back`, email sent to faculty with all pending comments
+- **Approve** - status -> `approved`, triggers final score lock
 - **Under Review** toggle
 
 **Rubric Scoring (Sheet 1 inline)**
 - Shows the rubric evaluation grid for the submission
-- DOFA can manually override automatically allocated scores
+- Dofa can manually override automatically allocated scores
 - Total score shown in real-time
 
-### 8.3 Rubrics Management (`/dofa/rubrics`)
-Same as DOFA Office — DOFA reviewers can also define rubric rules.
+### 8.3 Rubrics Management (`/Dofa/rubrics`)
+Same as Dofa Office - Dofa reviewers can also define rubric rules.
 
 ---
 
@@ -479,26 +479,26 @@ A read-only dashboard providing department-level visibility.
 - Shows all faculty in their department
 - Submission status per faculty (draft/submitted/approved/sent_back)
 - Department-wide statistics (how many submitted, pending, approved)
-- Cannot modify any data — view only
+- Cannot modify any data - view only
 - Filters by academic year and status
 
 ---
 
 ## 10. Form Builder Module
 
-Route: `/dofa-office/form-builder`  
-Role: `dofa_office`
+Route: `/Dofa-office/form-builder`  
+Role: `Dofa_office`
 
 A Canva-style drag-and-drop form editor allowing admins to create custom appraisal sections **without writing any code or SQL**.
 
 ### 10.1 Interface Layout
 
-**Left Sidebar — Palette**
+**Left Sidebar - Palette**
 - Form A / Form B tab switcher
 - Element types that can be dragged/clicked to add:
-  - `T` — Text field (single line)
-  - `¶` — Comment box (multi-line textarea)
-  - `⊞` — Table (configurable columns, add/remove rows)
+  - `T` - Text field (single line)
+  - `Â¶` - Comment box (multi-line textarea)
+  - `âŠž` - Table (configurable columns, add/remove rows)
 - Section Navigator: shows all existing sections for the active form
 
 **Canvas Area**
@@ -519,53 +519,53 @@ A Canva-style drag-and-drop form editor allowing admins to create custom apprais
 
 Clicking "+ New Section" opens a 4-step modal with animated step indicators:
 
-**Step 1 — Form Selection**
+**Step 1 - Form Selection**
 - Choose between Form A or Form B
 - Large clickable cards with icons and descriptions
 
-**Step 2 — Section Kind**
-- **New Top-Level Section** — standalone section at the root level
-- **Add Fields to Existing** — append fields to an already-created section
-- **New Subsection** — child of an existing parent section (uses `parent_id`)
+**Step 2 - Section Kind**
+- **New Top-Level Section** - standalone section at the root level
+- **Add Fields to Existing** - append fields to an already-created section
+- **New Subsection** - child of an existing parent section (uses `parent_id`)
 
-**Step 3 — Field Configuration**
+**Step 3 - Field Configuration**
 - Add multiple fields in one wizard session:
   - Choose type: Text | Comment | Table
   - Enter field label
   - For tables: define column names with add/remove pill buttons
 - "Add Another Field" button for multiple fields
 
-**Step 4 — Review & Confirm**
+**Step 4 - Review & Confirm**
 - Summary card showing:
   - Form type badge
   - Section name and kind
   - List of all fields with their types and column counts
 - "Create Section" submit button
 
-**Post-Creation — Rubric Reminder Popup**
+**Post-Creation - Rubric Reminder Popup**
 - Immediately after creation, a modal popup appears:
-  - 🔔 "Don't forget Rubrics!"
+  - ðŸ”” "Don't forget Rubrics!"
   - Explains that the section won't affect scores until rubric rules are defined
   - Two buttons: "Go to Rubrics Management" | "I'll do it later"
 
 ### 10.3 Data Model
 
-New sections use a 3-table EAV (Entity-Attribute-Value) pattern — **no new SQL tables ever created**:
+New sections use a 3-table EAV (Entity-Attribute-Value) pattern - **no new SQL tables ever created**:
 
 ```
-dynamic_sections  →  one row per section
-dynamic_fields    →  one row per field (linked via section_id)
-dynamic_responses →  one row per faculty per field (JSON value)
+dynamic_sections  ->  one row per section
+dynamic_fields    ->  one row per field (linked via section_id)
+dynamic_responses ->  one row per faculty per field (JSON value)
 ```
 
-**Hierarchy Support** — `parent_id` column enables subsections:
+**Hierarchy Support** - `parent_id` column enables subsections:
 ```
 Section: "Research Activities" (parent_id = NULL)
-  ↳ Subsection: "Journal Publications" (parent_id = 1)
-  ↳ Subsection: "Conference Papers"    (parent_id = 1)
+  â†³ Subsection: "Journal Publications" (parent_id = 1)
+  â†³ Subsection: "Conference Papers"    (parent_id = 1)
 ```
 
-**Flexible Value Storage** — `dynamic_responses.value` is a JSON column:
+**Flexible Value Storage** - `dynamic_responses.value` is a JSON column:
 ```json
 // Text field:   "Developed Python course from scratch"
 // Table field:  [{"paper":"Deep Learning...", "journal":"IEEE", "year":"2024"}, {...}]
@@ -575,7 +575,7 @@ Section: "Research Activities" (parent_id = NULL)
 
 ## 11. Rubrics Management
 
-Route: `/dofa-office/rubrics` and `/dofa/rubrics`  
+Route: `/Dofa-office/rubrics` and `/Dofa/rubrics`  
 Component: `RubricsManagement.jsx`
 
 Defines the **scoring rules** that determine how many marks each section is worth.
@@ -585,19 +585,19 @@ Defines the **scoring rules** that determine how many marks each section is wort
 - **Spreadsheet-style table** grouped by section name
 - Expandable section rows (click to show sub-section rows)
 - Edit any cell inline by clicking it
-- "Add Section" → adds new top-level group
-- "Add Sub-item" → adds a row under an existing section
+- "Add Section" -> adds new top-level group
+- "Add Sub-item" -> adds a row under an existing section
 
 ### 11.2 Columns
 
 | Column | Description |
 |---|---|
 | Section Name | Expandable header row (e.g., "Research Publications") |
-| Sub Section | Specific rubric item (e.g., "Journal Papers – Q1") |
+| Sub Section | Specific rubric item (e.g., "Journal Papers - Q1") |
 | Max Marks | Maximum score for this item |
 | Weightage | Percentage weight in final grade |
 | Scoring Type | `manual`, `count_based`, or `text_exists` |
-| Per Unit Marks | Only visible when `count_based` — marks per row/entry |
+| Per Unit Marks | Only visible when `count_based` - marks per row/entry |
 | Linked Section | Dropdown to link this rubric to a `dynamic_sections` row |
 | Actions | Delete button (hover to reveal) |
 
@@ -605,32 +605,32 @@ Defines the **scoring rules** that determine how many marks each section is wort
 
 | Type | How It Works |
 |---|---|
-| `manual` | DOFA enters the score by hand in the evaluation sheet |
-| `count_based` | `score = min(row_count × per_unit_marks, max_marks)` |
+| `manual` | Dofa enters the score by hand in the evaluation sheet |
+| `count_based` | `score = min(row_count x per_unit_marks, max_marks)` |
 | `text_exists` | Full marks if the field has any non-empty value |
 
 ### 11.4 Auto-Allocation Pipeline
 
-When faculty submits the form (`status → submitted`), `rubricMapper.js` fires automatically:
+When faculty submits the form (`status -> submitted`), `rubricMapper.js` fires automatically:
 
 ```
 autoAllocateMarks(submissionId, facultyId, academicYear)
-  ↓
-For each rubric in dofa_rubrics:
-  → Map section_name to the relevant DB table
-  → Query count of records (for count_based)
-  → Query text presence (for text_exists)
-  → Calculate score = min(count × per_unit_marks, max_marks)
-  → UPSERT into dofa_evaluation_scores
-  ↓
+  â†“
+For each rubric in Dofa_rubrics:
+  -> Map section_name to the relevant DB table
+  -> Query count of records (for count_based)
+  -> Query text presence (for text_exists)
+  -> Calculate score = min(count x per_unit_marks, max_marks)
+  -> UPSERT into Dofa_evaluation_scores
+  â†“
 Total score = SUM of all rubric scores
-→ UPDATE submissions.total_score
+-> UPDATE submissions.total_score
 ```
 
 ### 11.5 Save & Recalculate
 
-- "Save All Changes" button → batch upserts all rubric changes
-- "Recalculate Scores" button → re-runs `autoAllocateMarks` for all submitted/approved faculty for a chosen year
+- "Save All Changes" button -> batch upserts all rubric changes
+- "Recalculate Scores" button -> re-runs `autoAllocateMarks` for all submitted/approved faculty for a chosen year
   - Shows a confirmation popup listing affected faculty
   - Used when rubric values are changed mid-year
 
@@ -638,42 +638,42 @@ Total score = SUM of all rubric scores
 
 ## 12. Evaluation Sheets
 
-Three separate sheets for the complete DOFA evaluation workflow:
+Three separate sheets for the complete Dofa evaluation workflow:
 
-### 12.1 Evaluation Sheet 1 — Rubric Scores (`/sheet1`)
+### 12.1 Evaluation Sheet 1 - Rubric Scores (`/sheet1`)
 - Table of all rubric rows and corresponding auto-calculated scores
-- DOFA can **override** any individual score manually
+- Dofa can **override** any individual score manually
 - Running total shown at top right
 - Grade automatically assigned based on configurable grading parameters:
   ```
-  dofa_grading_parameters table:
-    condition: >=70  → Grade: A+
-    condition: >=60  → Grade: A
-    condition: >=50  → Grade: B+
+  Dofa_grading_parameters table:
+    condition: >=70  -> Grade: A+
+    condition: >=60  -> Grade: A
+    condition: >=50  -> Grade: B+
     etc.
   ```
 - Final grade displayed with color coding
 
-### 12.2 Evaluation Sheet 2 — Qualitative Review (`/sheet2`)
+### 12.2 Evaluation Sheet 2 - Qualitative Review (`/sheet2`)
 - Free-text fields:
   - Research Remarks
   - Teaching Feedback
   - Overall Feedback
 - Final Grade dropdown (override if needed)
-- Stored in: `dofa_evaluation_sheet2` table
+- Stored in: `Dofa_evaluation_sheet2` table
 
-### 12.3 Evaluation Sheet 3 — Increment Recommendation (`/sheet3`)
+### 12.3 Evaluation Sheet 3 - Increment Recommendation (`/sheet3`)
 - Salary increment percentage based on final grade
-- Uses `dofa_grade_increments` lookup table:
+- Uses `Dofa_grade_increments` lookup table:
   ```
-  A+ → 10%
-  A  → 8%
-  B+ → 6%
+  A+ -> 10%
+  A  -> 8%
+  B+ -> 6%
   etc.
   ```
 - Increment % auto-filled based on grade from Sheet 2
-- DOFA can override
-- Stored in: `dofa_evaluation_sheet3` table
+- Dofa can override
+- Stored in: `Dofa_evaluation_sheet3` table
 
 ---
 
@@ -686,15 +686,15 @@ Controller: `backend/controllers/pdfController.js`
 Template: `backend/utils/pdfTemplate.js`
 
 ```
-Request → Auth check → Parallel DB queries
-  → All 20+ section tables
-  → dynamic_responses (custom sections)
-  → generateHtml(allData)
-  → Puppeteer.launch()
-  → page.setContent(html, { waitUntil: 'networkidle0' })
-  → page.pdf({ format: 'A4', printBackground: true })
-  → browser.close()
-  → res.end(pdfBuffer)
+Request -> Auth check -> Parallel DB queries
+  -> All 20+ section tables
+  -> dynamic_responses (custom sections)
+  -> generateHtml(allData)
+  -> Puppeteer.launch()
+  -> page.setContent(html, { waitUntil: 'networkidle0' })
+  -> page.pdf({ format: 'A4', printBackground: true })
+  -> browser.close()
+  -> res.end(pdfBuffer)
 ```
 
 ### PDF Contents (in order)
@@ -728,7 +728,7 @@ Request → Auth check → Parallel DB queries
    - Teaching Plan (pre-formatted text)
    - Goals & Targets (table, by semester)
 
-4. **Custom Sections** (from Form Builder — appended at end)
+4. **Custom Sections** (from Form Builder - appended at end)
    - Each dynamic section rendered with its title + "Form A/B" badge
    - Table fields rendered as proper HTML tables with configured columns
    - Text/textarea fields rendered as labeled key-value pairs
@@ -746,7 +746,7 @@ a.download = `Appraisal_${academicYear}.pdf`;
 a.click();
 ```
 
-Button shows `⟳ Generating PDF…` spinner during generation (typically 3–8 seconds).
+Button shows `âŸ³ Generating PDF...` spinner during generation (typically 3-8 seconds).
 
 ---
 
@@ -771,9 +771,9 @@ useEffect(() => {
 ```
 
 Visual indicator in header:
-- 🔵 `⟳ Saving…` (blue pill, spinning loader icon)
-- 🟢 `✓ Saved` (green pill, appears for 3s then fades)
-- 🔴 `✕ Save failed` (red pill, if network error)
+- ðŸ”µ `âŸ³ Saving...` (blue pill, spinning loader icon)
+- ðŸŸ¢ `âœ“ Saved` (green pill, appears for 3s then fades)
+- ðŸ”´ `x Save failed` (red pill, if network error)
 
 ### Static Form Sections
 All Part A sections (Courses, Publications, etc.) use explicit "Save and Next" button. Data is never lost between sections because:
@@ -786,18 +786,18 @@ All Part A sections (Courses, Publications, etc.) use explicit "Save and Next" b
 
 ### Status Flow
 ```
-draft ──→ submitted ──→ under_review ──→ approved
-              ↑               │
-              └───── sent_back ┘
+draft ---> submitted ---> under_review ---> approved
+              â†‘               |
+              +----- sent_back +
 ```
 
 | Status | Who Sets It | Meaning |
 |---|---|---|
 | `draft` | System (auto-created) | Faculty hasn't submitted yet |
-| `submitted` | Faculty (Part B submit button) | Submitted for DOFA review |
-| `under_review` | DOFA | DOFA has opened the submission |
-| `sent_back` | DOFA | Returned to faculty for corrections |
-| `approved` | DOFA | Final approval — locked |
+| `submitted` | Faculty (Part B submit button) | Submitted for Dofa review |
+| `under_review` | Dofa | Dofa has opened the submission |
+| `sent_back` | Dofa | Returned to faculty for corrections |
+| `approved` | Dofa | Final approval - locked |
 
 ### Versioning System
 Every time faculty submits (or re-submits after sent_back), the system creates a **snapshot**:
@@ -806,26 +806,26 @@ Every time faculty submits (or re-submits after sent_back), the system creates a
 submission_versions table:
   - submission_id
   - version_number  (1, 2, 3...)
-  - snapshot_data   (LONGTEXT JSON — full dump of ALL section data)
-  - snapshot_note   (e.g., "Faculty re-submission after DOFA review")
+  - snapshot_data   (LONGTEXT JSON - full dump of ALL section data)
+  - snapshot_note   (e.g., "Faculty re-submission after Dofa review")
   - created_by
 ```
 
-This provides a complete audit trail — DOFA can view any past version.
+This provides a complete audit trail - Dofa can view any past version.
 
 ### Edit Request Flow
 After submitting, faculty can request edits:
 1. Faculty selects sections in `MySubmissionView`
 2. Adds optional reason message
-3. Submits → creates record in `edit_requests` table
-4. DOFA Office sees request in their dashboard
-5. DOFA approves selected sections → status → `sent_back`
-6. Faculty gets email → edits unlocked sections → re-submits
+3. Submits -> creates record in `edit_requests` table
+4. Dofa Office sees request in their dashboard
+5. Dofa approves selected sections -> status -> `sent_back`
+6. Faculty gets email -> edits unlocked sections -> re-submits
 
 Tables: `edit_requests` (pending/approved/denied status)
 
 ### Locking Mechanism
-- DOFA can lock a submission (`submission_locks` table)
+- Dofa can lock a submission (`submission_locks` table)
 - Locked submissions cannot be edited even if `sent_back`
 - Ensures data integrity during evaluation period
 
@@ -843,13 +843,13 @@ Scheduler: `backend/services/schedulerService.js` (node-cron)
 | New faculty registered | Faculty | Welcome email with temp password |
 | Forms released | All active faculty | "Appraisal forms are now open" |
 | Submission confirmed | Faculty | Confirmation with submission date |
-| Submission sent back | Faculty | List of pending DOFA comments per section |
-| Edit request submitted | DOFA Office | Details of sections faculty wants to edit |
+| Submission sent back | Faculty | List of pending Dofa comments per section |
+| Edit request submitted | Dofa Office | Details of sections faculty wants to edit |
 | Edit request approved | Faculty | List of unlocked sections |
-| Submission deadline approaching | All unsubmitted faculty | Reminder (cron job — configurable days before) |
+| Submission deadline approaching | All unsubmitted faculty | Reminder (cron job - configurable days before) |
 
 ### Scheduled Jobs
-- **Deadline reminders**: Runs daily at 8:00 AM — checks if deadline is X days away
+- **Deadline reminders**: Runs daily at 8:00 AM - checks if deadline is X days away
 - **Session status checks**: Automatically closes sessions past end date
 
 ---
@@ -862,7 +862,7 @@ Scheduler: `backend/services/schedulerService.js` (node-cron)
 
 | Table | Primary Purpose |
 |---|---|
-| `users` | Authentication — all roles (faculty, dofa, dofa_office, hod, admin) |
+| `users` | Authentication - all roles (faculty, Dofa, Dofa_office, hod, admin) |
 | `faculty_information` | Faculty profile data (name, dept, designation, etc.) |
 | `submissions` | One row per faculty per academic year |
 | `appraisal_sessions` | Academic year sessions (start date, end date, status) |
@@ -895,15 +895,15 @@ Scheduler: `backend/services/schedulerService.js` (node-cron)
 
 | Table | Stores |
 |---|---|
-| `dofa_rubrics` | Scoring rules per section with max marks and scoring type |
-| `dofa_evaluation_scores` | Auto-calculated + manual score per rubric per submission |
-| `dofa_section_scores` | Aggregated score per section |
-| `dofa_evaluation_sheet2` | Qualitative review remarks and final grade |
-| `dofa_evaluation_sheet3` | Salary increment percentage |
-| `dofa_grading_parameters` | Grade boundaries (e.g., ≥70 → A+) |
-| `dofa_grade_increments` | Grade → increment percentage lookup |
-| `dofa_evaluation_remarks` | General remarks on a submission |
-| `review_comments` | Section-specific DOFA comments (pending/resolved) |
+| `Dofa_rubrics` | Scoring rules per section with max marks and scoring type |
+| `Dofa_evaluation_scores` | Auto-calculated + manual score per rubric per submission |
+| `Dofa_section_scores` | Aggregated score per section |
+| `Dofa_evaluation_sheet2` | Qualitative review remarks and final grade |
+| `Dofa_evaluation_sheet3` | Salary increment percentage |
+| `Dofa_grading_parameters` | Grade boundaries (e.g., â‰¥70 -> A+) |
+| `Dofa_grade_increments` | Grade -> increment percentage lookup |
+| `Dofa_evaluation_remarks` | General remarks on a submission |
+| `review_comments` | Section-specific Dofa comments (pending/resolved) |
 | `rubrics` | Secondary rubric table (legacy) |
 | `submission_scores` | Legacy score table |
 
@@ -1001,7 +1001,7 @@ Scheduler: `backend/services/schedulerService.js` (node-cron)
 | POST | `/sessions` | Create session |
 | PUT | `/sessions/:id` | Update (release forms, set deadline) |
 
-### Registration (DOFA Office)
+### Registration (Dofa Office)
 | Method | Endpoint | Description |
 |---|---|---|
 | POST | `/registration/register-faculty` | Register new faculty user |
@@ -1019,15 +1019,15 @@ Scheduler: `backend/services/schedulerService.js` (node-cron)
 | GET/PUT | `/evaluation/sheet2/:submissionId` | Sheet 2 remarks |
 | GET/PUT | `/evaluation/sheet3/:submissionId` | Sheet 3 increment |
 | GET/PUT | `/evaluation/grading-parameters` | Grade boundaries |
-| GET/PUT | `/evaluation/grade-increments` | Grade → increment mapping |
+| GET/PUT | `/evaluation/grade-increments` | Grade -> increment mapping |
 
 ### Edit Requests
 | Method | Endpoint | Description |
 |---|---|---|
 | POST | `/edit-requests` | Faculty submits edit request |
 | GET | `/edit-requests/my-submission/:id` | Faculty's requests for submission |
-| GET | `/edit-requests` | DOFA views all pending requests |
-| PUT | `/edit-requests/:id` | DOFA approves/denies |
+| GET | `/edit-requests` | Dofa views all pending requests |
+| PUT | `/edit-requests/:id` | Dofa approves/denies |
 
 ---
 
@@ -1035,93 +1035,93 @@ Scheduler: `backend/services/schedulerService.js` (node-cron)
 
 ```
 faculty_appraisal_system/
-├── index.html                  # Vite entry point
-├── package.json                # Frontend dependencies
-├── vite.config.js              # Vite configuration
-│
-├── src/
-│   ├── App.jsx                 # Root router — all role-based routes
-│   ├── main.jsx                # React entry
-│   ├── context/
-│   │   ├── AuthContext.jsx     # JWT auth + user state (React Context)
-│   │   └── SubmissionContext.jsx # Submission state for faculty forms
-│   ├── components/
-│   │   ├── Layout.jsx          # Shell (sidebar + main content area)
-│   │   ├── Sidebar.jsx         # Navigation sidebar (role-aware links)
-│   │   ├── FormActions.jsx     # Reusable "Save and Next" + "Previous" buttons
-│   │   └── ProtectedRoute.jsx  # Role-guard wrapper component
-│   ├── pages/
-│   │   ├── LoginPage.jsx/css
-│   │   ├── ForgotPassword.jsx
-│   │   ├── ResetPassword.jsx
-│   │   ├── Onboarding.jsx/css
-│   │   ├── Dashboard.jsx/css          # Faculty home
-│   │   ├── FacultyInformation.jsx/css
-│   │   ├── CoursesTaught.jsx/css
-│   │   ├── NewCourses.jsx
-│   │   ├── Courseware.jsx
-│   │   ├── TeachingInnovation.jsx
-│   │   ├── ResearchPublications.jsx   # Largest form (61KB)
-│   │   ├── ResearchGrants.jsx
-│   │   ├── Patents.jsx
-│   │   ├── TechnologyTransfer.jsx
-│   │   ├── PaperReview.jsx
-│   │   ├── ConferenceSessions.jsx/css
-│   │   ├── KeynotesTalks.jsx/css
-│   │   ├── AwardsHonours.jsx
-│   │   ├── Consultancy.jsx
-│   │   ├── ContinuingEducation.jsx
-│   │   ├── InstitutionalContributions.jsx
-│   │   ├── OtherActivities.jsx
-│   │   ├── ResearchPlan.jsx
-│   │   ├── TeachingPlan.jsx
-│   │   ├── PartB.jsx/css              # Goal setting + final submit
-│   │   ├── MySubmissionView.jsx/css   # Tabbed submission review + PDF download
-│   │   ├── DynamicFormSection.jsx/css # Auto-save dynamic sections
-│   │   ├── HelpCenter.jsx
-│   │   ├── HODDashboard.jsx/css
-│   │   ├── DOFADashboard.jsx/css      # DOFA reviewer
-│   │   ├── DOFAReview.jsx/css         # Full review panel
-│   │   ├── DOFAOfficeDashboard.jsx/css # Admin hub
-│   │   ├── DOFARegistration.jsx/css   # User management
-│   │   ├── FormBuilder.jsx/css        # Dynamic form builder
-│   │   ├── FormRelease.jsx/css        # Session & deadline control
-│   │   ├── RubricsManagement.jsx/css  # Scoring rules editor
-│   │   ├── EvaluationSheet.jsx/css    # Sheet 1 — rubric scores
-│   │   ├── EvaluationSheet2.jsx/css   # Sheet 2 — qualitative
-│   │   └── EvaluationSheet3.jsx/css   # Sheet 3 — increment
-│   └── services/
-│       └── api.js                     # Axios wrapper (auth header injection)
-│
-└── backend/
-    ├── server.js                       # Express app entry, CORS, routes
-    ├── package.json                    # Backend dependencies
-    ├── .env                            # DB credentials, JWT secret, SMTP
-    ├── config/
-    │   └── database.js                 # MySQL2 connection pool
-    ├── middleware/
-    │   ├── authMiddleware.js           # JWT verify + req.user inject
-    │   └── submissionEditGuard.js      # Prevents edits on locked/submitted forms
-    ├── controllers/                    # 22 controllers
-    │   ├── authController.js
-    │   ├── submissionsController.js    # Largest (960 lines) — snapshot, versioning
-    │   ├── pdfController.js            # NEW — Puppeteer PDF generation
-    │   ├── formBuilderController.js    # Dynamic sections CRUD
-    │   ├── rubricsController.js        # Rubric CRUD with new scoring fields
-    │   ├── evaluationController.js     # Sheets 1/2/3, grading
-    │   ├── registrationController.js   # User management (32KB)
-    │   └── [14 more section-specific controllers]
-    ├── routes/                         # 21 route files
-    ├── services/
-    │   ├── rubricMapper.js             # Auto-allocation engine (29KB)
-    │   ├── emailService.js             # Nodemailer templates
-    │   └── schedulerService.js         # node-cron jobs
-    ├── utils/
-    │   ├── pdfTemplate.js              # NEW — HTML template for Puppeteer
-    │   ├── facultyResolver.js          # Resolves faculty_id ↔ faculty_information.id
-    │   └── resolveFacultyId.js         # Helper for FK resolution
-    ├── uploads/                        # Multer file destination
-    └── all_tables_schema.txt           # Full MySQL CREATE TABLE statements
++-- index.html                  # Vite entry point
++-- package.json                # Frontend dependencies
++-- vite.config.js              # Vite configuration
+|
++-- src/
+|   +-- App.jsx                 # Root router - all role-based routes
+|   +-- main.jsx                # React entry
+|   +-- context/
+|   |   +-- AuthContext.jsx     # JWT auth + user state (React Context)
+|   |   +-- SubmissionContext.jsx # Submission state for faculty forms
+|   +-- components/
+|   |   +-- Layout.jsx          # Shell (sidebar + main content area)
+|   |   +-- Sidebar.jsx         # Navigation sidebar (role-aware links)
+|   |   +-- FormActions.jsx     # Reusable "Save and Next" + "Previous" buttons
+|   |   +-- ProtectedRoute.jsx  # Role-guard wrapper component
+|   +-- pages/
+|   |   +-- LoginPage.jsx/css
+|   |   +-- ForgotPassword.jsx
+|   |   +-- ResetPassword.jsx
+|   |   +-- Onboarding.jsx/css
+|   |   +-- Dashboard.jsx/css          # Faculty home
+|   |   +-- FacultyInformation.jsx/css
+|   |   +-- CoursesTaught.jsx/css
+|   |   +-- NewCourses.jsx
+|   |   +-- Courseware.jsx
+|   |   +-- TeachingInnovation.jsx
+|   |   +-- ResearchPublications.jsx   # Largest form (61KB)
+|   |   +-- ResearchGrants.jsx
+|   |   +-- Patents.jsx
+|   |   +-- TechnologyTransfer.jsx
+|   |   +-- PaperReview.jsx
+|   |   +-- ConferenceSessions.jsx/css
+|   |   +-- KeynotesTalks.jsx/css
+|   |   +-- AwardsHonours.jsx
+|   |   +-- Consultancy.jsx
+|   |   +-- ContinuingEducation.jsx
+|   |   +-- InstitutionalContributions.jsx
+|   |   +-- OtherActivities.jsx
+|   |   +-- ResearchPlan.jsx
+|   |   +-- TeachingPlan.jsx
+|   |   +-- PartB.jsx/css              # Goal setting + final submit
+|   |   +-- MySubmissionView.jsx/css   # Tabbed submission review + PDF download
+|   |   +-- DynamicFormSection.jsx/css # Auto-save dynamic sections
+|   |   +-- HelpCenter.jsx
+|   |   +-- HODDashboard.jsx/css
+|   |   +-- DofaDashboard.jsx/css      # Dofa reviewer
+|   |   +-- DofaReview.jsx/css         # Full review panel
+|   |   +-- DofaOfficeDashboard.jsx/css # Admin hub
+|   |   +-- DofaRegistration.jsx/css   # User management
+|   |   +-- FormBuilder.jsx/css        # Dynamic form builder
+|   |   +-- FormRelease.jsx/css        # Session & deadline control
+|   |   +-- RubricsManagement.jsx/css  # Scoring rules editor
+|   |   +-- EvaluationSheet.jsx/css    # Sheet 1 - rubric scores
+|   |   +-- EvaluationSheet2.jsx/css   # Sheet 2 - qualitative
+|   |   +-- EvaluationSheet3.jsx/css   # Sheet 3 - increment
+|   +-- services/
+|       +-- api.js                     # Axios wrapper (auth header injection)
+|
++-- backend/
+    +-- server.js                       # Express app entry, CORS, routes
+    +-- package.json                    # Backend dependencies
+    +-- .env                            # DB credentials, JWT secret, SMTP
+    +-- config/
+    |   +-- database.js                 # MySQL2 connection pool
+    +-- middleware/
+    |   +-- authMiddleware.js           # JWT verify + req.user inject
+    |   +-- submissionEditGuard.js      # Prevents edits on locked/submitted forms
+    +-- controllers/                    # 22 controllers
+    |   +-- authController.js
+    |   +-- submissionsController.js    # Largest (960 lines) - snapshot, versioning
+    |   +-- pdfController.js            # NEW - Puppeteer PDF generation
+    |   +-- formBuilderController.js    # Dynamic sections CRUD
+    |   +-- rubricsController.js        # Rubric CRUD with new scoring fields
+    |   +-- evaluationController.js     # Sheets 1/2/3, grading
+    |   +-- registrationController.js   # User management (32KB)
+    |   +-- [14 more section-specific controllers]
+    +-- routes/                         # 21 route files
+    +-- services/
+    |   +-- rubricMapper.js             # Auto-allocation engine (29KB)
+    |   +-- emailService.js             # Nodemailer templates
+    |   +-- schedulerService.js         # node-cron jobs
+    +-- utils/
+    |   +-- pdfTemplate.js              # NEW - HTML template for Puppeteer
+    |   +-- facultyResolver.js          # Resolves faculty_id â†” faculty_information.id
+    |   +-- resolveFacultyId.js         # Helper for FK resolution
+    +-- uploads/                        # Multer file destination
+    +-- all_tables_schema.txt           # Full MySQL CREATE TABLE statements
 ```
 
 ---
@@ -1184,24 +1184,24 @@ SMTP_FROM=Faculty Appraisal System <your_email@gmail.com>
 FRONTEND_URL=http://localhost:5173
 ```
 
-### 4. Create Initial DOFA Office Account
+### 4. Create Initial Dofa Office Account
 
 ```bash
-node backend/reset-dofa.js
+node backend/reset-Dofa.js
 ```
 This creates (or resets) the default admin account:
-- Email: `dofa_office@lnmiit.ac.in`
+- Email: `Dofa_office@lnmiit.ac.in`
 - Password: `admin123`
 
 ### 5. Run the Application
 
 ```bash
-# Terminal 1 — Backend
+# Terminal 1 - Backend
 cd backend
-npm run dev    # nodemon → http://localhost:5000
+npm run dev    # nodemon -> http://localhost:5000
 
-# Terminal 2 — Frontend
-npm run dev    # Vite → http://localhost:5173
+# Terminal 2 - Frontend
+npm run dev    # Vite -> http://localhost:5173
 ```
 
 
@@ -1215,9 +1215,9 @@ Using 3 fixed tables (`dynamic_sections`, `dynamic_fields`, `dynamic_responses`)
 
 ### Why Puppeteer over jsPDF?
 - Pixel-perfect LNMIIT-branded PDF using real CSS (gradients, fonts, tables)
-- Dynamic sections automatically included — template just reads from DB
+- Dynamic sections automatically included - template just reads from DB
 - Single HTML template is easier to maintain than jsPDF coordinate math
-- Tradeoff: ~100MB Puppeteer binary, 3–8s generation time (acceptable for this use case)
+- Tradeoff: ~100MB Puppeteer binary, 3-8s generation time (acceptable for this use case)
 
 ### Why Debounced Autosave instead of real-time?
 - Continuous saves would cause flickering and network congestion
@@ -1225,8 +1225,9 @@ Using 3 fixed tables (`dynamic_sections`, `dynamic_fields`, `dynamic_responses`)
 - `isFirstLoad` guard prevents a save loop when the page loads existing DB data
 
 ### Why Versioned Snapshots?
-Full JSON snapshots at each submission let DOFA diff faculty changes across re-submissions, providing accountability and audit trail without complex change-tracking logic.
+Full JSON snapshots at each submission let Dofa diff faculty changes across re-submissions, providing accountability and audit trail without complex change-tracking logic.
 
 ---
 
 *Last updated: April 2026 | Built by Sanskriti | LNMIIT Faculty Appraisal System v2.0*
+

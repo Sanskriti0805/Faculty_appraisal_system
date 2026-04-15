@@ -1,7 +1,7 @@
-/**
+﻿/**
  * Migration: Form Builder v2
  * - Adds parent_id, description to dynamic_sections
- * - Adds dynamic_section_id, scoring_type, per_unit_marks, form_type to dofa_rubrics
+ * - Adds dynamic_section_id, scoring_type, per_unit_marks, form_type to Dofa_rubrics
  * Safe to run multiple times.
  */
 const path = require('path');
@@ -29,27 +29,27 @@ async function constraintExists(table, constraintName) {
 async function addColumnIfMissing(table, column, definition) {
   const exists = await columnExists(table, column);
   if (exists) {
-    console.log(`  ⏭  ${table}.${column} already exists`);
+    console.log(`  â­  ${table}.${column} already exists`);
     return;
   }
   await db.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
-  console.log(`  ✅ ${table}.${column} added`);
+  console.log(`  âœ… ${table}.${column} added`);
 }
 
 async function addFKIfMissing(table, constraintName, sql) {
   const exists = await constraintExists(table, constraintName);
   if (exists) {
-    console.log(`  ⏭  FK ${constraintName} already exists`);
+    console.log(`  â­  FK ${constraintName} already exists`);
     return;
   }
   await db.query(`ALTER TABLE \`${table}\` ADD CONSTRAINT \`${constraintName}\` ${sql}`);
-  console.log(`  ✅ FK ${constraintName} added`);
+  console.log(`  âœ… FK ${constraintName} added`);
 }
 
 async function migrate() {
-  console.log('🚀 Form Builder v2 Migration\n');
+  console.log('ðŸš€ Form Builder v2 Migration\n');
 
-  console.log('📌 dynamic_sections:');
+  console.log('ðŸ“Œ dynamic_sections:');
   await addColumnIfMissing('dynamic_sections', 'parent_id', 'INT DEFAULT NULL');
   await addColumnIfMissing('dynamic_sections', 'description', 'TEXT DEFAULT NULL');
   await addFKIfMissing(
@@ -58,22 +58,23 @@ async function migrate() {
     'FOREIGN KEY (parent_id) REFERENCES dynamic_sections(id) ON DELETE SET NULL'
   );
 
-  console.log('\n📌 dofa_rubrics:');
-  await addColumnIfMissing('dofa_rubrics', 'dynamic_section_id', 'INT DEFAULT NULL');
-  await addColumnIfMissing('dofa_rubrics', 'scoring_type', "ENUM('manual','count_based','text_exists') DEFAULT 'manual'");
-  await addColumnIfMissing('dofa_rubrics', 'per_unit_marks', 'DECIMAL(5,2) DEFAULT NULL');
-  await addColumnIfMissing('dofa_rubrics', 'form_type', "ENUM('A','B') DEFAULT NULL");
+  console.log('\nðŸ“Œ Dofa_rubrics:');
+  await addColumnIfMissing('Dofa_rubrics', 'dynamic_section_id', 'INT DEFAULT NULL');
+  await addColumnIfMissing('Dofa_rubrics', 'scoring_type', "ENUM('manual','count_based','text_exists') DEFAULT 'manual'");
+  await addColumnIfMissing('Dofa_rubrics', 'per_unit_marks', 'DECIMAL(5,2) DEFAULT NULL');
+  await addColumnIfMissing('Dofa_rubrics', 'form_type', "ENUM('A','B') DEFAULT NULL");
   await addFKIfMissing(
-    'dofa_rubrics',
+    'Dofa_rubrics',
     'fk_rubric_dynamic_section',
     'FOREIGN KEY (dynamic_section_id) REFERENCES dynamic_sections(id) ON DELETE SET NULL'
   );
 
-  console.log('\n✨ Migration complete!');
+  console.log('\nâœ¨ Migration complete!');
   process.exit(0);
 }
 
 migrate().catch(err => {
-  console.error('\n❌ Fatal migration error:', err.message);
+  console.error('\nâŒ Fatal migration error:', err.message);
   process.exit(1);
 });
+

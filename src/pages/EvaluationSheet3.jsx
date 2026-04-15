@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
 import './EvaluationSheet3.css';
 
 const EvaluationSheet3 = () => {
   const location = useLocation();
-  const basePath = location.pathname.startsWith('/dofa-office') ? '/dofa-office' : '/dofa';
+  const basePath = location.pathname.startsWith('/Dofa-office') ? '/Dofa-office' : '/Dofa';
   const [data, setData] = useState([]);
   const [gradeIncrements, setGradeIncrements] = useState({});
   const [availableGrades, setAvailableGrades] = useState([]);
@@ -67,7 +67,7 @@ const EvaluationSheet3 = () => {
     }
   };
 
-  if (loading) return <div className="eval3-loading">Loading Sheet 3…</div>;
+  if (loading) return <div className="eval3-loading">Loading Sheet 3...</div>;
 
   return (
     <div className="eval3-container">
@@ -76,7 +76,7 @@ const EvaluationSheet3 = () => {
       <div className="eval3-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1>Evaluation — Sheet 3</h1>
+            <h1>Evaluation - Sheet 3</h1>
             <p>Grade-based Salary Increments Summary</p>
           </div>
           <Link to={`${basePath}/sheet2`} className="back-btn">
@@ -141,7 +141,7 @@ const EvaluationSheet3 = () => {
                 <td style={{ textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
                   {item.total_score || 0}
                 </td>
-                <td className="eval3-grade">{item.final_grade || '—'}</td>
+                <td className="eval3-grade">{item.final_grade || '-'}</td>
                 <td className="eval3-increment">
                   {item.increment_percentage ? `${item.increment_percentage}%` : '0%'}
                 </td>

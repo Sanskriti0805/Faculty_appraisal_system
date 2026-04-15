@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -33,8 +33,8 @@ const Sidebar = () => {
 
   // Check if forms are released (for faculty sidebar)
   React.useEffect(() => {
-    const isDOFA = location.pathname.startsWith('/dofa');
-    if (isDOFA) return; // DOFA always sees everything
+    const isDofa = location.pathname.startsWith('/Dofa');
+    if (isDofa) return; // Dofa always sees everything
 
     const checkReleaseStatus = async () => {
       try {
@@ -52,8 +52,8 @@ const Sidebar = () => {
 
   // Fetch submission/edit access status for faculty to disable locked sections in UI.
   React.useEffect(() => {
-    const isDOFA = location.pathname.startsWith('/dofa')
-    if (isDOFA || !token || user?.role !== 'faculty') return
+    const isDofa = location.pathname.startsWith('/Dofa')
+    if (isDofa || !token || user?.role !== 'faculty') return
 
     const run = async () => {
       try {
@@ -63,7 +63,7 @@ const Sidebar = () => {
         const activeYear = sessionData?.data?.academic_year
 
         if (!activeYear) {
-          // No active session — unlock everything (nothing to submit)
+          // No active session - unlock everything (nothing to submit)
           setSubmissionStatus(null)
           setApprovedSections([])
           setHasSectionRestrictions(false)
@@ -78,7 +78,7 @@ const Sidebar = () => {
         const subData = await subRes.json()
 
         if (!subData.success || !subData.data || subData.data.length === 0) {
-          // No submission for current year yet — treat as draft (all sections open)
+          // No submission for current year yet - treat as draft (all sections open)
           setSubmissionStatus('draft')
           setApprovedSections([])
           setHasSectionRestrictions(false)
@@ -142,7 +142,7 @@ const Sidebar = () => {
   }
 
   const isPathEditable = (path) => {
-    const isFacultyRoute = !location.pathname.startsWith('/dofa')
+    const isFacultyRoute = !location.pathname.startsWith('/Dofa')
     if (!isFacultyRoute) return true
 
     // Faculty should always be able to open the profile data sheet in read/view mode.
@@ -195,8 +195,8 @@ const Sidebar = () => {
     )
   }
 
-  const isDOFAOfficeRoute = location.pathname.startsWith('/dofa-office')
-  const isDOFARoute = location.pathname.startsWith('/dofa') && !isDOFAOfficeRoute
+  const isDofaOfficeRoute = location.pathname.startsWith('/Dofa-office')
+  const isDofaRoute = location.pathname.startsWith('/Dofa') && !isDofaOfficeRoute
 
   const toggleSection = (sectionName) => {
     setExpandedSections(prev => {
@@ -249,33 +249,33 @@ const Sidebar = () => {
       .map(s => ({ name: s.title, path: `/faculty/dynamic/${s.id}` }))
   ]
 
-  // DOFA-specific sidebar
-  if (isDOFARoute || isDOFAOfficeRoute) {
-    const dofaNavItems = [
-      { name: 'Dashboard', path: '/dofa/dashboard' },
-      { name: 'Form Release', path: '/dofa/form-release' },
-      { name: 'Rubrics Management', path: '/dofa/rubrics' },
-      { name: 'Sheet 1 - Evaluation', path: '/dofa/sheet1' },
-      { name: 'Sheet 2', path: '/dofa/sheet2' },
-      { name: 'Sheet 3', path: '/dofa/sheet3' },
-      { name: 'Form Builder', path: '/dofa-office/form-builder' },
-      { name: 'Manage Users', path: '/dofa/manage-users' },
-      { name: 'Help Center', path: '/dofa/help' },
+  // Dofa-specific sidebar
+  if (isDofaRoute || isDofaOfficeRoute) {
+    const DofaNavItems = [
+      { name: 'Dashboard', path: '/Dofa/dashboard' },
+      { name: 'Form Release', path: '/Dofa/form-release' },
+      { name: 'Rubrics Management', path: '/Dofa/rubrics' },
+      { name: 'Sheet 1 - Evaluation', path: '/Dofa/sheet1' },
+      { name: 'Sheet 2', path: '/Dofa/sheet2' },
+      { name: 'Sheet 3', path: '/Dofa/sheet3' },
+      { name: 'Form Builder', path: '/Dofa-office/form-builder' },
+      { name: 'Manage Users', path: '/Dofa/manage-users' },
+      { name: 'Help Center', path: '/Dofa/help' },
     ]
 
-    const dofaOfficeNavItems = [
-      { name: 'Dashboard', path: '/dofa-office/dashboard' },
-      { name: 'Form Release', path: '/dofa-office/form-release' },
-      { name: 'Rubrics Management', path: '/dofa-office/rubrics' },
-      { name: 'Sheet 1 - Evaluation', path: '/dofa-office/sheet1' },
-      { name: 'Sheet 2', path: '/dofa-office/sheet2' },
-      { name: 'Sheet 3', path: '/dofa-office/sheet3' },
-      { name: 'Form Builder', path: '/dofa-office/form-builder' },
-      { name: 'Manage Users', path: '/dofa-office/manage-users' },
-      { name: 'Help Center', path: '/dofa-office/help' },
+    const DofaOfficeNavItems = [
+      { name: 'Dashboard', path: '/Dofa-office/dashboard' },
+      { name: 'Form Release', path: '/Dofa-office/form-release' },
+      { name: 'Rubrics Management', path: '/Dofa-office/rubrics' },
+      { name: 'Sheet 1 - Evaluation', path: '/Dofa-office/sheet1' },
+      { name: 'Sheet 2', path: '/Dofa-office/sheet2' },
+      { name: 'Sheet 3', path: '/Dofa-office/sheet3' },
+      { name: 'Form Builder', path: '/Dofa-office/form-builder' },
+      { name: 'Manage Users', path: '/Dofa-office/manage-users' },
+      { name: 'Help Center', path: '/Dofa-office/help' },
     ]
 
-    const navItems = isDOFAOfficeRoute ? dofaOfficeNavItems : dofaNavItems
+    const navItems = isDofaOfficeRoute ? DofaOfficeNavItems : DofaNavItems
 
     return (
       <aside className="sidebar">
@@ -289,7 +289,7 @@ const Sidebar = () => {
         <nav className="sidebar-nav">
           <div className="nav-section">
             <div className="nav-section-header" style={{ cursor: 'default' }}>
-              <span>{isDOFAOfficeRoute ? 'DOFA OFFICE' : 'DOFA'}</span>
+              <span>{isDofaOfficeRoute ? 'Dofa OFFICE' : 'Dofa'}</span>
             </div>
             <div className="nav-section-items">
               {navItems.map(item => (
@@ -331,7 +331,7 @@ const Sidebar = () => {
           <>
         {['submitted', 'under_review', 'approved'].includes(submissionStatus) && (
           <div className="sidebar-lock-note">
-            Form is submitted. Sections are locked until DOFA sends back or approves requested edits.
+            Form is submitted. Sections are locked until Dofa sends back or approves requested edits.
           </div>
         )}
         {submissionStatus === 'sent_back' && hasSectionRestrictions && (
@@ -400,9 +400,9 @@ const Sidebar = () => {
         </div>
 
         <div className="nav-section">
-          {/* <div className="nav-section-items">
+          <div className="nav-section-items">
             {renderNavLink('/help', 'Help Center', 'nav-item')}
-          </div> */}
+          </div>
         </div>
           </>
         ) : (
@@ -423,3 +423,4 @@ const Sidebar = () => {
 }
 
 export default Sidebar
+

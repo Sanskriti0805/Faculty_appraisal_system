@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Email Service using Nodemailer
  * Sends styled HTML emails for:
  *  - Registration (temp password)
@@ -19,7 +19,7 @@ class EmailService {
     const pass = process.env.EMAIL_PASS;
 
     if (!host || !user || !pass || user === 'your_email@gmail.com') {
-      console.log('⚠️  Email not configured — emails will be logged to console instead.');
+      console.log('âš ï¸  Email not configured - emails will be logged to console instead.');
       this.isConfigured = false;
       return;
     }
@@ -32,10 +32,10 @@ class EmailService {
     });
 
     this.isConfigured = true;
-    console.log('✅ Email service configured');
+    console.log('âœ… Email service configured');
   }
 
-  // ─── LNMIIT Branded Template (from email_fix.md) ──────────────────────
+  // --- LNMIIT Branded Template (from email_fix.md) ----------------------
 
   /**
    * Build the LNMIIT-branded HTML email (matching the official template)
@@ -79,11 +79,11 @@ class EmailService {
 </html>`;
   }
 
-  // ─── Registration Email (Temp Password) ────────────────────────────────
+  // --- Registration Email (Temp Password) --------------------------------
 
   /**
    * Send a registration email with temporary password
-   * Used when DOFA registers a department (HOD) or faculty member
+   * Used when Dofa registers a department (HOD) or faculty member
    */
   async sendTempPasswordEmail({ to, name, tempPassword, role, loginUrl }) {
     const siteUrl = loginUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -123,12 +123,12 @@ class EmailService {
 
     await this._send({
       to,
-      subject: `LNMIIT Faculty Appraisal — Your Temporary Password (${role})`,
+      subject: `LNMIIT Faculty Appraisal - Your Temporary Password (${role})`,
       html
     });
   }
 
-  // ─── Forgot Password Email (Reset Link) ────────────────────────────────
+  // --- Forgot Password Email (Reset Link) --------------------------------
 
   /**
    * Send a forgot-password email with reset link
@@ -165,12 +165,12 @@ class EmailService {
 
     await this._send({
       to,
-      subject: 'LNMIIT Faculty Appraisal — Password Reset',
+      subject: 'LNMIIT Faculty Appraisal - Password Reset',
       html
     });
   }
 
-  // ─── Form Release Notification Email ─────────────────────────────────
+  // --- Form Release Notification Email ---------------------------------
 
   /**
    * Send notification that appraisal forms have been released
@@ -206,7 +206,7 @@ class EmailService {
                         Go to Appraisal Portal
                       </a>
                     </div>
-                    <p style="font-size:13px;color:#718096;">If you have any questions or face any issues, please contact the DOFA office or write to webmaster@lnmiit.ac.in.</p>
+                    <p style="font-size:13px;color:#718096;">If you have any questions or face any issues, please contact the Dofa office or write to webmaster@lnmiit.ac.in.</p>
                     <br/>
                     <p>Best regards,</p>
                     <p><b>Webmaster LNMIIT</b></p>
@@ -218,12 +218,12 @@ class EmailService {
 
     await this._send({
       to,
-      subject: `LNMIIT Faculty Appraisal ${academicYear} — Forms Released | Deadline: ${deadline}`,
+      subject: `LNMIIT Faculty Appraisal ${academicYear} - Forms Released | Deadline: ${deadline}`,
       html
     });
   }
 
-  // ─── Deadline Reminder Email ────────────────────────────────────────
+  // --- Deadline Reminder Email ----------------------------------------
 
   /**
    * Send a deadline reminder email (2 days before deadline)
@@ -238,7 +238,7 @@ class EmailService {
                     <p>This is a gentle reminder that the deadline for submitting your <b>Faculty Appraisal Forms</b> for the academic year <b>${academicYear}</b> is approaching soon.</p>
                     
                     <div style="background: linear-gradient(135deg, #c53030 0%, #e53e3e 100%); color: #fff; padding: 20px 24px; border-radius: 10px; margin: 20px 0; text-align: center;">
-                      <p style="margin: 0 0 8px 0; font-size: 13px; opacity: 0.9;">⚠️ DEADLINE APPROACHING</p>
+                      <p style="margin: 0 0 8px 0; font-size: 13px; opacity: 0.9;">âš ï¸ DEADLINE APPROACHING</p>
                       <h2 style="margin: 0; font-size: 22px; letter-spacing: 1px;">${deadline}</h2>
                       <p style="margin: 8px 0 0 0; font-size: 13px; opacity: 0.9;">(Only 2 days remaining!)</p>
                     </div>
@@ -265,23 +265,23 @@ class EmailService {
 
     await this._send({
       to,
-      subject: `⚠️ REMINDER: Faculty Appraisal ${academicYear} — Deadline in 2 Days!`,
+      subject: `âš ï¸ REMINDER: Faculty Appraisal ${academicYear} - Deadline in 2 Days!`,
       html
     });
   }
 
-  // ─── Legacy: Password Setup Email (reset link for registration) ────────
+  // --- Legacy: Password Setup Email (reset link for registration) --------
   // Kept for backward compatibility but no longer used by registration flow
 
   /**
-   * Send a password reset/setup email (legacy — kept for compatibility)
+   * Send a password reset/setup email (legacy - kept for compatibility)
    */
   async sendPasswordReset({ to, name, resetUrl, role }) {
     // Redirect to the new forgot-password style email
     return this.sendForgotPassword({ to, name, resetUrl, role });
   }
 
-  // ─── Edit Request: Notification to DOFA ──────────────────────────────
+  // --- Edit Request: Notification to Dofa ------------------------------
 
   escapeHtml(value) {
     return String(value ?? '')
@@ -292,7 +292,7 @@ class EmailService {
       .replace(/'/g, '&#39;');
   }
 
-  // ─── Submission Sent Back: Notification to Faculty ───────────────────
+  // --- Submission Sent Back: Notification to Faculty -------------------
 
   /**
    * Notify faculty that submission has been sent back with section-wise comments.
@@ -308,17 +308,17 @@ class EmailService {
           return `
             <li style="margin-bottom:10px;">
               <p style="margin:0 0 4px 0;"><b>Section:</b> ${section}</p>
-              <p style="margin:0; color:#334155;">${text || '—'}</p>
+              <p style="margin:0; color:#334155;">${text || '-'}</p>
             </li>
           `;
         }).join('')
-      : '<li style="margin-bottom:10px;">No detailed comments were attached. Please contact DOFA office.</li>';
+      : '<li style="margin-bottom:10px;">No detailed comments were attached. Please contact Dofa office.</li>';
 
     const bodyHtml = `
                 <tr>
                   <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
                     <p>Dear <b>${safeName}</b>,</p>
-                    <p>Your appraisal submission for the academic year <b>${this.escapeHtml(academicYear || 'N/A')}</b> has been <b style="color: #c53030;">sent back</b> by the DOFA office for revisions.</p>
+                    <p>Your appraisal submission for the academic year <b>${this.escapeHtml(academicYear || 'N/A')}</b> has been <b style="color: #c53030;">sent back</b> by the Dofa office for revisions.</p>
 
                     <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 16px 0;">
                       <p style="margin: 0 0 10px 0; font-weight: 600; color: #991b1b;">Section-wise Review Comments:</p>
@@ -335,7 +335,7 @@ class EmailService {
                     </div>
                     <br/>
                     <p>Best regards,</p>
-                    <p><b>DOFA Office, LNMIIT Jaipur</b></p>
+                    <p><b>Dofa Office, LNMIIT Jaipur</b></p>
                   </td>
                 </tr>`;
 
@@ -343,22 +343,22 @@ class EmailService {
 
     await this._send({
       to,
-      subject: `Submission Sent Back — ${academicYear || 'Academic Year'} Appraisal`,
+      subject: `Submission Sent Back - ${academicYear || 'Academic Year'} Appraisal`,
       html
     });
   }
 
   /**
-   * Notify DOFA office that a faculty has requested edits to specific form sections
+   * Notify Dofa office that a faculty has requested edits to specific form sections
    */
-  async sendEditRequestNotificationToDOFA({ facultyName, facultyEmail, academicYear, sections, requestMessage, requestId }) {
+  async sendEditRequestNotificationToDofa({ facultyName, facultyEmail, academicYear, sections, requestMessage, requestId }) {
     const siteUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const sectionList = sections.map(s => `<li style="margin-bottom:4px;">${s}</li>`).join('');
 
     const bodyHtml = `
                 <tr>
                   <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
-                    <p>Dear DOFA Office,</p>
+                    <p>Dear Dofa Office,</p>
                     <p>A faculty member has submitted a request to make changes to specific sections of their appraisal form for the academic year <b>${academicYear}</b>.</p>
 
                     <div style="background: #f0f4ff; border: 1px solid #c3d3f0; border-radius: 8px; padding: 16px 20px; margin: 16px 0;">
@@ -374,9 +374,9 @@ class EmailService {
 
                     ${requestMessage ? `<p><b>Faculty's Message:</b></p><p style="background:#fafafa; border-left: 3px solid #034da2; padding: 10px 14px; border-radius: 4px; color: #334155;">${requestMessage}</p>` : ''}
 
-                    <p>Please log in to the DOFA dashboard to review and approve or deny this request.</p>
+                    <p>Please log in to the Dofa dashboard to review and approve or deny this request.</p>
                     <div style="text-align:center;margin:24px 0;">
-                      <a href="${siteUrl}/dofa/dashboard" style="display:inline-block;padding:14px 40px;background-color:#034da2;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600;">
+                      <a href="${siteUrl}/Dofa/dashboard" style="display:inline-block;padding:14px 40px;background-color:#034da2;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600;">
                         Review Edit Request
                       </a>
                     </div>
@@ -388,24 +388,24 @@ class EmailService {
                   </td>
                 </tr>`;
 
-    const html = this.buildLNMIITTemplate({ recipientName: 'DOFA Office', bodyHtml });
+    const html = this.buildLNMIITTemplate({ recipientName: 'Dofa Office', bodyHtml });
 
-    // Get DOFA emails from environment or use fallback
-    const dofaEmail = process.env.DOFA_EMAIL || process.env.EMAIL_FROM_ADDRESS || 'dofa@lnmiit.ac.in';
+    // Get Dofa emails from environment or use fallback
+    const DofaEmail = process.env.Dofa_EMAIL || process.env.EMAIL_FROM_ADDRESS || 'Dofa@lnmiit.ac.in';
 
     await this._send({
-      to: dofaEmail,
-      subject: `Edit Request — ${facultyName} | ${academicYear} Appraisal`,
+      to: DofaEmail,
+      subject: `Edit Request - ${facultyName} | ${academicYear} Appraisal`,
       html
     });
   }
 
-  // ─── Edit Request: Approved — Notification to Faculty ─────────────────
+  // --- Edit Request: Approved - Notification to Faculty -----------------
 
   /**
    * Notify faculty that their edit request has been approved
    */
-  async sendEditRequestApprovedToFaculty({ to, facultyName, academicYear, approvedSections, dofaNote }) {
+  async sendEditRequestApprovedToFaculty({ to, facultyName, academicYear, approvedSections, DofaNote }) {
     const siteUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const sectionList = approvedSections.map(s => `<li style="margin-bottom:4px;">${s}</li>`).join('');
 
@@ -413,7 +413,7 @@ class EmailService {
                 <tr>
                   <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
                     <p>Dear <b>${facultyName}</b>,</p>
-                    <p>Your request to edit sections of your appraisal form for the academic year <b>${academicYear}</b> has been <b style="color: #059669;">approved</b> by the DOFA office.</p>
+                    <p>Your request to edit sections of your appraisal form for the academic year <b>${academicYear}</b> has been <b style="color: #059669;">approved</b> by the Dofa office.</p>
 
                     <div style="background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 8px; padding: 16px 20px; margin: 16px 0;">
                       <p style="margin: 0 0 8px 0; font-weight: 600; color: #059669;">Sections Approved for Editing:</p>
@@ -422,7 +422,7 @@ class EmailService {
                       </ul>
                     </div>
 
-                    ${dofaNote ? `<p><b>Note from DOFA Office:</b></p><p style="background:#fafafa; border-left: 3px solid #059669; padding: 10px 14px; border-radius: 4px; color: #334155;">${dofaNote}</p>` : ''}
+                    ${DofaNote ? `<p><b>Note from Dofa Office:</b></p><p style="background:#fafafa; border-left: 3px solid #059669; padding: 10px 14px; border-radius: 4px; color: #334155;">${DofaNote}</p>` : ''}
 
                     <p>Please log in to the portal, make your changes in the approved sections, and <b>re-submit your form before the deadline</b>.</p>
                     <div style="text-align:center;margin:24px 0;">
@@ -433,7 +433,7 @@ class EmailService {
                     <p style="font-size:13px;color:#718096;">Please remember: changes must be submitted before the deadline. Only the approved sections will be editable.</p>
                     <br/>
                     <p>Best regards,</p>
-                    <p><b>DOFA Office, LNMIIT Jaipur</b></p>
+                    <p><b>Dofa Office, LNMIIT Jaipur</b></p>
                   </td>
                 </tr>`;
 
@@ -441,33 +441,33 @@ class EmailService {
 
     await this._send({
       to,
-      subject: `Edit Request Approved — ${academicYear} Appraisal Form`,
+      subject: `Edit Request Approved - ${academicYear} Appraisal Form`,
       html
     });
   }
 
-  // ─── Edit Request: Denied — Notification to Faculty ───────────────────
+  // --- Edit Request: Denied - Notification to Faculty -------------------
 
   /**
    * Notify faculty that their edit request has been denied
    */
-  async sendEditRequestDeniedToFaculty({ to, facultyName, academicYear, dofaNote }) {
+  async sendEditRequestDeniedToFaculty({ to, facultyName, academicYear, DofaNote }) {
     const bodyHtml = `
                 <tr>
                   <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
                     <p>Dear <b>${facultyName}</b>,</p>
-                    <p>We regret to inform you that your request to edit sections of your appraisal form for the academic year <b>${academicYear}</b> has been <b style="color: #dc2626;">denied</b> by the DOFA office.</p>
+                    <p>We regret to inform you that your request to edit sections of your appraisal form for the academic year <b>${academicYear}</b> has been <b style="color: #dc2626;">denied</b> by the Dofa office.</p>
 
-                    ${dofaNote ? `
+                    ${DofaNote ? `
                     <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 16px 0;">
-                      <p style="margin: 0 0 8px 0; font-weight: 600; color: #dc2626;">Reason from DOFA Office:</p>
-                      <p style="margin: 0; color: #7f1d1d;">${dofaNote}</p>
+                      <p style="margin: 0 0 8px 0; font-weight: 600; color: #dc2626;">Reason from Dofa Office:</p>
+                      <p style="margin: 0; color: #7f1d1d;">${DofaNote}</p>
                     </div>` : ''}
 
-                    <p>If you have questions or concerns, please contact the DOFA office directly.</p>
+                    <p>If you have questions or concerns, please contact the Dofa office directly.</p>
                     <br/>
                     <p>Best regards,</p>
-                    <p><b>DOFA Office, LNMIIT Jaipur</b></p>
+                    <p><b>Dofa Office, LNMIIT Jaipur</b></p>
                     <p>webmaster@lnmiit.ac.in</p>
                   </td>
                 </tr>`;
@@ -476,37 +476,38 @@ class EmailService {
 
     await this._send({
       to,
-      subject: `Edit Request Denied — ${academicYear} Appraisal Form`,
+      subject: `Edit Request Denied - ${academicYear} Appraisal Form`,
       html
     });
   }
 
-  // ─── Internal Send Method ──────────────────────────────────────────────
+  // --- Internal Send Method ----------------------------------------------
 
   /**
-   * Internal send method — falls back to console logging if not configured
+   * Internal send method - falls back to console logging if not configured
    */
   async _send({ to, subject, html }) {
     const from = process.env.EMAIL_FROM || 'LNMIIT Faculty Appraisal <noreply@lnmiit.ac.in>';
 
     if (!this.isConfigured) {
-      console.log('\n📧 ========== EMAIL (console mode) ==========');
+      console.log('\nðŸ“§ ========== EMAIL (console mode) ==========');
       console.log(`   To: ${to}`);
       console.log(`   Subject: ${subject}`);
       console.log(`   From: ${from}`);
-      console.log('   (Email body logged — configure EMAIL_* env vars to send real emails)');
+      console.log('   (Email body logged - configure EMAIL_* env vars to send real emails)');
       console.log('=============================================\n');
       return;
     }
 
     try {
       const info = await this.transporter.sendMail({ from, to, subject, html });
-      console.log(`📧 Email sent to ${to}: ${info.messageId}`);
+      console.log(`ðŸ“§ Email sent to ${to}: ${info.messageId}`);
     } catch (error) {
-      console.error(`❌ Failed to send email to ${to}:`, error.message);
+      console.error(`âŒ Failed to send email to ${to}:`, error.message);
       throw error;
     }
   }
 }
 
 module.exports = new EmailService();
+

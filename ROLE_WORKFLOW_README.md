@@ -1,34 +1,34 @@
-# Faculty Appraisal System - Role-Based Workflow
+﻿# Faculty Appraisal System - Role-Based Workflow
 
 ## Overview
 
 The Faculty Appraisal System now supports role-based dashboards and workflow management for three user types:
 
 - **Faculty**: Submit and manage appraisal forms
-- **DOFA (Dean of Faculty Affairs)**: Review and approve submissions
-- **DOFA Office**: Administrative support for managing submissions
+- **Dofa (Dean of Faculty Affairs)**: Review and approve submissions
+- **Dofa Office**: Administrative support for managing submissions
 
 ## System Architecture
 
 ### Database Tables
 
-1. **users** - User accounts with roles (faculty, dofa, dofa_office)
+1. **users** - User accounts with roles (faculty, Dofa, Dofa_office)
 2. **appraisal_sessions** - Timeline control for submission windows
 3. **submissions** - Faculty appraisal submissions with status tracking
-4. **review_comments** - DOFA feedback and comments
-5. **submission_locks** - Lock management for DOFA office
+4. **review_comments** - Dofa feedback and comments
+5. **submission_locks** - Lock management for Dofa office
 
 ### Submission Workflow
 
 ```
-Draft → Submitted → Under Review → Approved/Sent Back
+Draft -> Submitted -> Under Review -> Approved/Sent Back
 ```
 
 - **Draft**: Faculty is editing the form
 - **Submitted**: Faculty has submitted for review
-- **Under Review**: DOFA is currently reviewing
-- **Approved**: DOFA has approved the submission
-- **Sent Back**: DOFA requested changes
+- **Under Review**: Dofa is currently reviewing
+- **Approved**: Dofa has approved the submission
+- **Sent Back**: Dofa requested changes
 
 ## API Endpoints
 
@@ -60,12 +60,12 @@ Draft → Submitted → Under Review → Approved/Sent Back
 - `/courses-taught` - Courses taught
 - All other existing Part A & Part B pages
 
-### DOFA Routes
-- `/dofa/dashboard` - DOFA dashboard with submissions list
-- `/dofa/review/:id` - Review individual submission
+### Dofa Routes
+- `/Dofa/dashboard` - Dofa dashboard with submissions list
+- `/Dofa/review/:id` - Review individual submission
 
-### DOFA Office Routes
-- `/dofa-office/dashboard` - Administrative dashboard
+### Dofa Office Routes
+- `/Dofa-office/dashboard` - Administrative dashboard
 
 ## Using the System
 
@@ -74,7 +74,7 @@ Draft → Submitted → Under Review → Approved/Sent Back
 A role switcher is available in the top-right corner (development only):
 
 1. Click the role switcher button
-2. Select desired role (Faculty, DOFA, or DOFA Office)
+2. Select desired role (Faculty, Dofa, or Dofa Office)
 3. System will navigate to appropriate dashboard
 
 ### Mock Users
@@ -86,11 +86,11 @@ The following mock users are pre-configured:
 - Dr. Jane Doe (jane.doe@university.edu)
 - Dr. Robert Brown (robert.brown@university.edu)
 
-**DOFA:**
-- DOFA Admin (dofa@university.edu)
+**Dofa:**
+- Dofa Admin (Dofa@university.edu)
 
-**DOFA Office:**
-- DOFA Office Admin (dofa.office@university.edu)
+**Dofa Office:**
+- Dofa Office Admin (Dofa.office@university.edu)
 
 ### Testing Workflow
 
@@ -99,13 +99,13 @@ The following mock users are pre-configured:
    - Fill out forms
    - Submit for review
 
-2. **As DOFA:**
+2. **As Dofa:**
    - View submissions list
    - Review submission details
    - Add comments
    - Approve or send back submissions
 
-3. **As DOFA Office:**
+3. **As Dofa Office:**
    - View all submissions
    - Lock/unlock submissions
    - Send reminders
@@ -119,13 +119,13 @@ The following mock users are pre-configured:
 - View submission status
 - Edit drafts
 
-### DOFA Dashboard
+### Dofa Dashboard
 - Statistics cards (Total Faculty, Submissions, Pending, Approved)
 - Submissions table with filters
 - Quick actions: View, Approve, Send Back
 - Status-based filtering
 
-### DOFA Review Page
+### Dofa Review Page
 - Tabbed interface showing:
   - Faculty Information
   - Teaching records
@@ -135,7 +135,7 @@ The following mock users are pre-configured:
 - Comment history
 - Review actions (Approve/Send Back)
 
-### DOFA Office Dashboard
+### Dofa Office Dashboard
 - Administrative statistics
 - Submission management
 - Lock/unlock functionality
@@ -144,7 +144,7 @@ The following mock users are pre-configured:
 
 ## Timeline Control
 
-DOFA can control when faculty can access the appraisal form using appraisal sessions:
+Dofa can control when faculty can access the appraisal form using appraisal sessions:
 
 1. Create a session with academic year and date range
 2. Set status to "open"
@@ -191,30 +191,30 @@ For production use:
 
 ```
 backend/
-├── controllers/
-│   ├── submissionsController.js
-│   ├── reviewController.js
-│   └── sessionsController.js
-├── routes/
-│   ├── submissionsRoutes.js
-│   ├── reviewRoutes.js
-│   └── sessionsRoutes.js
-├── database/
-│   └── migrations/
-│       ├── add_role_workflow_tables.sql
-│       └── insert_mock_data.sql
++-- controllers/
+|   +-- submissionsController.js
+|   +-- reviewController.js
+|   +-- sessionsController.js
++-- routes/
+|   +-- submissionsRoutes.js
+|   +-- reviewRoutes.js
+|   +-- sessionsRoutes.js
++-- database/
+|   +-- migrations/
+|       +-- add_role_workflow_tables.sql
+|       +-- insert_mock_data.sql
 
 src/
-├── pages/
-│   ├── DOFADashboard.jsx & .css
-│   ├── DOFAReview.jsx & .css
-│   └── DOFAOfficeDashboard.jsx & .css
-├── components/
-│   ├── RoleSwitcher.jsx & .css
-│   └── Header.jsx (updated)
-├── services/
-│   └── authService.js
-└── App.jsx (updated with new routes)
++-- pages/
+|   +-- DofaDashboard.jsx & .css
+|   +-- DofaReview.jsx & .css
+|   +-- DofaOfficeDashboard.jsx & .css
++-- components/
+|   +-- RoleSwitcher.jsx & .css
+|   +-- Header.jsx (updated)
++-- services/
+|   +-- authService.js
++-- App.jsx (updated with new routes)
 ```
 
 ## Notes
@@ -230,3 +230,4 @@ For issues or questions about the role-based workflow system, refer to:
 - Backend API documentation in controllers
 - Component documentation in source files
 - Database schema in migration files
+

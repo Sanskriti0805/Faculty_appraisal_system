@@ -1,4 +1,4 @@
-const db = require('../config/database');
+﻿const db = require('../config/database');
 
 function safeJsonParse(value) {
   if (!value) return null;
@@ -101,7 +101,7 @@ function requireSectionEditAccess(sectionKey) {
         return res.status(403).json({
           success: false,
           code: 'SUBMISSION_LOCKED',
-          message: 'Submission is locked after submit. Request edits or wait for DOFA to send back.'
+          message: 'Submission is locked after submit. Request edits or wait for Dofa to send back.'
         });
       }
 
@@ -116,7 +116,7 @@ function requireSectionEditAccess(sectionKey) {
       );
 
       if (approvedReqRows.length === 0) {
-        // Sent back directly by DOFA without section-specific request: full edit allowed.
+        // Sent back directly by Dofa without section-specific request: full edit allowed.
         return next();
       }
 

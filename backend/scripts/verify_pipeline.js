@@ -1,4 +1,4 @@
-const db = require('../config/database');
+﻿const db = require('../config/database');
 const { autoAllocateMarks } = require('../services/rubricMapper');
 
 async function verify() {
@@ -34,8 +34,8 @@ async function verify() {
     // 5. Check if scores were inserted
     const [scores] = await db.query(`
       SELECT s.*, r.sub_section, r.max_marks 
-      FROM dofa_evaluation_scores s
-      JOIN dofa_rubrics r ON s.rubric_id = r.id
+      FROM Dofa_evaluation_scores s
+      JOIN Dofa_rubrics r ON s.rubric_id = r.id
       WHERE s.submission_id = ?
     `, [submissionId]);
 
@@ -57,3 +57,4 @@ async function verify() {
 }
 
 verify();
+

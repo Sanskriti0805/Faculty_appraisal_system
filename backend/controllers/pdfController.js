@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 /**
  * pdfController.js
@@ -13,7 +13,7 @@ const puppeteer  = require('puppeteer');
 const { generateHtml } = require('../utils/pdfTemplate');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 
-/* ── helpers copied from submissionsController ── */
+/* -- helpers copied from submissionsController -- */
 async function fetchLegacySectionContent(facultyId, academicYear, sectionKey) {
   const [rows] = await db.query(
     `SELECT content_json FROM legacy_section_entries
@@ -32,7 +32,7 @@ async function fetchLegacySectionContent(facultyId, academicYear, sectionKey) {
   return fallback.length > 0 ? fallback[0].content_json || null : null;
 }
 
-/* ── query dynamic responses for this faculty ── */
+/* -- query dynamic responses for this faculty -- */
 async function fetchDynamicData(facultyId) {
   try {
     // 1. Get all active sections + their fields
@@ -45,7 +45,7 @@ async function fetchDynamicData(facultyId) {
       ORDER BY ds.sequence, ds.id, df.sequence
     `);
 
-    // 2. Get this faculty's responses (not submission-scoped — linked by faculty_id)
+    // 2. Get this faculty's responses (not submission-scoped - linked by faculty_id)
     const [responses] = await db.query(
       `SELECT field_id, value FROM dynamic_responses WHERE faculty_id = ?`,
       [facultyId]
@@ -60,7 +60,7 @@ async function fetchDynamicData(facultyId) {
       }
     });
 
-    // Group rows into section → fields structure
+    // Group rows into section -> fields structure
     const sectMap = {};
     sections.forEach(row => {
       if (!row.field_id) return; // section with no fields yet
@@ -94,14 +94,14 @@ async function fetchDynamicData(facultyId) {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    MAIN CONTROLLER
    GET /api/submissions/:id/pdf
-   ═══════════════════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 exports.generateSubmissionPdf = async (req, res) => {
   const { id } = req.params;
 
-  // ── 1. Auth / fetch submission ──────────────────────────────────────────
+  // -- 1. Auth / fetch submission ------------------------------------------
   try {
     const [subRows] = await db.query(`
       SELECT s.*, u.name AS faculty_name, u.department, u.email, u.designation,
@@ -118,7 +118,7 @@ exports.generateSubmissionPdf = async (req, res) => {
 
     const sub = subRows[0];
 
-    // Only owner or DOFA/admin can download
+    // Only owner or Dofa/admin can download
     if (req.user?.role === 'faculty' && Number(req.user.id) !== Number(sub.faculty_id)) {
       return res.status(403).json({ success: false, message: 'Access denied.' });
     }
@@ -127,7 +127,7 @@ exports.generateSubmissionPdf = async (req, res) => {
       || Number(sub.faculty_id);
     const yearNum = (sub.academic_year || '').split('-')[0];
 
-    // ── 2. Parallel data fetch ────────────────────────────────────────────
+    // -- 2. Parallel data fetch --------------------------------------------
     const [
       facultyInfo, courses, publications, grants, patents, awards,
       newCourses, proposals, paperReviews, techTransfer,
@@ -160,7 +160,7 @@ exports.generateSubmissionPdf = async (req, res) => {
       fetchDynamicData(sub.faculty_id)
     ]);
 
-    // ── 3. Build HTML ─────────────────────────────────────────────────────
+    // -- 3. Build HTML -----------------------------------------------------
     const html = generateHtml({
       submission: sub,
       facultyInfo, courses, publications, grants, patents, awards,
@@ -168,10 +168,10 @@ exports.generateSubmissionPdf = async (req, res) => {
       conferenceSessions, keynotesTalks, consultancy,
       teachingInnovation, institutionalContributions, goals,
       courseware, continuingEducation, otherActivities, researchPlan, teachingPlan,
-      dynamicData   // ← custom sections from Form Builder
+      dynamicData   // â† custom sections from Form Builder
     });
 
-    // ── 4. Launch Puppeteer → PDF ─────────────────────────────────────────
+    // -- 4. Launch Puppeteer -> PDF -----------------------------------------
     let browser;
     try {
       browser = await puppeteer.launch({
@@ -205,7 +205,7 @@ exports.generateSubmissionPdf = async (req, res) => {
       await browser.close();
       browser = null;
 
-      // ── 5. Stream the PDF back ────────────────────────────────────────
+      // -- 5. Stream the PDF back ----------------------------------------
       const safeName = (sub.faculty_name || 'faculty').replace(/[^a-zA-Z0-9]/g, '_');
       const filename  = `Appraisal_${safeName}_${sub.academic_year || 'report'}.pdf`;
 
@@ -225,3 +225,4 @@ exports.generateSubmissionPdf = async (req, res) => {
     return res.status(500).json({ success: false, message: 'PDF generation failed: ' + err.message });
   }
 };
+

@@ -1,4 +1,4 @@
-const db = require('../config/database');
+﻿const db = require('../config/database');
 
 // GET /api/evaluation
 // Returns: rubrics (granular), submissions, scores (granular), remarks
@@ -6,7 +6,7 @@ exports.getEvaluationData = async (req, res) => {
   try {
     // 1. All rubrics for the evaluation structure
     const [rubrics] = await db.query(
-      'SELECT id, section_name, sub_section, max_marks FROM dofa_rubrics ORDER BY id ASC'
+      'SELECT id, section_name, sub_section, max_marks FROM Dofa_rubrics ORDER BY id ASC'
     );
 
     // 2. Faculty submissions
@@ -31,10 +31,10 @@ exports.getEvaluationData = async (req, res) => {
     // 3. Scores per (submission_id, rubric_id)
     const [scores] = await db.query(
       `SELECT es.submission_id, es.rubric_id, es.score
-       FROM dofa_evaluation_scores es
+       FROM Dofa_evaluation_scores es
        INNER JOIN (
          SELECT submission_id, rubric_id, MAX(id) AS latest_id
-         FROM dofa_evaluation_scores
+         FROM Dofa_evaluation_scores
          WHERE submission_id IN (${placeholders})
          GROUP BY submission_id, rubric_id
        ) latest ON latest.latest_id = es.id`,
@@ -43,7 +43,7 @@ exports.getEvaluationData = async (req, res) => {
 
     // 4. Remarks per submission
     const [remarks] = await db.query(
-      `SELECT submission_id, remark FROM dofa_evaluation_remarks WHERE submission_id IN (${placeholders}) ORDER BY updated_at DESC`,
+      `SELECT submission_id, remark FROM Dofa_evaluation_remarks WHERE submission_id IN (${placeholders}) ORDER BY updated_at DESC`,
       submissionIds
     );
 
@@ -78,15 +78,15 @@ exports.getSheet2Data = async (req, res) => {
       SELECT latest.submission_id, SUM(latest.score) as total_score
       FROM (
         SELECT es.submission_id, es.rubric_id, es.score
-        FROM dofa_evaluation_scores es
+        FROM Dofa_evaluation_scores es
         INNER JOIN (
           SELECT submission_id, rubric_id, MAX(id) AS latest_id
-          FROM dofa_evaluation_scores
+          FROM Dofa_evaluation_scores
           WHERE submission_id IN (?)
           GROUP BY submission_id, rubric_id
         ) m ON m.latest_id = es.id
       ) latest
-      INNER JOIN dofa_rubrics r ON r.id = latest.rubric_id
+      INNER JOIN Dofa_rubrics r ON r.id = latest.rubric_id
       GROUP BY latest.submission_id
     `, [submissionIds]);
 
@@ -96,10 +96,10 @@ exports.getSheet2Data = async (req, res) => {
     // 3. Get Sheet 2 remarks and grades
     const [sheet2Data] = await db.query(`
       SELECT e2.submission_id, e2.research_remarks, e2.overall_feedback, e2.teaching_feedback, e2.final_grade
-      FROM dofa_evaluation_sheet2 e2
+      FROM Dofa_evaluation_sheet2 e2
       INNER JOIN (
         SELECT submission_id, MAX(id) AS latest_id
-        FROM dofa_evaluation_sheet2
+        FROM Dofa_evaluation_sheet2
         WHERE submission_id IN (?)
         GROUP BY submission_id
       ) latest ON latest.latest_id = e2.id
@@ -109,7 +109,7 @@ exports.getSheet2Data = async (req, res) => {
     sheet2Data.forEach(s => sheet2Map[s.submission_id] = s);
 
     // 4. Get Grading Parameters
-    const [gradingParams] = await db.query('SELECT * FROM dofa_grading_parameters ORDER BY threshold_value DESC');
+    const [gradingParams] = await db.query('SELECT * FROM Dofa_grading_parameters ORDER BY threshold_value DESC');
 
     const result = submissions.map(sub => ({
       ...sub,
@@ -149,7 +149,7 @@ exports.saveSheet2Remarks = async (req, res) => {
     // to prevent orphaned records when the grade changes
     if (field === 'final_grade' && value) {
       await db.query(
-        'DELETE FROM dofa_evaluation_sheet3 WHERE submission_id = ? AND final_grade != ?',
+        'DELETE FROM Dofa_evaluation_sheet3 WHERE submission_id = ? AND final_grade != ?',
         [submission_id, value.trim()]
       );
     }
@@ -157,13 +157,13 @@ exports.saveSheet2Remarks = async (req, res) => {
     const normalizedValue = field === 'final_grade' ? String(value || '').trim() : value;
 
     const [upd] = await db.query(
-      `UPDATE dofa_evaluation_sheet2 SET ${field} = ? WHERE submission_id = ?`,
+      `UPDATE Dofa_evaluation_sheet2 SET ${field} = ? WHERE submission_id = ?`,
       [normalizedValue, submission_id]
     );
 
     if (!upd || upd.affectedRows === 0) {
       await db.query(
-        `INSERT INTO dofa_evaluation_sheet2 (submission_id, faculty_id, academic_year, ${field}) VALUES (?, ?, ?, ?)`,
+        `INSERT INTO Dofa_evaluation_sheet2 (submission_id, faculty_id, academic_year, ${field}) VALUES (?, ?, ?, ?)`,
         [submission_id, faculty_id, academic_year, normalizedValue]
       );
     }
@@ -178,7 +178,7 @@ exports.saveSheet2Remarks = async (req, res) => {
 // GET /api/evaluation/grading-parameters
 exports.getGradingParameters = async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM dofa_grading_parameters ORDER BY threshold_value DESC');
+    const [rows] = await db.query('SELECT * FROM Dofa_grading_parameters ORDER BY threshold_value DESC');
     res.json({ success: true, parameters: rows });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -191,11 +191,11 @@ exports.saveGradingParameters = async (req, res) => {
     const { parameters } = req.body; // Array of {condition_op, threshold_value, grade}
     
     // Simple approach: Delete all and re-insert
-    await db.query('DELETE FROM dofa_grading_parameters');
+    await db.query('DELETE FROM Dofa_grading_parameters');
     
     if (parameters && parameters.length > 0) {
       const values = parameters.map(p => [p.condition_op, p.threshold_value, p.grade]);
-      await db.query('INSERT INTO dofa_grading_parameters (condition_op, threshold_value, grade) VALUES ?', [values]);
+      await db.query('INSERT INTO Dofa_grading_parameters (condition_op, threshold_value, grade) VALUES ?', [values]);
     }
     
     res.json({ success: true, message: 'Parameters saved' });
@@ -217,20 +217,20 @@ exports.applyGrading = async (req, res) => {
       FROM submissions s
       LEFT JOIN (
         SELECT es.submission_id, es.rubric_id, es.score
-        FROM dofa_evaluation_scores es
+        FROM Dofa_evaluation_scores es
         INNER JOIN (
           SELECT submission_id, rubric_id, MAX(id) AS latest_id
-          FROM dofa_evaluation_scores
+          FROM Dofa_evaluation_scores
           GROUP BY submission_id, rubric_id
         ) m ON m.latest_id = es.id
       ) es_latest ON es_latest.submission_id = s.id
-      LEFT JOIN dofa_rubrics r ON r.id = es_latest.rubric_id
+      LEFT JOIN Dofa_rubrics r ON r.id = es_latest.rubric_id
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
       GROUP BY s.id, s.faculty_id, s.academic_year
     `);
 
     // 2. Fetch parameters
-    const [params] = await db.query('SELECT * FROM dofa_grading_parameters ORDER BY threshold_value DESC');
+    const [params] = await db.query('SELECT * FROM Dofa_grading_parameters ORDER BY threshold_value DESC');
 
     if (params.length === 0) {
       return res.status(400).json({ success: false, message: 'No grading parameters defined' });
@@ -260,13 +260,13 @@ exports.applyGrading = async (req, res) => {
       }
 
       const [upd] = await db.query(
-        'UPDATE dofa_evaluation_sheet2 SET final_grade = ? WHERE submission_id = ?',
+        'UPDATE Dofa_evaluation_sheet2 SET final_grade = ? WHERE submission_id = ?',
         [assignedGrade, s.submission_id]
       );
 
       if (!upd || upd.affectedRows === 0) {
         await db.query(
-          'INSERT INTO dofa_evaluation_sheet2 (submission_id, faculty_id, academic_year, final_grade) VALUES (?, ?, ?, ?)',
+          'INSERT INTO Dofa_evaluation_sheet2 (submission_id, faculty_id, academic_year, final_grade) VALUES (?, ?, ?, ?)',
           [s.submission_id, s.faculty_id, s.academic_year, assignedGrade]
         );
       }
@@ -292,28 +292,28 @@ exports.getSheet3Data = async (req, res) => {
                SELECT COALESCE(SUM(esd.score), 0)
                FROM (
                  SELECT es1.rubric_id, es1.score
-                 FROM dofa_evaluation_scores es1
+                 FROM Dofa_evaluation_scores es1
                  INNER JOIN (
                    SELECT rubric_id, MAX(id) AS latest_id
-                   FROM dofa_evaluation_scores
+                   FROM Dofa_evaluation_scores
                    WHERE submission_id = s.id
                    GROUP BY rubric_id
                  ) m ON m.latest_id = es1.id
                ) esd
-               INNER JOIN dofa_rubrics r ON r.id = esd.rubric_id
+               INNER JOIN Dofa_rubrics r ON r.id = esd.rubric_id
              ) as total_score,
              COALESCE(e2.final_grade, '') as final_grade,
              COALESCE(e3.increment_percentage, 0) as increment_percentage
       FROM submissions s
       JOIN users u ON s.faculty_id = u.id
-      LEFT JOIN dofa_evaluation_sheet2 e2 ON e2.id = (
+      LEFT JOIN Dofa_evaluation_sheet2 e2 ON e2.id = (
         SELECT MAX(e2x.id)
-        FROM dofa_evaluation_sheet2 e2x
+        FROM Dofa_evaluation_sheet2 e2x
         WHERE e2x.submission_id = s.id
       )
-      LEFT JOIN dofa_evaluation_sheet3 e3 ON e3.id = (
+      LEFT JOIN Dofa_evaluation_sheet3 e3 ON e3.id = (
         SELECT MAX(e3x.id)
-        FROM dofa_evaluation_sheet3 e3x
+        FROM Dofa_evaluation_sheet3 e3x
         WHERE e3x.submission_id = s.id
       )
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
@@ -324,9 +324,9 @@ exports.getSheet3Data = async (req, res) => {
     const [grades] = await db.query(`
       SELECT DISTINCT TRIM(e2.final_grade) AS final_grade
       FROM submissions s
-      INNER JOIN dofa_evaluation_sheet2 e2 ON e2.id = (
+      INNER JOIN Dofa_evaluation_sheet2 e2 ON e2.id = (
         SELECT MAX(e2x.id)
-        FROM dofa_evaluation_sheet2 e2x
+        FROM Dofa_evaluation_sheet2 e2x
         WHERE e2x.submission_id = s.id
       )
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
@@ -336,7 +336,7 @@ exports.getSheet3Data = async (req, res) => {
     `);
 
     // 3. Get existing grade-increment mappings
-    const [increments] = await db.query('SELECT * FROM dofa_grade_increments ORDER BY grade ASC');
+    const [increments] = await db.query('SELECT * FROM Dofa_grade_increments ORDER BY grade ASC');
 
     res.json({ 
       success: true, 
@@ -353,7 +353,7 @@ exports.getSheet3Data = async (req, res) => {
 // GET /api/evaluation/grade-increments
 exports.getGradeIncrements = async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM dofa_grade_increments');
+    const [rows] = await db.query('SELECT * FROM Dofa_grade_increments');
     res.json({ success: true, increments: rows });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -366,7 +366,7 @@ exports.saveGradeIncrements = async (req, res) => {
     const { increments } = req.body; // Array of {grade, increment_percentage}
     
     // We can use INSERT ... ON DUPLICATE KEY UPDATE or delete and re-insert
-    await db.query('DELETE FROM dofa_grade_increments');
+    await db.query('DELETE FROM Dofa_grade_increments');
     
     if (increments && increments.length > 0) {
       const cleaned = increments
@@ -374,7 +374,7 @@ exports.saveGradeIncrements = async (req, res) => {
         .map(i => [i.grade.trim(), parseFloat(i.increment_percentage) || 0]);
 
       if (cleaned.length > 0) {
-        await db.query('INSERT INTO dofa_grade_increments (grade, increment_percentage) VALUES ?', [cleaned]);
+        await db.query('INSERT INTO Dofa_grade_increments (grade, increment_percentage) VALUES ?', [cleaned]);
       }
     }
     
@@ -391,9 +391,9 @@ exports.applyIncrements = async (req, res) => {
     const [submissions] = await db.query(`
       SELECT e2.submission_id, e2.final_grade, s.faculty_id, s.academic_year
       FROM submissions s
-      INNER JOIN dofa_evaluation_sheet2 e2 ON e2.id = (
+      INNER JOIN Dofa_evaluation_sheet2 e2 ON e2.id = (
         SELECT MAX(e2x.id)
-        FROM dofa_evaluation_sheet2 e2x
+        FROM Dofa_evaluation_sheet2 e2x
         WHERE e2x.submission_id = s.id
       )
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
@@ -402,7 +402,7 @@ exports.applyIncrements = async (req, res) => {
     `);
     
     // 2. Get mapping
-    const [mappingRows] = await db.query('SELECT * FROM dofa_grade_increments');
+    const [mappingRows] = await db.query('SELECT * FROM Dofa_grade_increments');
     const mapping = {};
     mappingRows.forEach(row => mapping[row.grade] = row.increment_percentage);
 
@@ -413,21 +413,21 @@ exports.applyIncrements = async (req, res) => {
       // Keep exactly one current row in sheet3 per submission.
       // This removes stale grades and prevents repeated Apply operations from creating duplicates.
       await db.query(`
-        DELETE FROM dofa_evaluation_sheet3
+        DELETE FROM Dofa_evaluation_sheet3
         WHERE submission_id = ?
       `, [sub.submission_id]);
       
       // Now insert or update with the correct increment for the current grade
       if (inc !== undefined) {
         await db.query(`
-          INSERT INTO dofa_evaluation_sheet3 (submission_id, faculty_id, academic_year, final_grade, increment_percentage)
+          INSERT INTO Dofa_evaluation_sheet3 (submission_id, faculty_id, academic_year, final_grade, increment_percentage)
           VALUES (?, ?, ?, ?, ?)
         `, [sub.submission_id, sub.faculty_id, sub.academic_year, sub.final_grade, inc]);
       } else {
         // If no increment is defined for this grade, still create a record but with NULL increment
         // while preserving one current row for visibility in sheet3.
         await db.query(`
-          INSERT INTO dofa_evaluation_sheet3 (submission_id, faculty_id, academic_year, final_grade, increment_percentage)
+          INSERT INTO Dofa_evaluation_sheet3 (submission_id, faculty_id, academic_year, final_grade, increment_percentage)
           VALUES (?, ?, ?, ?, NULL)
         `, [sub.submission_id, sub.faculty_id, sub.academic_year, sub.final_grade]);
       }
@@ -452,7 +452,7 @@ exports.saveScore = async (req, res) => {
 
     // Validate against max marks
     const [rubricRows] = await db.query(
-      'SELECT max_marks FROM dofa_rubrics WHERE id = ?',
+      'SELECT max_marks FROM Dofa_rubrics WHERE id = ?',
       [rubric_id]
     );
     
@@ -473,13 +473,13 @@ exports.saveScore = async (req, res) => {
     // Update existing rows first so this works even if UNIQUE(submission_id, rubric_id)
     // is missing in a legacy database.
     const [upd] = await db.query(
-      'UPDATE dofa_evaluation_scores SET score = ? WHERE submission_id = ? AND rubric_id = ?',
+      'UPDATE Dofa_evaluation_scores SET score = ? WHERE submission_id = ? AND rubric_id = ?',
       [numericScore, submission_id, rubric_id]
     );
 
     if (!upd || upd.affectedRows === 0) {
       await db.query(
-        'INSERT INTO dofa_evaluation_scores (submission_id, rubric_id, score) VALUES (?, ?, ?)',
+        'INSERT INTO Dofa_evaluation_scores (submission_id, rubric_id, score) VALUES (?, ?, ?)',
         [submission_id, rubric_id, numericScore]
       );
     }
@@ -502,18 +502,18 @@ exports.saveRemark = async (req, res) => {
     }
 
     const [existing] = await db.query(
-      'SELECT id FROM dofa_evaluation_remarks WHERE submission_id = ? ORDER BY created_at DESC LIMIT 1',
+      'SELECT id FROM Dofa_evaluation_remarks WHERE submission_id = ? ORDER BY created_at DESC LIMIT 1',
       [submission_id]
     );
 
     if (existing.length > 0) {
       await db.query(
-        'UPDATE dofa_evaluation_remarks SET remark = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        'UPDATE Dofa_evaluation_remarks SET remark = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [remark, existing[0].id]
       );
     } else {
       await db.query(
-        'INSERT INTO dofa_evaluation_remarks (submission_id, remark, created_by) VALUES (?, ?, ?)',
+        'INSERT INTO Dofa_evaluation_remarks (submission_id, remark, created_by) VALUES (?, ?, ?)',
         [submission_id, remark, created_by || null]
       );
     }
@@ -542,14 +542,14 @@ exports.rerunAllocation = async (req, res) => {
     // Return updated scores
     const [scores] = await db.query(
       `SELECT es.rubric_id, es.score
-       FROM dofa_evaluation_scores es
+       FROM Dofa_evaluation_scores es
        INNER JOIN (
          SELECT rubric_id, MAX(id) AS latest_id
-         FROM dofa_evaluation_scores
+         FROM Dofa_evaluation_scores
          WHERE submission_id = ?
          GROUP BY rubric_id
        ) latest ON latest.latest_id = es.id
-       INNER JOIN dofa_rubrics r ON r.id = es.rubric_id`,
+       INNER JOIN Dofa_rubrics r ON r.id = es.rubric_id`,
       [submissionId]
     );
     const total = scores.reduce((s, r) => s + parseFloat(r.score || 0), 0);
@@ -560,3 +560,4 @@ exports.rerunAllocation = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+

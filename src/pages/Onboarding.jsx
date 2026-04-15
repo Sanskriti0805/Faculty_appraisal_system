@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -63,8 +63,8 @@ const Onboarding = () => {
     const map = {
       faculty: '/',
       hod: '/hod/dashboard',
-      dofa: '/dofa/dashboard',
-      dofa_office: '/dofa-office/dashboard'
+      Dofa: '/Dofa/dashboard',
+      Dofa_office: '/Dofa-office/dashboard'
     };
     navigate(map[user?.role] || '/', { replace: true });
   };
@@ -232,7 +232,7 @@ const Onboarding = () => {
           </div>
         )}
 
-        {/* ── Faculty Form ── */}
+        {/* -- Faculty Form -- */}
         {isFaculty && (
           <form className="onboarding-form" onSubmit={handleFacultySubmit}>
             {/* Salutation + Name */}
@@ -324,7 +324,7 @@ const Onboarding = () => {
           </form>
         )}
 
-        {/* ── HOD Form ── */}
+        {/* -- HOD Form -- */}
         {isHod && (
           <form className="onboarding-form" onSubmit={handleHodSubmit}>
             {/* Salutation + Name */}
@@ -398,3 +398,4 @@ const Onboarding = () => {
 };
 
 export default Onboarding;
+

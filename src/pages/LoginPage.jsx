@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -7,8 +7,8 @@ import './LoginPage.css';
 const ROLES = [
   { value: 'faculty', label: 'Faculty' },
   { value: 'hod', label: 'Head of Department (HOD)' },
-  { value: 'dofa', label: 'DOFA' },
-  { value: 'dofa_office', label: 'DOFA Office' },
+  { value: 'Dofa', label: 'Dofa' },
+  { value: 'Dofa_office', label: 'Dofa Office' },
 ];
 
 const LoginPage = () => {
@@ -40,8 +40,8 @@ const LoginPage = () => {
         const redirectMap = {
           hod: '/hod/dashboard',
           faculty: '/',
-          dofa: '/dofa/dashboard',
-          dofa_office: '/dofa-office/dashboard',
+          Dofa: '/Dofa/dashboard',
+          Dofa_office: '/Dofa-office/dashboard',
         };
         navigate(redirectMap[result.user.role] || '/');
       } else {
@@ -66,7 +66,7 @@ const LoginPage = () => {
             onError={(e) => { e.target.style.display = 'none'; }}
           />
           {/* <div className="login-logo-fallback">
-            <div className="login-logo-text">LNMIIT<span>■■</span></div>
+            <div className="login-logo-text">LNMIIT<span>â– â– </span></div>
             <div className="login-logo-subtitle">The LNM Institute of Information Technology</div>
           </div> */}
           <h1 className="login-title">Faculty Appraisal System</h1>
@@ -123,7 +123,7 @@ const LoginPage = () => {
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   className="login-input"
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   value={form.password}
                   onChange={handleChange}
                   autoComplete="current-password"
@@ -162,7 +162,7 @@ const LoginPage = () => {
 
         {/* Footer */}
         <div className="login-footer">
-          <p>© {new Date().getFullYear()} The LNM Institute of Information Technology</p>
+          <p>&copy; {new Date().getFullYear()} The LNM Institute of Information Technology</p>
           <p>Faculty Appraisal System v2.0</p>
         </div>
       </div>
@@ -171,3 +171,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 import './RoleSwitcher.css';
@@ -35,8 +35,8 @@ const RoleSwitcher = () => {
   const getRoleLabel = (role) => {
     const labels = {
       faculty: 'Faculty',
-      dofa: 'DOFA',
-      dofa_office: 'DOFA Office'
+      Dofa: 'Dofa',
+      Dofa_office: 'Dofa Office'
     };
     return labels[role] || role;
   };
@@ -48,9 +48,9 @@ const RoleSwitcher = () => {
         onClick={() => setIsOpen(!isOpen)}
         title="Switch Role (Development Only)"
       >
-        <span className="role-icon">👤</span>
+        <span className="role-icon">ðŸ‘¤</span>
         <span className="role-text">{getRoleLabel(currentRole)}</span>
-        <span className="role-arrow">{isOpen ? '▲' : '▼'}</span>
+        <span className="role-arrow">{isOpen ? 'â–²' : 'â–¼'}</span>
       </button>
 
       {isOpen && (
@@ -60,22 +60,22 @@ const RoleSwitcher = () => {
             className={`role-option ${currentRole === 'faculty' ? 'active' : ''}`}
             onClick={() => switchRole('faculty')}
           >
-            <span className="option-icon">👨‍🏫</span>
+            <span className="option-icon">ðŸ‘¨â€ðŸ«</span>
             <span>Faculty</span>
           </button>
           <button
-            className={`role-option ${currentRole === 'dofa' ? 'active' : ''}`}
-            onClick={() => switchRole('dofa')}
+            className={`role-option ${currentRole === 'Dofa' ? 'active' : ''}`}
+            onClick={() => switchRole('Dofa')}
           >
-            <span className="option-icon">👔</span>
-            <span>DOFA</span>
+            <span className="option-icon">ðŸ‘”</span>
+            <span>Dofa</span>
           </button>
           <button
-            className={`role-option ${currentRole === 'dofa_office' ? 'active' : ''}`}
-            onClick={() => switchRole('dofa_office')}
+            className={`role-option ${currentRole === 'Dofa_office' ? 'active' : ''}`}
+            onClick={() => switchRole('Dofa_office')}
           >
-            <span className="option-icon">🏢</span>
-            <span>DOFA Office</span>
+            <span className="option-icon">ðŸ¢</span>
+            <span>Dofa Office</span>
           </button>
         </div>
       )}
@@ -84,3 +84,4 @@ const RoleSwitcher = () => {
 };
 
 export default RoleSwitcher;
+

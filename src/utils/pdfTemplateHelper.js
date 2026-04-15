@@ -3,7 +3,7 @@ export const generateHTMLForSubmission = (sub, facultyInfo, publications, course
     if (!dataArray || dataArray.length === 0) return '<p style="text-align:center; color:#888;">No entries found for this section.</p>';
     const headerRow = columns.map(col => `<th>${col}</th>`).join('');
     const rows = dataArray.map(item => {
-      const cells = keys.map(key => `<td>${item[key] || 'â€”'}</td>`).join('');
+      const cells = keys.map(key => `<td>${item[key] || '-'}</td>`).join('');
       return `<tr>${cells}</tr>`;
     }).join('');
     return `<table><thead><tr>${headerRow}</tr></thead><tbody>${rows}</tbody></table>`;
@@ -137,11 +137,11 @@ export const generateHTMLForSubmission = (sub, facultyInfo, publications, course
             </div>
             <div class="info-item">
               <div class="info-label">Department</div>
-              <div class="info-value">${sub.department || 'â€”'}</div>
+              <div class="info-value">${sub.department || '-'}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Designation</div>
-              <div class="info-value">${facultyInfo?.designation || 'â€”'}</div>
+              <div class="info-value">${facultyInfo?.designation || '-'}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Evaluation Status</div>
@@ -196,9 +196,9 @@ export const generateHTMLForSubmission = (sub, facultyInfo, publications, course
             ${goals && goals.length > 0 ? goals.map((g, i) => \`
               <div class="goal-item">
                 <div class="goal-title">\${i + 1}. \${g.goal_type || 'General Goal'}</div>
-                <div class="goal-desc"><strong>Target:</strong> \${g.goal_description || 'â€”'}</div>
+                <div class="goal-desc"><strong>Target:</strong> \${g.goal_description || '-'}</div>
                 <div class="goal-desc" style="margin-top: 5px;"><strong>Achievement Status:</strong> \${g.achievement_status || 'In Progress'}</div>
-                <div class="goal-desc" style="margin-top: 5px;"><strong>Self Appraisal Marks:</strong> \${g.self_appraisal_marks || 'â€”'}</div>
+                <div class="goal-desc" style="margin-top: 5px;"><strong>Self Appraisal Marks:</strong> \${g.self_appraisal_marks || '-'}</div>
               </div>
             \`).join('') : '<p style="text-align:center; color:#888;">No goals set for this session.</p>'}
           </div>

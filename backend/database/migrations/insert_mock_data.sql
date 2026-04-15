@@ -1,12 +1,12 @@
--- Insert mock data for testing the role-based workflow system
+﻿-- Insert mock data for testing the role-based workflow system
 
 -- Insert mock users
 INSERT INTO users (name, email, password, role, department, designation) VALUES
 ('Dr. John Smith', 'john.smith@university.edu', 'password123', 'faculty', 'Computer Science', 'Associate Professor'),
 ('Dr. Jane Doe', 'jane.doe@university.edu', 'password123', 'faculty', 'Electrical Engineering', 'Assistant Professor'),
 ('Dr. Robert Brown', 'robert.brown@university.edu', 'password123', 'faculty', 'Mechanical Engineering', 'Professor'),
-('DOFA Admin', 'dofa@university.edu', 'password123', 'dofa', 'Administration', 'Dean of Faculty Affairs'),
-('DOFA Office Admin', 'dofa.office@university.edu', 'password123', 'dofa_office', 'Administration', 'Office Administrator');
+('Dofa Admin', 'Dofa@university.edu', 'password123', 'Dofa', 'Administration', 'Dean of Faculty Affairs'),
+('Dofa Office Admin', 'Dofa.office@university.edu', 'password123', 'Dofa_office', 'Administration', 'Office Administrator');
 
 -- Create an active appraisal session
 INSERT INTO appraisal_sessions (academic_year, start_date, end_date, status, created_by) VALUES
@@ -23,9 +23,10 @@ UPDATE submissions SET approved_by = 4, approved_at = '2026-03-08 16:45:00' WHER
 
 -- Add some review comments
 INSERT INTO review_comments (submission_id, reviewer_id, reviewer_role, comment) VALUES
-(2, 4, 'dofa', 'Please provide more details about your research publications.'),
-(3, 4, 'dofa', 'Excellent work. All requirements met.');
+(2, 4, 'Dofa', 'Please provide more details about your research publications.'),
+(3, 4, 'Dofa', 'Excellent work. All requirements met.');
 
 -- Add submission locks
 INSERT INTO submission_locks (submission_id, locked_by, is_locked) VALUES
 (3, 5, 1);
+

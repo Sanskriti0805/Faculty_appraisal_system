@@ -1,4 +1,4 @@
-const db = require('../config/database');
+﻿const db = require('../config/database');
 
 async function bootstrapDatabaseTables() {
   try {
@@ -9,7 +9,7 @@ async function bootstrapDatabaseTables() {
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255),
-        role ENUM('admin', 'faculty', 'hod', 'dofa', 'dofa_office') DEFAULT 'faculty',
+        role ENUM('admin', 'faculty', 'hod', 'Dofa', 'Dofa_office') DEFAULT 'faculty',
         department VARCHAR(100),
         designation VARCHAR(100),
         salutation VARCHAR(20),
@@ -44,7 +44,7 @@ async function bootstrapDatabaseTables() {
 
     // 3. Evaluation Sheet 1 (primary evaluation)
     await db.query(`
-      CREATE TABLE IF NOT EXISTS dofa_evaluation_sheet1 (
+      CREATE TABLE IF NOT EXISTS Dofa_evaluation_sheet1 (
         id INT PRIMARY KEY AUTO_INCREMENT,
         submission_id INT NOT NULL,
         faculty_id INT NOT NULL,
@@ -61,7 +61,7 @@ async function bootstrapDatabaseTables() {
 
     // 4. Evaluation Sheet 2 (performance)
     await db.query(`
-      CREATE TABLE IF NOT EXISTS dofa_evaluation_sheet2 (
+      CREATE TABLE IF NOT EXISTS Dofa_evaluation_sheet2 (
         id INT PRIMARY KEY AUTO_INCREMENT,
         submission_id INT NOT NULL,
         faculty_id INT NOT NULL,
@@ -80,7 +80,7 @@ async function bootstrapDatabaseTables() {
 
     // 5. Evaluation Sheet 3 (increment and benefits)
     await db.query(`
-      CREATE TABLE IF NOT EXISTS dofa_evaluation_sheet3 (
+      CREATE TABLE IF NOT EXISTS Dofa_evaluation_sheet3 (
         id INT PRIMARY KEY AUTO_INCREMENT,
         submission_id INT NOT NULL,
         faculty_id INT NOT NULL,
@@ -99,7 +99,7 @@ async function bootstrapDatabaseTables() {
 
     // 6. Evaluation scores table
     await db.query(`
-      CREATE TABLE IF NOT EXISTS dofa_evaluation_scores (
+      CREATE TABLE IF NOT EXISTS Dofa_evaluation_scores (
         id INT PRIMARY KEY AUTO_INCREMENT,
         submission_id INT NOT NULL,
         rubric_id INT,
@@ -114,7 +114,7 @@ async function bootstrapDatabaseTables() {
 
     // 6a. Evaluation remarks table (used by Sheet 1 data API)
     await db.query(`
-      CREATE TABLE IF NOT EXISTS dofa_evaluation_remarks (
+      CREATE TABLE IF NOT EXISTS Dofa_evaluation_remarks (
         id INT PRIMARY KEY AUTO_INCREMENT,
         submission_id INT NOT NULL,
         remark TEXT,
@@ -127,7 +127,7 @@ async function bootstrapDatabaseTables() {
 
     // 6b. Grading parameters table (used by Sheet 2 grading logic)
     await db.query(`
-      CREATE TABLE IF NOT EXISTS dofa_grading_parameters (
+      CREATE TABLE IF NOT EXISTS Dofa_grading_parameters (
         id INT PRIMARY KEY AUTO_INCREMENT,
         condition_op ENUM('>', '<', '>=', '<=', '=') NOT NULL,
         threshold_value DECIMAL(10,2) NOT NULL,
@@ -139,7 +139,7 @@ async function bootstrapDatabaseTables() {
 
     // 7. Grade increments table
     await db.query(`
-      CREATE TABLE IF NOT EXISTS dofa_grade_increments (
+      CREATE TABLE IF NOT EXISTS Dofa_grade_increments (
         id INT PRIMARY KEY AUTO_INCREMENT,
         grade VARCHAR(10),
         increment_percentage DECIMAL(5,2),
@@ -216,7 +216,7 @@ async function bootstrapDatabaseTables() {
         id INT PRIMARY KEY AUTO_INCREMENT,
         submission_id INT NOT NULL,
         reviewer_id INT,
-        reviewer_role ENUM('dofa', 'dofa_office'),
+        reviewer_role ENUM('Dofa', 'Dofa_office'),
         section_name VARCHAR(255) NOT NULL DEFAULT 'General',
         section_key VARCHAR(100) NULL,
         comment TEXT NOT NULL,
@@ -298,9 +298,9 @@ async function bootstrapDatabaseTables() {
       `CREATE INDEX idx_submissions_faculty ON submissions(faculty_id)`,
       `CREATE INDEX idx_submissions_status ON submissions(status)`,
       `CREATE INDEX idx_submissions_year ON submissions(academic_year)`,
-      `CREATE INDEX idx_eval_submission ON dofa_evaluation_sheet1(submission_id)`,
-      `CREATE INDEX idx_eval2_submission ON dofa_evaluation_sheet2(submission_id)`,
-      `CREATE INDEX idx_eval3_submission ON dofa_evaluation_sheet3(submission_id)`
+      `CREATE INDEX idx_eval_submission ON Dofa_evaluation_sheet1(submission_id)`,
+      `CREATE INDEX idx_eval2_submission ON Dofa_evaluation_sheet2(submission_id)`,
+      `CREATE INDEX idx_eval3_submission ON Dofa_evaluation_sheet3(submission_id)`
     ];
     for (const indexQuery of indexQueries) {
       try {
@@ -313,7 +313,7 @@ async function bootstrapDatabaseTables() {
       }
     }
   } catch (error) {
-    console.error('❌ Database bootstrap error:', error.message);
+    console.error('âŒ Database bootstrap error:', error.message);
     throw error;
   }
 }
@@ -324,3 +324,4 @@ async function bootstrapDynamicFormTables() {
 }
 
 module.exports = { bootstrapDynamicFormTables, bootstrapDatabaseTables };
+

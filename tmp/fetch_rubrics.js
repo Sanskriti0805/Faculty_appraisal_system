@@ -1,7 +1,7 @@
-const db = require('../backend/config/database');
+﻿const db = require('../backend/config/database');
 async function fetchRubrics() {
   try {
-    const [rows] = await db.query('SELECT * FROM dofa_rubrics');
+    const [rows] = await db.query('SELECT * FROM Dofa_rubrics');
     console.log(JSON.stringify(rows, null, 2));
     process.exit(0);
   } catch (error) {
@@ -10,3 +10,4 @@ async function fetchRubrics() {
   }
 }
 fetchRubrics();
+

@@ -1,5 +1,5 @@
-/**
- * Auth Middleware — JWT verification and role checking
+﻿/**
+ * Auth Middleware - JWT verification and role checking
  */
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
@@ -40,7 +40,7 @@ const authenticate = async (req, res, next) => {
     }
 
     if (Number(users[0].is_archived) === 1) {
-      return res.status(401).json({ success: false, message: 'Account is archived. Contact DOFA office.' });
+      return res.status(401).json({ success: false, message: 'Account is archived. Contact Dofa office.' });
     }
 
     req.user = users[0];
@@ -70,3 +70,4 @@ const requireRole = (...roles) => {
 };
 
 module.exports = { authenticate, requireRole };
+

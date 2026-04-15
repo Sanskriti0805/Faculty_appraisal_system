@@ -1,4 +1,4 @@
-const db = require('../config/database');
+﻿const db = require('../config/database');
 const emailService = require('../services/emailService');
 
 // Section labels for display/email
@@ -103,7 +103,7 @@ exports.createEditRequest = async (req, res) => {
     if (existing.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'You already have a pending edit request for this submission. Please wait for DOFA to review it.'
+        message: 'You already have a pending edit request for this submission. Please wait for Dofa to review it.'
       });
     }
 
@@ -113,10 +113,10 @@ exports.createEditRequest = async (req, res) => {
       [submission_id, facultyId, JSON.stringify(requested_sections), request_message || null]
     );
 
-    // Send email to DOFA
+    // Send email to Dofa
     try {
       const sectionLabels = await resolveSectionLabels(requested_sections);
-      await emailService.sendEditRequestNotificationToDOFA({
+      await emailService.sendEditRequestNotificationToDofa({
         facultyName: submission.faculty_name,
         facultyEmail: submission.faculty_email,
         academicYear: submission.academic_year,
@@ -125,13 +125,13 @@ exports.createEditRequest = async (req, res) => {
         requestId: result.insertId,
       });
     } catch (emailErr) {
-      console.error('Failed to send edit request email to DOFA:', emailErr.message);
-      // Don't fail—just log
+      console.error('Failed to send edit request email to Dofa:', emailErr.message);
+      // Don't fail-just log
     }
 
     res.status(201).json({
       success: true,
-      message: 'Edit request submitted successfully. DOFA has been notified via email.',
+      message: 'Edit request submitted successfully. Dofa has been notified via email.',
       data: { id: result.insertId }
     });
   } catch (error) {
@@ -142,7 +142,7 @@ exports.createEditRequest = async (req, res) => {
 
 /**
  * GET /api/edit-requests
- * DOFA: get all edit requests (optionally filtered by status)
+ * Dofa: get all edit requests (optionally filtered by status)
  * Faculty: get their own edit requests
  */
 exports.getEditRequests = async (req, res) => {
@@ -238,17 +238,17 @@ exports.getRequestsForSubmission = async (req, res) => {
 
 /**
  * PUT /api/edit-requests/:id/review
- * DOFA: approve or deny an edit request, specify which sections are approved
+ * Dofa: approve or deny an edit request, specify which sections are approved
  */
 exports.reviewEditRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, approved_sections, dofa_note } = req.body;
+    const { status, approved_sections, Dofa_note } = req.body;
     const reviewedBy = req.user.id;
 
-    // Only DOFA/dofa_office can review
-    if (!['dofa', 'dofa_office'].includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: 'Only DOFA office staff can review edit requests.' });
+    // Only Dofa/Dofa_office can review
+    if (!['Dofa', 'Dofa_office'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only Dofa office staff can review edit requests.' });
     }
 
     if (!['approved', 'denied'].includes(status)) {
@@ -277,8 +277,8 @@ exports.reviewEditRequest = async (req, res) => {
 
     // Update the request
     await db.query(
-      `UPDATE edit_requests SET status = ?, approved_sections = ?, dofa_note = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [status, status === 'approved' ? JSON.stringify(approved_sections) : null, dofa_note || null, reviewedBy, id]
+      `UPDATE edit_requests SET status = ?, approved_sections = ?, Dofa_note = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [status, status === 'approved' ? JSON.stringify(approved_sections) : null, Dofa_note || null, reviewedBy, id]
     );
 
     // If approved, update submission status back to 'sent_back' / unlocked for editing
@@ -296,19 +296,19 @@ exports.reviewEditRequest = async (req, res) => {
           facultyName: editRequest.faculty_name,
           academicYear: editRequest.academic_year,
           approvedSections: sectionLabels,
-          dofaNote: dofa_note,
+          DofaNote: Dofa_note,
         });
       } catch (emailErr) {
         console.error('Failed to send approval email to faculty:', emailErr.message);
       }
     } else {
-      // Denied — notify faculty
+      // Denied - notify faculty
       try {
         await emailService.sendEditRequestDeniedToFaculty({
           to: editRequest.faculty_email,
           facultyName: editRequest.faculty_name,
           academicYear: editRequest.academic_year,
-          dofaNote: dofa_note,
+          DofaNote: Dofa_note,
         });
       } catch (emailErr) {
         console.error('Failed to send denial email to faculty:', emailErr.message);
@@ -329,7 +329,7 @@ exports.reviewEditRequest = async (req, res) => {
 
 /**
  * GET /api/edit-requests/pending-count
- * DOFA: get count of pending edit requests (for dashboard badge)
+ * Dofa: get count of pending edit requests (for dashboard badge)
  */
 exports.getPendingCount = async (req, res) => {
   try {
@@ -341,3 +341,4 @@ exports.getPendingCount = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+

@@ -1,4 +1,4 @@
--- Add section_name to review comments for section-wise DOFA feedback
+﻿-- Add section_name to review comments for section-wise Dofa feedback
 ALTER TABLE review_comments
   ADD COLUMN IF NOT EXISTS section_name VARCHAR(255) NOT NULL DEFAULT 'General' AFTER reviewer_role;
 
@@ -6,7 +6,7 @@ ALTER TABLE review_comments
 ALTER TABLE review_comments
   ADD COLUMN IF NOT EXISTS section_key VARCHAR(100) NULL AFTER section_name;
 
--- Track resolution lifecycle of DOFA comments when faculty re-submits.
+-- Track resolution lifecycle of Dofa comments when faculty re-submits.
 ALTER TABLE review_comments
   ADD COLUMN IF NOT EXISTS is_resolved TINYINT(1) NOT NULL DEFAULT 0 AFTER comment;
 
@@ -16,7 +16,7 @@ ALTER TABLE review_comments
 ALTER TABLE review_comments
   ADD COLUMN IF NOT EXISTS resolved_in_version INT NULL AFTER resolved_at;
 
--- Preserve older snapshots of a submission for DOFA version history.
+-- Preserve older snapshots of a submission for Dofa version history.
 CREATE TABLE IF NOT EXISTS submission_versions (
   id INT PRIMARY KEY AUTO_INCREMENT,
   submission_id INT NOT NULL,
@@ -30,3 +30,4 @@ CREATE TABLE IF NOT EXISTS submission_versions (
   CONSTRAINT fk_submission_versions_submission FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
   CONSTRAINT fk_submission_versions_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
+

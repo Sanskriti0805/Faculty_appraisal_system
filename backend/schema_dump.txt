@@ -1,4 +1,4 @@
-=== RUBRICS TABLE ===
+﻿=== RUBRICS TABLE ===
 CREATE TABLE `rubrics` (
   `id` int NOT NULL AUTO_INCREMENT,
   `category` varchar(255) NOT NULL COMMENT 'Rubric category name',
@@ -23,7 +23,7 @@ CREATE TABLE `submission_scores` (
   `rubric_id` int NOT NULL COMMENT 'Foreign key to rubrics',
   `score` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'Score awarded',
   `comments` text COMMENT 'Evaluator comments',
-  `evaluated_by` int DEFAULT NULL COMMENT 'User ID who scored (DOFA)',
+  `evaluated_by` int DEFAULT NULL COMMENT 'User ID who scored (Dofa)',
   `evaluated_at` timestamp NULL DEFAULT NULL COMMENT 'When the score was given',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -37,3 +37,4 @@ CREATE TABLE `submission_scores` (
   CONSTRAINT `submission_scores_ibfk_3` FOREIGN KEY (`evaluated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_score` CHECK ((`score` >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Individual rubric scores for submissions with evaluator tracking'
+

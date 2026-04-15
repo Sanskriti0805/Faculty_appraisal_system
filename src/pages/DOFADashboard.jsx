@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, CheckCircle, XCircle, MessageSquare, FileText, Users, Clock, CheckSquare, Bell, ChevronDown, ChevronUp, Send } from 'lucide-react';
-import './DOFADashboard.css';
+import './DofaDashboard.css';
 import { showConfirm, showPrompt } from '../utils/appDialogs';
 
 const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`;
 
-const DOFADashboard = () => {
+const DofaDashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalFaculty: 0,
@@ -22,7 +22,7 @@ const DOFADashboard = () => {
   const [editRequestsOpen, setEditRequestsOpen] = useState(true);
   const [reviewingRequest, setReviewingRequest] = useState(null);
   const [approvedSections, setApprovedSections] = useState([]);
-  const [dofaNote, setDofaNote] = useState('');
+  const [DofaNote, setDofaNote] = useState('');
   const [reviewLoading, setReviewLoading] = useState(null);
   const [filter, setFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
@@ -81,7 +81,7 @@ const DOFADashboard = () => {
   };
 
   const handleViewSubmission = (id) => {
-    navigate(`/dofa/review/${id}`);
+    navigate(`/Dofa/review/${id}`);
   };
 
   const handleQuickApprove = async (id) => {
@@ -126,7 +126,7 @@ const DOFADashboard = () => {
         body: JSON.stringify({
           submission_id: id,
           reviewer_id: 1,
-          reviewer_role: 'dofa',
+          reviewer_role: 'Dofa',
           section_name: 'General',
           section_key: 'general',
           comment: comment
@@ -172,7 +172,7 @@ const DOFADashboard = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '—';
+    if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
@@ -206,7 +206,7 @@ const DOFADashboard = () => {
         body: JSON.stringify({
           status,
           approved_sections: status === 'approved' ? approvedSections : [],
-          dofa_note: dofaNote || null
+          Dofa_note: DofaNote || null
         })
       });
       const data = await res.json();
@@ -228,10 +228,10 @@ const DOFADashboard = () => {
   };
 
   return (
-    <div className="dofa-dashboard">
+    <div className="Dofa-dashboard">
       <div className="dashboard-header">
         <div>
-          <h1 className="dashboard-title">DOFA Dashboard</h1>
+          <h1 className="dashboard-title">Dofa Dashboard</h1>
           <p className="dashboard-subtitle">Review and manage faculty appraisal submissions</p>
         </div>
       </div>
@@ -344,7 +344,7 @@ const DOFADashboard = () => {
                           ))}
                         </div>
                       </td>
-                      <td style={{ maxWidth: 200, fontSize: '0.8125rem', color: '#64748b' }}>{req.request_message || '—'}</td>
+                      <td style={{ maxWidth: 200, fontSize: '0.8125rem', color: '#64748b' }}>{req.request_message || '-'}</td>
                       <td>{formatDate(req.created_at)}</td>
                       <td>
                         <div className="action-buttons">
@@ -390,7 +390,7 @@ const DOFADashboard = () => {
               </h2>
               <p style={{ color: '#64748b', margin: 0, fontSize: '0.8125rem' }}>
                 <strong style={{ color: '#334155' }}>{reviewingRequest.faculty_name}</strong>
-                <span style={{ margin: '0 6px', color: '#cbd5e1' }}>·</span>
+                <span style={{ margin: '0 6px', color: '#cbd5e1' }}> | </span>
                 {reviewingRequest.academic_year}
               </p>
             </div>
@@ -424,7 +424,7 @@ const DOFADashboard = () => {
                 Note to Faculty <span style={{ fontWeight: 400, color: '#94a3b8', textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
               </label>
               <textarea
-                value={dofaNote}
+                value={DofaNote}
                 onChange={e => setDofaNote(e.target.value)}
                 placeholder="e.g. Please only update the course names, not the marks or credit hours."
                 rows={3}
@@ -529,10 +529,10 @@ const DOFADashboard = () => {
             }}
           >
             <option value="all">All Academic Years</option>
-            <option value="2022-23">2022–23</option>
-            <option value="2023-24">2023–24</option>
-            <option value="2024-25">2024–25</option>
-            <option value="2025-26">2025–26</option>
+            <option value="2022-23">2022-23</option>
+            <option value="2023-24">2023-24</option>
+            <option value="2024-25">2024-25</option>
+            <option value="2025-26">2025-26</option>
           </select>
         </div>
       </div>
@@ -542,7 +542,7 @@ const DOFADashboard = () => {
         <h2 className="card-title">Faculty Submissions</h2>
 
         {loading ? (
-          <div className="loading-state">Loading submissions…</div>
+          <div className="loading-state">Loading submissions...</div>
         ) : submissions.length === 0 ? (
           <div className="empty-state">No submissions found.</div>
         ) : (
@@ -567,7 +567,7 @@ const DOFADashboard = () => {
                         <span className="faculty-email">{submission.email}</span>
                       </div>
                     </td>
-                    <td>{submission.department || '—'}</td>
+                    <td>{submission.department || '-'}</td>
                     <td>{submission.academic_year}</td>
                     <td>{getStatusBadge(submission.status)}</td>
                     <td>{formatDate(submission.submitted_at)}</td>
@@ -611,4 +611,4 @@ const DOFADashboard = () => {
   );
 };
 
-export default DOFADashboard;
+export default DofaDashboard;

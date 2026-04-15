@@ -1,5 +1,5 @@
-/**
- * Seeds the dofa_rubrics table with all 75 rubrics from seed_rubrics.sql.
+﻿/**
+ * Seeds the Dofa_rubrics table with all 75 rubrics from seed_rubrics.sql.
  * This is safe to run multiple times - it clears existing and re-seeds.
  */
 const mysql = require('mysql2/promise');
@@ -18,27 +18,27 @@ async function run() {
   });
 
   try {
-    console.log('=== Seeding dofa_rubrics ===\n');
+    console.log('=== Seeding Dofa_rubrics ===\n');
 
     // Read seed SQL
     const seedPath = path.join(__dirname, '/../database/seed_rubrics.sql');
     const sql = fs.readFileSync(seedPath, 'utf8');
 
     // Count existing rubrics
-    const [existing] = await conn.query('SELECT COUNT(*) as c FROM dofa_rubrics');
+    const [existing] = await conn.query('SELECT COUNT(*) as c FROM Dofa_rubrics');
     console.log(`Current rubric count: ${existing[0].c}`);
 
     if (existing[0].c > 0) {
       // Check if rubrics look like test data (non-Teaching Feedback names)
       const [tfCheck] = await conn.query(
-        "SELECT COUNT(*) as c FROM dofa_rubrics WHERE section_name LIKE '%Teaching Feedback%'"
+        "SELECT COUNT(*) as c FROM Dofa_rubrics WHERE section_name LIKE '%Teaching Feedback%'"
       );
       if (tfCheck[0].c === 0) {
         console.log('Existing rubrics appear to be test data. Clearing and re-seeding...');
-        await conn.query('DELETE FROM dofa_rubrics');
+        await conn.query('DELETE FROM Dofa_rubrics');
       } else {
         console.log('Rubrics already seeded. Run aborted to avoid duplicates.');
-        console.log('To force re-seed, manually DELETE FROM dofa_rubrics first.');
+        console.log('To force re-seed, manually DELETE FROM Dofa_rubrics first.');
         return;
       }
     }
@@ -47,18 +47,18 @@ async function run() {
     await conn.query(sql);
 
     // Verify
-    const [newCount] = await conn.query('SELECT COUNT(*) as c FROM dofa_rubrics');
+    const [newCount] = await conn.query('SELECT COUNT(*) as c FROM Dofa_rubrics');
     const [tfCount] = await conn.query(
-      "SELECT COUNT(*) as c FROM dofa_rubrics WHERE section_name LIKE '%Teaching Feedback%'"
+      "SELECT COUNT(*) as c FROM Dofa_rubrics WHERE section_name LIKE '%Teaching Feedback%'"
     );
     console.log(`\nAfter seed: ${newCount[0].c} total rubrics, ${tfCount[0].c} Teaching Feedback rubrics.`);
 
     // Show Teaching Feedback rubrics
     const [tfRubrics] = await conn.query(
-      "SELECT id, section_name, sub_section, max_marks FROM dofa_rubrics WHERE section_name LIKE '%Teaching Feedback%' ORDER BY id"
+      "SELECT id, section_name, sub_section, max_marks FROM Dofa_rubrics WHERE section_name LIKE '%Teaching Feedback%' ORDER BY id"
     );
     console.log('\nTeaching Feedback rubrics:');
-    tfRubrics.forEach(r => console.log(`  ID ${r.id}: ${r.sub_section} → ${r.max_marks} pts`));
+    tfRubrics.forEach(r => console.log(`  ID ${r.id}: ${r.sub_section} -> ${r.max_marks} pts`));
 
     console.log('\n=== Seed complete! ===');
   } finally {
@@ -67,3 +67,4 @@ async function run() {
 }
 
 run().catch(e => { console.error('Seed failed:', e.message); process.exit(1); });
+

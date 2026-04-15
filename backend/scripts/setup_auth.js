@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Database migration for Authentication & Registration system
  * Creates departments table, updates users table with new roles & columns,
  * and seeds an initial admin account.
@@ -6,7 +6,7 @@
 const db = require('../config/database');
 
 async function migrate() {
-  console.log('🔄 Starting Auth & Registration migration...\n');
+  console.log('ðŸ”„ Starting Auth & Registration migration...\n');
 
   try {
     // 1. Create departments table
@@ -22,15 +22,15 @@ async function migrate() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
-    console.log('   ✅ departments table created');
+    console.log('   âœ… departments table created');
 
-    // 2. Alter users table — expand role enum
+    // 2. Alter users table - expand role enum
     console.log('2. Updating users table role enum...');
     await db.query(`
       ALTER TABLE users 
-      MODIFY COLUMN role ENUM('faculty','dofa','dofa_office','admin','hod') DEFAULT 'faculty'
+      MODIFY COLUMN role ENUM('faculty','Dofa','Dofa_office','admin','hod') DEFAULT 'faculty'
     `);
-    console.log('   ✅ role enum updated');
+    console.log('   âœ… role enum updated');
 
     // 3. Add new columns to users table (skip if already exists)
     const columnsToAdd = [
@@ -47,10 +47,10 @@ async function migrate() {
     for (const col of columnsToAdd) {
       try {
         await db.query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.def}`);
-        console.log(`   ✅ Added column: ${col.name}`);
+        console.log(`   âœ… Added column: ${col.name}`);
       } catch (err) {
         if (err.code === 'ER_DUP_FIELDNAME') {
-          console.log(`   ⏭️  Column ${col.name} already exists, skipping`);
+          console.log(`   â­ï¸  Column ${col.name} already exists, skipping`);
         } else {
           throw err;
         }
@@ -65,12 +65,12 @@ async function migrate() {
         ADD CONSTRAINT fk_users_department 
         FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
       `);
-      console.log('   ✅ FK constraint added');
+      console.log('   âœ… FK constraint added');
     } catch (err) {
       if (err.code === 'ER_DUP_KEYNAME' || err.message.includes('Duplicate')) {
-        console.log('   ⏭️  FK constraint already exists, skipping');
+        console.log('   â­ï¸  FK constraint already exists, skipping');
       } else {
-        console.log('   ⚠️  FK constraint warning:', err.message);
+        console.log('   âš ï¸  FK constraint warning:', err.message);
       }
     }
 
@@ -78,7 +78,7 @@ async function migrate() {
     console.log('5. Seeding admin user...');
     const [existing] = await db.query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
     if (existing.length === 0) {
-      // bcryptjs not yet installed — we'll use a plain placeholder password
+      // bcryptjs not yet installed - we'll use a plain placeholder password
       // It will be hashed properly once bcryptjs is installed
       const bcrypt = require('bcryptjs');
       const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -87,14 +87,14 @@ async function migrate() {
         INSERT INTO users (name, email, password, role, department) 
         VALUES ('System Admin', 'admin@lnmiit.ac.in', ?, 'admin', 'Administration')
       `, [hashedPassword]);
-      console.log('   ✅ Admin user created (email: admin@lnmiit.ac.in, password: admin123)');
+      console.log('   âœ… Admin user created (email: admin@lnmiit.ac.in, password: admin123)');
     } else {
-      console.log('   ⏭️  Admin user already exists');
+      console.log('   â­ï¸  Admin user already exists');
     }
 
-    console.log('\n🎉 Migration completed successfully!');
+    console.log('\nðŸŽ‰ Migration completed successfully!');
   } catch (error) {
-    console.error('❌ Migration failed:', error.message);
+    console.error('âŒ Migration failed:', error.message);
     throw error;
   } finally {
     process.exit(0);
@@ -102,3 +102,4 @@ async function migrate() {
 }
 
 migrate();
+

@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
 import './EvaluationSheet.css';
 
 const EvaluationSheet = () => {
   const location = useLocation();
-  const basePath = location.pathname.startsWith('/dofa-office') ? '/dofa-office' : '/dofa';
+  const basePath = location.pathname.startsWith('/Dofa-office') ? '/Dofa-office' : '/Dofa';
   const [rubrics, setRubrics] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [scores, setScores] = useState({});
@@ -253,9 +253,9 @@ const EvaluationSheet = () => {
                     {rerunning === sub.submission_id ? 'Running...' : 'Re-calculate'}
                   </button>
                 </td>
-                <td><div className="cell-content">{sub.designation || '—'}</div></td>
+                <td><div className="cell-content">{sub.designation || '-'}</div></td>
                 <td>{sub.regular_visiting || 'Regular'}</td>
-                <td>{sub.department || '—'}</td>
+                <td>{sub.department || '-'}</td>
                 
                 {sections.map(sec => 
                   sec.rubrics.map(rub => (
@@ -300,3 +300,4 @@ const EvaluationSheet = () => {
 };
 
 export default EvaluationSheet;
+

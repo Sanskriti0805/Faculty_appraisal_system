@@ -1,4 +1,4 @@
--- Faculty Appraisal System Database Schema
+﻿-- Faculty Appraisal System Database Schema
 
 CREATE DATABASE IF NOT EXISTS faculty_appraisal;
 USE faculty_appraisal;
@@ -263,7 +263,7 @@ CREATE INDEX idx_grants_faculty ON research_grants(faculty_id);
 CREATE INDEX idx_patents_faculty ON patents(faculty_id);
 
 -- Rubrics Table
-CREATE TABLE IF NOT EXISTS dofa_rubrics (
+CREATE TABLE IF NOT EXISTS Dofa_rubrics (
     id INT PRIMARY KEY AUTO_INCREMENT,
     section_name VARCHAR(255) NOT NULL,
     sub_section VARCHAR(1000),
@@ -278,3 +278,4 @@ CREATE TABLE IF NOT EXISTS dofa_rubrics (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+

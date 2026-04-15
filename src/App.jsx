@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react'
+﻿import React, { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -13,8 +13,8 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 
-// DOFA Registration (migrated from Admin)
-const DOFARegistration = lazy(() => import('./pages/DOFARegistration'))
+// Dofa Registration (migrated from Admin)
+const DofaRegistration = lazy(() => import('./pages/DofaRegistration'))
 
 // HOD
 const HODDashboard = lazy(() => import('./pages/HODDashboard'))
@@ -47,10 +47,10 @@ const DynamicFormSection = lazy(() => import('./pages/DynamicFormSection'))
 const MySubmissionView = lazy(() => import('./pages/MySubmissionView'))
 const HelpCenter = lazy(() => import('./pages/HelpCenter'))
 
-// DOFA pages
-const DOFADashboard = lazy(() => import('./pages/DOFADashboard'))
-const DOFAReview = lazy(() => import('./pages/DOFAReview'))
-const DOFAOfficeDashboard = lazy(() => import('./pages/DOFAOfficeDashboard'))
+// Dofa pages
+const DofaDashboard = lazy(() => import('./pages/DofaDashboard'))
+const DofaReview = lazy(() => import('./pages/DofaReview'))
+const DofaOfficeDashboard = lazy(() => import('./pages/DofaOfficeDashboard'))
 const RubricsManagement = lazy(() => import('./pages/RubricsManagement'))
 const EvaluationSheet = lazy(() => import('./pages/EvaluationSheet'))
 const EvaluationSheet2 = lazy(() => import('./pages/EvaluationSheet2'))
@@ -82,12 +82,12 @@ function App() {
         <AppDialogHost />
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            {/* ── Public Routes ── */}
+            {/* -- Public Routes -- */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-            {/* ── Onboarding (first-login profile completion) ── */}
+            {/* -- Onboarding (first-login profile completion) -- */}
             <Route path="/onboarding" element={
               <ProtectedRoute>
                 <Onboarding />
@@ -96,14 +96,14 @@ function App() {
 
 
 
-            {/* ── HOD Routes ── */}
+            {/* -- HOD Routes -- */}
             <Route path="/hod/dashboard" element={
               <ProtectedRoute allowedRoles={['hod']}>
                 <HODDashboard />
               </ProtectedRoute>
             } />
 
-            {/* ── Faculty Routes (with Layout) ── */}
+            {/* -- Faculty Routes (with Layout) -- */}
             <Route path="/" element={
               <ProtectedRoute allowedRoles={['faculty']}>
                 <SubmissionProvider>
@@ -139,49 +139,49 @@ function App() {
               <Route path="help" element={<HelpCenter />} />
             </Route>
 
-            {/* ── DOFA Routes ── */}
-            <Route path="/dofa" element={
-              <ProtectedRoute allowedRoles={['dofa']}>
+            {/* -- Dofa Routes -- */}
+            <Route path="/Dofa" element={
+              <ProtectedRoute allowedRoles={['Dofa']}>
                 <Layout />
               </ProtectedRoute>
             }>
-              <Route index element={<DOFADashboard />} />
-              <Route path="dashboard" element={<DOFADashboard />} />
+              <Route index element={<DofaDashboard />} />
+              <Route path="dashboard" element={<DofaDashboard />} />
               <Route path="rubrics" element={<RubricsManagement />} />
-              <Route path="review/:id" element={<DOFAReview />} />
+              <Route path="review/:id" element={<DofaReview />} />
               <Route path="sheet1" element={<EvaluationSheet />} />
               <Route path="evaluation" element={<EvaluationSheet />} />
               <Route path="sheet2" element={<EvaluationSheet2 />} />
               <Route path="sheet3" element={<EvaluationSheet3 />} />
-              <Route path="registration" element={<DOFARegistration />} />
-              <Route path="manage-users" element={<DOFARegistration />} />
+              <Route path="registration" element={<DofaRegistration />} />
+              <Route path="manage-users" element={<DofaRegistration />} />
               <Route path="form-release" element={<FormRelease />} />
               <Route path="help" element={<HelpCenter />} />
             </Route>
 
-            {/* ── DOFA Office Routes ── */}
-            <Route path="/dofa-office" element={
-              <ProtectedRoute allowedRoles={['dofa_office']}>
+            {/* -- Dofa Office Routes -- */}
+            <Route path="/Dofa-office" element={
+              <ProtectedRoute allowedRoles={['Dofa_office']}>
                 <Layout />
               </ProtectedRoute>
             }>
-              <Route index element={<DOFAOfficeDashboard />} />
-              <Route path="dashboard" element={<DOFAOfficeDashboard />} />
+              <Route index element={<DofaOfficeDashboard />} />
+              <Route path="dashboard" element={<DofaOfficeDashboard />} />
               <Route path="rubrics" element={<RubricsManagement />} />
               <Route path="sheet1" element={<EvaluationSheet />} />
               <Route path="evaluation" element={<EvaluationSheet />} />
               <Route path="sheet2" element={<EvaluationSheet2 />} />
               <Route path="sheet3" element={<EvaluationSheet3 />} />
               <Route path="form-builder" element={<FormBuilder />} />
-              <Route path="registration" element={<DOFARegistration />} />
-              <Route path="manage-users" element={<DOFARegistration />} />
+              <Route path="registration" element={<DofaRegistration />} />
+              <Route path="manage-users" element={<DofaRegistration />} />
               <Route path="form-release" element={<FormRelease />} />
-              <Route path="review/:id" element={<DOFAReview />} />
+              <Route path="review/:id" element={<DofaReview />} />
               <Route path="help" element={<HelpCenter />} />
               <Route path="help" element={<HelpCenter />} />
             </Route>
 
-            {/* ── Catch-all → login ── */}
+            {/* -- Catch-all -> login -- */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Suspense>
@@ -191,3 +191,4 @@ function App() {
 }
 
 export default App
+

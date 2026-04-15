@@ -1,4 +1,4 @@
-// Simple authentication and role management service
+﻿// Simple authentication and role management service
 // In production, this should be replaced with proper JWT-based authentication
 
 class AuthService {
@@ -29,14 +29,14 @@ class AuthService {
     return this.getRole() === 'faculty';
   }
 
-  // Check if user is DOFA
-  isDOFA() {
-    return this.getRole() === 'dofa';
+  // Check if user is Dofa
+  isDofa() {
+    return this.getRole() === 'Dofa';
   }
 
-  // Check if user is DOFA Office
-  isDOFAOffice() {
-    return this.getRole() === 'dofa_office';
+  // Check if user is Dofa Office
+  isDofaOffice() {
+    return this.getRole() === 'Dofa_office';
   }
 
   // Get dashboard route based on role
@@ -45,10 +45,10 @@ class AuthService {
     switch (role) {
       case 'faculty':
         return '/';
-      case 'dofa':
-        return '/dofa/dashboard';
-      case 'dofa_office':
-        return '/dofa-office/dashboard';
+      case 'Dofa':
+        return '/Dofa/dashboard';
+      case 'Dofa_office':
+        return '/Dofa-office/dashboard';
       default:
         return '/';
     }
@@ -70,18 +70,18 @@ class AuthService {
         role: 'faculty',
         department: 'Computer Science'
       },
-      dofa: {
+      Dofa: {
         id: 2,
-        name: 'DOFA Admin',
-        email: 'dofa@university.edu',
-        role: 'dofa',
+        name: 'Dofa Admin',
+        email: 'Dofa@university.edu',
+        role: 'Dofa',
         department: 'Administration'
       },
-      dofa_office: {
+      Dofa_office: {
         id: 3,
-        name: 'DOFA Office Admin',
-        email: 'dofa.office@university.edu',
-        role: 'dofa_office',
+        name: 'Dofa Office Admin',
+        email: 'Dofa.office@university.edu',
+        role: 'Dofa_office',
         department: 'Administration'
       }
     };
@@ -96,3 +96,4 @@ class AuthService {
 }
 
 export default new AuthService();
+

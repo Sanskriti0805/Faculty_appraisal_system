@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
 import './EvaluationSheet2.css';
 
 const EvaluationSheet2 = () => {
   const location = useLocation();
-  const basePath = location.pathname.startsWith('/dofa-office') ? '/dofa-office' : '/dofa';
+  const basePath = location.pathname.startsWith('/Dofa-office') ? '/Dofa-office' : '/Dofa';
   const [data, setData] = useState([]);
   const [gradingParams, setGradingParams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,7 +121,7 @@ const EvaluationSheet2 = () => {
     }
   };
 
-  if (loading) return <div className="eval2-loading">Loading Sheet 2…</div>;
+  if (loading) return <div className="eval2-loading">Loading Sheet 2...</div>;
 
   return (
     <div className="eval2-container">
@@ -150,7 +150,7 @@ const EvaluationSheet2 = () => {
         ].map(({ label, value }) => (
           <div className="stat-item" key={label}>
             <span className="stat-label">{label}</span>
-            <span className="stat-value">{value || '—'}</span>
+            <span className="stat-value">{value || '-'}</span>
           </div>
         ))}
       </div>
@@ -222,7 +222,7 @@ const EvaluationSheet2 = () => {
                     className="eval2-textarea"
                     value={item.research_remarks || ''}
                     onChange={(e) => handleRemarkChange(item.submission_id, 'research_remarks', e.target.value)}
-                    placeholder="Research remarks…"
+                    placeholder="Research remarks..."
                   />
                 </td>
                 <td>
@@ -230,7 +230,7 @@ const EvaluationSheet2 = () => {
                     className="eval2-textarea"
                     value={item.teaching_feedback || ''}
                     onChange={(e) => handleRemarkChange(item.submission_id, 'teaching_feedback', e.target.value)}
-                    placeholder="Teaching feedback…"
+                    placeholder="Teaching feedback..."
                   />
                 </td>
                 <td>
@@ -238,10 +238,10 @@ const EvaluationSheet2 = () => {
                     className="eval2-textarea"
                     value={item.overall_feedback || ''}
                     onChange={(e) => handleRemarkChange(item.submission_id, 'overall_feedback', e.target.value)}
-                    placeholder="Overall feedback…"
+                    placeholder="Overall feedback..."
                   />
                 </td>
-                <td className="eval2-grade-cell">{item.final_grade || '—'}</td>
+                <td className="eval2-grade-cell">{item.final_grade || '-'}</td>
               </tr>
             ))}
           </tbody>

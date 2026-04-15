@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, FileText, Send, CheckCircle, Clock,
@@ -89,7 +89,7 @@ const MySubmissionView = () => {
 
       await fetchEditRequests(submission.id);
 
-      // ── Fetch dynamic sections list for edit-request options ─────────────────
+      // -- Fetch dynamic sections list for edit-request options -----------------
       try {
         const schemaRes = await fetch(`${API}/form-builder/schema/flat`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -160,13 +160,13 @@ const MySubmissionView = () => {
       });
       const data = await res.json();
       if (data.success) {
-        window.appToast('✅ Your edit request has been submitted! DOFA has been notified.');
+        window.appToast('âœ… Your edit request has been submitted! Dofa has been notified.');
         setSelectedSections([]);
         setRequestMessage('');
         setEditPanelOpen(false);
         await fetchEditRequests(submissionData.submission.id);
       } else {
-        window.appToast('❌ ' + (data.message || 'Failed to submit edit request.'));
+        window.appToast('âŒ ' + (data.message || 'Failed to submit edit request.'));
       }
     } catch (err) {
       window.appToast('Error submitting request: ' + err.message);
@@ -182,7 +182,7 @@ const MySubmissionView = () => {
     submissionData?.submission?.status === 'submitted' &&
     !isPastDeadline && !pendingRequest;
 
-  /* ── PDF download ── */
+  /* -- PDF download -- */
   const handleDownloadPdf = async () => {
     const subId = submissionData?.submission?.id;
     if (!subId) return;
@@ -206,9 +206,9 @@ const MySubmissionView = () => {
     }
   };
 
-  /* ── Helpers ── */
+  /* Helpers */
   const formatDate = (d) =>
-    d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+    d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '-';
 
   const uploadBase = `http://${window.location.hostname}:5000/uploads/`;
 
@@ -229,7 +229,7 @@ const MySubmissionView = () => {
 
   const formatCellValue = (value, key) => {
     if (value === null || value === undefined || value === '')
-      return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>;
+      return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>;
 
     if (key && key.includes('evidence_file') && typeof value === 'string') {
       return (
@@ -245,7 +245,7 @@ const MySubmissionView = () => {
     }
 
     if (Array.isArray(value)) {
-      if (value.length === 0) return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>;
+      if (value.length === 0) return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>;
       return value.map(e => typeof e === 'object' ? JSON.stringify(e) : String(e)).join(', ');
     }
 
@@ -338,12 +338,12 @@ const MySubmissionView = () => {
     ));
   };
 
-  /* ── States ── */
+  /* States */
   if (loading) return (
     <div className="my-submission-view">
       <div className="msv-loading">
         <div className="msv-spinner" />
-        <p>Loading your submission…</p>
+        <p>Loading your submission...</p>
       </div>
     </div>
   );
@@ -394,7 +394,7 @@ const MySubmissionView = () => {
   return (
     <div className="my-submission-view">
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="msv-header">
         <button className="msv-back-btn" onClick={() => navigate('/')}>
           <ArrowLeft size={14} /> Back
@@ -414,13 +414,13 @@ const MySubmissionView = () => {
             title="Download full appraisal as PDF"
           >
             {pdfDownloading
-              ? <><Loader size={14} className="msv-pdf-spin" /> Generating PDF…</>
+              ? <><Loader size={14} className="msv-pdf-spin" /> Generating PDF...</>
               : <><Download size={14} /> Download PDF</>}
           </button>
         </div>
       </div>
 
-      {/* ── Status Bar ── */}
+      {/* Status Bar */}
       <div className={`msv-status-bar status-${submission.status}`}>
         <div className="msv-status-icon">
           {submission.status === 'submitted' || submission.status === 'approved'
@@ -432,21 +432,21 @@ const MySubmissionView = () => {
         <div className="msv-status-info">
           <h3>
             {submission.status === 'submitted'    && 'Form Successfully Submitted'}
-            {submission.status === 'approved'     && 'Form Approved by DOFA'}
+            {submission.status === 'approved'     && 'Form Approved by Dofa'}
             {submission.status === 'sent_back'    && 'Edit Access Granted'}
-            {submission.status === 'draft'        && 'Draft — Not Yet Submitted'}
+            {submission.status === 'draft'        && 'Draft - Not Yet Submitted'}
             {submission.status === 'under_review' && 'Under Review'}
           </h3>
           <p>
             Submitted on <strong>{formatDate(submission.submitted_at)}</strong>
-            {isPastDeadline && ' · Submission deadline has passed. No further edits allowed.'}
+            {isPastDeadline && ' | Submission deadline has passed. No further edits allowed.'}
             {!isPastDeadline && sessionInfo?.data?.deadline &&
-              ` · Deadline: ${formatDate(sessionInfo.data.deadline)}`}
+              ` | Deadline: ${formatDate(sessionInfo.data.deadline)}`}
           </p>
         </div>
       </div>
 
-      {/* ── Edit Request Panel ── */}
+      {/* Edit Request Panel */}
       {(submission.status === 'submitted' || pendingRequest || approvedRequest) && (
         <div className="msv-edit-panel">
           <div className="msv-edit-panel-header" onClick={() => setEditPanelOpen(o => !o)}>
@@ -454,7 +454,7 @@ const MySubmissionView = () => {
               <div className="msv-panel-icon"><Send size={16} /></div>
               <div>
                 <h3>Request Section Edits</h3>
-                <p>Ask DOFA to unlock specific sections for editing</p>
+                <p>Ask Dofa to unlock specific sections for editing</p>
               </div>
             </div>
             {editPanelOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -520,7 +520,7 @@ const MySubmissionView = () => {
                     <textarea
                       value={requestMessage}
                       onChange={e => setRequestMessage(e.target.value)}
-                      placeholder="Briefly explain why you need to make changes…"
+                      placeholder="Briefly explain why you need to make changes..."
                       rows={3}
                     />
                   </div>
@@ -541,7 +541,7 @@ const MySubmissionView = () => {
                           animation: 'msvSpin 0.7s linear infinite',
                           flexShrink: 0
                         }} />
-                        Submitting…
+                        Submitting...
                       </>
                     ) : (
                       <>
@@ -565,10 +565,10 @@ const MySubmissionView = () => {
                       <div className="msv-request-item-content">
                         <p><strong>Requested:</strong> {(req.requested_sections || []).map(resolveSectionLabel).join(', ')}</p>
                         {req.approved_sections && <p><strong>Approved:</strong> {req.approved_sections.map(resolveSectionLabel).join(', ')}</p>}
-                        {req.dofa_note && <p><strong>Note:</strong> {req.dofa_note}</p>}
+                        {req.Dofa_note && <p><strong>Note:</strong> {req.Dofa_note}</p>}
                         <p style={{ color: '#94a3b8', fontSize: '0.72rem' }}>
                           {formatDate(req.created_at)}
-                          {req.reviewed_at && ` · Reviewed: ${formatDate(req.reviewed_at)}`}
+                          {req.reviewed_at && ` | Reviewed: ${formatDate(req.reviewed_at)}`}
                         </p>
                       </div>
                     </div>
@@ -580,7 +580,7 @@ const MySubmissionView = () => {
         </div>
       )}
 
-      {/* ── Tabs ── */}
+      {/* Tabs */}
       <div className="msv-tabs">
         {tabs.map(t => (
           <button
@@ -603,7 +603,7 @@ const MySubmissionView = () => {
         ))}
       </div>
 
-      {/* ── Content ── */}
+      {/* Content */}
       <div className="msv-content-card">
         <div className="msv-section-card">
 
@@ -666,17 +666,17 @@ const MySubmissionView = () => {
 
           {activeTab === 'partb' && (
             <>
-              <h3 className="msv-section-title"><CheckCircle size={17} /> Part B — Goal Setting</h3>
+              <h3 className="msv-section-title"><CheckCircle size={17} /> Part B - Goal Setting</h3>
               {renderGoalsBySemester()}
             </>
           )}
 
-          {/* ── Dynamic / Custom Sections ── */}
+          {/* Dynamic / Custom Sections */}
           {activeTab === 'dynamic' && (
             <>
               <h3 className="msv-section-title"><Layers size={17} /> Custom Sections</h3>
               <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.5rem' }}>
-                These sections were added by the DOFA office specifically for your college's appraisal form.
+                These sections were added by the Dofa office specifically for your college's appraisal form.
               </p>
               {dynamicData.map(({ section, fields = [], respMap = {} }) => (
                 <div key={section.id} className="msv-data-section" style={{ marginBottom: '2rem' }}>
@@ -691,7 +691,7 @@ const MySubmissionView = () => {
                       ? respMap[field.id]
                       : field.value;
 
-                    // Table field — render as a proper table
+                    // Table field: render as a proper table
                     if (field.field_type === 'table' && Array.isArray(value) && value.length > 0) {
                       const cols = field.config?.columns || [];
                       return (
@@ -705,7 +705,7 @@ const MySubmissionView = () => {
                               <tbody>
                                 {value.map((row, ri) => (
                                   <tr key={ri}>
-                                    {cols.map(c => <td key={c.key}>{row[c.key] ?? '—'}</td>)}
+                                    {cols.map(c => <td key={c.key}>{row[c.key] ?? '-'}</td>)}
                                   </tr>
                                 ))}
                               </tbody>
@@ -720,7 +720,7 @@ const MySubmissionView = () => {
                       <div key={field.id} className="msv-info-item" style={{ marginBottom: '0.75rem' }}>
                         <label>{field.label}</label>
                         <p style={{ whiteSpace: 'pre-wrap' }}>
-                          {Array.isArray(value) ? value.join(', ') : String(value ?? '—')}
+                          {Array.isArray(value) ? value.join(', ') : String(value ?? '-')}
                         </p>
                       </div>
                     );
@@ -733,13 +733,13 @@ const MySubmissionView = () => {
         </div>
       </div>
 
-      {/* ── DOFA Comments ── */}
+      {/* Dofa Comments */}
       {comments && comments.length > 0 && (
         <div className="msv-content-card" style={{ marginTop: '1.25rem' }}>
           <div className="msv-section-card">
             <h3 className="msv-section-title">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              Comments from DOFA
+              Comments from Dofa
             </h3>
             {comments.length > 0 && (
               <div className="msv-comment-view-tabs" role="tablist" aria-label="Comment status filters">
@@ -758,7 +758,7 @@ const MySubmissionView = () => {
                 .map((c, i) => (
                   <div key={`pending-${i}-${c.id || ''}`} className="msv-request-item" style={{ marginBottom: '0.5rem' }}>
                     <div className="msv-request-item-content">
-                      <p><strong>{c.reviewer_name || 'DOFA Office'}</strong> · {formatDate(c.created_at)}</p>
+                      <p><strong>{c.reviewer_name || 'Dofa Office'}</strong> | {formatDate(c.created_at)}</p>
                       <div className="msv-comment-section-row">
                         <span className="msv-comment-section-badge">{c.section_name || 'General'}</span>
                       </div>
@@ -772,7 +772,7 @@ const MySubmissionView = () => {
                 .map((c, i) => (
                   <div key={`resolved-${i}-${c.id || ''}`} className="msv-request-item" style={{ marginBottom: '0.5rem' }}>
                     <div className="msv-request-item-content">
-                      <p><strong>{c.reviewer_name || 'DOFA Office'}</strong> · {formatDate(c.created_at)}</p>
+                      <p><strong>{c.reviewer_name || 'Dofa Office'}</strong> | {formatDate(c.created_at)}</p>
                       <div className="msv-comment-section-row">
                         <span className="msv-comment-section-badge">{c.section_name || 'General'}</span>
                         <span className="msv-comment-resolved-badge">

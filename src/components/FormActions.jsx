@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
 import { FORM_SEQUENCE, getNextPath, getPreviousPath } from '../constants/navigation';
@@ -94,7 +94,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
   React.useEffect(() => {
     const isFaculty = user?.role === 'faculty';
-    const isDofaPath = currentPath?.startsWith('/dofa');
+    const isDofaPath = currentPath?.startsWith('/Dofa');
     if (!isFaculty || isDofaPath || !token) return;
 
     const loadAccess = async () => {
@@ -273,7 +273,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
             }}
             aria-label="Dismiss validation message"
           >
-            ×
+            x
           </button>
         </div>
       )}
@@ -358,3 +358,4 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 };
 
 export default FormActions;
+

@@ -1,4 +1,4 @@
-INSERT INTO dofa_rubrics (section_name, sub_section, max_marks) VALUES 
+﻿INSERT INTO Dofa_rubrics (section_name, sub_section, max_marks) VALUES 
 ('1. Teaching Feedback', 'If no. of students is greater than or equal to 50: Feedback>=4', 5),
 ('1. Teaching Feedback', 'If no. of students is greater than or equal to 50: 3.5<=Feedback<4', 4),
 ('1. Teaching Feedback', 'If no. of students is greater than or equal to 50: 3<=Feedback<3.5', 3),
@@ -87,3 +87,4 @@ INSERT INTO dofa_rubrics (section_name, sub_section, max_marks) VALUES
 ('13. Other Institutional Contributions', 'Other Significant: Scholarly articles in reputed newspapers/magazines (max 9 points)', 3),
 
 ('14. Other activities', 'Other activities (up to a maximum of 10 points) [1-3 points]', 3);
+

@@ -1,4 +1,4 @@
-const db = require('../config/database');
+﻿const db = require('../config/database');
 const { autoAllocateMarks } = require('../services/rubricMapper');
 
 const normalizeScoringType = (value) => {
@@ -69,7 +69,7 @@ exports.recalculateScores = async (req, res) => {
 // GET all rubrics
 exports.getAllRubrics = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM dofa_rubrics ORDER BY id ASC');
+        const [rows] = await db.query('SELECT * FROM Dofa_rubrics ORDER BY id ASC');
         const data = rows.map((row) => ({
             ...row,
             rule_config: parseRuleConfig(row.rule_config)
@@ -112,7 +112,7 @@ exports.createRubric = async (req, res) => {
         }
 
         const query = `
-            INSERT INTO dofa_rubrics 
+            INSERT INTO Dofa_rubrics 
               (section_name, sub_section, max_marks, weightage, academic_year, scoring_type, per_unit_marks, dynamic_section_id, data_source, rule_config)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
@@ -182,7 +182,7 @@ exports.updateRubric = async (req, res) => {
         }
 
         const query = `
-            UPDATE dofa_rubrics 
+            UPDATE Dofa_rubrics 
             SET section_name = ?, sub_section = ?, max_marks = ?, weightage = ?, academic_year = ?,
                 scoring_type = ?, per_unit_marks = ?, dynamic_section_id = ?, data_source = ?, rule_config = ?
             WHERE id = ?
@@ -215,7 +215,7 @@ exports.deleteRubric = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const query = 'DELETE FROM dofa_rubrics WHERE id = ?';
+        const query = 'DELETE FROM Dofa_rubrics WHERE id = ?';
         const [result] = await db.query(query, [id]);
 
         if (result.affectedRows === 0) {
@@ -231,3 +231,4 @@ exports.deleteRubric = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error', error: error.message });
     }
 };
+

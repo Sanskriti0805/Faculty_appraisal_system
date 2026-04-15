@@ -1,7 +1,7 @@
-/**
+﻿/**
  * Seed Test Accounts
- * Creates one user per role: faculty, hod, dofa, dofa_office, admin
- * Safe to re-run — upserts existing accounts
+ * Creates one user per role: faculty, hod, Dofa, Dofa_office, admin
+ * Safe to re-run - upserts existing accounts
  */
 const bcrypt = require('bcryptjs');
 const mysql = require('mysql2/promise');
@@ -33,25 +33,25 @@ const ACCOUNTS = [
     employment_type: 'fixed',
   },
   {
-    name: 'Test DOFA',
-    email: 'dofa@test.com',
+    name: 'Test Dofa',
+    email: 'Dofa@test.com',
     password: 'Dofa@123',
-    role: 'dofa',
+    role: 'Dofa',
     department: 'Administration',
     designation: 'Dean of Faculty Affairs',
     salutation: 'Prof',
-    employee_id: 'DOFA01',
+    employee_id: 'Dofa01',
     employment_type: 'fixed',
   },
   {
-    name: 'Test DOFA Office',
-    email: 'dofaoffice@test.com',
+    name: 'Test Dofa Office',
+    email: 'Dofaoffice@test.com',
     password: 'DofaOffice@123',
-    role: 'dofa_office',
+    role: 'Dofa_office',
     department: 'Administration',
-    designation: 'DOFA Office Staff',
+    designation: 'Dofa Office Staff',
     salutation: 'Mr',
-    employee_id: 'DOFAOFF01',
+    employee_id: 'DofaOFF01',
     employment_type: 'fixed',
   },
   {
@@ -96,7 +96,7 @@ async function seed() {
          acc.salutation, acc.employee_id, acc.employment_type,
          acc.email, acc.role]
       );
-      console.log(`  ✔ Updated  [${acc.role.padEnd(12)}]  ${acc.email}`);
+      console.log(`  âœ” Updated  [${acc.role.padEnd(12)}]  ${acc.email}`);
     } else {
       await conn.query(
         `INSERT INTO users
@@ -106,22 +106,22 @@ async function seed() {
          acc.department, acc.designation, acc.salutation,
          acc.employee_id, acc.employment_type]
       );
-      console.log(`  ✔ Created  [${acc.role.padEnd(12)}]  ${acc.email}`);
+      console.log(`  âœ” Created  [${acc.role.padEnd(12)}]  ${acc.email}`);
     }
   }
 
   await conn.end();
 
-  console.log('\n╔══════════════╦═══════════════════════╦══════════════════╗');
-  console.log('║ Role         ║ Email                 ║ Password         ║');
-  console.log('╠══════════════╬═══════════════════════╬══════════════════╣');
+  console.log('\nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•¦â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•¦â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—');
+  console.log('â•‘ Role         â•‘ Email                 â•‘ Password         â•‘');
+  console.log('â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•¬â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•¬â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£');
   for (const acc of ACCOUNTS) {
     const role = acc.role.padEnd(12);
     const email = acc.email.padEnd(21);
     const pass = acc.password.padEnd(16);
-    console.log(`║ ${role} ║ ${email} ║ ${pass} ║`);
+    console.log(`â•‘ ${role} â•‘ ${email} â•‘ ${pass} â•‘`);
   }
-  console.log('╚══════════════╩═══════════════════════╩══════════════════╝');
+  console.log('â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•©â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•©â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
   console.log('\nAll accounts ready! Login at http://localhost:5173\n');
 }
 
@@ -129,3 +129,4 @@ seed().catch(e => {
   console.error('Seed failed:', e.message);
   process.exit(1);
 });
+

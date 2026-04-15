@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, CheckCircle, XCircle, MessageSquare, User, BookOpen,
   FileText, Award, Briefcase, ExternalLink, Lightbulb, ChevronDown
 } from 'lucide-react';
-import './DOFAReview.css';
+import './DofaReview.css';
 import { showConfirm } from '../utils/appDialogs';
 
 // Import Mirror Mode components
@@ -49,7 +49,7 @@ const SECTION_KEY_TO_LABEL = COMMENT_SECTIONS.reduce((acc, item) => {
   return acc;
 }, {});
 
-/* ── Collapsible Section ─────────────────────────────────── */
+/* -- Collapsible Section ----------------------------------- */
 const CollapsibleSection = ({ title, count, children, defaultOpen = false, icon }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -74,7 +74,7 @@ const CollapsibleSection = ({ title, count, children, defaultOpen = false, icon 
   );
 };
 
-/* ── Publication Detail Card ─────────────────────────────── */
+/* -- Publication Detail Card ------------------------------- */
 const PubDetailCard = ({ pub }) => {
   const field = (label, value, fullWidth = false, badge = null) => {
     const isEmpty = value === null || value === undefined || value === '';
@@ -82,9 +82,9 @@ const PubDetailCard = ({ pub }) => {
       <div className={`pub-detail-field${fullWidth ? ' full-width' : ''}`}>
         <label>{label}</label>
         {badge ? (
-          <span><span className={`pub-badge ${badge}`}>{isEmpty ? '—' : String(value)}</span></span>
+          <span><span className={`pub-badge ${badge}`}>{isEmpty ? '-' : String(value)}</span></span>
         ) : (
-          <span className={isEmpty ? 'empty' : ''}>{isEmpty ? '—' : String(value)}</span>
+          <span className={isEmpty ? 'empty' : ''}>{isEmpty ? '-' : String(value)}</span>
         )}
       </div>
     );
@@ -145,13 +145,13 @@ const PubDetailCard = ({ pub }) => {
   );
 };
 
-/* ── Main Component ──────────────────────────────────────── */
-const DOFAReview = () => {
+/* -- Main Component ---------------------------------------- */
+const DofaReview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const isOfficeRoute = location.pathname.startsWith('/dofa-office');
-  const backPath = isOfficeRoute ? '/dofa-office/dashboard' : '/dofa/dashboard';
+  const isOfficeRoute = location.pathname.startsWith('/Dofa-office');
+  const backPath = isOfficeRoute ? '/Dofa-office/dashboard' : '/Dofa/dashboard';
 
   const [submissionData, setSubmissionData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -297,7 +297,7 @@ const DOFAReview = () => {
           body: JSON.stringify({
             submission_id: id,
             reviewer_id: 1,
-            reviewer_role: 'dofa',
+            reviewer_role: 'Dofa',
             section_name: sectionName,
             section_key: sectionKey,
             comment
@@ -343,7 +343,7 @@ const DOFAReview = () => {
         body: JSON.stringify({
           submission_id: id,
           reviewer_id: 1,
-          reviewer_role: 'dofa',
+          reviewer_role: 'Dofa',
           section_name: sectionName,
           section_key: sectionKey,
           comment
@@ -358,8 +358,8 @@ const DOFAReview = () => {
     }
   };
 
-  if (loading) return <div className="dofa-review"><div className="loading-state">Loading submission…</div></div>;
-  if (!submissionData) return <div className="dofa-review"><div className="empty-state">Submission not found</div></div>;
+  if (loading) return <div className="Dofa-review"><div className="loading-state">Loading submission...</div></div>;
+  if (!submissionData) return <div className="Dofa-review"><div className="empty-state">Submission not found</div></div>;
 
   const displayData = selectedVersionSnapshot || submissionData;
 
@@ -384,7 +384,7 @@ const DOFAReview = () => {
   const pendingComments = comments.filter((c) => Number(c.is_resolved) !== 1);
   const resolvedComments = comments.filter((c) => Number(c.is_resolved) === 1);
 
-  /* ── Helpers ── */
+  /* -- Helpers -- */
   const renderFileLink = (filename) => {
     if (!filename) return null;
     const fileUrl = `${API.replace('/api', '')}/uploads/${filename}`;
@@ -398,9 +398,9 @@ const DOFAReview = () => {
   const isEmptyValue = (v) => v === null || v === undefined || v === '';
 
   const renderValue = (value, key) => {
-    if (isEmptyValue(value)) return <span className="legacy-empty-inline">—</span>;
+    if (isEmptyValue(value)) return <span className="legacy-empty-inline">-</span>;
     if (Array.isArray(value)) {
-      if (value.length === 0) return <span className="legacy-empty-inline">—</span>;
+      if (value.length === 0) return <span className="legacy-empty-inline">-</span>;
       return (
         <ul className="legacy-list">
           {value.map((entry, i) => (
@@ -411,7 +411,7 @@ const DOFAReview = () => {
     }
     if (typeof value === 'object') return <pre className="legacy-pre">{JSON.stringify(value, null, 2)}</pre>;
     if (typeof value === 'string' && /file|manual|attachment/i.test(key || ''))
-      return renderFileLink(value) || <span className="legacy-empty-inline">—</span>;
+      return renderFileLink(value) || <span className="legacy-empty-inline">-</span>;
     if (typeof value === 'string' && /^https?:\/\//i.test(value))
       return <a href={value} target="_blank" rel="noopener noreferrer" className="evidence-link"><ExternalLink size={12} /><span>Open</span></a>;
     return <p className="legacy-text">{String(value)}</p>;
@@ -466,7 +466,7 @@ const DOFAReview = () => {
     return 'pending';
   };
 
-  /* ── Tab definitions ── */
+  /* -- Tab definitions -- */
   const tabs = [
     { id: 'faculty',     label: 'Faculty',      icon: <User size={14} /> },
     { id: 'teaching',    label: 'Teaching',      icon: <BookOpen size={14} />, count: (courses?.length || 0) + (newCourses?.length || 0) },
@@ -483,8 +483,8 @@ const DOFAReview = () => {
   ];
 
   return (
-    <div className="dofa-review">
-      {/* ── Header ── */}
+    <div className="Dofa-review">
+      {/* -- Header -- */}
       <div className="review-header">
         <button className="back-btn" onClick={() => navigate(backPath)}>
           <ArrowLeft size={14} /> Back to Dashboard
@@ -505,7 +505,7 @@ const DOFAReview = () => {
         </div>
       </div>
 
-      {/* ── Tabs ── */}
+      {/* -- Tabs -- */}
       <div className="review-tabs">
         {tabs.map(tab => (
           <button
@@ -522,7 +522,7 @@ const DOFAReview = () => {
         ))}
       </div>
 
-      {/* ── Content ── */}
+      {/* -- Content -- */}
       <div className="review-content">
         <div className="content-main">
 
@@ -578,13 +578,13 @@ const DOFAReview = () => {
                       <tbody>
                         {newCourses.map((course, index) => (
                           <tr key={course.id || index}>
-                            <td className="cell-title">{course.course_name || '—'}</td>
-                            <td>{course.course_code || '—'}</td>
-                            <td>{course.level_type || '—'}</td>
-                            <td>{course.program || '—'}</td>
-                            <td>{course.level || '—'}</td>
-                            <td>{course.remarks || '—'}</td>
-                            <td className="cell-center">{renderFileLink(course.cif_file) || '—'}</td>
+                            <td className="cell-title">{course.course_name || '-'}</td>
+                            <td>{course.course_code || '-'}</td>
+                            <td>{course.level_type || '-'}</td>
+                            <td>{course.program || '-'}</td>
+                            <td>{course.level || '-'}</td>
+                            <td>{course.remarks || '-'}</td>
+                            <td className="cell-center">{renderFileLink(course.cif_file) || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -642,7 +642,7 @@ const DOFAReview = () => {
                           <div>
                             <p className="publication-card-kicker">
                               {pub?.publication_type || 'Publication'}
-                              {pub?.sub_type ? ` · ${pub.sub_type}` : ''}
+                              {pub?.sub_type ? `  |  ${pub.sub_type}` : ''}
                             </p>
                             <h4 className="publication-card-title">
                               {pub?.title || 'Untitled publication'}
@@ -697,7 +697,7 @@ const DOFAReview = () => {
                           <tr key={i}>
                             <td className="cell-title">{pr.journal_name}</td>
                             <td className="cell-center">{pr.count}</td>
-                            <td className="cell-center">{renderFileLink(pr.evidence_file) || '—'}</td>
+                            <td className="cell-center">{renderFileLink(pr.evidence_file) || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -733,9 +733,9 @@ const DOFAReview = () => {
                           <tr key={i}>
                             <td className="cell-title">{s.conference_name}</td>
                             <td className="cell-title">{s.session_title}</td>
-                            <td>{s.role || '—'}</td>
-                            <td>{s.location || '—'}</td>
-                            <td className="cell-center">{renderFileLink(s.evidence_file) || '—'}</td>
+                            <td>{s.role || '-'}</td>
+                            <td>{s.location || '-'}</td>
+                            <td className="cell-center">{renderFileLink(s.evidence_file) || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -764,9 +764,9 @@ const DOFAReview = () => {
                           <tr key={i}>
                             <td className="cell-title">{k.event_name}</td>
                             <td className="cell-title">{k.title}</td>
-                            <td>{k.event_type || '—'}</td>
-                            <td>{k.audience_type || '—'}</td>
-                            <td className="cell-center">{renderFileLink(k.evidence_file) || '—'}</td>
+                            <td>{k.event_type || '-'}</td>
+                            <td>{k.audience_type || '-'}</td>
+                            <td className="cell-center">{renderFileLink(k.evidence_file) || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -838,9 +838,9 @@ const DOFAReview = () => {
                         {techTransfer.map((tt, i) => (
                           <tr key={i}>
                             <td className="cell-title">{tt.title}</td>
-                            <td>{tt.agency || '—'}</td>
-                            <td>{tt.date ? new Date(tt.date).toLocaleDateString() : '—'}</td>
-                            <td className="cell-center">{renderFileLink(tt.evidence_file) || '—'}</td>
+                            <td>{tt.agency || '-'}</td>
+                            <td>{tt.date ? new Date(tt.date).toLocaleDateString() : '-'}</td>
+                            <td className="cell-center">{renderFileLink(tt.evidence_file) || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -924,7 +924,7 @@ const DOFAReview = () => {
           {/* Part B */}
           {activeTab === 'partb' && (
             <div className="section-card">
-              <h3 className="section-title">Part B — Goals</h3>
+              <h3 className="section-title">Part B - Goals</h3>
               <div className="mirror-component-wrapper">
                 <PartB initialData={goals} readOnly={true} />
               </div>
@@ -967,7 +967,7 @@ const DOFAReview = () => {
           )}
         </div>
 
-        {/* ── Sidebar ── */}
+        {/* -- Sidebar -- */}
         <div className="content-sidebar">
           {/* Actions */}
           <div className="actions-card">
@@ -990,7 +990,7 @@ const DOFAReview = () => {
               </select>
               <textarea
                 className="comment-textarea"
-                placeholder="Enter your review comments…"
+                placeholder="Enter your review comments..."
                 value={comment}
                 onChange={e => setComment(e.target.value)}
                 rows="4"
@@ -1115,4 +1115,4 @@ const DOFAReview = () => {
   );
 };
 
-export default DOFAReview;
+export default DofaReview;

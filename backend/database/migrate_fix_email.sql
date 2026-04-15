@@ -1,8 +1,8 @@
--- Migration: Fix email system
+﻿-- Migration: Fix email system
 -- Run this against the live database to add missing columns and fix the role enum
 
 -- 1. Fix role enum to include 'hod'
-ALTER TABLE users MODIFY COLUMN role ENUM('admin','faculty','hod','dofa','dofa_office') DEFAULT 'faculty';
+ALTER TABLE users MODIFY COLUMN role ENUM('admin','faculty','hod','Dofa','Dofa_office') DEFAULT 'faculty';
 
 -- 2. Add missing columns to users table (safe: IF NOT EXISTS)
 -- Note: MySQL 8.0.15+ supports ADD COLUMN IF NOT EXISTS via workarounds
@@ -54,3 +54,4 @@ CREATE TABLE IF NOT EXISTS departments (
 );
 
 SELECT 'Migration completed successfully!' AS result;
+

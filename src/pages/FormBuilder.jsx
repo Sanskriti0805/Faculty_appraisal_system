@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Trash2, GripVertical, Save, Layout,
@@ -29,7 +29,7 @@ import apiClient from '../services/api';
 import { showConfirm } from '../utils/appDialogs';
 import './FormBuilder.css';
 
-// ─── Sortable Field Card ──────────────────────────────────────────────────────
+// --- Sortable Field Card ------------------------------------------------------
 const SortableField = ({ field, onDelete, onUpdateLabel, onUpdateTableColumns }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
@@ -84,7 +84,7 @@ const SortableField = ({ field, onDelete, onUpdateLabel, onUpdateTableColumns })
             </div>
             <div className="table-preview">
               <table>
-                <thead><tr>{field.config?.columns?.map((col, i) => <th key={i}>{col.header || '—'}</th>)}</tr></thead>
+                <thead><tr>{field.config?.columns?.map((col, i) => <th key={i}>{col.header || '-'}</th>)}</tr></thead>
                 <tbody><tr>{field.config?.columns?.map((_, i) => <td key={i}>...</td>)}</tr></tbody>
               </table>
             </div>
@@ -104,7 +104,7 @@ const SortableField = ({ field, onDelete, onUpdateLabel, onUpdateTableColumns })
   );
 };
 
-// ─── Add Section Wizard ───────────────────────────────────────────────────────
+// --- Add Section Wizard -------------------------------------------------------
 const FIELD_TYPES = [
   { id: 'text',     label: 'Text Input',   desc: 'Single-line answer',        icon: Type },
   { id: 'textarea', label: 'Comment Box',  desc: 'Multi-line paragraph',      icon: AlignLeft },
@@ -231,7 +231,7 @@ const WizardModal = ({ onClose, onCreated, existingSections }) => {
 
         {/* Body */}
         <div className="wizard-body">
-          {/* ── Step 1: Form Type ── */}
+          {/* -- Step 1: Form Type -- */}
           {step === 1 && (
             <div className="wizard-step-content">
               <h3 className="wizard-step-title">Which form does this section belong to?</h3>
@@ -255,7 +255,7 @@ const WizardModal = ({ onClose, onCreated, existingSections }) => {
             </div>
           )}
 
-          {/* ── Step 2: Section Kind ── */}
+          {/* -- Step 2: Section Kind -- */}
           {step === 2 && (
             <div className="wizard-step-content">
               <h3 className="wizard-step-title">What kind of section is this?</h3>
@@ -317,7 +317,7 @@ const WizardModal = ({ onClose, onCreated, existingSections }) => {
                     value={parentId || ''}
                     onChange={e => setParentId(Number(e.target.value) || null)}
                   >
-                    <option value="">— choose a section —</option>
+                    <option value="">- choose a section -</option>
                     {filteredSections.map(s => (
                       <option key={s.id} value={s.id}>{s.title}</option>
                     ))}
@@ -340,7 +340,7 @@ const WizardModal = ({ onClose, onCreated, existingSections }) => {
             </div>
           )}
 
-          {/* ── Step 3: Fields ── */}
+          {/* -- Step 3: Fields -- */}
           {step === 3 && (
             <div className="wizard-step-content">
               <h3 className="wizard-step-title">Define the fields for this section</h3>
@@ -412,7 +412,7 @@ const WizardModal = ({ onClose, onCreated, existingSections }) => {
             </div>
           )}
 
-          {/* ── Step 4: Review ── */}
+          {/* -- Step 4: Review -- */}
           {step === 4 && (
             <div className="wizard-step-content">
               <h3 className="wizard-step-title">Review & Confirm</h3>
@@ -494,12 +494,12 @@ const WizardModal = ({ onClose, onCreated, existingSections }) => {
   );
 };
 
-// ─── Rubric Reminder Popup ────────────────────────────────────────────────────
+// --- Rubric Reminder Popup ----------------------------------------------------
 const RubricReminder = ({ sectionName, onClose, onGoToRubrics }) => (
   <div className="rubric-reminder-overlay">
     <div className="rubric-reminder-card">
       <div className="rubric-reminder-icon"><Bell size={28} /></div>
-      <h3>Section Created! 🎉</h3>
+      <h3>Section Created! ðŸŽ‰</h3>
       <p className="rubric-reminder-main">
         <strong>"{sectionName}"</strong> is now part of your form.
       </p>
@@ -522,7 +522,7 @@ const RubricReminder = ({ sectionName, onClose, onGoToRubrics }) => (
   </div>
 );
 
-// ─── Main Form Builder ────────────────────────────────────────────────────────
+// --- Main Form Builder --------------------------------------------------------
 const FormBuilder = () => {
   const navigate = useNavigate();
   const [allSections, setAllSections] = useState([]); // flat list from /schema/flat
@@ -682,11 +682,11 @@ const FormBuilder = () => {
         <RubricReminder
           sectionName={rubricReminder}
           onClose={() => setRubricReminder(null)}
-          onGoToRubrics={() => { setRubricReminder(null); navigate('/dofa-office/rubrics'); }}
+          onGoToRubrics={() => { setRubricReminder(null); navigate('/Dofa-office/rubrics'); }}
         />
       )}
 
-      {/* ── Left Palette ── */}
+      {/* -- Left Palette -- */}
       <div className="fb-palette">
         <div className="fb-palette-header">
           <MousePointer2 size={18} />
@@ -776,7 +776,7 @@ const FormBuilder = () => {
                     className={`mini-section-item mini-section-child ${activeSection?.id === child.id ? 'active' : ''}`}
                     onClick={() => setActiveSection(child)}
                   >
-                    <span>↳ {child.title}</span>
+                    <span>â†³ {child.title}</span>
                     <button
                       className="mini-section-delete"
                       onClick={e => { e.stopPropagation(); handleDeleteSection(child.id); }}
@@ -794,11 +794,11 @@ const FormBuilder = () => {
         </div>
       </div>
 
-      {/* ── Canvas ── */}
+      {/* -- Canvas -- */}
       <div className="fb-canvas">
         <div className="fb-canvas-header">
           <div className="fb-breadcrumb">
-            <span>DOFA Office</span> <ChevronRight size={14} /> <strong>Form Builder</strong>
+            <span>Dofa Office</span> <ChevronRight size={14} /> <strong>Form Builder</strong>
             {activeSection && (
               <><ChevronRight size={14} /> <span className="bc-section">{activeSection.title}</span></>
             )}
@@ -807,7 +807,7 @@ const FormBuilder = () => {
             <div className={`form-tab-badge form-tab-badge--${activeFormTab.toLowerCase()}`}>
               Form {activeFormTab}
             </div>
-            <button className="save-btn" onClick={() => showToast('Schema saved to database ✓', 'success')}>
+            <button className="save-btn" onClick={() => showToast('Schema saved to database âœ“', 'success')}>
               <Save size={18} /> Publish Changes
             </button>
           </div>
@@ -906,3 +906,4 @@ const FormBuilder = () => {
 };
 
 export default FormBuilder;
+

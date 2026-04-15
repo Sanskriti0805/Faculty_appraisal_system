@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Building2, Users, Plus, X, CheckCircle, AlertCircle,
@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { showConfirm } from '../utils/appDialogs';
-import './DOFARegistration.css';
+import './DofaRegistration.css';
 
 const API_BASE = `http://${window.location.hostname}:5000/api`;
 
@@ -14,7 +14,7 @@ const DESIGNATIONS = ['Professor', 'Associate Professor', 'Assistant Professor',
 const SALUTATIONS = ['Prof', 'Dr', 'Mr', 'Ms'];
 const EMPLOYMENT_TYPES = [{ value: 'fixed', label: 'Fixed' }, { value: 'contractual', label: 'Contractual' }];
 
-const DOFARegistration = () => {
+const DofaRegistration = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -103,7 +103,7 @@ const DOFARegistration = () => {
       if (data.success) {
         setDeptModal(false);
         setDeptForm({ name: '', code: '', hod_email: '', hod_name: '' });
-        showToast('Department registered! Password setup email sent to HOD. ✅');
+        showToast('Department registered! Password setup email sent to HOD. âœ…');
         loadData();
       } else {
         setDeptError(data.message);
@@ -127,7 +127,7 @@ const DOFARegistration = () => {
       if (data.success) {
         setFacultyModal(false);
         setFacultyForm({ salutation: 'Dr', name: '', designation: '', email: '', employee_id: '', employment_type: 'fixed', date_of_joining: '', department_id: '' });
-        showToast('Faculty registered! Password setup email sent. ✅');
+        showToast('Faculty registered! Password setup email sent. âœ…');
         loadData();
       } else {
         setFacError(data.message);
@@ -167,7 +167,7 @@ const DOFARegistration = () => {
   };
 
   const formatDate = (d) => {
-    if (!d) return '—';
+    if (!d) return '-';
 
     // Avoid timezone offset for DATE values returned as YYYY-MM-DD.
     const value = String(d);
@@ -175,7 +175,7 @@ const DOFARegistration = () => {
     const dt = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(value);
 
     return Number.isNaN(dt.getTime())
-      ? '—'
+      ? '-'
       : dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
@@ -279,7 +279,7 @@ const DOFARegistration = () => {
   };
 
   const getReviewRoute = (submissionId) => {
-    const basePath = location.pathname.startsWith('/dofa-office') ? '/dofa-office' : '/dofa';
+    const basePath = location.pathname.startsWith('/Dofa-office') ? '/Dofa-office' : '/Dofa';
     return `${basePath}/review/${submissionId}`;
   };
 
@@ -320,7 +320,7 @@ const DOFARegistration = () => {
         .meta-item label{font-size:11px;color:#777;display:block}
         .meta-item span{font-weight:600}
       </style></head><body>
-      <h1>Annual Performance Appraisal — Form ${sub.form_type || 'A'}</h1>
+      <h1>Annual Performance Appraisal - Form ${sub.form_type || 'A'}</h1>
       <div class="meta">
         <div class="meta-item"><label>Name</label><span>${sub.faculty_name || ''}</span></div>
         <div class="meta-item"><label>Department</label><span>${sub.department || 'N/A'}</span></div>
@@ -329,7 +329,7 @@ const DOFARegistration = () => {
         <div class="meta-item"><label>Designation</label><span>${facultyInfo?.designation || 'N/A'}</span></div>
       </div>
 
-      <h2>Part A — Courses Taught (${courses?.length || 0})</h2>
+      <h2>Part A - Courses Taught (${courses?.length || 0})</h2>
       <table><tr><th>Course Name</th><th>Code</th><th>Semester</th><th>Program</th><th>Enrollment</th></tr>
       ${(courses || []).map(c => `<tr><td>${c.course_name||''}</td><td>${c.course_code||''}</td><td>${c.semester||''}</td><td>${c.program||''}</td><td>${c.enrollment||''}</td></tr>`).join('')}
       </table>
@@ -427,7 +427,7 @@ const DOFARegistration = () => {
           <button onClick={() => setToast(null)} style={{
             background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff',
             borderRadius: '4px', padding: '2px 8px', cursor: 'pointer', fontSize: '16px'
-          }}>×</button>
+          }}>x</button>
         </div>
       )}
       <style>{`@keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
@@ -435,7 +435,7 @@ const DOFARegistration = () => {
       <main className="admin-main">
         {/* Welcome */}
         <div className="admin-welcome">
-          <h1>Welcome, {user?.name?.split(' ')[0]} 👋</h1>
+          <h1>Welcome, {user?.name?.split(' ')[0]} ðŸ‘‹</h1>
           <p>Manage departments, register faculty members, and oversee the appraisal system.</p>
         </div>
 
@@ -492,7 +492,7 @@ const DOFARegistration = () => {
           <div className="admin-action-card bulk" onClick={() => { setBulkModal(true); setBulkResults(null); setBulkEmails(''); setBulkRole('faculty'); }}>
             <div className="admin-action-icon"><Send size={26} /></div>
             <h3 className="admin-action-title">Bulk Email Invite</h3>
-            <p className="admin-action-desc">Send invite emails to multiple faculty or HODs at once. Paste comma-separated emails — they'll set up their own profiles.</p>
+            <p className="admin-action-desc">Send invite emails to multiple faculty or HODs at once. Paste comma-separated emails - they'll set up their own profiles.</p>
             <button className="admin-action-btn bulk-btn"><Mail size={15} /> Send Invites</button>
           </div>
         </div>
@@ -523,7 +523,7 @@ const DOFARegistration = () => {
                     <tr key={d.id}>
                       <td style={{ fontWeight: '500' }}>{d.name}</td>
                       <td><code style={{ background: '#f0f4f8', padding: '2px 8px', borderRadius: '4px', fontSize: '12px' }}>{d.code}</code></td>
-                      <td>{d.hod_name || '—'}</td>
+                      <td>{d.hod_name || '-'}</td>
                       <td>{d.hod_email}</td>
                       <td>{d.faculty_count || 0}</td>
                       <td>{formatDate(d.created_at)}</td>
@@ -568,15 +568,15 @@ const DOFARegistration = () => {
                     <tr key={u.id}>
                       <td style={{ fontWeight: '500' }}>{u.salutation ? `${u.salutation}. ` : ''}{u.name}</td>
                       <td>{u.email}</td>
-                      <td>{u.designation || '—'}</td>
-                      <td>{u.department_name || u.department || '—'}</td>
-                      <td>{u.employee_id || '—'}</td>
+                      <td>{u.designation || '-'}</td>
+                      <td>{u.department_name || u.department || '-'}</td>
+                      <td>{u.employee_id || '-'}</td>
                       <td>
                         {u.employment_type ? (
                           <span className={`admin-badge ${u.employment_type === 'fixed' ? 'faculty' : 'hod'}`}>
                             {u.employment_type}
                           </span>
-                        ) : '—'}
+                        ) : '-'}
                       </td>
                       <td>{formatDate(u.date_of_joining)}</td>
                       <td>
@@ -612,7 +612,7 @@ const DOFARegistration = () => {
               <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('faculty', 'xlsx')} style={{ padding: '8px 12px', fontSize: '12px' }}>
                 <Download size={14} /> Faculty Excel
               </button>
-              {(user?.role === 'dofa' || user?.role === 'dofa_office' || user?.role === 'admin') && (
+              {(user?.role === 'Dofa' || user?.role === 'Dofa_office' || user?.role === 'admin') && (
                 <>
                   <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('department', 'csv')} style={{ padding: '8px 12px', fontSize: '12px' }}>
                     <Download size={14} /> Department CSV
@@ -645,7 +645,7 @@ const DOFARegistration = () => {
                         <tr key={`arch-f-${f.id}`}>
                           <td>{f.name}</td>
                           <td>{f.email}</td>
-                          <td>{f.department_name || f.department || '—'}</td>
+                          <td>{f.department_name || f.department || '-'}</td>
                           <td>{formatDate(f.archived_at)}</td>
                           <td>
                             <button className="admin-btn-submit" onClick={() => handleRestoreFaculty(f)} style={{ padding: '6px 10px', fontSize: '12px' }}>
@@ -658,7 +658,7 @@ const DOFARegistration = () => {
                   </table>
                 ) : <div className="admin-empty" style={{ marginBottom: '14px' }}>No faculty in archive.</div>}
 
-                {(user?.role === 'dofa' || user?.role === 'dofa_office' || user?.role === 'admin') && (
+                {(user?.role === 'Dofa' || user?.role === 'Dofa_office' || user?.role === 'admin') && (
                   <>
                     <h3 className="archive-group-title">Archived Departments</h3>
                     {archiveData.departments?.length ? (
@@ -697,7 +697,7 @@ const DOFARegistration = () => {
         </div>
       </main>
 
-      {/* ── Department Registration Modal ── */}
+      {/* -- Department Registration Modal -- */}
       {deptModal && (
         <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setDeptModal(false); }}>
           <div className="admin-modal">
@@ -748,7 +748,7 @@ const DOFARegistration = () => {
         </div>
       )}
 
-      {/* ── Faculty Registration Modal ── */}
+      {/* -- Faculty Registration Modal -- */}
       {facultyModal && (
         <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setFacultyModal(false); }}>
           <div className="admin-modal">
@@ -839,7 +839,7 @@ const DOFARegistration = () => {
         </div>
       )}
 
-      {/* ── Bulk Invite Modal ── */}
+      {/* -- Bulk Invite Modal -- */}
       {bulkModal && (
         <div className="admin-modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setBulkModal(false); } }}>
           <div className="admin-modal" style={{ maxWidth: '560px' }}>
@@ -898,7 +898,7 @@ const DOFARegistration = () => {
                     padding: '10px 14px', background: '#f0fff4', border: '1px solid #c6f6d5',
                     borderRadius: '8px', fontSize: '13px', color: '#276749', marginBottom: '12px', fontWeight: '500'
                   }}>
-                    ✅ {bulkResults.message}
+                    âœ… {bulkResults.message}
                   </div>
                   <div style={{ maxHeight: '180px', overflowY: 'auto', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                     {bulkResults.results.map((r, i) => (
@@ -912,10 +912,10 @@ const DOFARegistration = () => {
                           padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600',
                           background: statusBg(r.status), color: statusColor(r.status)
                         }}>
-                          {r.status === 'sent' ? '✓ Sent' :
-                           r.status === 'sent_no_email' ? '⚠ Created' :
-                           r.status === 'skipped' ? '↩ Exists' :
-                           r.status === 'invalid' ? '✗ Invalid' : '✗ Failed'}
+                          {r.status === 'sent' ? 'âœ“ Sent' :
+                           r.status === 'sent_no_email' ? 'âš  Created' :
+                           r.status === 'skipped' ? 'â†© Exists' :
+                           r.status === 'invalid' ? 'x Invalid' : 'x Failed'}
                         </span>
                       </div>
                     ))}
@@ -983,8 +983,8 @@ const DOFARegistration = () => {
                     <tbody>
                       {historyModal.submissions.map(s => (
                         <tr key={s.id}>
-                          <td>{s.academic_year || '—'}</td>
-                          <td>{s.calendar_year || '—'}</td>
+                          <td>{s.academic_year || '-'}</td>
+                          <td>{s.calendar_year || '-'}</td>
                           <td>{s.form_type || 'A'}</td>
                           <td>
                             <span className="admin-badge faculty" style={{ textTransform: 'capitalize' }}>
@@ -1035,4 +1035,5 @@ const DOFARegistration = () => {
   );
 };
 
-export default DOFARegistration;
+export default DofaRegistration;
+

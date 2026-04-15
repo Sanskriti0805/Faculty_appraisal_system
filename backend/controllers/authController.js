@@ -1,5 +1,5 @@
-/**
- * Auth Controller — login, forgot-password, reset-password, me
+﻿/**
+ * Auth Controller - login, forgot-password, reset-password, me
  */
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -44,7 +44,7 @@ exports.login = async (req, res) => {
     const user = users[0];
 
     if (Number(user.is_archived) === 1) {
-      return res.status(403).json({ success: false, message: 'Account is archived. Contact DOFA office.' });
+      return res.status(403).json({ success: false, message: 'Account is archived. Contact Dofa office.' });
     }
 
     if (!user.password) {
@@ -113,7 +113,7 @@ exports.forgotPassword = async (req, res) => {
     // Look up user by email AND role
     const [users] = await db.query('SELECT * FROM users WHERE email = ? AND role = ?', [email, role]);
     if (users.length === 0) {
-      // Don't reveal whether email exists — always return success
+      // Don't reveal whether email exists - always return success
       return res.json({ success: true, message: 'If that email is registered with the selected role, a reset link has been sent.' });
     }
 
@@ -142,10 +142,10 @@ exports.forgotPassword = async (req, res) => {
       });
     } catch (emailErr) {
       console.error('Email send error:', emailErr);
-      // Still return success — don't reveal email status
+      // Still return success - don't reveal email status
     }
 
-    console.log(`🔗 Password reset URL for ${user.email} (${role}): ${resetUrl}`);
+    console.log(`ðŸ”— Password reset URL for ${user.email} (${role}): ${resetUrl}`);
 
     res.json({ success: true, message: 'If that email is registered with the selected role, a reset link has been sent.' });
   } catch (error) {
@@ -259,3 +259,4 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+

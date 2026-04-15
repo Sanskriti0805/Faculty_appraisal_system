@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Archive, RotateCcw, Eye, Download, X, Settings, Lock, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -37,19 +37,28 @@ const HODDashboard = () => {
       const deptData = await deptRes.json();
       const archiveData = await archiveRes.json();
 
-      let effectiveDeptId = user?.department_id ? Number(user.department_id) : null;
+      let effectiveDeptId = Number(user?.department_id || 0);
+      let effectiveDeptInfo = null;
 
       if (deptData.success) {
-        if (!effectiveDeptId && user?.department) {
-          const targetDeptName = String(user.department || '').trim().toLowerCase();
-          const byName = deptData.data.find(d => String(d.name || '').trim().toLowerCase() === targetDeptName);
-          if (byName) effectiveDeptId = Number(byName.id);
+        if (effectiveDeptId > 0) {
+          effectiveDeptInfo = deptData.data.find((d) => Number(d.id) === effectiveDeptId) || null;
         }
-        const dept = deptData.data.find(d => Number(d.id) === Number(effectiveDeptId));
-        setDeptInfo(dept);
+
+        if (!effectiveDeptInfo && user?.department) {
+          const targetDeptName = String(user.department).trim().toLowerCase();
+          effectiveDeptInfo = deptData.data.find(
+            (d) => String(d.name || '').trim().toLowerCase() === targetDeptName
+          ) || null;
+          if (effectiveDeptInfo) {
+            effectiveDeptId = Number(effectiveDeptInfo.id);
+          }
+        }
       }
 
-      if (effectiveDeptId) {
+      setDeptInfo(effectiveDeptInfo);
+
+      if (effectiveDeptId > 0) {
         const facRes = await fetch(`${API_BASE}/register/departments/${effectiveDeptId}/faculty`, { headers });
         const facData = await facRes.json();
         if (facData.success) {
@@ -76,7 +85,7 @@ const HODDashboard = () => {
     navigate('/login');
   };
   const formatDate = (d) => {
-    if (!d) return '—';
+    if (!d) return '-';
 
     // Avoid timezone offset for DATE values returned as YYYY-MM-DD.
     const value = String(d);
@@ -84,7 +93,7 @@ const HODDashboard = () => {
     const dt = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(value);
 
     return Number.isNaN(dt.getTime())
-      ? '—'
+      ? '-'
       : dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
@@ -219,7 +228,7 @@ const HODDashboard = () => {
       <main className="admin-main">
         {/* Welcome + Dept Info */}
         <div className="admin-welcome">
-          <h1>Welcome, {user?.name || 'HOD'} 👋</h1>
+          <h1>Welcome, {user?.name || 'HOD'} ðŸ‘‹</h1>
           <p>View and manage faculty members registered in your department.</p>
         </div>
 
@@ -246,6 +255,11 @@ const HODDashboard = () => {
               <div style={{ fontSize: '36px', fontWeight: '700' }}>{faculty.length}</div>
               <div style={{ fontSize: '13px', opacity: 0.75 }}>Faculty Members</div>
             </div>
+          </div>
+        )}
+        {!deptInfo && !loading && (
+          <div className="admin-empty" style={{ marginBottom: '28px' }}>
+            Your account does not have a department assigned. Contact the admin or Dofa office to correct the HOD mapping.
           </div>
         )}
 
@@ -281,14 +295,14 @@ const HODDashboard = () => {
                       {f.salutation ? `${f.salutation}. ` : ''}{f.name}
                     </td>
                     <td>{f.email}</td>
-                    <td>{f.designation || '—'}</td>
-                    <td>{f.employee_id || '—'}</td>
+                    <td>{f.designation || '-'}</td>
+                    <td>{f.employee_id || '-'}</td>
                     <td>
                       {f.employment_type ? (
                         <span className={`admin-badge ${f.employment_type === 'fixed' ? 'faculty' : 'hod'}`}>
                           {f.employment_type}
                         </span>
-                      ) : '—'}
+                      ) : '-'}
                     </td>
                     <td>{formatDate(f.date_of_joining)}</td>
                     <td style={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
@@ -353,7 +367,7 @@ const HODDashboard = () => {
           <div className="admin-modal">
             <div className="admin-modal-header">
               <h2 className="admin-modal-title">Faculty Details</h2>
-              <button className="admin-modal-close" onClick={() => setSelected(null)}>✕</button>
+              <button className="admin-modal-close" onClick={() => setSelected(null)}>x</button>
             </div>
             <div className="admin-modal-body">
               {/* Avatar */}
@@ -375,10 +389,10 @@ const HODDashboard = () => {
               {/* Details Grid */}
               {[
                 { icon: <Mail size={16} />, label: 'Email', value: selected.email },
-                { icon: <Hash size={16} />, label: 'Employee ID', value: selected.employee_id || '—' },
-                { icon: <Briefcase size={16} />, label: 'Employment Type', value: selected.employment_type ? (selected.employment_type === 'fixed' ? 'Fixed' : 'Contractual') : '—' },
+                { icon: <Hash size={16} />, label: 'Employee ID', value: selected.employee_id || '-' },
+                { icon: <Briefcase size={16} />, label: 'Employment Type', value: selected.employment_type ? (selected.employment_type === 'fixed' ? 'Fixed' : 'Contractual') : '-' },
                 { icon: <Calendar size={16} />, label: 'Date of Joining', value: formatDate(selected.date_of_joining) },
-                { icon: <Building2 size={16} />, label: 'Department', value: deptInfo?.name || '—' },
+                { icon: <Building2 size={16} />, label: 'Department', value: deptInfo?.name || '-' },
               ].map(item => (
                 <div key={item.label} style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
@@ -496,3 +510,4 @@ const HODDashboard = () => {
 };
 
 export default HODDashboard;
+

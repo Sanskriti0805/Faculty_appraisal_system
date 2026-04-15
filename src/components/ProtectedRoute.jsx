@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -39,8 +39,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     const redirectMap = {
       hod: '/hod/dashboard',
       faculty: '/',
-      dofa: '/dofa/dashboard',
-      dofa_office: '/dofa-office/dashboard'
+      Dofa: '/Dofa/dashboard',
+      Dofa_office: '/Dofa-office/dashboard'
     };
     return <Navigate to={redirectMap[user.role] || '/login'} replace />;
   }
@@ -49,3 +49,4 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 };
 
 export default ProtectedRoute;
+

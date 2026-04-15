@@ -1,4 +1,4 @@
-const mysql = require('mysql2/promise');
+﻿const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
@@ -49,7 +49,7 @@ async function resetAllData() {
     if (fs.existsSync(seedRubricsPath)) {
       const sql = fs.readFileSync(seedRubricsPath, 'utf8');
       await conn.query(sql);
-      const [rubricCount] = await conn.query('SELECT COUNT(*) AS c FROM dofa_rubrics');
+      const [rubricCount] = await conn.query('SELECT COUNT(*) AS c FROM Dofa_rubrics');
       console.log(`Rubrics reseeded: ${rubricCount[0].c}`);
     } else {
       console.warn('seed_rubrics.sql not found; rubrics were not reseeded.');
@@ -65,3 +65,4 @@ async function resetAllData() {
 }
 
 resetAllData();
+

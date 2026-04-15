@@ -1,4 +1,4 @@
-const db = require('../config/database');
+﻿const db = require('../config/database');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 const { evaluateRuleConfig } = require('./rubricRuleEngine');
 
@@ -12,13 +12,13 @@ const ensureRuleDrivenColumns = async () => {
     const [rows] = await db.query(
       `SELECT COLUMN_NAME
        FROM INFORMATION_SCHEMA.COLUMNS
-       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dofa_rubrics' AND COLUMN_NAME = ?`,
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Dofa_rubrics' AND COLUMN_NAME = ?`,
       [columnName]
     );
 
     if (rows.length === 0) {
-      await db.query(`ALTER TABLE dofa_rubrics ADD COLUMN ${definitionSql}`);
-      console.log(`  Migration: added dofa_rubrics.${columnName}`);
+      await db.query(`ALTER TABLE Dofa_rubrics ADD COLUMN ${definitionSql}`);
+      console.log(`  Migration: added Dofa_rubrics.${columnName}`);
     }
   };
 
@@ -68,7 +68,7 @@ const bootstrapTeachingFeedbackRuleConfigs = async () => {
 
   const [rows] = await db.query(
     `SELECT id, section_name, sub_section, max_marks, scoring_type, rule_config
-     FROM dofa_rubrics
+     FROM Dofa_rubrics
      WHERE LOWER(section_name) LIKE '%teaching feedback%'`
   );
 
@@ -87,7 +87,7 @@ const bootstrapTeachingFeedbackRuleConfigs = async () => {
     };
 
     await db.query(
-      `UPDATE dofa_rubrics
+      `UPDATE Dofa_rubrics
        SET scoring_type = 'rule', data_source = 'courses_taught', rule_config = ?
        WHERE id = ?`,
       [JSON.stringify(ruleConfig), row.id]
@@ -100,19 +100,19 @@ const bootstrapTeachingFeedbackRuleConfigs = async () => {
 /**
  * Auto-allocates marks per rubric for a submitted faculty appraisal.
  * Logic: granular mapping of each rubric to specific DB data.
- * Teaching Feedback  → computed from courses_taught (enrollment + feedback_score).
- * Research Guidance  → 0 (no guidance table in DB yet).
- * All unmatched rubrics → 0 (inserted explicitly for complete record).
+ * Teaching Feedback  -> computed from courses_taught (enrollment + feedback_score).
+ * Research Guidance  -> 0 (no guidance table in DB yet).
+ * All unmatched rubrics -> 0 (inserted explicitly for complete record).
  *
  * Teaching Feedback rubric categories (Form A, Part A, Section 4.1):
- *   Rubric IDs 1-3  (≥50 students category, scale 5-4-3):
- *     ID 1: enrollment≥50 AND feedback≥4   → 5 pts
- *     ID 2: enrollment≥50 AND 3.5≤fb<4    → 4 pts
- *     ID 3: enrollment≥50 AND 3≤fb<3.5    → 3 pts
+ *   Rubric IDs 1-3  (â‰¥50 students category, scale 5-4-3):
+ *     ID 1: enrollmentâ‰¥50 AND feedbackâ‰¥4   -> 5 pts
+ *     ID 2: enrollmentâ‰¥50 AND 3.5â‰¤fb<4    -> 4 pts
+ *     ID 3: enrollmentâ‰¥50 AND 3â‰¤fb<3.5    -> 3 pts
  *   Rubric IDs 4-6  (<50 students category, scale 4-3-2):
- *     ID 4: enrollment<50  AND feedback≥4  → 4 pts
- *     ID 5: enrollment<50  AND 3.5≤fb<4   → 3 pts
- *     ID 6: enrollment<50  AND 3≤fb<3.5   → 2 pts
+ *     ID 4: enrollment<50  AND feedbackâ‰¥4  -> 4 pts
+ *     ID 5: enrollment<50  AND 3.5â‰¤fb<4   -> 3 pts
+ *     ID 6: enrollment<50  AND 3â‰¤fb<3.5   -> 2 pts
  *   Each qualifying course contributes independently to exactly one rubric,
  *   and scores are accumulated across all courses.
  */
@@ -124,10 +124,10 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
     await ensureRuleDrivenColumns();
     await bootstrapTeachingFeedbackRuleConfigs();
 
-    // ── Fetch all rubrics ──────────────────────────────────────────────────
+    // -- Fetch all rubrics --------------------------------------------------
     const [rubrics] = await db.query(
       `SELECT id, section_name, sub_section, max_marks, scoring_type, per_unit_marks, dynamic_section_id, rule_config, data_source
-       FROM dofa_rubrics
+       FROM Dofa_rubrics
        ORDER BY id ASC`
     );
 
@@ -145,7 +145,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       return rows;
     };
 
-    // ── Fetch all faculty submission data ──────────────────────────────────
+    // -- Fetch all faculty submission data ----------------------------------
     const publications = await byFacultyIds('research_publications');
     const courses = await byFacultyIds('courses_taught');
     const newCourses = await byFacultyIds('new_courses');
@@ -192,7 +192,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       dynamicResponses = [];
     }
 
-    // ── Helper: safely parse float ─────────────────────────────────────────
+    // -- Helper: safely parse float -----------------------------------------
     const f = (v) => parseFloat(v) || 0;
     const norm = (v) => String(v || '').toLowerCase();
     const parseResponseValue = (raw) => {
@@ -222,7 +222,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       return false;
     };
 
-    // ── Build score map: rubricId → score ──────────────────────────────────
+    // -- Build score map: rubricId -> score ----------------------------------
     const scoreMap = {};
 
     const dataSources = {
@@ -245,11 +245,11 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       dynamic_responses: dynamicResponses
     };
 
-    // ── Pre-compute Teaching Feedback scores (IDs 1-6) ────────────────────
+    // -- Pre-compute Teaching Feedback scores (IDs 1-6) --------------------
     // Get the 6 Teaching Feedback rubrics sorted by ID.
     const tfRubrics = rubrics
       .filter(r => r.section_name.toLowerCase().includes('teaching feedback') && String(r.scoring_type || 'manual').toLowerCase() !== 'rule')
-      .sort((a, b) => a.id - b.id); // IDs 1→6 in order
+      .sort((a, b) => a.id - b.id); // IDs 1->6 in order
 
     if (tfRubrics.length === 6) {
       // rubric indices: [0]=ID1, [1]=ID2, [2]=ID3, [3]=ID4, [4]=ID5, [5]=ID6
@@ -266,7 +266,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         if (course.feedback_score === null || course.feedback_score === undefined || isNaN(fb)) continue;
 
         if (enrollment >= 50) {
-          // Category  5-4-3  (rubric IDs 1,2,3  → indices 0,1,2)
+          // Category  5-4-3  (rubric IDs 1,2,3  -> indices 0,1,2)
           if (fb >= 4) {
             scoreMap[tfRubrics[0].id] += f(tfRubrics[0].max_marks);
             qualifyingCourses += 1;
@@ -277,9 +277,9 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
             scoreMap[tfRubrics[2].id] += f(tfRubrics[2].max_marks);
             qualifyingCourses += 1;
           }
-          // fb < 3 → no points
+          // fb < 3 -> no points
         } else {
-          // Category  4-3-2  (rubric IDs 4,5,6  → indices 3,4,5)
+          // Category  4-3-2  (rubric IDs 4,5,6  -> indices 3,4,5)
           if (fb >= 4) {
             scoreMap[tfRubrics[3].id] += f(tfRubrics[3].max_marks);
             qualifyingCourses += 1;
@@ -290,15 +290,15 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
             scoreMap[tfRubrics[5].id] += f(tfRubrics[5].max_marks);
             qualifyingCourses += 1;
           }
-          // fb < 3 → no points
+          // fb < 3 -> no points
         }
       }
 
       const teachingFeedbackTotal = tfRubrics.reduce((sum, r) => sum + (scoreMap[r.id] || 0), 0);
       if (qualifyingCourses > 0) {
-        console.log(`  Teaching Feedback: ${qualifyingCourses} qualifying course(s) → ${teachingFeedbackTotal.toFixed(2)} pts`);
+        console.log(`  Teaching Feedback: ${qualifyingCourses} qualifying course(s) -> ${teachingFeedbackTotal.toFixed(2)} pts`);
       } else {
-        console.log(`  Teaching Feedback: no qualifying courses found → all 0`);
+        console.log(`  Teaching Feedback: no qualifying courses found -> all 0`);
       }
     } else {
       console.log(`  Warning: Expected 6 Teaching Feedback rubrics, found ${tfRubrics.length}`);
@@ -352,14 +352,14 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 1. Teaching Feedback (IDs 1-6) ────────────────────────────────
+      // -- 1. Teaching Feedback (IDs 1-6) --------------------------------
       // Scores already computed and injected into scoreMap above.
       // Skip loop processing for these rubrics.
       if (sec.includes('teaching feedback')) {
         score = scoreMap[rubric.id] ?? 0;
       }
 
-      // ── 2. Research Guidance (IDs 7-10) ───────────────────────────────
+      // -- 2. Research Guidance (IDs 7-10) -------------------------------
       else if (sec.includes('research guidance')) {
         if (guidance.length === 0) {
           score = 0;
@@ -379,12 +379,12 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 3. New Courses designed (ID 11) ───────────────────────────────
+      // -- 3. New Courses designed (ID 11) -------------------------------
       else if (sec.includes('new courses')) {
         score = newCourses.length > 0 ? max : 0;
       }
 
-      // ── 4. Research Publications ───────────────────────────────────────
+      // -- 4. Research Publications ---------------------------------------
       else if (sec.includes('research publications')) {
         if (sub.includes('q1')) {
           const count = publications.filter(p =>
@@ -417,7 +417,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 5. Conference Publications ─────────────────────────────────────
+      // -- 5. Conference Publications -------------------------------------
       else if (sec.includes('conference') && !sec.includes('talks and conferences')) {
         const confPubs = publications.filter(p =>
           (p.publication_type || '').toLowerCase() === 'conference'
@@ -444,7 +444,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 6. Others — book chapter / edited / textbook / paper presentation ─
+      // -- 6. Others - book chapter / edited / textbook / paper presentation -
       else if (sec.startsWith('6.') || (sec.includes('others') && !sec.includes('institutional') && !sec.includes('activities'))) {
         if (sub.includes('paper') || sub.includes('poster')) {
           score = publications.filter(p =>
@@ -466,7 +466,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 7. Sponsored Projects (Grants) ────────────────────────────────
+      // -- 7. Sponsored Projects (Grants) --------------------------------
       else if (sec.includes('sponsored project')) {
         if (sub.includes('proposal')) {
           // Proposals submitted
@@ -477,7 +477,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
           );
           score = Math.min(filtered.length * max, max);
         } else {
-          // Grants received — check amount range and PI/co-PI
+          // Grants received - check amount range and PI/co-PI
           const isPI = sub.includes('(pi)') || sub.endsWith(' pi)');
           const matchingGrants = grants.filter(g => {
             const amt = f(g.amount_in_lakhs);
@@ -488,7 +488,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
             if (!piMatch) return false;
 
-            if (sub.includes('>=20') || sub.includes('≥20') || sub.includes('value>=20') || sub.includes('value>20')) {
+            if (sub.includes('>=20') || sub.includes('â‰¥20') || sub.includes('value>=20') || sub.includes('value>20')) {
               return amt >= 20;
             } else if (sub.includes('10') && sub.includes('20')) {
               return amt >= 10 && amt < 20;
@@ -505,7 +505,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 8. Patents ─────────────────────────────────────────────────────
+      // -- 8. Patents -----------------------------------------------------
       else if (sec.includes('patent')) {
         if (sub.includes('granted')) {
           score = patents.filter(p =>
@@ -524,7 +524,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 9. Technology Contribution ─────────────────────────────────────
+      // -- 9. Technology Contribution -------------------------------------
       else if (sec.includes('technology contribution')) {
         if (sub.includes('software')) {
           score = techTransfer.filter(tt =>
@@ -537,7 +537,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 10. Review of Research Papers ─────────────────────────────────
+      // -- 10. Review of Research Papers ---------------------------------
       else if (sec.includes('review of research papers')) {
         const totalPapers = reviews.reduce((sum, r) => sum + (parseInt(r.number_of_papers) || 0), 0);
         const isHighTier = sub.includes('q1') || sub.includes('q2');
@@ -554,7 +554,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 11. Talks and Conferences ──────────────────────────────────────
+      // -- 11. Talks and Conferences --------------------------------------
       else if (sec.includes('talks and conferences')) {
         const hasSessionMatch = (predicate) => sessions.some(s => {
           const roleText = norm(s.role);
@@ -592,7 +592,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 12. Visits / Honours / Consultancy ────────────────────────────
+      // -- 12. Visits / Honours / Consultancy ----------------------------
       else if (sec.includes('visits') || sec.includes('honours') || sec.includes('consultancy')) {
         if (sub.includes('visits') || sub.includes('collaborative')) {
           score = Math.min(contribs.filter(c =>
@@ -630,7 +630,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 13. Institutional Contributions ───────────────────────────────
+      // -- 13. Institutional Contributions -------------------------------
       else if (sec.includes('institutional contributions')) {
         const hasPosition = (entry, expected) => {
           const selected = norm(entry.title);
@@ -710,7 +710,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }
       }
 
-      // ── 14. Other Activities ──────────────────────────────────────────
+      // -- 14. Other Activities ------------------------------------------
       else if (sec.includes('other activities')) {
         const hasOtherActivity = otherActivities.length > 0 || teachingInnovation.length > 0;
         score = hasOtherActivity ? max : 0;
@@ -724,22 +724,22 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       }
     }
 
-    // ── Reset previous rows for this submission first.
+    // -- Reset previous rows for this submission first.
     // This avoids cumulative duplicates in legacy databases missing a unique key.
-    await db.query('DELETE FROM dofa_evaluation_scores WHERE submission_id = ?', [submissionId]);
+    await db.query('DELETE FROM Dofa_evaluation_scores WHERE submission_id = ?', [submissionId]);
 
-    // ── Insert all rubric rows (including zeros) ──────────────────────────
+    // -- Insert all rubric rows (including zeros) --------------------------
     const valuesToInsert = rubrics.map(r => [submissionId, r.id, scoreMap[r.id] ?? 0]);
 
     await db.query(
-      `INSERT INTO dofa_evaluation_scores (submission_id, rubric_id, score)
+      `INSERT INTO Dofa_evaluation_scores (submission_id, rubric_id, score)
        VALUES ?`,
       [valuesToInsert]
     );
 
     const nonZero = valuesToInsert.filter(v => v[2] > 0).length;
     const total   = valuesToInsert.reduce((s, v) => s + v[2], 0);
-    console.log(`  ✓ Allocated ${nonZero}/${rubrics.length} rubric(s) with scores. Grand Total: ${total.toFixed(2)}`);
+    console.log(`  âœ“ Allocated ${nonZero}/${rubrics.length} rubric(s) with scores. Grand Total: ${total.toFixed(2)}`);
 
     return true;
   } catch (error) {
@@ -749,3 +749,4 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 };
 
 module.exports = { autoAllocateMarks };
+

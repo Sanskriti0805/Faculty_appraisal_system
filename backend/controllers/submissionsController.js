@@ -1,4 +1,4 @@
-const db = require('../config/database');
+﻿const db = require('../config/database');
 const { autoAllocateMarks } = require('../services/rubricMapper');
 const emailService = require('../services/emailService');
 const xlsx = require('xlsx');
@@ -20,7 +20,7 @@ async function getTargetAcademicYear() {
   return getCurrentAcademicYear();
 }
 
-// GET /api/submissions/my — get or create draft submission for logged-in faculty
+// GET /api/submissions/my - get or create draft submission for logged-in faculty
 exports.getMySubmission = async (req, res) => {
   try {
     const facultyId = req.user.id;
@@ -55,7 +55,7 @@ function getCurrentAcademicYear() {
   const now = new Date();
   const month = now.getMonth() + 1; // 1-12
   const year = now.getFullYear();
-  // Academic year starts in July: before July → previous-current, from July → current-next
+  // Academic year starts in July: before July -> previous-current, from July -> current-next
   if (month >= 7) {
     return `${year}-${String(year + 1).slice(-2)}`;
   } else {
@@ -468,7 +468,7 @@ exports.getSubmissionById = async (req, res) => {
       return res.status(403).json({ success: false, message: 'HOD cannot access submitted form details.' });
     }
 
-    if (!['faculty', 'dofa', 'dofa_office', 'admin'].includes(req.user?.role)) {
+    if (!['faculty', 'Dofa', 'Dofa_office', 'admin'].includes(req.user?.role)) {
       return res.status(403).json({ success: false, message: 'Insufficient permissions to view submission.' });
     }
 
@@ -638,12 +638,12 @@ exports.updateSubmissionStatus = async (req, res) => {
       if (!['draft', 'sent_back'].includes(submission.status)) {
         return res.status(403).json({
           success: false,
-          message: 'Submission is locked. Request edits or wait for DOFA to send back.'
+          message: 'Submission is locked. Request edits or wait for Dofa to send back.'
         });
       }
     }
 
-    // DOFA/DOFA office/Admin can manage review statuses.
+    // Dofa/Dofa office/Admin can manage review statuses.
     if (req.user && req.user.role !== 'faculty') {
       const allowed = ['under_review', 'approved', 'sent_back', 'submitted'];
       if (!allowed.includes(status)) {
@@ -678,7 +678,7 @@ exports.updateSubmissionStatus = async (req, res) => {
         const nextVersion = await createSubmissionSnapshot({
           submissionId: Number(id),
           createdBy: req.user?.id || null,
-          note: submission.status === 'sent_back' ? 'Faculty re-submission after DOFA review' : 'Faculty submission'
+          note: submission.status === 'sent_back' ? 'Faculty re-submission after Dofa review' : 'Faculty submission'
         });
 
         await db.query(
@@ -948,7 +948,7 @@ exports.sendReminder = async (req, res) => {
 
     const deadline = sessions[0]?.deadline
       ? new Date(sessions[0].deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
-      : 'Please check with DOFA office';
+      : 'Please check with Dofa office';
 
     await emailService.sendDeadlineReminder({
       to: sub.email,
@@ -1092,3 +1092,4 @@ exports.exportComprehensiveExcel = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+

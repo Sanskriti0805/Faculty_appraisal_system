@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileText, Clock, AlertTriangle, CheckCircle, CalendarOff, Calendar, Archive, Send } from 'lucide-react'
 import './Dashboard.css'
@@ -15,7 +15,7 @@ const Dashboard = () => {
   useEffect(() => {
     fetchSessionStatus()
 
-    // Auto-poll every 30 s so the page updates when DOFA releases forms
+    // Auto-poll every 30 s so the page updates when Dofa releases forms
     // without requiring a manual refresh
     const pollInterval = setInterval(() => {
       fetchSessionStatus()
@@ -84,7 +84,7 @@ const Dashboard = () => {
   const isReleased = sessionInfo?.released
   const isPastDeadline = sessionInfo?.pastDeadline
 
-  // ─── Case 1: Forms are released ─────────────────────────────
+  // --- Case 1: Forms are released -----------------------------
   if (isReleased && session) {
     const deadline = session.deadline ? new Date(session.deadline) : null
     const now = new Date()
@@ -92,7 +92,7 @@ const Dashboard = () => {
     const isSubmitted = lastSubmission && ['submitted', 'under_review', 'sent_back'].includes(lastSubmission.status)
     const isEditGranted = lastSubmission?.status === 'sent_back'
 
-    // ── Sub-case A: Already submitted ────────────────────────
+    // -- Sub-case A: Already submitted ------------------------
     if (isSubmitted) {
       return (
         <div className="dashboard">
@@ -104,7 +104,7 @@ const Dashboard = () => {
               <div className="banner-content">
                 <h1 className="dashboard-title">Edit Access Granted</h1>
                 <p className="dashboard-description">
-                  The DOFA office has approved your edit request for <strong>{session.academic_year}</strong>.
+                  The Dofa office has approved your edit request for <strong>{session.academic_year}</strong>.
                   Navigate to the approved sections from the sidebar, make your changes, then re-submit from <strong>Part B</strong>.
                   &nbsp;Deadline: <strong>{formatDate(session.deadline)}</strong>
                 </p>
@@ -119,7 +119,7 @@ const Dashboard = () => {
                 <h1 className="dashboard-title">Appraisal Form Submitted</h1>
                 <p className="dashboard-description">
                   Your appraisal form for <strong>{session.academic_year}</strong> has been submitted successfully.
-                  You may view the submitted form or request section edits from the DOFA office before the deadline.
+                  You may view the submitted form or request section edits from the Dofa office before the deadline.
                 </p>
               </div>
             </div>
@@ -156,7 +156,7 @@ const Dashboard = () => {
           {daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
             <div className="dashboard-urgent-banner">
               <AlertTriangle size={16} />
-              <span>Deadline approaching — <strong>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong> remaining.</span>
+              <span>Deadline approaching - <strong>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong> remaining.</span>
             </div>
           )}
 
@@ -180,7 +180,7 @@ const Dashboard = () => {
                 >
                   <Send size={20} />
                   <span>Request Section Edits</span>
-                  <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 400 }}>Ask DOFA to unlock sections</span>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 400 }}>Ask Dofa to unlock sections</span>
                 </button>
               )}
             </div>
@@ -200,7 +200,7 @@ const Dashboard = () => {
                   <FileText size={18} /><span>Research Publications</span>
                 </button>
                 <button className="quick-link-card" onClick={() => navigate('/part-b')}>
-                  <FileText size={18} /><span>Part B — Re-submit</span>
+                  <FileText size={18} /><span>Part B - Re-submit</span>
                 </button>
               </div>
             </div>
@@ -209,7 +209,7 @@ const Dashboard = () => {
       )
     }
 
-    // ── Sub-case B: Not yet submitted ────────────────────────
+    // -- Sub-case B: Not yet submitted ------------------------
     return (
       <div className="dashboard">
         <div className="dashboard-banner dashboard-banner-active">
@@ -244,7 +244,7 @@ const Dashboard = () => {
             <div>
               <span className="info-label">Days Remaining</span>
               <span className="info-value">
-                {daysLeft !== null ? (daysLeft > 0 ? `${daysLeft} days` : 'Last day') : '—'}
+                {daysLeft !== null ? (daysLeft > 0 ? `${daysLeft} days` : 'Last day') : '-'}
               </span>
             </div>
           </div>
@@ -253,7 +253,7 @@ const Dashboard = () => {
         {daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
           <div className="dashboard-urgent-banner">
             <AlertTriangle size={16} />
-            <span>Deadline approaching — please submit within <strong>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>.</span>
+            <span>Deadline approaching - please submit within <strong>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>.</span>
           </div>
         )}
 
@@ -278,7 +278,7 @@ const Dashboard = () => {
     )
   }
 
-  // ─── Case 2: Deadline has passed ─────────────────────────────
+  // --- Case 2: Deadline has passed -----------------------------
   if (isPastDeadline && session) {
     return (
       <div className="dashboard">
@@ -290,7 +290,7 @@ const Dashboard = () => {
             <h1 className="dashboard-title">Submission Deadline Has Passed</h1>
             <p className="dashboard-description">
               The submission deadline for <strong>{session.academic_year}</strong> was <strong>{formatDate(session.deadline)}</strong>.
-              Form submissions are no longer accepted. Please contact the DOFA office if you have any concerns.
+              Form submissions are no longer accepted. Please contact the Dofa office if you have any concerns.
             </p>
           </div>
         </div>
@@ -318,7 +318,7 @@ const Dashboard = () => {
     )
   }
 
-  // ─── Case 3: No active session / Forms not released ──────────
+  // --- Case 3: No active session / Forms not released ----------
   return (
     <div className="dashboard">
       <div className="dashboard-banner dashboard-banner-waiting">
@@ -338,7 +338,7 @@ const Dashboard = () => {
       <div className="dashboard-waiting-illustration">
         <div className="waiting-pulse"></div>
         <p>Awaiting form release</p>
-        <span>Check your email for updates from the DOFA office</span>
+        <span>Check your email for updates from the Dofa office</span>
       </div>
 
       {lastSubmission && (

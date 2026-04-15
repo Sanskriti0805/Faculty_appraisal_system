@@ -1,6 +1,7 @@
-import React from 'react'
+﻿import React from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import './HelpCenter.css'
 import './FormPages.css'
 
 const toSectionId = (title) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
@@ -117,14 +118,14 @@ const REVIEWER_HELP = [
       'Write actionable comments: mention field, expected correction, and example format.',
       'If insufficient evidence, ask for specific file/document type rather than generic note.',
       'Use consistent evaluation criteria across similar submissions.',
-      'Escalate technical data issues (schema/file errors) to DOFA office/admin.'
+      'Escalate technical data issues (schema/file errors) to Dofa office/admin.'
     ]
   }
 ]
 
-const DOFA_HELP = [
+const Dofa_HELP = [
   {
-    title: 'DOFA/DOFA Office Operations',
+    title: 'Dofa/Dofa Office Operations',
     bullets: [
       'Release forms only after rubrics/session configuration is complete.',
       'Validate rubric ranges and weightages before evaluation cycles.',
@@ -158,7 +159,7 @@ const ADMIN_HELP = [
     bullets: [
       'Document frequent user-facing errors with one-step fixes in this Help Center.',
       'Ensure re-auth and token expiration behavior is explicit in UI messages.',
-      'Validate role permissions after each release (faculty, hod, dofa, dofa_office).',
+      'Validate role permissions after each release (faculty, hod, Dofa, Dofa_office).',
       'Run smoke tests for Save Draft / Save and Next on critical sections every deploy.'
     ]
   }
@@ -167,14 +168,14 @@ const ADMIN_HELP = [
 const HELP_BY_ROLE = {
   faculty: FACULTY_HELP,
   hod: REVIEWER_HELP,
-  dofa: DOFA_HELP,
-  dofa_office: DOFA_HELP,
+  Dofa: Dofa_HELP,
+  Dofa_office: Dofa_HELP,
   admin: ADMIN_HELP
 }
 
 const roleLabel = (role) => {
-  if (role === 'dofa_office') return 'DOFA Office'
-  if (role === 'dofa') return 'DOFA'
+  if (role === 'Dofa_office') return 'Dofa Office'
+  if (role === 'Dofa') return 'Dofa'
   if (role === 'hod') return 'Reviewer/HOD'
   if (role === 'faculty') return 'Faculty'
   if (role === 'admin') return 'Admin'
@@ -183,16 +184,16 @@ const roleLabel = (role) => {
 
 const getDefaultRole = (pathname, userRole) => {
   if (userRole && HELP_BY_ROLE[userRole]) return userRole
-  if (pathname.startsWith('/dofa-office')) return 'dofa_office'
-  if (pathname.startsWith('/dofa')) return 'dofa'
+  if (pathname.startsWith('/Dofa-office')) return 'Dofa_office'
+  if (pathname.startsWith('/Dofa')) return 'Dofa'
   return 'faculty'
 }
 
 const ROLE_OPTIONS = [
   { key: 'faculty', label: 'Faculty' },
   { key: 'hod', label: 'Reviewer/HOD' },
-  { key: 'dofa', label: 'DOFA' },
-  { key: 'dofa_office', label: 'DOFA Office' },
+  { key: 'Dofa', label: 'Dofa' },
+  { key: 'Dofa_office', label: 'Dofa Office' },
   { key: 'admin', label: 'Admin/Technical' }
 ]
 
@@ -214,12 +215,102 @@ const HELP_MEDIA = [
   }
 ]
 
+const ROLE_OVERVIEW = {
+  faculty: {
+    badge: 'Faculty guide',
+    title: 'Start with the sections that unlock the rest of the form.',
+    description: 'Use the suggestions below to save time, avoid missing evidence, and verify every row before submission.'
+  },
+  hod: {
+    badge: 'Reviewer guide',
+    title: 'Review with consistency and leave comments that are easy to act on.',
+    description: 'Focus on evidence quality, section references, and clear next steps for resubmission or approval.'
+  },
+  Dofa: {
+    badge: 'Dofa guide',
+    title: 'Keep form cycles controlled with clear unlock and governance steps.',
+    description: 'Use the guidance here to manage releases, locking, and form lifecycle decisions without guesswork.'
+  },
+  Dofa_office: {
+    badge: 'Dofa Office guide',
+    title: 'Coordinate releases, schema checks, and support notes from one place.',
+    description: 'Use the quick actions below to find the right operating guidance before each cycle or correction.'
+  },
+  admin: {
+    badge: 'Admin guide',
+    title: 'Keep the system stable by checking errors, schema, and uploads early.',
+    description: 'This section groups the most common support tasks into interactive shortcuts and concise action cards.'
+  }
+}
+
+const ROLE_TOPICS = {
+  faculty: [
+    { label: 'Save and next', query: 'save' },
+    { label: 'Upload evidence', query: 'upload' },
+    { label: 'Common errors', query: 'error' },
+    { label: 'Date validation', query: 'date' }
+  ],
+  hod: [
+    { label: 'Comment guidance', query: 'comment' },
+    { label: 'Evidence review', query: 'evidence' },
+    { label: 'Decision workflow', query: 'workflow' },
+    { label: 'Escalation help', query: 'technical' }
+  ],
+  Dofa: [
+    { label: 'Form release', query: 'release' },
+    { label: 'Locking rules', query: 'lock' },
+    { label: 'Rubric checks', query: 'rubric' },
+    { label: 'Schema sync', query: 'schema' }
+  ],
+  Dofa_office: [
+    { label: 'Release steps', query: 'release' },
+    { label: 'Migration notes', query: 'migration' },
+    { label: 'Upload issues', query: 'upload' },
+    { label: 'Troubleshooting', query: 'error' }
+  ],
+  admin: [
+    { label: 'Backend checks', query: 'backend' },
+    { label: 'Upload middleware', query: 'upload' },
+    { label: 'Schema mismatch', query: 'unknown column' },
+    { label: 'System backup', query: 'backup' }
+  ]
+}
+
+const ROLE_ACTIONS = {
+  faculty: [
+    { title: 'Start with profile mapping', text: 'Complete Faculty Information first so dependent sections unlock correctly.' },
+    { title: 'Save before moving on', text: 'Use Save Draft or Save and Next after each row to avoid losing entered data.' },
+    { title: 'Confirm uploaded evidence', text: 'Check that the preview icon appears and the file is retained after save.' }
+  ],
+  hod: [
+    { title: 'Check evidence first', text: 'Review supporting files and section data before leaving scores or comments.' },
+    { title: 'Write actionable feedback', text: 'State the field, the correction needed, and a clear example of the expected format.' },
+    { title: 'Escalate system issues', text: 'If the submission problem is technical, route it to the Dofa office or admin team.' }
+  ],
+  Dofa: [
+    { title: 'Confirm release readiness', text: 'Check rubrics, session setup, and form availability before opening a cycle.' },
+    { title: 'Control edit scope', text: 'Unlock only the sections that need action when sending items back for correction.' },
+    { title: 'Monitor section health', text: 'Watch for recurring errors and update support guidance when a pattern appears.' }
+  ],
+  Dofa_office: [
+    { title: 'Validate the setup', text: 'Cross-check schema, rubrics, and active form configuration before support begins.' },
+    { title: 'Use jump links', text: 'Go directly to the save, upload, or error sections that match the current issue.' },
+    { title: 'Capture repeated fixes', text: 'Keep a short note for recurring problems so the next user can self-serve faster.' }
+  ],
+  admin: [
+    { title: 'Check backend alignment', text: 'Verify controller expectations, upload keys, and migration state before release.' },
+    { title: 'Watch for schema drift', text: 'Unknown column and FK errors usually mean the database is behind the code.' },
+    { title: 'Keep recovery ready', text: 'Maintain backups and rollback scripts before structural changes go live.' }
+  ]
+}
+
 const HelpCenter = () => {
   const { user } = useAuth()
   const location = useLocation()
   const defaultRole = getDefaultRole(location.pathname, user?.role)
   const [selectedRole, setSelectedRole] = React.useState(defaultRole)
   const [searchTerm, setSearchTerm] = React.useState('')
+  const [expandedSectionId, setExpandedSectionId] = React.useState(null)
   const canSwitchRoles = user?.role === 'admin'
 
   React.useEffect(() => {
@@ -234,6 +325,9 @@ const HelpCenter = () => {
   }, [canSwitchRoles, defaultRole])
 
   const sections = HELP_BY_ROLE[selectedRole] || FACULTY_HELP
+  const roleOverview = ROLE_OVERVIEW[selectedRole] || ROLE_OVERVIEW.faculty
+  const roleTopics = ROLE_TOPICS[selectedRole] || ROLE_TOPICS.faculty
+  const roleActions = ROLE_ACTIONS[selectedRole] || ROLE_ACTIONS.faculty
   const normalizedQuery = searchTerm.trim().toLowerCase()
 
   const filteredSections = React.useMemo(() => {
@@ -246,9 +340,22 @@ const HelpCenter = () => {
     })
   }, [sections, normalizedQuery])
 
+  React.useEffect(() => {
+    const nextExpanded = filteredSections[0] ? toSectionId(filteredSections[0].title) : null
+    if (!expandedSectionId || !filteredSections.some((section) => toSectionId(section.title) === expandedSectionId)) {
+      setExpandedSectionId(nextExpanded)
+    }
+  }, [expandedSectionId, filteredSections])
+
   const uploadAnchor = firstMatchingSectionId(sections, ['upload', 'evidence'])
   const saveNextAnchor = firstMatchingSectionId(sections, ['save and next', 'save draft', 'save'])
   const errorsAnchor = firstMatchingSectionId(sections, ['common errors', 'error', 'fix'])
+  const sectionTotal = sections.length
+  const bulletTotal = sections.reduce((count, section) => count + section.bullets.length, 0)
+
+  const focusTopic = (query) => {
+    setSearchTerm(query)
+  }
 
   return (
     <div className="form-page">
@@ -259,11 +366,33 @@ const HelpCenter = () => {
         </div>
       </div>
 
-      <div className="form-card" style={{ display: 'grid', gap: '1.25rem' }}>
-        <div style={{ display: 'grid', gap: '0.75rem' }}>
-          <div style={{ fontWeight: 600, color: '#1e3a5f' }}>{canSwitchRoles ? 'View Help As Role' : 'Role-Specific Help'}</div>
+      <div className="form-card help-center-shell" style={{ display: 'grid', gap: '1.25rem' }}>
+        <div className="help-center-hero">
+          <div className="help-center-hero-copy">
+            <div className="help-center-hero-badge">{roleOverview.badge}</div>
+            <h2 className="help-center-hero-title">{roleOverview.title}</h2>
+            <p className="help-center-hero-lead">{roleOverview.description}</p>
+          </div>
+          <div className="help-center-metrics">
+            <div className="help-metric">
+              <span className="help-metric-label">Sections</span>
+              <strong>{sectionTotal}</strong>
+            </div>
+            <div className="help-metric">
+              <span className="help-metric-label">Checks</span>
+              <strong>{bulletTotal}</strong>
+            </div>
+            <div className="help-metric">
+              <span className="help-metric-label">Role</span>
+              <strong>{roleLabel(selectedRole)}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="help-center-panel">
+          <div className="help-center-panel-title">{canSwitchRoles ? 'View help as a different role' : 'Role-specific help'}</div>
           {canSwitchRoles ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div className="help-chip-row">
               {ROLE_OPTIONS.map((role) => {
                 const active = selectedRole === role.key
                 return (
@@ -271,15 +400,7 @@ const HelpCenter = () => {
                     key={role.key}
                     type="button"
                     onClick={() => setSelectedRole(role.key)}
-                    style={{
-                      border: active ? '1px solid #3b82f6' : '1px solid #d1d8e0',
-                      background: active ? '#eff6ff' : '#fff',
-                      color: '#1e3a5f',
-                      borderRadius: '999px',
-                      padding: '0.45rem 0.9rem',
-                      cursor: 'pointer',
-                      fontWeight: active ? 600 : 500
-                    }}
+                    className={`help-chip ${active ? 'help-chip-active' : ''}`}
                   >
                     {role.label}
                   </button>
@@ -287,7 +408,7 @@ const HelpCenter = () => {
               })}
             </div>
           ) : (
-            <div style={{ display: 'inline-flex', alignItems: 'center', width: 'fit-content', border: '1px solid #d1d8e0', borderRadius: '999px', padding: '0.45rem 0.9rem', background: '#f8fafc', color: '#1e3a5f', fontWeight: 600 }}>
+            <div className="help-role-pill">
               {roleLabel(selectedRole)}
             </div>
           )}
@@ -296,76 +417,111 @@ const HelpCenter = () => {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gap: '0.6rem' }}>
-          <label htmlFor="help-search" style={{ fontWeight: 600, color: '#1e3a5f' }}>Search Help</label>
+        <div className="help-center-panel">
+          <div className="help-center-panel-title">Quick suggestions</div>
+          <div className="help-chip-row">
+            {roleTopics.map((topic) => (
+              <button
+                key={topic.label}
+                type="button"
+                className="help-chip help-chip-suggestion"
+                onClick={() => focusTopic(topic.query)}
+              >
+                {topic.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="help-center-panel">
+          <div className="help-center-panel-title">What to do next</div>
+          <div className="help-action-grid">
+            {roleActions.map((action, index) => (
+              <div key={action.title} className="help-action-card">
+                <div className="help-action-step">0{index + 1}</div>
+                <div className="help-action-title">{action.title}</div>
+                <div className="help-action-text">{action.text}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="help-center-panel">
+          <label htmlFor="help-search" className="help-center-panel-title">Search help</label>
           <input
             id="help-search"
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search keywords like upload, save and next, lock, evidence, date..."
-            style={{
-              width: '100%',
-              maxWidth: '760px',
-              border: '1px solid #d1d8e0',
-              borderRadius: '8px',
-              padding: '0.65rem 0.8rem',
-              fontSize: '0.95rem'
-            }}
+            className="help-search-input"
           />
           <div style={{ color: '#64748b', fontSize: '0.88rem' }}>
             Showing <strong>{filteredSections.length}</strong> section(s) for role: <strong>{roleLabel(selectedRole)}</strong>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gap: '0.6rem' }}>
-          <div style={{ fontWeight: 600, color: '#1e3a5f' }}>Quick Jump</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div className="help-center-panel">
+          <div className="help-center-panel-title">Quick jump</div>
+          <div className="help-chip-row">
             {uploadAnchor && (
-              <a href={`#${uploadAnchor}`} style={{ textDecoration: 'none', border: '1px solid #d1d8e0', borderRadius: '999px', padding: '0.38rem 0.8rem', color: '#1e3a5f', background: '#fff' }}>
+              <a href={`#${uploadAnchor}`} className="help-chip help-chip-link">
                 Uploads
               </a>
             )}
             {saveNextAnchor && (
-              <a href={`#${saveNextAnchor}`} style={{ textDecoration: 'none', border: '1px solid #d1d8e0', borderRadius: '999px', padding: '0.38rem 0.8rem', color: '#1e3a5f', background: '#fff' }}>
+              <a href={`#${saveNextAnchor}`} className="help-chip help-chip-link">
                 Save & Next
               </a>
             )}
             {errorsAnchor && (
-              <a href={`#${errorsAnchor}`} style={{ textDecoration: 'none', border: '1px solid #d1d8e0', borderRadius: '999px', padding: '0.38rem 0.8rem', color: '#1e3a5f', background: '#fff' }}>
+              <a href={`#${errorsAnchor}`} className="help-chip help-chip-link">
                 Common Errors
               </a>
             )}
           </div>
         </div>
 
-        <div style={{ display: 'grid', gap: '1rem' }}>
+        <div className="help-center-list">
           {filteredSections.map((section) => (
-            <div id={toSectionId(section.title)} key={section.title} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem 1.1rem', background: '#fff' }}>
-              <h3 style={{ margin: '0 0 0.6rem 0', color: '#1e3a5f' }}>{section.title}</h3>
-              <ul style={{ margin: 0, paddingLeft: '1.15rem', color: '#334155', lineHeight: 1.6 }}>
-                {section.bullets.map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
-            </div>
+            <article id={toSectionId(section.title)} key={section.title} className="help-section-card">
+              <button
+                type="button"
+                className="help-section-toggle"
+                aria-expanded={expandedSectionId === toSectionId(section.title)}
+                onClick={() => setExpandedSectionId((current) => (current === toSectionId(section.title) ? null : toSectionId(section.title)))}
+              >
+                <span>
+                  <span className="help-section-title">{section.title}</span>
+                  <span className="help-section-summary">Tap to expand or collapse this guidance.</span>
+                </span>
+                <span className="help-section-status">{expandedSectionId === toSectionId(section.title) ? 'Hide' : 'Show'}</span>
+              </button>
+              {expandedSectionId === toSectionId(section.title) && (
+                <ul className="help-section-bullets">
+                  {section.bullets.map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
+              )}
+            </article>
           ))}
 
           {filteredSections.length === 0 && (
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem 1.1rem', background: '#fff', color: '#64748b' }}>
+            <div className="help-empty-state">
               No help section matched your search. Try broader keywords like <strong>save</strong>, <strong>upload</strong>, <strong>error</strong>, or <strong>date</strong>.
             </div>
           )}
         </div>
 
         <div style={{ display: 'grid', gap: '0.8rem' }}>
-          <h2 style={{ margin: 0, color: '#1e3a5f', fontSize: '1.2rem' }}>Visual Walkthroughs (Screenshots / GIFs)</h2>
+          <h2 style={{ margin: 0, color: '#1e3a5f', fontSize: '1.2rem' }}>Visual walkthroughs and examples</h2>
           <p style={{ margin: 0, color: '#64748b', fontSize: '0.92rem' }}>
             Add visual files under <strong>public/help-media</strong>. The Help Center will auto-show them here.
           </p>
-          <div style={{ display: 'grid', gap: '0.9rem' }}>
+          <div className="help-media-grid">
             {HELP_MEDIA.map((item) => (
-              <div key={item.title} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.9rem', background: '#fff', display: 'grid', gap: '0.55rem' }}>
+              <div key={item.title} className="help-media-card">
                 <div style={{ fontWeight: 600, color: '#1e3a5f' }}>{item.title}</div>
                 <div style={{ color: '#64748b', fontSize: '0.9rem' }}>{item.note}</div>
                 <MediaPreview item={item} />
@@ -379,3 +535,4 @@ const HelpCenter = () => {
 }
 
 export default HelpCenter
+

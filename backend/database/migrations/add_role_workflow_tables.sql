@@ -1,4 +1,4 @@
--- Add role-based workflow tables for DOFA system
+﻿-- Add role-based workflow tables for Dofa system
 
 -- Users table for authentication and role management
 CREATE TABLE IF NOT EXISTS users (
@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255),
-    role ENUM('faculty', 'dofa', 'dofa_office') DEFAULT 'faculty',
+    role ENUM('faculty', 'Dofa', 'Dofa_office') DEFAULT 'faculty',
     department VARCHAR(100),
     designation VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -41,12 +41,12 @@ CREATE TABLE IF NOT EXISTS submissions (
     FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Review comments for DOFA feedback
+-- Review comments for Dofa feedback
 CREATE TABLE IF NOT EXISTS review_comments (
     id INT PRIMARY KEY AUTO_INCREMENT,
     submission_id INT NOT NULL,
     reviewer_id INT,
-    reviewer_role ENUM('dofa', 'dofa_office'),
+    reviewer_role ENUM('Dofa', 'Dofa_office'),
     section_name VARCHAR(255) NOT NULL DEFAULT 'General',
     section_key VARCHAR(100) NULL,
     comment TEXT NOT NULL,
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS submission_versions (
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Submission locks for DOFA office
+-- Submission locks for Dofa office
 CREATE TABLE IF NOT EXISTS submission_locks (
     id INT PRIMARY KEY AUTO_INCREMENT,
     submission_id INT NOT NULL,
@@ -94,3 +94,4 @@ CREATE INDEX idx_submissions_year_workflow ON submissions(academic_year);
 CREATE INDEX idx_review_comments_submission_workflow ON review_comments(submission_id);
 CREATE INDEX idx_review_comments_resolved_workflow ON review_comments(is_resolved);
 CREATE INDEX idx_appraisal_sessions_status_workflow ON appraisal_sessions(status);
+

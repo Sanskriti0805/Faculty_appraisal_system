@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, User, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import './LoginPage.css';
@@ -8,8 +8,8 @@ const API_BASE = `http://${window.location.hostname}:5000/api`;
 const ROLES = [
   { value: 'faculty', label: 'Faculty' },
   { value: 'hod', label: 'Head of Department (HOD)' },
-  { value: 'dofa', label: 'DOFA' },
-  { value: 'dofa_office', label: 'DOFA Office' },
+  { value: 'Dofa', label: 'Dofa' },
+  { value: 'Dofa_office', label: 'Dofa Office' },
 ];
 
 const ForgotPassword = () => {
@@ -49,7 +49,7 @@ const ForgotPassword = () => {
       <div className="login-container">
         <div className="login-logo-section">
           <div className="login-logo-fallback">
-            <div className="login-logo-text">LNMIIT<span>■■</span></div>
+            <div className="login-logo-text">LNMIIT<span>â– â– </span></div>
             <div className="login-logo-subtitle">The LNM Institute of Information Technology</div>
           </div>
           <h1 className="login-title">Reset Your Password</h1>
@@ -130,7 +130,7 @@ const ForgotPassword = () => {
         </div>
 
         <div className="login-footer">
-          <p>© {new Date().getFullYear()} The LNM Institute of Information Technology</p>
+          <p>(c) {new Date().getFullYear()} The LNM Institute of Information Technology</p>
         </div>
       </div>
     </div>
@@ -138,3 +138,4 @@ const ForgotPassword = () => {
 };
 
 export default ForgotPassword;
+

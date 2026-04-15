@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Lock, Unlock, Mail, Download, Users, FileText, Clock, CheckSquare, Eye, CheckCircle, XCircle, Calendar, FileCode, Table, X, ChevronDown, LayoutList } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import './DOFAOfficeDashboard.css';
+import './DofaOfficeDashboard.css';
 import { showConfirm } from '../utils/appDialogs';
 
 const API = `http://${window.location.hostname}:5000/api`;
 
-const DOFAOfficeDashboard = () => {
+const DofaOfficeDashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalFaculty: 0,
@@ -105,9 +105,9 @@ const DOFAOfficeDashboard = () => {
       });
       const data = await res.json();
       if (data.success) {
-        window.appToast(`✅ Reminder sent to ${email}`);
+        window.appToast(`âœ… Reminder sent to ${email}`);
       } else {
-        window.appToast(`⚠️ ${data.message || 'Failed to send reminder'}`);
+        window.appToast(`âš ï¸ ${data.message || 'Failed to send reminder'}`);
       }
     } catch (e) {
       console.error('Reminder error:', e);
@@ -126,18 +126,18 @@ const DOFAOfficeDashboard = () => {
       });
       const data = await res.json();
       if (data.success) {
-        window.appToast(`✅ Status updated to "${status}"`);
+        window.appToast(`âœ… Status updated to "${status}"`);
         fetchSubmissions();
         fetchStats();
       } else {
-        window.appToast(`⚠️ ${data.message}`);
+        window.appToast(`âš ï¸ ${data.message}`);
       }
     } catch (e) {
       window.appToast('Error updating status');
     }
   };
 
-  // ── Download Helpers ─────────────────────────────────────────────────────
+  // -- Download Helpers -----------------------------------------------------
 
   const fetchSubmissionData = async (id) => {
     const res = await fetch(`${API}/submissions/${id}`, {
@@ -213,7 +213,7 @@ const DOFAOfficeDashboard = () => {
         .meta-item label{font-size:11px;color:#777;display:block}
         .meta-item span{font-weight:600}
       </style></head><body>
-      <h1>Annual Performance Appraisal — Form ${sub.form_type || 'A'}</h1>
+      <h1>Annual Performance Appraisal - Form ${sub.form_type || 'A'}</h1>
       <div class="meta">
         <div class="meta-item"><label>Name</label><span>${sub.faculty_name}</span></div>
         <div class="meta-item"><label>Department</label><span>${sub.department || 'N/A'}</span></div>
@@ -222,7 +222,7 @@ const DOFAOfficeDashboard = () => {
         <div class="meta-item"><label>Designation</label><span>${facultyInfo?.designation || 'N/A'}</span></div>
       </div>
 
-      <h2>Part A — Courses Taught (${courses?.length || 0})</h2>
+      <h2>Part A - Courses Taught (${courses?.length || 0})</h2>
       <table><tr><th>Course Name</th><th>Code</th><th>Semester</th><th>Program</th><th>Enrollment</th></tr>
       ${(courses || []).map(c => `<tr><td>${c.course_name||''}</td><td>${c.course_code||''}</td><td>${c.semester||''}</td><td>${c.program||''}</td><td>${c.enrollment||''}</td></tr>`).join('')}
       </table>
@@ -285,7 +285,7 @@ const DOFAOfficeDashboard = () => {
     }
   };
 
-  // ── Bulk Export: Summary PDF (dashboard table view for all faculties) ────
+  // -- Bulk Export: Summary PDF (dashboard table view for all faculties) ----
   const handleExportSummaryPDF = () => {
     setExportLoading('summary');
     setExportDropdownOpen(false);
@@ -320,7 +320,7 @@ const DOFAOfficeDashboard = () => {
       });
 
       const html = `<!DOCTYPE html>
-<html><head><title>DOFA Appraisal Summary — ${yearLabel}</title>
+<html><head><title>Dofa Appraisal Summary - ${yearLabel}</title>
 <style>
   @page { size: A4 landscape; margin: 16mm; }
   body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
@@ -344,7 +344,7 @@ const DOFAOfficeDashboard = () => {
   <thead><tr><th>Academic Year</th><th>Faculty Name</th><th>Department</th><th>Designation</th><th>Email</th><th>Form</th><th>Status</th><th>Submitted On</th></tr></thead>
   <tbody>${tableRows}</tbody>
 </table>
-<p class="footer">Dean of Faculty Affairs (DOFA) Office &mdash; Confidential Record</p>
+<p class="footer">Dean of Faculty Affairs (Dofa) Office &mdash; Confidential Record</p>
 </body></html>`;
 
       const win = window.open('', '_blank');
@@ -356,7 +356,7 @@ const DOFAOfficeDashboard = () => {
     }
   };
 
-  // ── Bulk Export: All Faculty Forms PDF (one PDF with all faculty detailed forms) ──
+  // -- Bulk Export: All Faculty Forms PDF (one PDF with all faculty detailed forms) --
   const handleExportFormsPDF = async () => {
     setExportLoading('forms');
     setExportDropdownOpen(false);
@@ -432,7 +432,7 @@ const DOFAOfficeDashboard = () => {
       `).join('');
 
       const html = `<!DOCTYPE html>
-<html><head><title>Faculty Appraisal Forms — ${yearLabel}</title>
+<html><head><title>Faculty Appraisal Forms - ${yearLabel}</title>
 <style>
   @page { size: A4 portrait; margin: 16mm; }
   body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
@@ -458,7 +458,7 @@ const DOFAOfficeDashboard = () => {
   .badge.approved { background: #bbf7d0; color: #166534; }
   .badge.sent_back { background: #fecaca; color: #991b1b; }
 </style></head><body>
-<h1>Annual Performance Appraisal — Faculty Forms</h1>
+<h1>Annual Performance Appraisal - Faculty Forms</h1>
 <p class="cover-meta">Academic Year: <strong>${yearLabel}</strong> &nbsp;|&nbsp; Total Faculty: <strong>${allData.length}</strong> &nbsp;|&nbsp; Generated: ${new Date().toLocaleString('en-IN')}</p>
 ${facultySections}
 </body></html>`;
@@ -493,10 +493,10 @@ ${facultySections}
   const yearsToShow = yearFilter === 'all' ? Object.keys(grouped).sort().reverse() : [yearFilter];
 
   return (
-    <div className="dofa-office-dashboard">
+    <div className="Dofa-office-dashboard">
       <div className="dashboard-header">
         <div>
-          <h1 className="dashboard-title">DOFA Office Dashboard</h1>
+          <h1 className="dashboard-title">Dofa Office Dashboard</h1>
           <p className="dashboard-subtitle">Academic year-wise faculty appraisal management</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -536,7 +536,7 @@ ${facultySections}
                   </div>
                   <div className="export-item-text">
                     <strong>Faculty Forms PDF</strong>
-                    <span>Full appraisal forms for all faculty — combined PDF</span>
+                    <span>Full appraisal forms for all faculty - combined PDF</span>
                   </div>
                 </button>
 
@@ -549,7 +549,7 @@ ${facultySections}
                   </div>
                   <div className="export-item-text">
                     <strong>Submission Summary PDF</strong>
-                    <span>Dashboard overview — name, dept, status, date, etc.</span>
+                    <span>Dashboard overview - name, dept, status, date, etc.</span>
                   </div>
                 </button>
               </div>
@@ -655,7 +655,7 @@ ${facultySections}
                           <div className="action-buttons" style={{ justifyContent: 'center' }}>
                             <button
                               className="action-btn btn-view"
-                              onClick={() => navigate(`/dofa-office/review/${submission.id}`)}
+                              onClick={() => navigate(`/Dofa-office/review/${submission.id}`)}
                               title="View Full Form"
                             >
                               <Eye size={16} />
@@ -723,7 +723,7 @@ ${facultySections}
             <div className="modal-header">
               <div>
                 <h2 className="modal-title">Export Appraisal Form</h2>
-                <p className="modal-subtitle">{downloadModal.submission.faculty_name} — {downloadModal.submission.academic_year}</p>
+                <p className="modal-subtitle">{downloadModal.submission.faculty_name} - {downloadModal.submission.academic_year}</p>
               </div>
               <button 
                 className="modal-close-btn"
@@ -794,4 +794,4 @@ ${facultySections}
   );
 };
 
-export default DOFAOfficeDashboard;
+export default DofaOfficeDashboard;
