@@ -63,6 +63,49 @@ function getCurrentAcademicYear() {
   }
 }
 
+const normalizeFormType = (value) => String(value || 'A').trim().toUpperCase();
+
+const resolveHodDepartmentContext = async (user = {}) => {
+  const userDeptId = Number(user.department_id || 0);
+  const userDeptName = String(user.department || '').trim();
+
+  if (userDeptId > 0) {
+    const [rows] = await db.query('SELECT id, name FROM departments WHERE id = ? LIMIT 1', [userDeptId]);
+    if (rows.length > 0) {
+      return {
+        id: Number(rows[0].id),
+        name: String(rows[0].name || '').trim(),
+        nameNorm: String(rows[0].name || '').trim().toLowerCase()
+      };
+    }
+  }
+
+  if (!userDeptName) return null;
+  const [rowsByName] = await db.query('SELECT id, name FROM departments WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1', [userDeptName]);
+  if (rowsByName.length > 0) {
+    return {
+      id: Number(rowsByName[0].id),
+      name: String(rowsByName[0].name || userDeptName).trim(),
+      nameNorm: String(rowsByName[0].name || userDeptName).trim().toLowerCase()
+    };
+  }
+
+  return {
+    id: 0,
+    name: userDeptName,
+    nameNorm: userDeptName.toLowerCase()
+  };
+};
+
+const isSubmissionInHodDepartment = (submission = {}, hodDept = null) => {
+  if (!hodDept) return false;
+  const facultyDeptId = Number(submission.faculty_department_id || 0);
+  const facultyDeptNameNorm = String(submission.faculty_department || '').trim().toLowerCase();
+  const sameDeptById = hodDept.id > 0 && facultyDeptId > 0 && facultyDeptId === hodDept.id;
+  const sameDeptByName = facultyDeptNameNorm && facultyDeptNameNorm === hodDept.nameNorm;
+  return sameDeptById || sameDeptByName;
+};
+
 const TEACHING_SECTION_KEYS = ['courses_taught', 'new_courses', 'courseware', 'teaching_innovation'];
 
 const COMMENT_SECTION_LABEL_TO_KEYS = {
@@ -405,21 +448,63 @@ async function fetchLegacySectionContent(facultyId, academicYear, sectionKey) {
 // Get all submissions with filters
 exports.getAllSubmissions = async (req, res) => {
   try {
-    const { status, academic_year, faculty_id } = req.query;
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+
+    const { status, academic_year, faculty_id, form_type } = req.query;
+    const role = req.user.role;
 
     let query = `
       SELECT s.*, u.name as faculty_name, u.department, u.email,
+             u.department_id as faculty_department_id,
              a.name as approved_by_name
       FROM submissions s
       JOIN users u ON s.faculty_id = u.id
       LEFT JOIN users a ON s.approved_by = a.id
       WHERE 1=1
+        AND u.role = 'faculty'
     `;
     const params = [];
 
+    if (role === 'faculty') {
+      query += ' AND s.faculty_id = ?';
+      params.push(req.user.id);
+
+      if (!form_type) {
+        query += " AND UPPER(COALESCE(s.form_type, 'A')) = 'A'";
+      }
+    } else if (role === 'hod') {
+      const hodDept = await resolveHodDepartmentContext(req.user);
+      if (!hodDept) {
+        return res.status(403).json({ success: false, message: 'HOD department mapping is missing.' });
+      }
+
+      query += " AND UPPER(COALESCE(s.form_type, 'A')) = 'B'";
+      query += ' AND ((u.department_id = ?) OR (u.department_id IS NULL AND ? <> "" AND LOWER(TRIM(u.department)) = LOWER(TRIM(?))))';
+      params.push(hodDept.id || 0, hodDept.name || '', hodDept.name || '');
+    } else if (!['Dofa', 'Dofa_office', 'admin'].includes(role)) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions to view submissions.' });
+    }
+
+    if (form_type) {
+      const normalizedFormType = normalizeFormType(form_type);
+      if (!['A', 'B'].includes(normalizedFormType)) {
+        return res.status(400).json({ success: false, message: 'Invalid form_type. Use A or B.' });
+      }
+      query += " AND UPPER(COALESCE(s.form_type, 'A')) = ?";
+      params.push(normalizedFormType);
+    }
+
     if (status) {
-      query += ' AND s.status = ?';
-      params.push(status);
+      if (status === 'submitted') {
+        query += " AND s.status IN ('submitted', 'submitted_hod', 'hod_approved')";
+      } else if (status === 'under_review') {
+        query += " AND s.status IN ('under_review', 'under_review_hod')";
+      } else {
+        query += ' AND s.status = ?';
+        params.push(status);
+      }
     }
     if (academic_year) {
       query += ' AND s.academic_year = ?';
@@ -445,8 +530,8 @@ exports.getSubmissionById = async (req, res) => {
     const { id } = req.params;
 
     // Get submission details
-    const [submission] = await db.query(`
-      SELECT s.*, u.name as faculty_name, u.department, u.email, u.designation,
+        const [submission] = await db.query(`
+          SELECT s.*, u.name as faculty_name, u.department, u.department_id as faculty_department_id, u.email, u.designation, u.role as faculty_role,
              a.name as approved_by_name
       FROM submissions s
       JOIN users u ON s.faculty_id = u.id
@@ -460,15 +545,42 @@ exports.getSubmissionById = async (req, res) => {
 
     const sub = submission[0];
 
-    if (req.user?.role === 'faculty' && Number(req.user.id) !== Number(sub.faculty_id)) {
+    if (String(sub.faculty_role || '').toLowerCase() !== 'faculty') {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+
+    const role = req.user?.role;
+    const formType = normalizeFormType(sub.form_type);
+
+    if (role === 'faculty' && Number(req.user.id) !== Number(sub.faculty_id)) {
       return res.status(403).json({ success: false, message: 'You can only view your own submission.' });
     }
 
-    if (req.user?.role === 'hod') {
-      return res.status(403).json({ success: false, message: 'HOD cannot access submitted form details.' });
+    if (role === 'hod') {
+      if (formType !== 'B') {
+        return res.status(403).json({ success: false, message: 'HOD can only access Form B submissions.' });
+      }
+
+      const hodDept = await resolveHodDepartmentContext(req.user);
+      if (!hodDept) {
+        return res.status(403).json({ success: false, message: 'HOD department mapping is missing.' });
+      }
+
+      const facultyDeptId = Number(sub.faculty_department_id || sub.department_id || 0);
+      const facultyDeptName = String(sub.department || '').trim().toLowerCase();
+      const sameDeptById = hodDept.id > 0 && facultyDeptId > 0 && facultyDeptId === hodDept.id;
+      const sameDeptByName = facultyDeptName && facultyDeptName === hodDept.nameNorm;
+
+      if (!sameDeptById && !sameDeptByName) {
+        return res.status(403).json({ success: false, message: 'HOD can only access submissions from own department.' });
+      }
     }
 
-    if (!['faculty', 'Dofa', 'Dofa_office', 'admin'].includes(req.user?.role)) {
+    if (['Dofa', 'Dofa_office'].includes(role) && formType === 'B' && ['submitted_hod', 'under_review_hod'].includes(sub.status)) {
+      return res.status(403).json({ success: false, message: 'Form B can be reviewed by Dofa only after HOD approval.' });
+    }
+
+    if (!['faculty', 'hod', 'Dofa', 'Dofa_office', 'admin'].includes(role)) {
       return res.status(403).json({ success: false, message: 'Insufficient permissions to view submission.' });
     }
 
@@ -485,6 +597,55 @@ exports.getSubmissionById = async (req, res) => {
     
     // Helper to get year from academic_year string (e.g. "2025-26" -> 2025)
     const yearNum = academicYear.split('-')[0];
+
+    // HOD must only review Form B content. Do not return Form A sections.
+    if (role === 'hod' && formType === 'B') {
+      const [facultyInfo] = await db.query('SELECT * FROM faculty_information WHERE id = ?', [fid]);
+      const [goals] = await db.query('SELECT * FROM faculty_goals WHERE faculty_id = ?', [fid]);
+      const dynamicData = await fetchDynamicSectionData({
+        facultyIds: [sub.faculty_id, fid],
+        submissionId: id,
+        formType: 'B'
+      });
+
+      const [comments] = await db.query(`
+        SELECT rc.*, u.name as reviewer_name
+        FROM review_comments rc
+        LEFT JOIN users u ON rc.reviewer_id = u.id
+        WHERE rc.submission_id = ?
+        ORDER BY rc.created_at DESC
+      `, [id]);
+
+      return res.json({
+        success: true,
+        data: {
+          submission: sub,
+          facultyInfo: facultyInfo[0] || {},
+          courses: [],
+          publications: [],
+          grants: [],
+          patents: [],
+          awards: [],
+          newCourses: [],
+          proposals: [],
+          paperReviews: [],
+          techTransfer: [],
+          conferenceSessions: [],
+          keynotesTalks: [],
+          consultancy: [],
+          teachingInnovation: [],
+          institutionalContributions: [],
+          goals: goals || [],
+          courseware: null,
+          continuingEducation: null,
+          otherActivities: null,
+          researchPlan: null,
+          teachingPlan: null,
+          comments: comments || [],
+          dynamicData: dynamicData || []
+        }
+      });
+    }
 
     // Get faculty information
     const [facultyInfo] = await db.query('SELECT * FROM faculty_information WHERE id = ?', [fid]);
@@ -617,21 +778,38 @@ exports.updateSubmissionStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, approved_by } = req.body;
+    const requesterRole = req.user?.role;
 
-    const [existingRows] = await db.query('SELECT id, faculty_id, status, academic_year FROM submissions WHERE id = ?', [id]);
+    if (!requesterRole) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+
+    const [existingRows] = await db.query(
+      `SELECT s.id, s.faculty_id, s.status, s.academic_year, s.form_type,
+              u.department_id as faculty_department_id, u.department as faculty_department, u.role as faculty_role
+       FROM submissions s
+       JOIN users u ON u.id = s.faculty_id
+       WHERE s.id = ?`,
+      [id]
+    );
     if (existingRows.length === 0) {
       return res.status(404).json({ success: false, message: 'Submission not found' });
     }
 
     const submission = existingRows[0];
+    if (String(submission.faculty_role || '').toLowerCase() !== 'faculty') {
+      return res.status(400).json({ success: false, message: 'Only faculty submissions are reviewable.' });
+    }
+    const formType = normalizeFormType(submission.form_type);
+    let nextStatus = String(status || '').trim();
 
     // Faculty can only submit/re-submit their own record.
-    if (req.user?.role === 'faculty') {
+    if (requesterRole === 'faculty') {
       if (Number(submission.faculty_id) !== Number(req.user.id)) {
         return res.status(403).json({ success: false, message: 'You can only update your own submission.' });
       }
 
-      if (status !== 'submitted') {
+      if (nextStatus !== 'submitted') {
         return res.status(403).json({ success: false, message: 'Faculty can only submit or re-submit.' });
       }
 
@@ -641,26 +819,74 @@ exports.updateSubmissionStatus = async (req, res) => {
           message: 'Submission is locked. Request edits or wait for Dofa to send back.'
         });
       }
+
+      nextStatus = formType === 'B' ? 'submitted_hod' : 'submitted';
     }
 
-    // Dofa/Dofa office/Admin can manage review statuses.
-    if (req.user && req.user.role !== 'faculty') {
-      const allowed = ['under_review', 'approved', 'sent_back', 'submitted'];
-      if (!allowed.includes(status)) {
-        return res.status(400).json({ success: false, message: 'Invalid status transition requested.' });
+    if (requesterRole === 'hod') {
+      if (formType !== 'B') {
+        return res.status(403).json({ success: false, message: 'HOD can only review Form B submissions.' });
+      }
+
+      const hodDept = await resolveHodDepartmentContext(req.user);
+      if (!isSubmissionInHodDepartment(submission, hodDept)) {
+        return res.status(403).json({ success: false, message: 'HOD can only review submissions from own department.' });
+      }
+
+      const allowed = ['under_review_hod', 'hod_approved', 'sent_back'];
+      if (!allowed.includes(nextStatus)) {
+        return res.status(400).json({ success: false, message: 'Invalid status transition requested for HOD.' });
+      }
+
+      const transitionMap = {
+        submitted_hod: ['under_review_hod', 'hod_approved', 'sent_back'],
+        under_review_hod: ['hod_approved', 'sent_back'],
+        sent_back: []
+      };
+      const allowedNext = transitionMap[submission.status] || [];
+      if (!allowedNext.includes(nextStatus)) {
+        return res.status(400).json({ success: false, message: 'Invalid HOD status transition for the current submission state.' });
       }
     }
 
-    let query = 'UPDATE submissions SET status = ?';
-    const params = [status];
+    // Dofa/Dofa office/Admin can manage Dofa stage statuses.
+    if (['Dofa', 'Dofa_office', 'admin'].includes(requesterRole)) {
+      const allowed = ['under_review', 'approved', 'sent_back'];
+      if (!allowed.includes(nextStatus)) {
+        return res.status(400).json({ success: false, message: 'Invalid status transition requested.' });
+      }
 
-    if (status === 'submitted') {
+      if (formType === 'B' && ['submitted_hod', 'under_review_hod'].includes(submission.status)) {
+        return res.status(403).json({ success: false, message: 'Form B can be reviewed by Dofa only after HOD approval.' });
+      }
+
+      const transitionMap = {
+        submitted: ['under_review', 'approved', 'sent_back'],
+        hod_approved: ['under_review', 'approved', 'sent_back'],
+        under_review: ['approved', 'sent_back'],
+        approved: ['sent_back'],
+        sent_back: []
+      };
+      const allowedNext = transitionMap[submission.status] || [];
+      if (!allowedNext.includes(nextStatus)) {
+        return res.status(400).json({ success: false, message: 'Invalid status transition for the current submission state.' });
+      }
+    }
+
+    if (!['faculty', 'hod', 'Dofa', 'Dofa_office', 'admin'].includes(requesterRole)) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions to update submission.' });
+    }
+
+    let query = 'UPDATE submissions SET status = ?';
+    const params = [nextStatus];
+
+    if (nextStatus === 'submitted' || nextStatus === 'submitted_hod') {
       query += ', submitted_at = CURRENT_TIMESTAMP';
     }
 
-    if (status === 'approved' && approved_by) {
+    if (nextStatus === 'approved') {
       query += ', approved_by = ?, approved_at = CURRENT_TIMESTAMP';
-      params.push(approved_by);
+      params.push(approved_by || req.user?.id || null);
     }
 
     query += ' WHERE id = ?';
@@ -672,13 +898,42 @@ exports.updateSubmissionStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Submission not found' });
     }
 
+    // When faculty submits Form A, ensure a parallel Form B row exists and enters HOD pipeline.
+    if (requesterRole === 'faculty' && formType === 'A' && nextStatus === 'submitted') {
+      const [formBRows] = await db.query(
+        `SELECT id, status
+         FROM submissions
+         WHERE faculty_id = ? AND academic_year = ? AND UPPER(COALESCE(form_type, 'A')) = 'B'
+         ORDER BY id DESC
+         LIMIT 1`,
+        [submission.faculty_id, submission.academic_year]
+      );
+
+      if (formBRows.length === 0) {
+        await db.query(
+          `INSERT INTO submissions (faculty_id, academic_year, form_type, status, submitted_at)
+           VALUES (?, ?, 'B', 'submitted_hod', CURRENT_TIMESTAMP)`,
+          [submission.faculty_id, submission.academic_year]
+        );
+      } else {
+        await db.query(
+          `UPDATE submissions
+           SET status = 'submitted_hod', submitted_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          [formBRows[0].id]
+        );
+      }
+    }
+
     // Trigger auto-allocation if status is 'submitted'
-    if (status === 'submitted') {
+    if (nextStatus === 'submitted' || nextStatus === 'submitted_hod') {
       try {
         const nextVersion = await createSubmissionSnapshot({
           submissionId: Number(id),
           createdBy: req.user?.id || null,
-          note: submission.status === 'sent_back' ? 'Faculty re-submission after Dofa review' : 'Faculty submission'
+          note: submission.status === 'sent_back'
+            ? `Faculty re-submission routed to ${formType === 'B' ? 'HOD' : 'Dofa'}`
+            : `Faculty submission routed to ${formType === 'B' ? 'HOD' : 'Dofa'}`
         });
 
         await db.query(
@@ -701,7 +956,7 @@ exports.updateSubmissionStatus = async (req, res) => {
       }
     }
 
-    if (status === 'sent_back') {
+    if (nextStatus === 'sent_back') {
       try {
         const [facultyRows] = await db.query(
           `SELECT s.academic_year, u.name AS faculty_name, u.email
@@ -751,7 +1006,7 @@ exports.updateSubmissionStatus = async (req, res) => {
       }
     }
 
-    res.json({ success: true, message: 'Submission status updated successfully' });
+    res.json({ success: true, message: 'Submission status updated successfully', data: { status: nextStatus } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -852,23 +1107,66 @@ exports.saveConsultancy = async (req, res) => {
 // Get submission statistics
 exports.getSubmissionStats = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+
     const { academic_year } = req.query;
-    let whereClause = academic_year ? 'WHERE academic_year = ?' : '';
-    const params = academic_year ? [academic_year] : [];
+    const params = [];
+    const whereParts = [];
+
+    if (academic_year) {
+      whereParts.push('s.academic_year = ?');
+      params.push(academic_year);
+    }
+
+    if (req.user.role === 'faculty') {
+      whereParts.push('s.faculty_id = ?');
+      params.push(req.user.id);
+    } else if (req.user.role === 'hod') {
+      const hodDept = await resolveHodDepartmentContext(req.user);
+      if (!hodDept) {
+        return res.status(403).json({ success: false, message: 'HOD department mapping is missing.' });
+      }
+
+      whereParts.push("UPPER(COALESCE(s.form_type, 'A')) = 'B'");
+      whereParts.push('((u.department_id = ?) OR (u.department_id IS NULL AND ? <> "" AND LOWER(TRIM(u.department)) = LOWER(TRIM(?))))');
+      params.push(hodDept.id || 0, hodDept.name || '', hodDept.name || '');
+    } else if (!['Dofa', 'Dofa_office', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions to view submission stats.' });
+    }
+
+    const whereClause = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
 
     const [stats] = await db.query(`
       SELECT 
         COUNT(*) as total,
-        SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft,
-        SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as submitted,
-        SUM(CASE WHEN status = 'under_review' THEN 1 ELSE 0 END) as under_review,
-        SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
-        SUM(CASE WHEN status = 'sent_back' THEN 1 ELSE 0 END) as sent_back
-      FROM submissions
+        SUM(CASE WHEN s.status = 'draft' THEN 1 ELSE 0 END) as draft,
+        SUM(CASE WHEN s.status IN ('submitted', 'submitted_hod', 'hod_approved') THEN 1 ELSE 0 END) as submitted,
+        SUM(CASE WHEN s.status IN ('under_review', 'under_review_hod') THEN 1 ELSE 0 END) as under_review,
+        SUM(CASE WHEN s.status = 'approved' THEN 1 ELSE 0 END) as approved,
+        SUM(CASE WHEN s.status = 'sent_back' THEN 1 ELSE 0 END) as sent_back,
+        SUM(CASE WHEN s.status = 'submitted_hod' THEN 1 ELSE 0 END) as submitted_hod,
+        SUM(CASE WHEN s.status = 'under_review_hod' THEN 1 ELSE 0 END) as under_review_hod,
+        SUM(CASE WHEN s.status = 'hod_approved' THEN 1 ELSE 0 END) as hod_approved
+      FROM submissions s
+      JOIN users u ON u.id = s.faculty_id
+      AND u.role = 'faculty'
       ${whereClause}
     `, params);
 
-    const [totalFaculty] = await db.query("SELECT COUNT(*) as total FROM users WHERE role = 'faculty'");
+    let totalFacultyQuery = "SELECT COUNT(*) as total FROM users WHERE role = 'faculty'";
+    const totalFacultyParams = [];
+    if (req.user.role === 'hod') {
+      const hodDept = await resolveHodDepartmentContext(req.user);
+      totalFacultyQuery += ' AND ((department_id = ?) OR (department_id IS NULL AND ? <> "" AND LOWER(TRIM(department)) = LOWER(TRIM(?))))';
+      totalFacultyParams.push(hodDept?.id || 0, hodDept?.name || '', hodDept?.name || '');
+    } else if (req.user.role === 'faculty') {
+      totalFacultyQuery += ' AND id = ?';
+      totalFacultyParams.push(req.user.id);
+    }
+
+    const [totalFaculty] = await db.query(totalFacultyQuery, totalFacultyParams);
 
     res.json({
       success: true,
@@ -880,6 +1178,9 @@ exports.getSubmissionStats = async (req, res) => {
         underReview: stats[0].under_review,
         approved: stats[0].approved,
         sentBack: stats[0].sent_back,
+        hodSubmitted: stats[0].submitted_hod,
+        hodUnderReview: stats[0].under_review_hod,
+        hodApproved: stats[0].hod_approved,
         pending: stats[0].submitted + stats[0].under_review
       }
     });

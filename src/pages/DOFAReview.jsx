@@ -20,6 +20,17 @@ import PartB from './PartB';
 
 const API = `http://${window.location.hostname}:5000/api`;
 
+const decodeTokenPayload = (token) => {
+  if (!token) return null;
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    return JSON.parse(atob(payload));
+  } catch (_) {
+    return null;
+  }
+};
+
 const COMMENT_SECTIONS = [
   { key: 'faculty_info', label: 'Faculty Information' },
   { key: 'courses_taught', label: 'Teaching & Projects' },
@@ -150,17 +161,21 @@ const DofaReview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const token = localStorage.getItem('auth_token') || '';
+  const currentUser = decodeTokenPayload(token);
   const isOfficeRoute = location.pathname.startsWith('/Dofa-office');
-  const backPath = isOfficeRoute ? '/Dofa-office/dashboard' : '/Dofa/dashboard';
+  const isHodRoute = location.pathname.startsWith('/hod');
+  const reviewerRole = isHodRoute ? 'hod' : 'Dofa';
+  const backPath = isHodRoute ? '/hod/dashboard' : (isOfficeRoute ? '/Dofa-office/dashboard' : '/Dofa/dashboard');
 
   const [submissionData, setSubmissionData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
-  const [activeTab, setActiveTab] = useState('faculty');
+  const [activeTab, setActiveTab] = useState(isHodRoute ? 'partb' : 'faculty');
   const [expandedPubs, setExpandedPubs] = useState({});
   const [comments, setComments] = useState([]);
   const [commentView, setCommentView] = useState('pending');
-  const [selectedCommentSection, setSelectedCommentSection] = useState('faculty_info');
+  const [selectedCommentSection, setSelectedCommentSection] = useState(isHodRoute ? 'part_b' : 'faculty_info');
   const [submissionVersions, setSubmissionVersions] = useState([]);
   const [selectedVersionNumber, setSelectedVersionNumber] = useState(null);
   const [selectedVersionSnapshot, setSelectedVersionSnapshot] = useState(null);
@@ -171,6 +186,12 @@ const DofaReview = () => {
 
   useEffect(() => { fetchSubmissionDetails(); }, [id]);
   useEffect(() => {
+    if (isHodRoute && activeTab !== 'partb' && activeTab !== 'dynamic') {
+      setActiveTab('partb');
+      setSelectedCommentSection('part_b');
+      return;
+    }
+
     const mapped = TAB_TO_SECTION_KEY[activeTab];
     if (mapped) {
       setSelectedCommentSection(mapped);
@@ -184,7 +205,7 @@ const DofaReview = () => {
         setSelectedCommentSection(`dynamic_section_${firstSectionId}`);
       }
     }
-  }, [activeTab, selectedVersionSnapshot, submissionData]);
+  }, [activeTab, selectedVersionSnapshot, submissionData, isHodRoute]);
 
   const fetchSubmissionDetails = async () => {
     try {
@@ -253,7 +274,11 @@ const DofaReview = () => {
   };
 
   const handleApprove = async () => {
-    if (!(await showConfirm('Are you sure you want to approve this submission?'))) return;
+    const nextStatus = isHodRoute ? 'hod_approved' : 'approved';
+    const confirmText = isHodRoute
+      ? 'Are you sure you want to approve this Form B and forward it to DoFA?'
+      : 'Are you sure you want to approve this submission?';
+    if (!(await showConfirm(confirmText))) return;
     try {
       const response = await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
@@ -261,10 +286,10 @@ const DofaReview = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
-        body: JSON.stringify({ status: 'approved', approved_by: 1 })
+        body: JSON.stringify({ status: nextStatus })
       });
       const data = await response.json();
-      if (data.success) { window.appToast('Submission approved successfully'); navigate(backPath); }
+      if (data.success) { window.appToast(isHodRoute ? 'Submission approved and forwarded to DoFA' : 'Submission approved successfully'); navigate(backPath); }
       else window.appToast(`Error: ${data.message || 'Failed to approve submission'}`);
     } catch (error) {
       console.error('Error approving submission:', error);
@@ -296,8 +321,8 @@ const DofaReview = () => {
           },
           body: JSON.stringify({
             submission_id: id,
-            reviewer_id: 1,
-            reviewer_role: 'Dofa',
+            reviewer_id: currentUser?.id || null,
+            reviewer_role: reviewerRole,
             section_name: sectionName,
             section_key: sectionKey,
             comment
@@ -342,8 +367,8 @@ const DofaReview = () => {
         },
         body: JSON.stringify({
           submission_id: id,
-          reviewer_id: 1,
-          reviewer_role: 'Dofa',
+          reviewer_id: currentUser?.id || null,
+          reviewer_role: reviewerRole,
           section_name: sectionName,
           section_key: sectionKey,
           comment
@@ -379,7 +404,10 @@ const DofaReview = () => {
       }))
     : [];
 
-  const allCommentSections = [...COMMENT_SECTIONS, ...dynamicCommentSections];
+  const baseCommentSections = isHodRoute
+    ? COMMENT_SECTIONS.filter((section) => section.key === 'part_b')
+    : COMMENT_SECTIONS;
+  const allCommentSections = [...baseCommentSections, ...dynamicCommentSections];
 
   const pendingComments = comments.filter((c) => Number(c.is_resolved) !== 1);
   const resolvedComments = comments.filter((c) => Number(c.is_resolved) === 1);
@@ -467,20 +495,27 @@ const DofaReview = () => {
   };
 
   /* -- Tab definitions -- */
-  const tabs = [
-    { id: 'faculty',     label: 'Faculty',      icon: <User size={14} /> },
-    { id: 'teaching',    label: 'Teaching',      icon: <BookOpen size={14} />, count: (courses?.length || 0) + (newCourses?.length || 0) },
-    { id: 'publications',label: 'Publications',  icon: <FileText size={14} />, count: publications?.length },
-    { id: 'research',    label: 'Research',      icon: <Briefcase size={14} /> },
-    { id: 'events',      label: 'Events',        icon: <Award size={14} /> },
-    { id: 'consultancy', label: 'Consultancy',   icon: <Briefcase size={14} />, count: consultancy?.length },
-    { id: 'innovation',  label: 'Innovation',    icon: <Lightbulb size={14} /> },
-    { id: 'additional',  label: 'Additional',    icon: <FileText size={14} /> },
-    { id: 'partb',       label: 'Part B',        icon: <CheckCircle size={14} /> },
-    ...(dynamicCommentSections.length > 0
-      ? [{ id: 'dynamic', label: 'Custom Sections', icon: <FileText size={14} />, count: dynamicCommentSections.length }]
-      : []),
-  ];
+  const tabs = isHodRoute
+    ? [
+        { id: 'partb', label: 'Part B', icon: <CheckCircle size={14} /> },
+        ...(dynamicCommentSections.length > 0
+          ? [{ id: 'dynamic', label: 'Custom Sections', icon: <FileText size={14} />, count: dynamicCommentSections.length }]
+          : []),
+      ]
+    : [
+        { id: 'faculty',     label: 'Faculty',      icon: <User size={14} /> },
+        { id: 'teaching',    label: 'Teaching',      icon: <BookOpen size={14} />, count: (courses?.length || 0) + (newCourses?.length || 0) },
+        { id: 'publications',label: 'Publications',  icon: <FileText size={14} />, count: publications?.length },
+        { id: 'research',    label: 'Research',      icon: <Briefcase size={14} /> },
+        { id: 'events',      label: 'Events',        icon: <Award size={14} /> },
+        { id: 'consultancy', label: 'Consultancy',   icon: <Briefcase size={14} />, count: consultancy?.length },
+        { id: 'innovation',  label: 'Innovation',    icon: <Lightbulb size={14} /> },
+        { id: 'additional',  label: 'Additional',    icon: <FileText size={14} /> },
+        { id: 'partb',       label: 'Part B',        icon: <CheckCircle size={14} /> },
+        ...(dynamicCommentSections.length > 0
+          ? [{ id: 'dynamic', label: 'Custom Sections', icon: <FileText size={14} />, count: dynamicCommentSections.length }]
+          : []),
+      ];
 
   return (
     <div className="Dofa-review">
@@ -1003,7 +1038,7 @@ const DofaReview = () => {
 
             <div className="action-buttons-group">
               <button className="btn btn-success" onClick={handleApprove} disabled={Boolean(selectedVersionNumber)}>
-                <CheckCircle size={15} /> Approve
+                <CheckCircle size={15} /> {isHodRoute ? 'Approve & Forward' : 'Approve'}
               </button>
               <button className="btn btn-danger" onClick={handleSendBack} disabled={Boolean(selectedVersionNumber)}>
                 <XCircle size={15} /> Send Back

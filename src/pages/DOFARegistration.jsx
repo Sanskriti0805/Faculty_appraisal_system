@@ -47,7 +47,7 @@ const DofaRegistration = () => {
   });
 
   // Bulk invite state
-  const [bulkRole, setBulkRole] = useState('faculty');
+  const [bulkRole, setBulkRole] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
   const [bulkResults, setBulkResults] = useState(null);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
@@ -91,7 +91,7 @@ const DofaRegistration = () => {
   const handleDeptSubmit = async (e) => {
     e.preventDefault();
     if (!deptForm.name || !deptForm.code || !deptForm.hod_email) {
-      setDeptError('Name, code, and HOD email are required'); return;
+      setDeptError('Name, code, and HoD email are required'); return;
     }
     setSubmitting(true); setDeptError(''); setDeptSuccess('');
     try {
@@ -103,7 +103,7 @@ const DofaRegistration = () => {
       if (data.success) {
         setDeptModal(false);
         setDeptForm({ name: '', code: '', hod_email: '', hod_name: '' });
-        showToast('Department registered! Password setup email sent to HOD. âœ…');
+        showToast('Department registered. Password setup email sent to HoD.');
         loadData();
       } else {
         setDeptError(data.message);
@@ -127,7 +127,7 @@ const DofaRegistration = () => {
       if (data.success) {
         setFacultyModal(false);
         setFacultyForm({ salutation: 'Dr', name: '', designation: '', email: '', employee_id: '', employment_type: 'fixed', date_of_joining: '', department_id: '' });
-        showToast('Faculty registered! Password setup email sent. âœ…');
+        showToast('Faculty registered. Password setup email sent.');
         loadData();
       } else {
         setFacError(data.message);
@@ -137,6 +137,11 @@ const DofaRegistration = () => {
   };
 
   const handleBulkInvite = async () => {
+    if (!bulkRole) {
+      showToast('Please select a role for bulk invite.', 'error');
+      return;
+    }
+
     const rawEmails = bulkEmails
       .split(/[,\n]+/)
       .map(e => e.trim())
@@ -435,7 +440,7 @@ const DofaRegistration = () => {
       <main className="admin-main">
         {/* Welcome */}
         <div className="admin-welcome">
-          <h1>Welcome, {user?.name?.split(' ')[0]} ðŸ‘‹</h1>
+          <h1>Welcome, {user?.name?.split(' ')[0]}</h1>
           <p>Manage departments, register faculty members, and oversee the appraisal system.</p>
         </div>
 
@@ -478,7 +483,7 @@ const DofaRegistration = () => {
           <div className="admin-action-card dept" onClick={() => { setDeptModal(true); setDeptError(''); setDeptSuccess(''); }}>
             <div className="admin-action-icon"><Building2 size={26} /></div>
             <h3 className="admin-action-title">Register Department</h3>
-            <p className="admin-action-desc">Add a new department and assign a Head of Department. The HOD will receive an email to set up their account.</p>
+            <p className="admin-action-desc">Add a new department and assign a Head of Department. The HoD will receive an email to set up their account.</p>
             <button className="admin-action-btn"><Plus size={15} /> Add Department</button>
           </div>
 
@@ -489,10 +494,10 @@ const DofaRegistration = () => {
             <button className="admin-action-btn"><Plus size={15} /> Add Faculty</button>
           </div>
 
-          <div className="admin-action-card bulk" onClick={() => { setBulkModal(true); setBulkResults(null); setBulkEmails(''); setBulkRole('faculty'); }}>
+          <div className="admin-action-card bulk" onClick={() => { setBulkModal(true); setBulkResults(null); setBulkEmails(''); setBulkRole(''); }}>
             <div className="admin-action-icon"><Send size={26} /></div>
             <h3 className="admin-action-title">Bulk Email Invite</h3>
-            <p className="admin-action-desc">Send invite emails to multiple faculty or HODs at once. Paste comma-separated emails - they'll set up their own profiles.</p>
+            <p className="admin-action-desc">Send invite emails to multiple faculty or HoDs at once. Paste comma-separated emails - they'll set up their own profiles.</p>
             <button className="admin-action-btn bulk-btn"><Mail size={15} /> Send Invites</button>
           </div>
         </div>
@@ -511,8 +516,8 @@ const DofaRegistration = () => {
                   <tr>
                     <th>Department</th>
                     <th>Code</th>
-                    <th>HOD Name</th>
-                    <th>HOD Email</th>
+                    <th>HoD Name</th>
+                    <th>HoD Email</th>
                     <th>Faculty Count</th>
                     <th>Registered On</th>
                     <th>Actions</th>
@@ -722,17 +727,17 @@ const DofaRegistration = () => {
                       onChange={e => setDeptForm(p => ({ ...p, code: e.target.value.toUpperCase() }))} />
                   </div>
                   <div className="admin-form-field">
-                    <label className="admin-form-label">HOD Name</label>
+                    <label className="admin-form-label">HoD Name</label>
                     <input className="admin-form-input" placeholder="Full name" value={deptForm.hod_name}
                       onChange={e => setDeptForm(p => ({ ...p, hod_name: e.target.value }))} />
                   </div>
                 </div>
                 <div className="admin-form-field">
-                  <label className="admin-form-label">HOD Email <span>*</span></label>
+                  <label className="admin-form-label">HoD Email <span>*</span></label>
                   <input className="admin-form-input" type="email" placeholder="hod@lnmiit.ac.in" value={deptForm.hod_email}
                     onChange={e => setDeptForm(p => ({ ...p, hod_email: e.target.value }))} />
                   <p style={{ fontSize: '12px', color: '#718096', margin: '5px 0 0' }}>
-                    HOD will receive an email with a temporary password.
+                    HoD will receive an email with a temporary password.
                   </p>
                 </div>
               </div>
@@ -851,9 +856,14 @@ const DofaRegistration = () => {
 
               {/* Role toggle */}
               <div className="admin-form-field">
-                <label className="admin-form-label">Invite as</label>
+                <label className="admin-form-label">Invite as <span>*</span></label>
+                {!bulkRole && (
+                  <p style={{ fontSize: '12px', color: '#718096', margin: '6px 0 8px' }}>
+                    Select role
+                  </p>
+                )}
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  {[{ value: 'faculty', label: 'Faculty' }, { value: 'hod', label: 'HOD' }].map(opt => (
+                  {[{ value: 'faculty', label: 'Faculty' }, { value: 'hod', label: 'HoD' }].map(opt => (
                     <button
                       key={opt.value}
                       type="button"
@@ -876,7 +886,7 @@ const DofaRegistration = () => {
               {/* Email textarea */}
               <div className="admin-form-field">
                 <label className="admin-form-label">
-                  {bulkRole === 'faculty' ? 'Faculty' : 'HOD'} Emails <span>*</span>
+                  {(bulkRole === 'faculty' ? 'Faculty' : bulkRole === 'hod' ? 'HoD' : 'Selected role')} Emails <span>*</span>
                 </label>
                 <textarea
                   className="admin-form-input"
@@ -898,7 +908,7 @@ const DofaRegistration = () => {
                     padding: '10px 14px', background: '#f0fff4', border: '1px solid #c6f6d5',
                     borderRadius: '8px', fontSize: '13px', color: '#276749', marginBottom: '12px', fontWeight: '500'
                   }}>
-                    âœ… {bulkResults.message}
+                    {bulkResults.message}
                   </div>
                   <div style={{ maxHeight: '180px', overflowY: 'auto', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                     {bulkResults.results.map((r, i) => (
@@ -912,9 +922,9 @@ const DofaRegistration = () => {
                           padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600',
                           background: statusBg(r.status), color: statusColor(r.status)
                         }}>
-                          {r.status === 'sent' ? 'âœ“ Sent' :
-                           r.status === 'sent_no_email' ? 'âš  Created' :
-                           r.status === 'skipped' ? 'â†© Exists' :
+                          {r.status === 'sent' ? 'Sent' :
+                           r.status === 'sent_no_email' ? 'Created' :
+                           r.status === 'skipped' ? 'Exists' :
                            r.status === 'invalid' ? 'x Invalid' : 'x Failed'}
                         </span>
                       </div>
@@ -929,7 +939,7 @@ const DofaRegistration = () => {
                 <button
                   type="button"
                   className="admin-btn-submit"
-                  disabled={bulkSubmitting || !bulkEmails.trim()}
+                  disabled={bulkSubmitting || !bulkRole || !bulkEmails.trim()}
                   onClick={handleBulkInvite}
                   style={{ background: 'linear-gradient(135deg, #276749, #38a169)' }}
                 >

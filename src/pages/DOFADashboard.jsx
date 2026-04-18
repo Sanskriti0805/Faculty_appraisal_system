@@ -38,7 +38,9 @@ const DofaDashboard = () => {
     try {
       const url = new URL(`${API}/submissions/stats`);
       if (yearFilter !== 'all') url.searchParams.append('academic_year', yearFilter);
-      const response = await fetch(url.toString());
+      const response = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+      });
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -55,7 +57,9 @@ const DofaDashboard = () => {
       if (filter !== 'all') url.searchParams.append('status', filter);
       if (yearFilter !== 'all') url.searchParams.append('academic_year', yearFilter);
 
-      const response = await fetch(url.toString());
+      const response = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+      });
       const data = await response.json();
       if (data.success) {
         setSubmissions(data.data);
@@ -92,7 +96,10 @@ const DofaDashboard = () => {
     try {
       const response = await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify({
           status: 'approved',
           approved_by: 1
@@ -122,7 +129,10 @@ const DofaDashboard = () => {
     try {
       await fetch(`${API}/review/comment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify({
           submission_id: id,
           reviewer_id: 1,
@@ -135,7 +145,10 @@ const DofaDashboard = () => {
 
       await fetch(`${API}/submissions/${id}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify({ status: 'sent_back' })
       });
 
@@ -151,15 +164,21 @@ const DofaDashboard = () => {
     const statusClasses = {
       draft: 'status-badge status-draft',
       submitted: 'status-badge status-submitted',
+      submitted_hod: 'status-badge status-submitted',
+      hod_approved: 'status-badge status-submitted',
       under_review: 'status-badge status-review',
+      under_review_hod: 'status-badge status-review',
       approved: 'status-badge status-approved',
       sent_back: 'status-badge status-sent-back'
     };
 
     const statusText = {
       draft: 'Draft',
-      submitted: 'Submitted',
-      under_review: 'Under Review',
+      submitted: 'Submitted to DoFA',
+      submitted_hod: 'Submitted to HoD',
+      hod_approved: 'HoD Approved - Pending DoFA',
+      under_review: 'Under DoFA Review',
+      under_review_hod: 'Under HoD Review',
       approved: 'Approved',
       sent_back: 'Sent Back'
     };
@@ -231,7 +250,7 @@ const DofaDashboard = () => {
     <div className="Dofa-dashboard">
       <div className="dashboard-header">
         <div>
-          <h1 className="dashboard-title">Dofa Dashboard</h1>
+          <h1 className="dashboard-title">DoFA Dashboard</h1>
           <p className="dashboard-subtitle">Review and manage faculty appraisal submissions</p>
         </div>
       </div>

@@ -6,7 +6,7 @@ import apiClient from '../services/api';
 import { showConfirm } from '../utils/appDialogs';
 
 const SCORING_TYPES = [
-  { value: 'manual',      label: 'Manual',      desc: 'Dofa enters score manually' },
+  { value: 'manual',      label: 'Manual',      desc: 'DoFA enters score manually' },
   { value: 'rule',        label: 'Rule-Driven', desc: 'Calculated from rule configuration' },
   { value: 'count_based', label: 'Count-Based', desc: 'Rows x per-unit marks (auto)' },
   { value: 'text_exists', label: 'Text Exists', desc: 'Full marks if field is filled' },
@@ -131,8 +131,12 @@ const RubricsManagement = () => {
     setExpandedSections(prev => ({ ...prev, [sectionName]: true }));
   };
 
-  const handleDeleteRow = (index) => {
+  const handleDeleteRow = async (index) => {
     const row = rubrics[index];
+    const itemLabel = String(row?.sub_section || row?.section_name || 'this item').trim();
+    const shouldDelete = await showConfirm(`Are you sure you want to delete "${itemLabel}"?`);
+    if (!shouldDelete) return;
+
     if (!row._isNew) {
       setDeletedIds(prev => [...prev, row.id]);
     }
@@ -353,7 +357,7 @@ const RubricsManagement = () => {
                               title="Click to expand/collapse"
                             >
                               <span className="rubric-chevron">
-                                {expandedSections[sectionName] ? 'â–¼' : 'â–¶'}
+                                {expandedSections[sectionName] ? 'v' : '>'}
                               </span>
                               <span className="rubric-section-title">{sectionName}</span>
                               <span className="rubric-item-count">{items.length} item{items.length !== 1 ? 's' : ''}</span>
@@ -370,12 +374,12 @@ const RubricsManagement = () => {
                             className="rubric-sec-btn rubric-sec-btn--edit"
                             onClick={e => { e.stopPropagation(); setEditingSection(sectionName); setEditSectionValue(sectionName); }}
                             title="Rename section"
-                          >âœŽ Edit</button>
+                          >Edit</button>
                           <button
                             className="rubric-sec-btn rubric-sec-btn--del"
                             onClick={e => { e.stopPropagation(); handleDeleteSection(sectionName); }}
                             title="Delete section"
-                          >ðŸ—‘ Delete</button>
+                          >Delete</button>
                         </td>
                       </tr>
                       {expandedSections[sectionName] && items.map(row => (
@@ -437,7 +441,7 @@ const RubricsManagement = () => {
                               <option value="">- none -</option>
                               {dynamicSections.map(ds => (
                                 <option key={ds.id} value={ds.id}>
-                                  {ds.parent_id ? `â†³ ${ds.title}` : ds.title} [{ds.form_type}]
+                                    {ds.parent_id ? `-> ${ds.title}` : ds.title} [{ds.form_type}]
                                 </option>
                               ))}
                             </select>
@@ -448,7 +452,7 @@ const RubricsManagement = () => {
                               onClick={() => handleDeleteRow(row.originalIndex)}
                               title="Delete row"
                             >
-                              ðŸ—‘
+                              Delete
                             </button>
                           </td>
                         </tr>

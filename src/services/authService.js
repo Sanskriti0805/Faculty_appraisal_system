@@ -72,15 +72,15 @@ class AuthService {
       },
       Dofa: {
         id: 2,
-        name: 'Dofa Admin',
-        email: 'Dofa@university.edu',
+        name: 'DoFA Admin',
+        email: 'DoFA@university.edu',
         role: 'Dofa',
         department: 'Administration'
       },
       Dofa_office: {
         id: 3,
-        name: 'Dofa Office Admin',
-        email: 'Dofa.office@university.edu',
+        name: 'DoFA Office Admin',
+        email: 'DoFA.office@university.edu',
         role: 'Dofa_office',
         department: 'Administration'
       }

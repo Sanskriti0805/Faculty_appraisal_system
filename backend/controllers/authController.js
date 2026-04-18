@@ -9,6 +9,26 @@ const emailService = require('../services/emailService');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+const canonicalizeRole = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  const map = {
+    admin: 'admin',
+    faculty: 'faculty',
+    hod: 'hod',
+    dofa: 'Dofa',
+    dofa_office: 'Dofa_office',
+    'dofa office': 'Dofa_office',
+    dofaoffice: 'Dofa_office'
+  };
+  return map[normalized] || value;
+};
+
+const normalizeRoleForDbLookup = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'dofa office' || normalized === 'dofaoffice') return 'dofa_office';
+  return normalized;
+};
+
 /**
  * POST /api/auth/login
  * Body: { email, password, role }
@@ -16,6 +36,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 exports.login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
+    const roleLookup = normalizeRoleForDbLookup(role);
 
     if (!email || !password || !role) {
       return res.status(400).json({ success: false, message: 'Email, password, and role are required' });
@@ -34,8 +55,8 @@ exports.login = async (req, res) => {
           DATE(u.created_at)
         ) AS effective_date_of_joining
        FROM users u
-       WHERE u.email = ? AND u.role = ?`,
-      [email, role]
+       WHERE LOWER(TRIM(u.email)) = LOWER(TRIM(?)) AND LOWER(TRIM(u.role)) = ?`,
+      [email, roleLookup]
     );
     if (users.length === 0) {
       return res.status(401).json({ success: false, message: 'Invalid email or role' });
@@ -56,8 +77,10 @@ exports.login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid password' });
     }
 
+    const safeRole = canonicalizeRole(user.role);
+
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: safeRole },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
@@ -76,7 +99,7 @@ exports.login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: safeRole,
         department: user.department,
         department_id: user.department_id,
         departmentInfo,
@@ -101,6 +124,7 @@ exports.login = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email, role } = req.body;
+    const roleLookup = normalizeRoleForDbLookup(role);
 
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email is required' });
@@ -111,13 +135,17 @@ exports.forgotPassword = async (req, res) => {
     }
 
     // Look up user by email AND role
-    const [users] = await db.query('SELECT * FROM users WHERE email = ? AND role = ?', [email, role]);
+    const [users] = await db.query(
+      'SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) AND LOWER(TRIM(role)) = ?',
+      [email, roleLookup]
+    );
     if (users.length === 0) {
       // Don't reveal whether email exists - always return success
       return res.json({ success: true, message: 'If that email is registered with the selected role, a reset link has been sent.' });
     }
 
     const user = users[0];
+    const safeRole = canonicalizeRole(user.role);
     if (Number(user.is_archived) === 1) {
       return res.json({ success: true, message: 'If that email is registered with the selected role, a reset link has been sent.' });
     }
@@ -131,21 +159,21 @@ exports.forgotPassword = async (req, res) => {
     );
 
     // Include role in reset URL so frontend knows which role is resetting
-    const resetUrl = `${FRONTEND_URL}/reset-password/${resetToken}?role=${encodeURIComponent(role)}`;
+    const resetUrl = `${FRONTEND_URL}/reset-password/${resetToken}?role=${encodeURIComponent(safeRole)}`;
 
     try {
       await emailService.sendForgotPassword({
         to: user.email,
         name: user.name,
         resetUrl,
-        role: role.toUpperCase()
+        role: safeRole.toUpperCase()
       });
     } catch (emailErr) {
       console.error('Email send error:', emailErr);
       // Still return success - don't reveal email status
     }
 
-    console.log(`ðŸ”— Password reset URL for ${user.email} (${role}): ${resetUrl}`);
+    console.log(`Password reset URL for ${user.email} (${safeRole}): ${resetUrl}`);
 
     res.json({ success: true, message: 'If that email is registered with the selected role, a reset link has been sent.' });
   } catch (error) {
@@ -186,7 +214,7 @@ exports.resetPassword = async (req, res) => {
       [hashedPassword, user.id]
     );
 
-    res.json({ success: true, message: 'Password reset successful. You can now log in.', role: user.role });
+    res.json({ success: true, message: 'Password reset successful. You can now log in.', role: canonicalizeRole(user.role) });
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ success: false, message: 'Server error' });

@@ -52,7 +52,9 @@ const Dashboard = () => {
       // Filter by the CURRENT session's academic year so a previous year's
       // submission doesn't appear as "submitted" for the new session
       const yearParam = academicYear ? `&academic_year=${encodeURIComponent(academicYear)}` : ''
-      const res = await fetch(`${API}/submissions?faculty_id=${user.id}&limit=1${yearParam}`)
+      const res = await fetch(`${API}/submissions?faculty_id=${user.id}&limit=1${yearParam}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+      })
       const data = await res.json()
       if (data.success && data.data && data.data.length > 0) {
         setLastSubmission(data.data[0])
@@ -104,7 +106,7 @@ const Dashboard = () => {
               <div className="banner-content">
                 <h1 className="dashboard-title">Edit Access Granted</h1>
                 <p className="dashboard-description">
-                  The Dofa office has approved your edit request for <strong>{session.academic_year}</strong>.
+                  The DoFA office has approved your edit request for <strong>{session.academic_year}</strong>.
                   Navigate to the approved sections from the sidebar, make your changes, then re-submit from <strong>Part B</strong>.
                   &nbsp;Deadline: <strong>{formatDate(session.deadline)}</strong>
                 </p>
@@ -119,7 +121,7 @@ const Dashboard = () => {
                 <h1 className="dashboard-title">Appraisal Form Submitted</h1>
                 <p className="dashboard-description">
                   Your appraisal form for <strong>{session.academic_year}</strong> has been submitted successfully.
-                  You may view the submitted form or request section edits from the Dofa office before the deadline.
+                  You may view the submitted form or request section edits from the DoFA office before the deadline.
                 </p>
               </div>
             </div>
@@ -180,7 +182,7 @@ const Dashboard = () => {
                 >
                   <Send size={20} />
                   <span>Request Section Edits</span>
-                  <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 400 }}>Ask Dofa to unlock sections</span>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 400 }}>Ask DoFA to unlock sections</span>
                 </button>
               )}
             </div>
@@ -290,7 +292,7 @@ const Dashboard = () => {
             <h1 className="dashboard-title">Submission Deadline Has Passed</h1>
             <p className="dashboard-description">
               The submission deadline for <strong>{session.academic_year}</strong> was <strong>{formatDate(session.deadline)}</strong>.
-              Form submissions are no longer accepted. Please contact the Dofa office if you have any concerns.
+              Form submissions are no longer accepted. Please contact the DoFA office if you have any concerns.
             </p>
           </div>
         </div>
@@ -338,7 +340,7 @@ const Dashboard = () => {
       <div className="dashboard-waiting-illustration">
         <div className="waiting-pulse"></div>
         <p>Awaiting form release</p>
-        <span>Check your email for updates from the Dofa office</span>
+        <span>Check your email for updates from the DoFA office</span>
       </div>
 
       {lastSubmission && (

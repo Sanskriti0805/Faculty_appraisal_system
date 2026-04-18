@@ -18,32 +18,50 @@ export const AuthProvider = ({ children }) => {
 
   // Validate token on mount
   useEffect(() => {
+    let isCancelled = false;
+
     const validateToken = async () => {
       const storedToken = localStorage.getItem('auth_token');
       if (!storedToken) {
-        setLoading(false);
+        if (!isCancelled) setLoading(false);
         return;
       }
+
+      const tokenAtStart = storedToken;
       try {
         const res = await fetch(`${API_BASE}/auth/me`, {
           headers: { Authorization: `Bearer ${storedToken}` }
         });
         const data = await res.json();
+        if (isCancelled) return;
+
         if (data.success) {
           setUser(data.user);
           setToken(storedToken);
         } else {
-          logout();
+          // Avoid logging out a fresh session if token changed while this request was in flight.
+          if (localStorage.getItem('auth_token') === tokenAtStart) {
+            logout();
+          }
         }
       } catch {
+        if (isCancelled) return;
+
         // Backend might be restarting — keep token, set user from cache
         const cached = localStorage.getItem('auth_user');
-        if (cached) setUser(JSON.parse(cached));
+        if (cached) {
+          setUser(JSON.parse(cached));
+          setToken(localStorage.getItem('auth_token'));
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) setLoading(false);
       }
     };
     validateToken();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [logout]);
 
   const login = async (email, password, role) => {

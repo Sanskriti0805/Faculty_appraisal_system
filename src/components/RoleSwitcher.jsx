@@ -35,8 +35,8 @@ const RoleSwitcher = () => {
   const getRoleLabel = (role) => {
     const labels = {
       faculty: 'Faculty',
-      Dofa: 'Dofa',
-      Dofa_office: 'Dofa Office'
+      Dofa: 'DoFA',
+      Dofa_office: 'DoFA Office'
     };
     return labels[role] || role;
   };
@@ -48,9 +48,9 @@ const RoleSwitcher = () => {
         onClick={() => setIsOpen(!isOpen)}
         title="Switch Role (Development Only)"
       >
-        <span className="role-icon">ðŸ‘¤</span>
+        <span className="role-icon">User</span>
         <span className="role-text">{getRoleLabel(currentRole)}</span>
-        <span className="role-arrow">{isOpen ? 'â–²' : 'â–¼'}</span>
+        <span className="role-arrow">{isOpen ? '^' : 'v'}</span>
       </button>
 
       {isOpen && (
@@ -60,22 +60,22 @@ const RoleSwitcher = () => {
             className={`role-option ${currentRole === 'faculty' ? 'active' : ''}`}
             onClick={() => switchRole('faculty')}
           >
-            <span className="option-icon">ðŸ‘¨â€ðŸ«</span>
+            <span className="option-icon">FAC</span>
             <span>Faculty</span>
           </button>
           <button
             className={`role-option ${currentRole === 'Dofa' ? 'active' : ''}`}
             onClick={() => switchRole('Dofa')}
           >
-            <span className="option-icon">ðŸ‘”</span>
-            <span>Dofa</span>
+            <span className="option-icon">DOF</span>
+            <span>DoFA</span>
           </button>
           <button
             className={`role-option ${currentRole === 'Dofa_office' ? 'active' : ''}`}
             onClick={() => switchRole('Dofa_office')}
           >
-            <span className="option-icon">ðŸ¢</span>
-            <span>Dofa Office</span>
+            <span className="option-icon">OFF</span>
+            <span>DoFA Office</span>
           </button>
         </div>
       )}

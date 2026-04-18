@@ -104,7 +104,7 @@ const FACULTY_HELP = [
 
 const REVIEWER_HELP = [
   {
-    title: 'Reviewer/HOD Workflow',
+    title: 'Reviewer/HoD Workflow',
     bullets: [
       'Open assigned submissions from dashboard queue.',
       'Review section data and evidence links before scoring/comments.',
@@ -118,14 +118,14 @@ const REVIEWER_HELP = [
       'Write actionable comments: mention field, expected correction, and example format.',
       'If insufficient evidence, ask for specific file/document type rather than generic note.',
       'Use consistent evaluation criteria across similar submissions.',
-      'Escalate technical data issues (schema/file errors) to Dofa office/admin.'
+      'Escalate technical data issues (schema/file errors) to DoFA office/admin.'
     ]
   }
 ]
 
 const Dofa_HELP = [
   {
-    title: 'Dofa/Dofa Office Operations',
+    title: 'DoFA/DoFA Office Operations',
     bullets: [
       'Release forms only after rubrics/session configuration is complete.',
       'Validate rubric ranges and weightages before evaluation cycles.',
@@ -159,7 +159,7 @@ const ADMIN_HELP = [
     bullets: [
       'Document frequent user-facing errors with one-step fixes in this Help Center.',
       'Ensure re-auth and token expiration behavior is explicit in UI messages.',
-      'Validate role permissions after each release (faculty, hod, Dofa, Dofa_office).',
+      'Validate role permissions after each release (faculty, hod, DoFA, DoFA Office).',
       'Run smoke tests for Save Draft / Save and Next on critical sections every deploy.'
     ]
   }
@@ -174,9 +174,9 @@ const HELP_BY_ROLE = {
 }
 
 const roleLabel = (role) => {
-  if (role === 'Dofa_office') return 'Dofa Office'
-  if (role === 'Dofa') return 'Dofa'
-  if (role === 'hod') return 'Reviewer/HOD'
+  if (role === 'Dofa_office') return 'DoFA Office'
+  if (role === 'Dofa') return 'DoFA'
+  if (role === 'hod') return 'Reviewer/HoD'
   if (role === 'faculty') return 'Faculty'
   if (role === 'admin') return 'Admin'
   return 'User'
@@ -191,9 +191,9 @@ const getDefaultRole = (pathname, userRole) => {
 
 const ROLE_OPTIONS = [
   { key: 'faculty', label: 'Faculty' },
-  { key: 'hod', label: 'Reviewer/HOD' },
-  { key: 'Dofa', label: 'Dofa' },
-  { key: 'Dofa_office', label: 'Dofa Office' },
+  { key: 'hod', label: 'Reviewer/HoD' },
+  { key: 'Dofa', label: 'DoFA' },
+  { key: 'Dofa_office', label: 'DoFA Office' },
   { key: 'admin', label: 'Admin/Technical' }
 ]
 
@@ -227,12 +227,12 @@ const ROLE_OVERVIEW = {
     description: 'Focus on evidence quality, section references, and clear next steps for resubmission or approval.'
   },
   Dofa: {
-    badge: 'Dofa guide',
+    badge: 'DoFA guide',
     title: 'Keep form cycles controlled with clear unlock and governance steps.',
     description: 'Use the guidance here to manage releases, locking, and form lifecycle decisions without guesswork.'
   },
   Dofa_office: {
-    badge: 'Dofa Office guide',
+    badge: 'DoFA Office guide',
     title: 'Coordinate releases, schema checks, and support notes from one place.',
     description: 'Use the quick actions below to find the right operating guidance before each cycle or correction.'
   },
@@ -285,7 +285,7 @@ const ROLE_ACTIONS = {
   hod: [
     { title: 'Check evidence first', text: 'Review supporting files and section data before leaving scores or comments.' },
     { title: 'Write actionable feedback', text: 'State the field, the correction needed, and a clear example of the expected format.' },
-    { title: 'Escalate system issues', text: 'If the submission problem is technical, route it to the Dofa office or admin team.' }
+    { title: 'Escalate system issues', text: 'If the submission problem is technical, route it to the DoFA office or admin team.' }
   ],
   Dofa: [
     { title: 'Confirm release readiness', text: 'Check rubrics, session setup, and form availability before opening a cycle.' },

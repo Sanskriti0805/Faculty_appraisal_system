@@ -4,6 +4,20 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 
+const canonicalizeRole = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  const map = {
+    admin: 'admin',
+    faculty: 'faculty',
+    hod: 'hod',
+    dofa: 'Dofa',
+    dofa_office: 'Dofa_office',
+    'dofa office': 'Dofa_office',
+    dofaoffice: 'Dofa_office'
+  };
+  return map[normalized] || value;
+};
+
 /**
  * Verify JWT token and attach user to request
  */
@@ -43,7 +57,10 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Account is archived. Contact Dofa office.' });
     }
 
-    req.user = users[0];
+    req.user = {
+      ...users[0],
+      role: canonicalizeRole(users[0].role)
+    };
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
@@ -62,7 +79,9 @@ const requireRole = (...roles) => {
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
-    if (!roles.includes(req.user.role)) {
+    const normalizedAllowedRoles = roles.map(canonicalizeRole);
+    const userRole = canonicalizeRole(req.user.role);
+    if (!normalizedAllowedRoles.includes(userRole)) {
       return res.status(403).json({ success: false, message: 'Insufficient permissions' });
     }
     next();

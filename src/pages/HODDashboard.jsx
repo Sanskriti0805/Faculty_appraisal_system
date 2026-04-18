@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Archive, RotateCcw, Eye, Download, X, Settings, Lock, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Archive, RotateCcw, Eye, Download, FileText, X, Settings, Lock, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { confirmLogout, showConfirm } from '../utils/appDialogs';
 import './HODDashboard.css';
@@ -16,6 +16,9 @@ const HODDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [archiveFaculty, setArchiveFaculty] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [submissionLoading, setSubmissionLoading] = useState(false);
+  const [submissionFilter, setSubmissionFilter] = useState('all');
 
   const [showSettings, setShowSettings] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -25,6 +28,24 @@ const HODDashboard = () => {
   const [settingsError, setSettingsError] = useState(false);
 
   const headers = { Authorization: `Bearer ${token}` };
+
+  const fetchHodSubmissions = useCallback(async () => {
+    setSubmissionLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/submissions`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.success) {
+        setSubmissions(Array.isArray(data.data) ? data.data : []);
+      } else {
+        setSubmissions([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch HoD submissions:', error);
+      setSubmissions([]);
+    } finally {
+      setSubmissionLoading(false);
+    }
+  }, [token]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -71,9 +92,10 @@ const HODDashboard = () => {
       }
 
       if (archiveData.success) setArchiveFaculty(archiveData.data.faculty || []);
+      await fetchHodSubmissions();
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [user, token]);
+  }, [user, token, fetchHodSubmissions]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -97,13 +119,20 @@ const HODDashboard = () => {
       : dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
+  const visibleSubmissions = submissions.filter((item) => {
+    if (submissionFilter === 'all') return true;
+    if (submissionFilter === 'submitted') return ['submitted_hod', 'hod_approved'].includes(item.status);
+    if (submissionFilter === 'under_review') return item.status === 'under_review_hod';
+    return item.status === submissionFilter;
+  });
+
   const handleArchiveFaculty = async (f) => {
     if (!(await showConfirm('Are you sure you want to delete this faculty?'))) return;
     try {
       const res = await fetch(`${API_BASE}/register/faculty/${f.id}/archive`, {
         method: 'PUT',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: 'Archived by HOD' })
+          body: JSON.stringify({ reason: 'Archived by HoD' })
       });
       const data = await res.json();
       if (!data.success) window.appToast(data.message || 'Failed to archive faculty');
@@ -141,6 +170,64 @@ const HODDashboard = () => {
     } catch {
       window.appToast('Failed to export archive data');
     }
+  };
+
+  const handleSubmissionStatusUpdate = async (submission, status) => {
+    const labels = {
+      under_review_hod: 'mark this submission as under HoD review',
+      hod_approved: 'approve this Form B and forward it to DoFA',
+      sent_back: 'send this submission back to faculty'
+    };
+
+    if (!(await showConfirm(`Are you sure you want to ${labels[status] || 'update this submission'}?`))) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/submissions/${submission.id}/status`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        window.appToast(data.message || 'Failed to update submission status');
+        return;
+      }
+      window.appToast('Submission status updated successfully');
+      await fetchHodSubmissions();
+    } catch {
+      window.appToast('Failed to update submission status');
+    }
+  };
+
+  const handleSubmissionDownload = async (submissionId) => {
+    try {
+      const res = await fetch(`${API_BASE}/submissions/${submissionId}/pdf`, { headers });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || 'Failed to download PDF');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `submission_${submissionId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      window.appToast(error.message || 'Failed to download PDF');
+    }
+  };
+
+  const getSubmissionStatusLabel = (status) => {
+    const labels = {
+      submitted_hod: 'Submitted to HoD',
+      under_review_hod: 'Under HoD Review',
+      hod_approved: 'HoD Approved',
+      sent_back: 'Sent Back'
+    };
+    return labels[status] || status;
   };
 
   const closeSettingsModal = () => {
@@ -213,8 +300,7 @@ const HODDashboard = () => {
         </div>
         <div className="admin-topnav-right">
           <div className="admin-topnav-user">
-            <span>{user?.name}</span>
-            <span className="admin-topnav-badge">HOD</span>
+            <span className="admin-topnav-badge">HoD</span>
           </div>
           <button className="admin-settings-btn" onClick={() => setShowSettings(true)}>
             <Settings size={14} /> Account Settings
@@ -228,7 +314,7 @@ const HODDashboard = () => {
       <main className="admin-main">
         {/* Welcome + Dept Info */}
         <div className="admin-welcome">
-          <h1>Welcome, {user?.name || 'HOD'} ðŸ‘‹</h1>
+          <h1>Welcome, {user?.name || 'HoD'}</h1>
           <p>View and manage faculty members registered in your department.</p>
         </div>
 
@@ -259,7 +345,7 @@ const HODDashboard = () => {
         )}
         {!deptInfo && !loading && (
           <div className="admin-empty" style={{ marginBottom: '28px' }}>
-            Your account does not have a department assigned. Contact the admin or Dofa office to correct the HOD mapping.
+            Your account does not have a department assigned. Contact the admin or DoFA office to correct the HoD mapping.
           </div>
         )}
 
@@ -315,6 +401,114 @@ const HODDashboard = () => {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <h2 className="admin-section-title"><FileText size={20} /> Form B Submissions</h2>
+        <div className="admin-table-card">
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'submitted', label: 'Submitted' },
+              { key: 'under_review', label: 'Under Review' },
+              { key: 'hod_approved', label: 'HoD Approved' },
+              { key: 'sent_back', label: 'Sent Back' }
+            ].map((entry) => (
+              <button
+                key={entry.key}
+                className={submissionFilter === entry.key ? 'admin-btn-submit' : 'admin-btn-cancel'}
+                onClick={() => setSubmissionFilter(entry.key)}
+                style={{ padding: '6px 10px', fontSize: '12px' }}
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
+
+          {submissionLoading ? (
+            <div className="admin-empty">Loading submissions...</div>
+          ) : visibleSubmissions.length === 0 ? (
+            <div className="admin-empty">No Form B submissions found for your department.</div>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Faculty</th>
+                  <th>Academic Year</th>
+                  <th>Status</th>
+                  <th>Submitted On</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleSubmissions.map((submission) => {
+                  const canMoveUnderReview = submission.status === 'submitted_hod';
+                  const canApprove = ['submitted_hod', 'under_review_hod'].includes(submission.status);
+                  const canSendBack = ['submitted_hod', 'under_review_hod', 'hod_approved'].includes(submission.status);
+
+                  return (
+                    <tr key={`sub-${submission.id}`}>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <strong>{submission.faculty_name}</strong>
+                          <span style={{ fontSize: '12px', color: '#6b7280' }}>{submission.email}</span>
+                        </div>
+                      </td>
+                      <td>{submission.academic_year || '-'}</td>
+                      <td>
+                        <span className="admin-badge faculty">{getSubmissionStatusLabel(submission.status)}</span>
+                      </td>
+                      <td>{formatDate(submission.submitted_at)}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          <button
+                            className="admin-btn-cancel"
+                            style={{ padding: '6px 10px', fontSize: '12px' }}
+                            onClick={() => navigate(`/hod/review/${submission.id}`)}
+                          >
+                            <Eye size={12} /> View
+                          </button>
+                          <button
+                            className="admin-btn-cancel"
+                            style={{ padding: '6px 10px', fontSize: '12px' }}
+                            onClick={() => handleSubmissionDownload(submission.id)}
+                          >
+                            <Download size={12} /> Download
+                          </button>
+                          {canMoveUnderReview && (
+                            <button
+                              className="admin-btn-cancel"
+                              style={{ padding: '6px 10px', fontSize: '12px' }}
+                              onClick={() => handleSubmissionStatusUpdate(submission, 'under_review_hod')}
+                            >
+                              Mark Under Review
+                            </button>
+                          )}
+                          {canApprove && (
+                            <button
+                              className="admin-btn-submit"
+                              style={{ padding: '6px 10px', fontSize: '12px' }}
+                              onClick={() => handleSubmissionStatusUpdate(submission, 'hod_approved')}
+                            >
+                              Approve & Forward
+                            </button>
+                          )}
+                          {canSendBack && (
+                            <button
+                              className="admin-btn-cancel"
+                              style={{ padding: '6px 10px', fontSize: '12px' }}
+                              onClick={() => handleSubmissionStatusUpdate(submission, 'sent_back')}
+                            >
+                              Send Back
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}

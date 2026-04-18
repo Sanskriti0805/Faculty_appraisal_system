@@ -7,14 +7,14 @@ const API_BASE = `http://${window.location.hostname}:5000/api`;
 
 const ROLES = [
   { value: 'faculty', label: 'Faculty' },
-  { value: 'hod', label: 'Head of Department (HOD)' },
-  { value: 'Dofa', label: 'Dofa' },
-  { value: 'Dofa_office', label: 'Dofa Office' },
+  { value: 'hod', label: 'Head of Department (HoD)' },
+  { value: 'Dofa', label: 'DoFA' },
+  { value: 'Dofa_office', label: 'DoFA Office' },
 ];
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('faculty');
+  const [role, setRole] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
@@ -49,7 +49,7 @@ const ForgotPassword = () => {
       <div className="login-container">
         <div className="login-logo-section">
           <div className="login-logo-fallback">
-            <div className="login-logo-text">LNMIIT<span>â– â– </span></div>
+            <div className="login-logo-text">LNMIIT<span>II</span></div>
             <div className="login-logo-subtitle">The LNM Institute of Information Technology</div>
           </div>
           <h1 className="login-title">Reset Your Password</h1>
@@ -84,8 +84,10 @@ const ForgotPassword = () => {
                 <select
                   className="login-select"
                   value={role}
+                  required
                   onChange={e => { setRole(e.target.value); setError(''); }}
                 >
+                  <option value="" disabled>Select your role</option>
                   {ROLES.map(r => (
                     <option key={r.value} value={r.value}>{r.label}</option>
                   ))}

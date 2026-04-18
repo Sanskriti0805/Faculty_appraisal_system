@@ -6,16 +6,16 @@ import './LoginPage.css';
 
 const ROLES = [
   { value: 'faculty', label: 'Faculty' },
-  { value: 'hod', label: 'Head of Department (HOD)' },
-  { value: 'Dofa', label: 'Dofa' },
-  { value: 'Dofa_office', label: 'Dofa Office' },
+  { value: 'hod', label: 'Head of Department (HoD)' },
+  { value: 'Dofa', label: 'Dean of Faculty Affairs (DoFA)' },
+  { value: 'Dofa_office', label: 'Dean of Faculty Affairs Office' },
 ];
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [form, setForm] = useState({ email: '', password: '', role: 'faculty' });
+  const [form, setForm] = useState({ email: '', password: '', role: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -66,7 +66,7 @@ const LoginPage = () => {
             onError={(e) => { e.target.style.display = 'none'; }}
           />
           {/* <div className="login-logo-fallback">
-            <div className="login-logo-text">LNMIIT<span>â– â– </span></div>
+            <div className="login-logo-text">LNMIIT<span>II</span></div>
             <div className="login-logo-subtitle">The LNM Institute of Information Technology</div>
           </div> */}
           <h1 className="login-title">Faculty Appraisal System</h1>
@@ -88,7 +88,9 @@ const LoginPage = () => {
                 className="login-select"
                 value={form.role}
                 onChange={handleChange}
+                required
               >
+                <option value="" disabled>Select your role</option>
                 {ROLES.map(r => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
@@ -105,7 +107,7 @@ const LoginPage = () => {
                 type="email"
                 name="email"
                 className="login-input"
-                placeholder={`${form.role}@lnmiit.ac.in`}
+                placeholder={form.role ? `${form.role}@lnmiit.ac.in` : 'Enter your email'}
                 value={form.email}
                 onChange={handleChange}
                 autoComplete="email"

@@ -34,7 +34,7 @@ const Onboarding = () => {
     department_id: ''
   });
 
-  // HOD form state
+  // HoD form state
   const [hodForm, setHodForm] = useState({
     salutation: 'Dr',
     name: '',
@@ -324,7 +324,7 @@ const Onboarding = () => {
           </form>
         )}
 
-        {/* -- HOD Form -- */}
+        {/* -- HoD Form -- */}
         {isHod && (
           <form className="onboarding-form" onSubmit={handleHodSubmit}>
             {/* Salutation + Name */}
@@ -337,7 +337,7 @@ const Onboarding = () => {
                 </select>
               </div>
               <div className="ob-field ob-field--wide">
-                <label className="ob-label">HOD Full Name <span>*</span></label>
+                <label className="ob-label">HoD Full Name <span>*</span></label>
                 <div className="ob-input-wrap">
                   <User size={15} className="ob-icon" />
                   <input className="ob-input ob-input--icon" placeholder="Your full name"

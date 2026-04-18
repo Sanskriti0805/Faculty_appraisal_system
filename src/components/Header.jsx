@@ -7,6 +7,9 @@ const API_BASE = `http://${window.location.hostname}:5000/api`;
 
 const Header = ({ onLogout }) => {
   const { user, token } = useAuth()
+  const displayName = user?.role === 'faculty' && user?.salutation
+    ? `${user.salutation}. ${user.name}`
+    : user?.name
   const [showSettings, setShowSettings] = useState(false)
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const [showPassword, setShowPassword] = useState({ current: false, new: false, confirm: false })
@@ -97,7 +100,7 @@ const Header = ({ onLogout }) => {
               fontSize: '13px', color: '#5b6e9f', fontWeight: '500',
               padding: '6px 12px', background: '#f0f4ff', borderRadius: '20px'
             }}>
-              {user.salutation ? `${user.salutation}. ` : ''}{user.name}
+              {displayName}
             </span>
           )}
           <div style={{ display: 'flex', gap: '10px' }}>

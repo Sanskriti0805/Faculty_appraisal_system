@@ -499,7 +499,7 @@ const RubricReminder = ({ sectionName, onClose, onGoToRubrics }) => (
   <div className="rubric-reminder-overlay">
     <div className="rubric-reminder-card">
       <div className="rubric-reminder-icon"><Bell size={28} /></div>
-      <h3>Section Created! ðŸŽ‰</h3>
+      <h3>Section Created</h3>
       <p className="rubric-reminder-main">
         <strong>"{sectionName}"</strong> is now part of your form.
       </p>
@@ -776,7 +776,7 @@ const FormBuilder = () => {
                     className={`mini-section-item mini-section-child ${activeSection?.id === child.id ? 'active' : ''}`}
                     onClick={() => setActiveSection(child)}
                   >
-                    <span>â†³ {child.title}</span>
+                      <span>-> {child.title}</span>
                     <button
                       className="mini-section-delete"
                       onClick={e => { e.stopPropagation(); handleDeleteSection(child.id); }}
@@ -798,7 +798,7 @@ const FormBuilder = () => {
       <div className="fb-canvas">
         <div className="fb-canvas-header">
           <div className="fb-breadcrumb">
-            <span>Dofa Office</span> <ChevronRight size={14} /> <strong>Form Builder</strong>
+            <span>DoFA Office</span> <ChevronRight size={14} /> <strong>Form Builder</strong>
             {activeSection && (
               <><ChevronRight size={14} /> <span className="bc-section">{activeSection.title}</span></>
             )}
@@ -807,7 +807,7 @@ const FormBuilder = () => {
             <div className={`form-tab-badge form-tab-badge--${activeFormTab.toLowerCase()}`}>
               Form {activeFormTab}
             </div>
-            <button className="save-btn" onClick={() => showToast('Schema saved to database âœ“', 'success')}>
+            <button className="save-btn" onClick={() => showToast('Schema saved to database', 'success')}>
               <Save size={18} /> Publish Changes
             </button>
           </div>

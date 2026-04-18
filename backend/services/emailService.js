@@ -19,7 +19,7 @@ class EmailService {
     const pass = process.env.EMAIL_PASS;
 
     if (!host || !user || !pass || user === 'your_email@gmail.com') {
-      console.log('âš ï¸  Email not configured - emails will be logged to console instead.');
+      console.log('[WARN] Email not configured - emails will be logged to console instead.');
       this.isConfigured = false;
       return;
     }
@@ -32,7 +32,7 @@ class EmailService {
     });
 
     this.isConfigured = true;
-    console.log('âœ… Email service configured');
+    console.log('[OK] Email service configured');
   }
 
   // --- LNMIIT Branded Template (from email_fix.md) ----------------------
@@ -238,7 +238,7 @@ class EmailService {
                     <p>This is a gentle reminder that the deadline for submitting your <b>Faculty Appraisal Forms</b> for the academic year <b>${academicYear}</b> is approaching soon.</p>
                     
                     <div style="background: linear-gradient(135deg, #c53030 0%, #e53e3e 100%); color: #fff; padding: 20px 24px; border-radius: 10px; margin: 20px 0; text-align: center;">
-                      <p style="margin: 0 0 8px 0; font-size: 13px; opacity: 0.9;">âš ï¸ DEADLINE APPROACHING</p>
+                      <p style="margin: 0 0 8px 0; font-size: 13px; opacity: 0.9;">DEADLINE APPROACHING</p>
                       <h2 style="margin: 0; font-size: 22px; letter-spacing: 1px;">${deadline}</h2>
                       <p style="margin: 8px 0 0 0; font-size: 13px; opacity: 0.9;">(Only 2 days remaining!)</p>
                     </div>
@@ -265,7 +265,7 @@ class EmailService {
 
     await this._send({
       to,
-      subject: `âš ï¸ REMINDER: Faculty Appraisal ${academicYear} - Deadline in 2 Days!`,
+      subject: `REMINDER: Faculty Appraisal ${academicYear} - Deadline in 2 Days`,
       html
     });
   }
@@ -490,7 +490,7 @@ class EmailService {
     const from = process.env.EMAIL_FROM || 'LNMIIT Faculty Appraisal <noreply@lnmiit.ac.in>';
 
     if (!this.isConfigured) {
-      console.log('\nðŸ“§ ========== EMAIL (console mode) ==========');
+      console.log('\n========== EMAIL (console mode) ==========');
       console.log(`   To: ${to}`);
       console.log(`   Subject: ${subject}`);
       console.log(`   From: ${from}`);
@@ -501,9 +501,9 @@ class EmailService {
 
     try {
       const info = await this.transporter.sendMail({ from, to, subject, html });
-      console.log(`ðŸ“§ Email sent to ${to}: ${info.messageId}`);
+      console.log(`Email sent to ${to}: ${info.messageId}`);
     } catch (error) {
-      console.error(`âŒ Failed to send email to ${to}:`, error.message);
+      console.error(`Failed to send email to ${to}:`, error.message);
       throw error;
     }
   }

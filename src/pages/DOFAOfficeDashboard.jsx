@@ -24,6 +24,7 @@ const DofaOfficeDashboard = () => {
   const [downloadingFormat, setDownloadingFormat] = useState(null);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [exportLoading, setExportLoading] = useState(null); // 'forms' | 'summary'
+  const [activeFormType, setActiveFormType] = useState('A');
   const exportDropdownRef = useRef(null);
 
   useEffect(() => {
@@ -45,7 +46,9 @@ const DofaOfficeDashboard = () => {
   const fetchStats = async () => {
     try {
       const params = yearFilter !== 'all' ? `?academic_year=${yearFilter}` : '';
-      const response = await fetch(`${API}/submissions/stats${params}`);
+      const response = await fetch(`${API}/submissions/stats${params}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+      });
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -59,7 +62,6 @@ const DofaOfficeDashboard = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (filter !== 'all') params.set('status', filter);
       if (yearFilter !== 'all') params.set('academic_year', yearFilter);
 
       const url = `${API}/submissions${params.toString() ? '?' + params.toString() : ''}`;
@@ -86,7 +88,10 @@ const DofaOfficeDashboard = () => {
     try {
       await fetch(`${API}/submissions/${id}/lock`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify({ locked: !currentlyLocked, locked_by: 1 })
       });
       window.appToast(`Submission ${action}ed successfully`);
@@ -105,9 +110,9 @@ const DofaOfficeDashboard = () => {
       });
       const data = await res.json();
       if (data.success) {
-        window.appToast(`âœ… Reminder sent to ${email}`);
+        window.appToast(`Reminder sent to ${email}`);
       } else {
-        window.appToast(`âš ï¸ ${data.message || 'Failed to send reminder'}`);
+        window.appToast(data.message || 'Failed to send reminder');
       }
     } catch (e) {
       console.error('Reminder error:', e);
@@ -126,11 +131,11 @@ const DofaOfficeDashboard = () => {
       });
       const data = await res.json();
       if (data.success) {
-        window.appToast(`âœ… Status updated to "${status}"`);
+        window.appToast(`Status updated to "${status}"`);
         fetchSubmissions();
         fetchStats();
       } else {
-        window.appToast(`âš ï¸ ${data.message}`);
+        window.appToast(data.message || 'Failed to update status');
       }
     } catch (e) {
       window.appToast('Error updating status');
@@ -293,7 +298,21 @@ const DofaOfficeDashboard = () => {
       const yearLabel = yearFilter === 'all' ? 'All Academic Years' : yearFilter;
       const subs = yearFilter === 'all' ? submissions : submissions.filter(s => s.academic_year === yearFilter);
 
-      const statusText = { draft: 'Draft', submitted: 'Submitted', under_review: 'Under Review', approved: 'Approved', sent_back: 'Sent Back' };
+      const formatExplicitStatus = (submission) => {
+        const formType = String(submission?.form_type || 'A').toUpperCase() === 'B' ? 'Form B' : 'Form A';
+        const status = String(submission?.status || '').toLowerCase();
+        const textMap = {
+          draft: 'Draft',
+          submitted: 'Submitted to DoFA',
+          submitted_hod: 'Submitted to HoD',
+          hod_approved: 'HoD Approved - Pending DoFA',
+          under_review: 'Under DoFA Review',
+          under_review_hod: 'Under HoD Review',
+          approved: 'Approved',
+          sent_back: 'Sent Back'
+        };
+        return `${formType} - ${textMap[status] || submission?.status || 'Unknown'}`;
+      };
 
       // Group by academic year for the table
       const byYear = subs.reduce((acc, s) => {
@@ -313,14 +332,14 @@ const DofaOfficeDashboard = () => {
             <td>${s.designation || '-'}</td>
             <td>${s.email || '-'}</td>
             <td>${s.form_type || 'A'}</td>
-            <td><span class="badge ${s.status}">${statusText[s.status] || s.status}</span></td>
+            <td><span class="badge ${s.status}">${formatExplicitStatus(s)}</span></td>
             <td>${s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
           </tr>`;
         });
       });
 
       const html = `<!DOCTYPE html>
-<html><head><title>Dofa Appraisal Summary - ${yearLabel}</title>
+<html><head><title>DoFA Appraisal Summary - ${yearLabel}</title>
 <style>
   @page { size: A4 landscape; margin: 16mm; }
   body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
@@ -344,7 +363,7 @@ const DofaOfficeDashboard = () => {
   <thead><tr><th>Academic Year</th><th>Faculty Name</th><th>Department</th><th>Designation</th><th>Email</th><th>Form</th><th>Status</th><th>Submitted On</th></tr></thead>
   <tbody>${tableRows}</tbody>
 </table>
-<p class="footer">Dean of Faculty Affairs (Dofa) Office &mdash; Confidential Record</p>
+<p class="footer">Dean of Faculty Affairs (DoFA) Office &mdash; Confidential Record</p>
 </body></html>`;
 
       const win = window.open('', '_blank');
@@ -393,7 +412,16 @@ const DofaOfficeDashboard = () => {
               <div><label>Email</label><span>${s.email || '-'}</span></div>
               <div><label>Academic Year</label><span>${s.academic_year}</span></div>
               <div><label>Form Type</label><span>Form ${s.form_type || 'A'}</span></div>
-              <div><label>Status</label><span class="badge ${s.status}">${{ draft: 'Draft', submitted: 'Submitted', under_review: 'Under Review', approved: 'Approved', sent_back: 'Sent Back' }[s.status] || s.status}</span></div>
+              <div><label>Status</label><span class="badge ${s.status}">${(String(s.form_type || 'A').toUpperCase() === 'B' ? 'Form B' : 'Form A')} - ${{
+                draft: 'Draft',
+                submitted: 'Submitted to DoFA',
+                submitted_hod: 'Submitted to HoD',
+                hod_approved: 'HoD Approved - Pending DoFA',
+                under_review: 'Under DoFA Review',
+                under_review_hod: 'Under HoD Review',
+                approved: 'Approved',
+                sent_back: 'Sent Back'
+              }[s.status] || s.status}</span></div>
               <div><label>Date of Submission</label><span>${s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Not Submitted'}</span></div>
               ${s.total_score != null ? `<div><label>Total Score</label><span>${s.total_score}</span></div>` : ''}
             </div>
@@ -472,10 +500,30 @@ ${facultySections}
     }
   };
 
-  const getStatusBadge = (status) => {
-    const cls = { draft: 'status-draft', submitted: 'status-submitted', under_review: 'status-review', approved: 'status-approved', sent_back: 'status-sent-back' };
-    const text = { draft: 'Draft', submitted: 'Submitted', under_review: 'Under Review', approved: 'Approved', sent_back: 'Sent Back' };
-    return <span className={`status-badge ${cls[status] || ''}`}>{text[status] || status}</span>;
+  const getStatusBadge = (submission) => {
+    const status = String(submission?.status || '').toLowerCase();
+    const formLabel = String(submission?.form_type || 'A').toUpperCase() === 'B' ? 'Form B' : 'Form A';
+    const cls = {
+      draft: 'status-draft',
+      submitted: 'status-submitted',
+      submitted_hod: 'status-submitted',
+      hod_approved: 'status-submitted',
+      under_review: 'status-review',
+      under_review_hod: 'status-review',
+      approved: 'status-approved',
+      sent_back: 'status-sent-back'
+    };
+    const text = {
+      draft: 'Draft',
+      submitted: 'Submitted to DoFA',
+      submitted_hod: 'Submitted to HoD',
+      hod_approved: 'HoD Approved - Pending DoFA',
+      under_review: 'Under DoFA Review',
+      under_review_hod: 'Under HoD Review',
+      approved: 'Approved',
+      sent_back: 'Sent Back'
+    };
+    return <span className={`status-badge ${cls[status] || ''}`}>{`${formLabel} - ${text[status] || status}`}</span>;
   };
 
   const formatDate = (d) => {
@@ -483,10 +531,73 @@ ${facultySections}
     return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const grouped = submissions.reduce((acc, s) => {
-    const yr = s.academic_year || 'Unknown';
+  const getWorkflowStage = (submission) => {
+    const formType = String(submission?.form_type || 'A').toUpperCase();
+    const status = String(submission?.status || '').toLowerCase();
+
+    if (formType === 'A') {
+      if (status === 'approved') return 'DoFA Approved';
+      if (status === 'sent_back') return 'Sent Back to Faculty';
+      if (status === 'under_review') return 'Under DoFA Review';
+      if (status === 'submitted') return 'Queued for DoFA Review';
+      return 'Faculty Draft / Pending Submission';
+    }
+
+    if (status === 'approved') return 'DoFA Approved';
+    if (status === 'sent_back') return 'Sent Back to Faculty';
+    if (status === 'under_review') return 'Under DoFA Review';
+    if (status === 'hod_approved') return 'HoD Approved - Queued for DoFA';
+    if (status === 'under_review_hod') return 'Under HoD Review';
+    if (status === 'submitted_hod') return 'Submitted to HoD';
+    return 'Faculty Draft / Pending Submission';
+  };
+
+  const matchesFilter = (status, activeFilter) => {
+    if (activeFilter === 'all') return true;
+    const normalized = String(status || '').toLowerCase();
+    if (activeFilter === 'submitted') return ['submitted', 'submitted_hod', 'hod_approved'].includes(normalized);
+    if (activeFilter === 'under_review') return ['under_review', 'under_review_hod'].includes(normalized);
+    return normalized === activeFilter;
+  };
+
+  const combinedEntriesMap = new Map();
+  submissions.forEach((submission) => {
+    const key = `${submission.faculty_id || submission.email || submission.faculty_name}_${submission.academic_year || 'Unknown'}`;
+    const formType = String(submission.form_type || 'A').toUpperCase() === 'B' ? 'B' : 'A';
+
+    if (!combinedEntriesMap.has(key)) {
+      combinedEntriesMap.set(key, {
+        key,
+        academic_year: submission.academic_year,
+        faculty_name: submission.faculty_name,
+        faculty_id: submission.faculty_id,
+        email: submission.email,
+        department: submission.department,
+        forms: { A: null, B: null }
+      });
+    }
+
+    combinedEntriesMap.get(key).forms[formType] = submission;
+  });
+
+  const combinedEntries = Array.from(combinedEntriesMap.values());
+
+  const selectedRows = combinedEntries
+    .map((entry) => {
+      const selectedFormType = activeFormType;
+      const selectedSubmission = entry.forms[selectedFormType];
+      return {
+        ...entry,
+        selectedFormType,
+        selectedSubmission
+      };
+    })
+    .filter((entry) => entry.selectedSubmission && matchesFilter(entry.selectedSubmission.status, filter));
+
+  const grouped = selectedRows.reduce((acc, entry) => {
+    const yr = entry.academic_year || 'Unknown';
     if (!acc[yr]) acc[yr] = [];
-    acc[yr].push(s);
+    acc[yr].push(entry);
     return acc;
   }, {});
 
@@ -496,7 +607,7 @@ ${facultySections}
     <div className="Dofa-office-dashboard">
       <div className="dashboard-header">
         <div>
-          <h1 className="dashboard-title">Dofa Office Dashboard</h1>
+          <h1 className="dashboard-title">DoFA Office Dashboard</h1>
           <p className="dashboard-subtitle">Academic year-wise faculty appraisal management</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -621,7 +732,29 @@ ${facultySections}
                     <tr>
                       <th>Faculty Name</th>
                       <th>Department</th>
-                      <th>Form</th>
+                      <th>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>Form</span>
+                          <select
+                            value={activeFormType}
+                            onChange={(e) => setActiveFormType(String(e.target.value || 'A').toUpperCase() === 'B' ? 'B' : 'A')}
+                            style={{
+                              border: '1px solid #bbf7d0',
+                              background: '#f0fdf4',
+                              color: '#166534',
+                              borderRadius: '6px',
+                              padding: '4px 6px',
+                              fontWeight: 600,
+                              fontSize: '12px'
+                            }}
+                            aria-label="Select form type for table"
+                          >
+                            <option value="A">Form A</option>
+                            <option value="B">Form B</option>
+                          </select>
+                        </div>
+                      </th>
+                      <th>Stage</th>
                       <th>Status</th>
                       <th>Submitted On</th>
                       <th>Locked</th>
@@ -629,22 +762,28 @@ ${facultySections}
                     </tr>
                   </thead>
                   <tbody>
-                    {grouped[yr].map(submission => (
-                      <tr key={submission.id}>
+                    {grouped[yr].map(entry => {
+                      const submission = entry.selectedSubmission;
+                      const isFormB = entry.selectedFormType === 'B';
+                      const isPendingHod = isFormB && ['submitted_hod', 'under_review_hod'].includes(submission.status);
+                      const canDofaReview = !isPendingHod;
+
+                      return (
+                      <tr key={entry.key}>
                         <td>
                           <div className="faculty-info">
-                            <span className="faculty-name">{submission.faculty_name}</span>
-                            <span className="faculty-email">{submission.email}</span>
+                            <span className="faculty-name">{entry.faculty_name}</span>
+                            <span className="faculty-email">{entry.email}</span>
                           </div>
                         </td>
-                        <td>{submission.department || '-'}</td>
+                        <td>{entry.department || '-'}</td>
                         <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span className="form-type-badge" style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0' }}>Form A</span>
-                            <span className="form-type-badge" style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0' }}>Form B</span>
-                          </div>
+                          <span className="form-type-badge" style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0' }}>
+                            {activeFormType === 'B' ? 'Form B' : 'Form A'}
+                          </span>
                         </td>
-                        <td>{getStatusBadge(submission.status)}</td>
+                        <td>{getWorkflowStage(submission)}</td>
+                        <td>{getStatusBadge(submission)}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>{formatDate(submission.submitted_at)}</td>
                         <td>
                           <span className={`lock-status ${submission.locked ? 'locked' : 'unlocked'}`}>
@@ -656,7 +795,8 @@ ${facultySections}
                             <button
                               className="action-btn btn-view"
                               onClick={() => navigate(`/Dofa-office/review/${submission.id}`)}
-                              title="View Full Form"
+                              title={canDofaReview ? 'View Full Form' : 'Available after HoD approval'}
+                              disabled={!canDofaReview}
                             >
                               <Eye size={16} />
                             </button>
@@ -664,12 +804,13 @@ ${facultySections}
                             <button
                               className="action-btn btn-download"
                               onClick={() => setDownloadModal({ open: true, submission })}
-                              title="Download Form"
+                              title={canDofaReview ? 'Download Form' : 'Available after HoD approval'}
+                              disabled={!canDofaReview}
                             >
                               <Download size={16} />
                             </button>
 
-                            {submission.status !== 'approved' && (
+                            {submission.status !== 'approved' && canDofaReview && (
                               <button
                                 className="action-btn btn-approve"
                                 onClick={() => handleUpdateStatus(submission.id, 'approved', submission.faculty_name)}
@@ -679,7 +820,7 @@ ${facultySections}
                               </button>
                             )}
 
-                            {submission.status !== 'sent_back' && submission.status !== 'draft' && (
+                            {submission.status !== 'sent_back' && submission.status !== 'draft' && canDofaReview && (
                               <button
                                 className="action-btn btn-send-back"
                                 onClick={() => handleUpdateStatus(submission.id, 'sent_back', submission.faculty_name)}
@@ -707,7 +848,7 @@ ${facultySections}
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>

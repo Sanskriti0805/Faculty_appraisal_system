@@ -160,13 +160,13 @@ const MySubmissionView = () => {
       });
       const data = await res.json();
       if (data.success) {
-        window.appToast('âœ… Your edit request has been submitted! Dofa has been notified.');
+        window.appToast('Your edit request has been submitted. DoFA has been notified.');
         setSelectedSections([]);
         setRequestMessage('');
         setEditPanelOpen(false);
         await fetchEditRequests(submissionData.submission.id);
       } else {
-        window.appToast('âŒ ' + (data.message || 'Failed to submit edit request.'));
+        window.appToast('Error: ' + (data.message || 'Failed to submit edit request.'));
       }
     } catch (err) {
       window.appToast('Error submitting request: ' + err.message);
@@ -432,7 +432,7 @@ const MySubmissionView = () => {
         <div className="msv-status-info">
           <h3>
             {submission.status === 'submitted'    && 'Form Successfully Submitted'}
-            {submission.status === 'approved'     && 'Form Approved by Dofa'}
+            {submission.status === 'approved'     && 'Form Approved by DoFA'}
             {submission.status === 'sent_back'    && 'Edit Access Granted'}
             {submission.status === 'draft'        && 'Draft - Not Yet Submitted'}
             {submission.status === 'under_review' && 'Under Review'}
@@ -454,7 +454,7 @@ const MySubmissionView = () => {
               <div className="msv-panel-icon"><Send size={16} /></div>
               <div>
                 <h3>Request Section Edits</h3>
-                <p>Ask Dofa to unlock specific sections for editing</p>
+                <p>Ask DoFA to unlock specific sections for editing</p>
               </div>
             </div>
             {editPanelOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -676,7 +676,7 @@ const MySubmissionView = () => {
             <>
               <h3 className="msv-section-title"><Layers size={17} /> Custom Sections</h3>
               <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.5rem' }}>
-                These sections were added by the Dofa office specifically for your college's appraisal form.
+                These sections were added by the DoFA office specifically for your college's appraisal form.
               </p>
               {dynamicData.map(({ section, fields = [], respMap = {} }) => (
                 <div key={section.id} className="msv-data-section" style={{ marginBottom: '2rem' }}>
@@ -739,7 +739,7 @@ const MySubmissionView = () => {
           <div className="msv-section-card">
             <h3 className="msv-section-title">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              Comments from Dofa
+              Comments from DoFA
             </h3>
             {comments.length > 0 && (
               <div className="msv-comment-view-tabs" role="tablist" aria-label="Comment status filters">
@@ -758,7 +758,7 @@ const MySubmissionView = () => {
                 .map((c, i) => (
                   <div key={`pending-${i}-${c.id || ''}`} className="msv-request-item" style={{ marginBottom: '0.5rem' }}>
                     <div className="msv-request-item-content">
-                      <p><strong>{c.reviewer_name || 'Dofa Office'}</strong> | {formatDate(c.created_at)}</p>
+                      <p><strong>{c.reviewer_name || 'DoFA Office'}</strong> | {formatDate(c.created_at)}</p>
                       <div className="msv-comment-section-row">
                         <span className="msv-comment-section-badge">{c.section_name || 'General'}</span>
                       </div>
@@ -772,7 +772,7 @@ const MySubmissionView = () => {
                 .map((c, i) => (
                   <div key={`resolved-${i}-${c.id || ''}`} className="msv-request-item" style={{ marginBottom: '0.5rem' }}>
                     <div className="msv-request-item-content">
-                      <p><strong>{c.reviewer_name || 'Dofa Office'}</strong> | {formatDate(c.created_at)}</p>
+                      <p><strong>{c.reviewer_name || 'DoFA Office'}</strong> | {formatDate(c.created_at)}</p>
                       <div className="msv-comment-section-row">
                         <span className="msv-comment-section-badge">{c.section_name || 'General'}</span>
                         <span className="msv-comment-resolved-badge">

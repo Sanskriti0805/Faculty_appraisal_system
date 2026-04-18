@@ -35,7 +35,7 @@ exports.runMigrations = async () => {
       );
       if (rows.length === 0) {
         await db.query(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
-        console.log(`âœ… Migration: added ${table}.${column}`);
+        console.log(`Migration: added ${table}.${column}`);
       }
     };
 
@@ -94,9 +94,9 @@ exports.runMigrations = async () => {
     await ensureColumn('Dofa_rubrics', 'data_source', 'data_source VARCHAR(64) NULL');
     await ensureColumn('Dofa_rubrics', 'rule_config', 'rule_config JSON NULL');
 
-    console.log('âœ… Migration: archive columns ensured');
+    console.log('Migration: archive columns ensured');
   } catch (err) {
-    console.log('â„¹ï¸  Migration note:', err.message);
+    console.log('Migration note:', err.message);
   }
 };
 
@@ -251,7 +251,7 @@ exports.registerDepartment = async (req, res) => {
       } catch (emailErr) {
         console.error('Email error:', emailErr);
       }
-      console.log(`ðŸ”‘ HOD temp password for ${hod_email}: ${tempPassword}`);
+      console.log(`HOD temp password for ${hod_email}: ${tempPassword}`);
     } else {
       // Update existing user to have HOD role and link to department
       await db.query(
@@ -328,7 +328,7 @@ exports.registerFaculty = async (req, res) => {
     } catch (emailErr) {
       console.error('Email error:', emailErr);
     }
-    console.log(`ðŸ”‘ Faculty temp password for ${email}: ${tempPassword}`);
+    console.log(`Faculty temp password for ${email}: ${tempPassword}`);
 
     res.json({
       success: true,
@@ -396,11 +396,11 @@ exports.bulkInvite = async (req, res) => {
             role: role === 'hod' ? 'HOD' : 'Faculty',
             loginUrl: FRONTEND_URL
           });
-          console.log(`ðŸ“§ Bulk invite sent to ${email} (${role}) - temp: ${tempPassword}`);
+          console.log(`Bulk invite sent to ${email} (${role}) - temp: ${tempPassword}`);
           results.push({ email, status: 'sent', message: 'Invitation sent' });
         } catch (emailErr) {
           console.error(`Email error for ${email}:`, emailErr.message);
-          console.log(`ðŸ”‘ (console fallback) ${email} temp password: ${tempPassword}`);
+          console.log(`(console fallback) ${email} temp password: ${tempPassword}`);
           results.push({ email, status: 'sent_no_email', message: 'Account created; email delivery failed' });
         }
       } catch (dbErr) {
@@ -429,7 +429,7 @@ exports.bulkInvite = async (req, res) => {
  * Faculty or HOD completes their profile on first login.
  * 
  * Faculty body: { salutation, name, designation, employee_id, employment_type, date_of_joining, department_id }
- * HOD body: { salutation, name, dept_name, dept_code }  â† creates department if needed
+ * HOD body: { salutation, name, dept_name, dept_code }  -> creates department if needed
  */
 exports.completeOnboarding = async (req, res) => {
   try {

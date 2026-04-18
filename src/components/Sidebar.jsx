@@ -289,7 +289,7 @@ const Sidebar = () => {
         <nav className="sidebar-nav">
           <div className="nav-section">
             <div className="nav-section-header" style={{ cursor: 'default' }}>
-              <span>{isDofaOfficeRoute ? 'Dofa OFFICE' : 'Dofa'}</span>
+              <span>{isDofaOfficeRoute ? 'DoFA Office' : 'DoFA'}</span>
             </div>
             <div className="nav-section-items">
               {navItems.map(item => (
@@ -331,7 +331,7 @@ const Sidebar = () => {
           <>
         {['submitted', 'under_review', 'approved'].includes(submissionStatus) && (
           <div className="sidebar-lock-note">
-            Form is submitted. Sections are locked until Dofa sends back or approves requested edits.
+            Form is submitted. Sections are locked until DoFA sends back or approves requested edits.
           </div>
         )}
         {submissionStatus === 'sent_back' && hasSectionRestrictions && (

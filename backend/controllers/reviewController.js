@@ -54,7 +54,9 @@ const ensureReviewCommentsSectionColumn = async () => {
 exports.addComment = async (req, res) => {
   try {
     await ensureReviewCommentsSectionColumn();
-    const { submission_id, reviewer_id, reviewer_role, comment, section_name, section_key } = req.body;
+    const { submission_id, comment, section_name, section_key } = req.body;
+    const reviewerId = req.user?.id || null;
+    const reviewerRole = req.user?.role || 'reviewer';
     const normalizedSection = normalizeSectionName(section_name);
     const normalizedSectionKey = normalizeSectionKey(section_key);
 
@@ -62,7 +64,7 @@ exports.addComment = async (req, res) => {
       `INSERT INTO review_comments
         (submission_id, reviewer_id, reviewer_role, section_name, section_key, comment, is_resolved, resolved_at, resolved_in_version)
        VALUES (?, ?, ?, ?, ?, ?, 0, NULL, NULL)`,
-      [submission_id, reviewer_id, reviewer_role, normalizedSection, normalizedSectionKey, comment]
+      [submission_id, reviewerId, reviewerRole, normalizedSection, normalizedSectionKey, comment]
     );
 
     res.status(201).json({

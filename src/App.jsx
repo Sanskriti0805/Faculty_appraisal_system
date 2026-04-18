@@ -16,7 +16,7 @@ const Onboarding = lazy(() => import('./pages/Onboarding'))
 // Dofa Registration (migrated from Admin)
 const DofaRegistration = lazy(() => import('./pages/DofaRegistration'))
 
-// HOD
+// HoD
 const HODDashboard = lazy(() => import('./pages/HODDashboard'))
 
 // Faculty form pages
@@ -96,10 +96,15 @@ function App() {
 
 
 
-            {/* -- HOD Routes -- */}
+            {/* -- HoD Routes -- */}
             <Route path="/hod/dashboard" element={
               <ProtectedRoute allowedRoles={['hod']}>
                 <HODDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/hod/review/:id" element={
+              <ProtectedRoute allowedRoles={['hod']}>
+                <DofaReview />
               </ProtectedRoute>
             } />
 
