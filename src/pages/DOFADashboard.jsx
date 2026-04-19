@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, CheckCircle, XCircle, MessageSquare, FileText, Users, Clock, CheckSquare, Bell, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import './DofaDashboard.css';
 import { showConfirm, showPrompt } from '../utils/appDialogs';
@@ -26,19 +26,35 @@ const DofaDashboard = () => {
   const [DofaNote, setDofaNote] = useState('');
   const [reviewLoading, setReviewLoading] = useState(null);
   const [filter, setFilter] = useState('all');
-  const [yearFilter, setYearFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedYearLockState, setSelectedYearLockState] = useState(null);
+  const [sessionLockLoading, setSessionLockLoading] = useState(false);
+  const [activeSessionYear, setActiveSessionYear] = useState('');
 
   useEffect(() => {
+    fetchActiveSessionYear();
+  }, []);
+
+  useEffect(() => {
+    if (!yearFilter) return;
     fetchStats();
     fetchSubmissions();
     fetchEditRequests();
   }, [filter, yearFilter]);
 
+  useEffect(() => {
+    if (yearFilter === 'all') {
+      setSelectedYearLockState(null);
+      return;
+    }
+    fetchSessionLockState(yearFilter);
+  }, [yearFilter]);
+
   const fetchStats = async () => {
     try {
       const url = new URL(`${API}/submissions/stats`);
-      if (yearFilter !== 'all') url.searchParams.append('academic_year', yearFilter);
+      if (yearFilter) url.searchParams.append('academic_year', yearFilter);
       const response = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
       });
@@ -56,7 +72,7 @@ const DofaDashboard = () => {
       setLoading(true);
       const url = new URL(`${API}/submissions`);
       if (filter !== 'all') url.searchParams.append('status', filter);
-      if (yearFilter !== 'all') url.searchParams.append('academic_year', yearFilter);
+      if (yearFilter) url.searchParams.append('academic_year', yearFilter);
 
       const response = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
@@ -75,13 +91,82 @@ const DofaDashboard = () => {
   const fetchEditRequests = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch(`${API}/edit-requests`, {
+      const url = new URL(`${API}/edit-requests`);
+      if (yearFilter) url.searchParams.append('academic_year', yearFilter);
+      const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       if (data.success) setEditRequests(data.data);
     } catch (err) {
       console.error('Error fetching edit requests:', err);
+    }
+  };
+
+  const fetchActiveSessionYear = async () => {
+    try {
+      const res = await fetch(`${API}/sessions/active`);
+      const data = await res.json();
+      const activeYear = data?.data?.academic_year || '';
+      setActiveSessionYear(activeYear);
+      setYearFilter(activeYear);
+      if (!activeYear) setLoading(false);
+    } catch (error) {
+      console.error('Error fetching active session year:', error);
+      setActiveSessionYear('');
+      setYearFilter('');
+      setLoading(false);
+    }
+  };
+
+  const fetchSessionLockState = async (academicYear) => {
+    if (!academicYear || academicYear === 'all') return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API}/submissions/session-lock?academic_year=${encodeURIComponent(academicYear)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setSelectedYearLockState(data.data);
+      else setSelectedYearLockState({ academic_year: academicYear, locked: false });
+    } catch {
+      setSelectedYearLockState({ academic_year: academicYear, locked: false });
+    }
+  };
+
+  const handleSessionFinalLockToggle = async (locked) => {
+    if (!yearFilter) {
+      window.appToast('No active academic session found.');
+      return;
+    }
+
+    const confirmText = locked
+      ? `Final-lock session ${yearFilter}? This auto-approves non-approved submissions and freezes review actions for this session.`
+      : `Unlock session ${yearFilter}? This will re-enable review actions (send back/approve/edit-request review).`;
+
+    if (!(await showConfirm(confirmText))) return;
+
+    setSessionLockLoading(true);
+    try {
+      const res = await fetch(`${API}/submissions/session-lock`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ academic_year: yearFilter, locked })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.appToast(data.message || (locked ? 'Session locked successfully.' : 'Session unlocked successfully.'));
+        await Promise.all([fetchSubmissions(), fetchStats(), fetchEditRequests(), fetchSessionLockState(yearFilter)]);
+      } else {
+        window.appToast(data.message || 'Failed to update session lock.');
+      }
+    } catch (error) {
+      window.appToast(`Operation failed: ${error.message}`);
+    } finally {
+      setSessionLockLoading(false);
     }
   };
 
@@ -203,6 +288,12 @@ const DofaDashboard = () => {
   const pendingEditRequests = editRequests.filter((r) => r.status === 'pending');
   const reviewedEditRequests = editRequests.filter((r) => r.status !== 'pending');
   const visibleEditRequests = editRequestsTab === 'pending' ? pendingEditRequests : reviewedEditRequests;
+  const sessionLockedYears = new Set(
+    submissions
+      .filter((s) => Number(s.session_locked || 0) === 1)
+      .map((s) => String(s.academic_year || '').trim())
+      .filter(Boolean)
+  );
 
   const startReview = (req) => {
     setReviewingRequest(req);
@@ -396,7 +487,7 @@ const DofaDashboard = () => {
                         <td>{formatDate(req.created_at)}</td>
                         <td>
                           <div className="action-buttons">
-                            {req.status === 'pending' ? (
+                            {req.status === 'pending' && !sessionLockedYears.has(String(req.academic_year || '').trim()) ? (
                               <button
                                 className="action-btn btn-approve"
                                 title="Review & Approve/Deny"
@@ -568,28 +659,47 @@ const DofaDashboard = () => {
           ))}
         </div>
         <div>
-          <select
-            value={yearFilter}
-            onChange={(e) => setYearFilter(e.target.value)}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span
             style={{
               padding: '7px 12px',
               borderRadius: 6,
-              border: '1px solid #e2e8f0',
-              backgroundColor: '#fff',
-              fontSize: '0.8125rem',
-              outline: 'none',
-              cursor: 'pointer',
-              minWidth: 160,
+              border: '1px solid #cbd5e1',
+              background: '#f8fafc',
               color: '#334155',
-              fontFamily: 'inherit'
+              fontSize: '0.8125rem',
+              fontWeight: 600
             }}
           >
-            <option value="all">All Academic Years</option>
-            <option value="2022-23">2022-23</option>
-            <option value="2023-24">2023-24</option>
-            <option value="2024-25">2024-25</option>
-            <option value="2025-26">2025-26</option>
-          </select>
+            Active Session: {activeSessionYear || 'N/A'}
+          </span>
+          <Link
+            to="/Dofa/logs"
+            className="action-btn btn-view"
+            style={{ padding: '8px 12px', textDecoration: 'none' }}
+            title="Open historical session logs"
+          >
+            Logs
+          </Link>
+          <button
+            className="action-btn btn-lock"
+            onClick={() => handleSessionFinalLockToggle(true)}
+            disabled={!yearFilter || !!sessionLockLoading || !!selectedYearLockState?.locked}
+            title={!yearFilter ? 'No active session year found' : selectedYearLockState?.locked ? 'Already locked' : 'Final-lock selected session'}
+            style={{ padding: '8px 12px' }}
+          >
+            {sessionLockLoading ? 'Working...' : 'Final Lock Session'}
+          </button>
+          <button
+            className="action-btn btn-reject"
+            onClick={() => handleSessionFinalLockToggle(false)}
+            disabled={!yearFilter || !!sessionLockLoading || !selectedYearLockState?.locked}
+            title={!yearFilter ? 'No active session year found' : !selectedYearLockState?.locked ? 'Session is not locked' : 'Unlock selected session'}
+            style={{ padding: '8px 12px' }}
+          >
+            {sessionLockLoading ? 'Working...' : 'Unlock Session'}
+          </button>
+          </div>
         </div>
       </div>
 
@@ -629,6 +739,10 @@ const DofaDashboard = () => {
                     <td>{formatDate(submission.submitted_at)}</td>
                     <td>
                       <div className="action-buttons">
+                        {(() => {
+                          const isSessionLocked = Number(submission.session_locked || 0) === 1;
+                          return (
+                            <>
                         <button
                           className="action-btn btn-view"
                           onClick={() => handleViewSubmission(submission.id)}
@@ -636,7 +750,7 @@ const DofaDashboard = () => {
                         >
                           <Eye size={13} />
                         </button>
-                        {(submission.status === 'submitted' || submission.status === 'under_review') && (
+                        {(submission.status === 'submitted' || submission.status === 'under_review') && !isSessionLocked && (
                           <>
                             <button
                               className="action-btn btn-approve"
@@ -654,6 +768,9 @@ const DofaDashboard = () => {
                             </button>
                           </>
                         )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </td>
                   </tr>

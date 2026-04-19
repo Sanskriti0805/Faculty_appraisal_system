@@ -20,11 +20,54 @@ async function getTargetAcademicYear() {
   return getCurrentAcademicYear();
 }
 
+let sessionFinalLockColumnsEnsured = false;
+
+async function ensureColumnExists(tableName, columnName, definitionSql) {
+  const [rows] = await db.query(
+    `SELECT 1
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = ?
+       AND COLUMN_NAME = ?
+     LIMIT 1`,
+    [tableName, columnName]
+  );
+
+  if (rows.length === 0) {
+    await db.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definitionSql}`);
+  }
+}
+
+async function ensureSessionFinalLockColumns() {
+  if (sessionFinalLockColumnsEnsured) return;
+  await ensureColumnExists('appraisal_sessions', 'final_locked', 'TINYINT(1) NOT NULL DEFAULT 0');
+  await ensureColumnExists('appraisal_sessions', 'final_locked_at', 'TIMESTAMP NULL DEFAULT NULL');
+  await ensureColumnExists('appraisal_sessions', 'final_locked_by', 'INT NULL DEFAULT NULL');
+  sessionFinalLockColumnsEnsured = true;
+}
+
+async function getSessionFinalLockRecord(academicYear) {
+  if (!academicYear) return null;
+  await ensureSessionFinalLockColumns();
+  const [rows] = await db.query(
+    `SELECT s.id, s.academic_year, COALESCE(s.final_locked, 0) AS final_locked,
+            s.final_locked_at, s.final_locked_by, u.name AS final_locked_by_name
+     FROM appraisal_sessions s
+     LEFT JOIN users u ON u.id = s.final_locked_by
+     WHERE s.academic_year = ?
+     ORDER BY s.id DESC
+     LIMIT 1`,
+    [academicYear]
+  );
+  return rows.length > 0 ? rows[0] : null;
+}
+
 // GET /api/submissions/my - get or create draft submission for logged-in faculty
 exports.getMySubmission = async (req, res) => {
   try {
     const facultyId = req.user.id;
     const academicYear = await getTargetAcademicYear();
+    const lockRecord = await getSessionFinalLockRecord(academicYear);
 
     // Find existing submission for this faculty + year
     const [rows] = await db.query(
@@ -34,6 +77,13 @@ exports.getMySubmission = async (req, res) => {
 
     if (rows.length > 0) {
       return res.json({ success: true, data: rows[0] });
+    }
+
+    if (Number(lockRecord?.final_locked || 0) === 1) {
+      return res.status(423).json({
+        success: false,
+        message: `This session (${academicYear}) is final-locked by DoFA. New submissions are disabled.`
+      });
     }
 
     // Create new draft submission
@@ -507,6 +557,7 @@ async function fetchLegacySectionContent(facultyId, academicYear, sectionKey) {
 // Get all submissions with filters
 exports.getAllSubmissions = async (req, res) => {
   try {
+    await ensureSessionFinalLockColumns();
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'Authentication required.' });
     }
@@ -517,10 +568,28 @@ exports.getAllSubmissions = async (req, res) => {
     let query = `
       SELECT s.*, u.name as faculty_name, u.department, u.email,
              u.department_id as faculty_department_id,
-             a.name as approved_by_name
+             a.name as approved_by_name,
+             COALESCE(sess.final_locked, 0) as session_locked,
+             sess.final_locked_at,
+             sess.final_locked_by,
+             sess.final_locked_by_name
       FROM submissions s
       JOIN users u ON s.faculty_id = u.id
       LEFT JOIN users a ON s.approved_by = a.id
+      LEFT JOIN (
+        SELECT s1.academic_year,
+               COALESCE(s1.final_locked, 0) as final_locked,
+               s1.final_locked_at,
+               s1.final_locked_by,
+               u2.name as final_locked_by_name
+        FROM appraisal_sessions s1
+        LEFT JOIN users u2 ON u2.id = s1.final_locked_by
+        INNER JOIN (
+          SELECT academic_year, MAX(id) as max_id
+          FROM appraisal_sessions
+          GROUP BY academic_year
+        ) latest ON latest.max_id = s1.id
+      ) sess ON sess.academic_year = s.academic_year
       WHERE 1=1
         AND u.role = 'faculty'
     `;
@@ -848,6 +917,7 @@ exports.createSubmission = async (req, res) => {
 // Update submission status
 exports.updateSubmissionStatus = async (req, res) => {
   try {
+    await ensureSessionFinalLockColumns();
     const { id } = req.params;
     const { status, approved_by } = req.body;
     const requesterRole = req.user?.role;
@@ -869,6 +939,14 @@ exports.updateSubmissionStatus = async (req, res) => {
     }
 
     const submission = existingRows[0];
+    const sessionLockRecord = await getSessionFinalLockRecord(submission.academic_year);
+    if (Number(sessionLockRecord?.final_locked || 0) === 1) {
+      return res.status(423).json({
+        success: false,
+        message: `Session ${submission.academic_year} is final-locked. Status changes are disabled until DoFA unlocks it.`
+      });
+    }
+
     if (String(submission.faculty_role || '').toLowerCase() !== 'faculty') {
       return res.status(400).json({ success: false, message: 'Only faculty submissions are reviewable.' });
     }
@@ -1264,8 +1342,22 @@ exports.getSubmissionStats = async (req, res) => {
 // Lock/Unlock submission
 exports.toggleSubmissionLock = async (req, res) => {
   try {
+    await ensureSessionFinalLockColumns();
     const { id } = req.params;
     const { locked, locked_by } = req.body;
+
+    const [rows] = await db.query('SELECT academic_year FROM submissions WHERE id = ? LIMIT 1', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Submission not found.' });
+    }
+
+    const sessionLockRecord = await getSessionFinalLockRecord(rows[0].academic_year);
+    if (Number(sessionLockRecord?.final_locked || 0) === 1) {
+      return res.status(423).json({
+        success: false,
+        message: `Session ${rows[0].academic_year} is final-locked. Per-submission lock changes are disabled.`
+      });
+    }
 
     // Update submission lock status
     await db.query('UPDATE submissions SET locked = ? WHERE id = ?', [locked, id]);
@@ -1286,6 +1378,122 @@ exports.toggleSubmissionLock = async (req, res) => {
     res.json({
       success: true,
       message: locked ? 'Submission locked successfully' : 'Submission unlocked successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getSessionFinalLockState = async (req, res) => {
+  try {
+    await ensureSessionFinalLockColumns();
+    const academicYear = String(req.query.academic_year || '').trim() || await getTargetAcademicYear();
+    const lockRecord = await getSessionFinalLockRecord(academicYear);
+
+    if (!lockRecord) {
+      return res.status(404).json({
+        success: false,
+        message: `No session found for academic year ${academicYear}`
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        session_id: lockRecord.id,
+        academic_year: lockRecord.academic_year,
+        locked: Number(lockRecord.final_locked || 0) === 1,
+        locked_at: lockRecord.final_locked_at,
+        locked_by: lockRecord.final_locked_by,
+        locked_by_name: lockRecord.final_locked_by_name || null
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.setSessionFinalLock = async (req, res) => {
+  try {
+    await ensureSessionFinalLockColumns();
+
+    const role = req.user?.role;
+    if (!['Dofa', 'Dofa_office', 'admin'].includes(role)) {
+      return res.status(403).json({ success: false, message: 'Only DoFA roles can manage session final lock.' });
+    }
+
+    const academicYear = String(req.body?.academic_year || '').trim();
+    const locked = !!req.body?.locked;
+    if (!academicYear) {
+      return res.status(400).json({ success: false, message: 'academic_year is required.' });
+    }
+
+    if (!locked && !['Dofa', 'admin'].includes(role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Session unlock is allowed only from DoFA side.'
+      });
+    }
+
+    const [sessionRows] = await db.query(
+      `SELECT id, academic_year, COALESCE(final_locked, 0) as final_locked
+       FROM appraisal_sessions
+       WHERE academic_year = ?
+       ORDER BY id DESC
+       LIMIT 1`,
+      [academicYear]
+    );
+
+    if (sessionRows.length === 0) {
+      return res.status(404).json({ success: false, message: `No session found for academic year ${academicYear}` });
+    }
+
+    const session = sessionRows[0];
+    if (Number(session.final_locked || 0) === Number(locked ? 1 : 0)) {
+      return res.json({
+        success: true,
+        message: locked ? 'Session is already final-locked.' : 'Session is already unlocked.'
+      });
+    }
+
+    await db.query(
+      `UPDATE appraisal_sessions
+       SET final_locked = ?,
+           final_locked_at = ?,
+           final_locked_by = ?
+       WHERE id = ?`,
+      [locked ? 1 : 0, locked ? new Date() : null, locked ? (req.user?.id || null) : null, session.id]
+    );
+
+    let autoApprovedCount = 0;
+    if (locked) {
+      const [approvalResult] = await db.query(
+        `UPDATE submissions
+         SET status = 'approved',
+             approved_by = COALESCE(approved_by, ?),
+             approved_at = COALESCE(approved_at, CURRENT_TIMESTAMP),
+             locked = 1
+         WHERE academic_year = ?
+           AND status NOT IN ('approved', 'draft')`,
+        [req.user?.id || null, academicYear]
+      );
+      autoApprovedCount = Number(approvalResult?.affectedRows || 0);
+
+      await db.query('UPDATE submissions SET locked = 1 WHERE academic_year = ?', [academicYear]);
+    } else {
+      await db.query('UPDATE submissions SET locked = 0 WHERE academic_year = ?', [academicYear]);
+    }
+
+    res.json({
+      success: true,
+      message: locked
+        ? `Session ${academicYear} final-locked successfully. ${autoApprovedCount} submissions auto-approved.`
+        : `Session ${academicYear} unlocked successfully. Review actions are enabled again.`,
+      data: {
+        academic_year: academicYear,
+        locked,
+        auto_approved: autoApprovedCount
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

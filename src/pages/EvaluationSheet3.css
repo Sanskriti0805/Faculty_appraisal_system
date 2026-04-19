@@ -29,6 +29,78 @@
   margin: 0;
 }
 
+.eval3-lock-banner {
+  margin-bottom: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  padding: 0.9rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.eval3-lock-banner h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #334155;
+}
+
+.eval3-lock-banner p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #475569;
+}
+
+.eval3-lock-banner.locked {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.eval3-lock-banner.locked h3,
+.eval3-lock-banner.locked p {
+  color: #991b1b;
+}
+
+.eval3-lock-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.session-lock-btn,
+.session-unlock-btn {
+  border: none;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.session-lock-btn {
+  background: #991b1b;
+}
+
+.session-unlock-btn {
+  background: #0f172a;
+}
+
+.session-lock-btn:hover,
+.session-unlock-btn:hover {
+  opacity: 0.88;
+}
+
+.session-lock-btn:disabled,
+.session-unlock-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* Increment Config */
 .eval3-inc-config {
   background: #fff;
@@ -112,6 +184,11 @@
 
 .apply-inc-btn:hover {
   opacity: 0.85;
+}
+
+.apply-inc-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Table */

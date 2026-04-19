@@ -11,15 +11,76 @@ const EvaluationSheet3 = () => {
   const [availableGrades, setAvailableGrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [activeSessionYear, setActiveSessionYear] = useState('');
+  const [sessionLockState, setSessionLockState] = useState({ locked: false });
+  const [sessionLockLoading, setSessionLockLoading] = useState(false);
+
+  const isOfficePath = basePath === '/Dofa-office';
 
   useEffect(() => {
-    fetchData();
+    initializePage();
   }, []);
 
-  const fetchData = async () => {
+  const initializePage = async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/evaluation/sheet3');
+      const targetYear = await fetchTargetYear();
+      if (targetYear) {
+        await Promise.all([fetchData(targetYear), fetchSessionLockState(targetYear)]);
+      } else {
+        setData([]);
+        setAvailableGrades([]);
+        setGradeIncrements({});
+        setSessionLockState({ locked: false });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTargetYear = async () => {
+    try {
+      const res = await apiClient.get('/sessions/active');
+      const year = res?.session?.academic_year || '';
+      if (year) {
+        setActiveSessionYear(year);
+        return year;
+      }
+    } catch {
+      // Fall back to Sheet 3 derived year when active session API is unavailable.
+    }
+    return '';
+  };
+
+  const fetchSessionLockState = async (preferredYear = '') => {
+    let targetYear = preferredYear || activeSessionYear;
+    if (!targetYear && data.length > 0) {
+      targetYear = data[0]?.academic_year || '';
+    }
+    if (!targetYear) {
+      setSessionLockState({ locked: false });
+      return;
+    }
+
+    try {
+      const res = await apiClient.get(`/submissions/session-lock?academic_year=${encodeURIComponent(targetYear)}`);
+      if (res?.success) {
+        setActiveSessionYear(res?.data?.academic_year || targetYear);
+        setSessionLockState(res.data || { academic_year: targetYear, locked: false });
+        return;
+      }
+    } catch {
+      // Keep unlocked fallback state.
+    }
+
+    setActiveSessionYear(targetYear);
+    setSessionLockState({ academic_year: targetYear, locked: false });
+  };
+
+  const fetchData = async (academicYear = activeSessionYear) => {
+    if (!academicYear) return;
+    try {
+      const res = await apiClient.get(`/evaluation/sheet3?academic_year=${encodeURIComponent(academicYear)}`);
       if (res.success) {
         setData(res.data || []);
         const activeGrades = res.availableGrades || [];
@@ -31,11 +92,10 @@ const EvaluationSheet3 = () => {
           }
         });
         setGradeIncrements(incMap);
+        setActiveSessionYear(academicYear);
       }
     } catch (err) {
       showToast('Error loading Sheet 3 data', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -50,6 +110,11 @@ const EvaluationSheet3 = () => {
 
   const applyIncrements = async () => {
     try {
+      if (sessionLockState?.locked) {
+        showToast(`Session ${activeSessionYear || ''} is final-locked. Increments cannot be changed.`, 'error');
+        return;
+      }
+
       setLoading(true);
       const incArray = availableGrades.map((grade) => ({
         grade,
@@ -59,11 +124,52 @@ const EvaluationSheet3 = () => {
       const res = await apiClient.post('/evaluation/apply-increments');
       if (res.success) {
         showToast('Increments applied successfully');
-        fetchData();
+        await fetchData();
+        await fetchSessionLockState();
       }
     } catch {
       showToast('Error applying increments', 'error');
+    } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSessionLockToggle = async (nextLocked) => {
+    const targetYear = activeSessionYear || data[0]?.academic_year;
+    if (!targetYear) {
+      showToast('Academic year is unavailable. Unable to change lock state.', 'error');
+      return;
+    }
+
+    if (nextLocked) {
+      const ok = window.confirm(
+        `Final-lock session ${targetYear}? This will freeze Sheet 1/2/3 edits and all review actions (except view/download) until DoFA unlocks.`
+      );
+      if (!ok) return;
+    } else {
+      const ok = window.confirm(
+        `Unlock session ${targetYear}? This will re-enable evaluation and review actions for this academic year.`
+      );
+      if (!ok) return;
+    }
+
+    try {
+      setSessionLockLoading(true);
+      const res = await apiClient.put('/submissions/session-lock', {
+        academic_year: targetYear,
+        locked: nextLocked
+      });
+      if (res?.success) {
+        showToast(res.message || `Session ${targetYear} ${nextLocked ? 'locked' : 'unlocked'} successfully`);
+        await fetchSessionLockState(targetYear);
+        await fetchData();
+      } else {
+        showToast(res?.message || 'Unable to update session lock state.', 'error');
+      }
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Unable to update session lock state.', 'error');
+    } finally {
+      setSessionLockLoading(false);
     }
   };
 
@@ -85,8 +191,50 @@ const EvaluationSheet3 = () => {
         </div>
       </div>
 
+      <div className={`eval3-lock-banner ${sessionLockState?.locked ? 'locked' : 'unlocked'}`}>
+        <div>
+          <h3>Session Lock Status</h3>
+          <p>
+            {activeSessionYear ? `${activeSessionYear}: ` : ''}
+            {sessionLockState?.locked
+              ? 'Final-locked. Sheet 1/2/3 data and review actions are frozen.'
+              : 'Unlocked. You can still apply grading, increments, and reviews.'}
+          </p>
+          {!activeSessionYear && (
+            <p style={{ marginTop: 6 }}>No active appraisal session found. Sheet 3 will open when a session is released.</p>
+          )}
+        </div>
+        <div className="eval3-lock-actions">
+          {!sessionLockState?.locked && (
+            <button
+              className="session-lock-btn"
+              onClick={() => handleSessionLockToggle(true)}
+              disabled={sessionLockLoading || !activeSessionYear}
+              title="Lock this session after verifying Sheet 3 increments"
+            >
+              {sessionLockLoading ? 'Working...' : 'Final Lock Session'}
+            </button>
+          )}
+          {sessionLockState?.locked && !isOfficePath && (
+            <button
+              className="session-unlock-btn"
+              onClick={() => handleSessionLockToggle(false)}
+              disabled={sessionLockLoading || !activeSessionYear}
+              title="DoFA-only action to re-open this session"
+            >
+              {sessionLockLoading ? 'Working...' : 'Unlock Session'}
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="eval3-inc-config">
         <h2>Set Increment Percentage by Grade</h2>
+        {sessionLockState?.locked && (
+          <p style={{ color: '#b91c1c', fontSize: '0.875rem', margin: '0 0 1rem 0' }}>
+            This academic session is final-locked. Increment settings are read-only.
+          </p>
+        )}
         {availableGrades.length === 0 ? (
           <p style={{ color: '#b91c1c', fontSize: '0.875rem', margin: 0 }}>
             No grades found in Sheet 2. Please finalise grades in Sheet 2 first.
@@ -104,13 +252,14 @@ const EvaluationSheet3 = () => {
                       placeholder="0"
                       value={gradeIncrements[grade] || ''}
                       onChange={(e) => handleIncChange(grade, e.target.value)}
+                      disabled={sessionLockState?.locked}
                     />
                     <span>%</span>
                   </div>
                 </div>
               ))}
             </div>
-            <button className="apply-inc-btn" onClick={applyIncrements}>
+            <button className="apply-inc-btn" onClick={applyIncrements} disabled={sessionLockState?.locked}>
               Apply Increments to All Faculty
             </button>
           </>

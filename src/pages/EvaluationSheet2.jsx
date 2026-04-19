@@ -8,19 +8,41 @@ const EvaluationSheet2 = () => {
   const basePath = location.pathname.startsWith('/Dofa-office') ? '/Dofa-office' : '/Dofa';
   const [data, setData] = useState([]);
   const [gradingParams, setGradingParams] = useState([]);
+  const [activeYear, setActiveYear] = useState('');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [stats, setStats] = useState({ mean: null, median: null, mode: null, stdDev: null });
   const saveTimers = useRef({});
 
   useEffect(() => {
-    fetchData();
+    initializePage();
   }, []);
 
-  const fetchData = async () => {
+  const initializePage = async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/evaluation/sheet2');
+      const sessionRes = await apiClient.get('/sessions/active');
+      const year = sessionRes?.data?.academic_year || '';
+      setActiveYear(year);
+      if (!year) {
+        setData([]);
+        setGradingParams([]);
+        return;
+      }
+      await fetchData(year);
+    } catch {
+      showToast('Unable to detect active session year', 'error');
+      setData([]);
+      setGradingParams([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchData = async (academicYear = activeYear) => {
+    if (!academicYear) return;
+    try {
+      const res = await apiClient.get(`/evaluation/sheet2?academic_year=${encodeURIComponent(academicYear)}`);
       if (res.success) {
         const rows = res.data || [];
         setData(rows);
@@ -31,8 +53,6 @@ const EvaluationSheet2 = () => {
       }
     } catch (err) {
       showToast('Error loading Sheet 2 data', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -113,7 +133,7 @@ const EvaluationSheet2 = () => {
       const res = await apiClient.post('/evaluation/apply-grading');
       if (res.success) {
         showToast('Grading applied successfully');
-        fetchData();
+        fetchData(activeYear);
       }
     } catch {
       showToast('Error applying grade', 'error');
@@ -131,13 +151,19 @@ const EvaluationSheet2 = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1>Evaluation - Sheet 2</h1>
-            <p>Research, Teaching Feedback &amp; Consolidated Grading</p>
+            <p>Research, Teaching Feedback &amp; Consolidated Grading {activeYear ? `(${activeYear})` : ''}</p>
           </div>
           <Link to={`${basePath}/sheet1`} className="add-rule-btn" style={{ textDecoration: 'none' }}>
             &larr; Back to Sheet 1
           </Link>
         </div>
       </div>
+
+      {!activeYear && (
+        <div className="eval2-loading" style={{ height: 'auto', padding: '10px 14px', marginBottom: 12 }}>
+          No active appraisal session found. Sheet 2 will open when a session is released.
+        </div>
+      )}
 
       {/* Statistics Bar */}
       <div className="eval2-stats-bar">

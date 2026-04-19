@@ -55,6 +55,7 @@ const RubricsManagement = lazy(() => import('./pages/RubricsManagement'))
 const EvaluationSheet = lazy(() => import('./pages/EvaluationSheet'))
 const EvaluationSheet2 = lazy(() => import('./pages/EvaluationSheet2'))
 const EvaluationSheet3 = lazy(() => import('./pages/EvaluationSheet3'))
+const SessionLogs = lazy(() => import('./pages/SessionLogs'))
 const FormBuilder = lazy(() => import('./pages/FormBuilder'))
 const FormRelease = lazy(() => import('./pages/FormRelease'))
 
@@ -158,6 +159,7 @@ function App() {
               <Route path="evaluation" element={<EvaluationSheet />} />
               <Route path="sheet2" element={<EvaluationSheet2 />} />
               <Route path="sheet3" element={<EvaluationSheet3 />} />
+              <Route path="logs" element={<SessionLogs />} />
               <Route path="registration" element={<DofaRegistration />} />
               <Route path="manage-users" element={<DofaRegistration />} />
               <Route path="form-release" element={<FormRelease />} />
@@ -177,6 +179,7 @@ function App() {
               <Route path="evaluation" element={<EvaluationSheet />} />
               <Route path="sheet2" element={<EvaluationSheet2 />} />
               <Route path="sheet3" element={<EvaluationSheet3 />} />
+              <Route path="logs" element={<SessionLogs />} />
               <Route path="form-builder" element={<FormBuilder />} />
               <Route path="registration" element={<DofaRegistration />} />
               <Route path="manage-users" element={<DofaRegistration />} />

@@ -10,18 +10,44 @@ const EvaluationSheet = () => {
   const [submissions, setSubmissions] = useState([]);
   const [scores, setScores] = useState({});
   const [remarks, setRemarks] = useState({});
+  const [activeYear, setActiveYear] = useState('');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [rerunning, setRerunning] = useState(null); // submissionId being re-run
   const saveTimers = useRef({});
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { initializePage(); }, []);
 
-  const fetchData = async () => {
+  const initializePage = async () => {
     setLoading(true);
     try {
+      const sessionRes = await apiClient.get('/sessions/active');
+      const year = sessionRes?.data?.academic_year || '';
+      setActiveYear(year);
+      if (!year) {
+        setRubrics([]);
+        setSubmissions([]);
+        setScores({});
+        setRemarks({});
+        return;
+      }
+      await fetchData(year);
+    } catch {
+      showToast('Unable to detect active session year', 'error');
+      setRubrics([]);
+      setSubmissions([]);
+      setScores({});
+      setRemarks({});
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchData = async (academicYear = activeYear) => {
+    if (!academicYear) return;
+    try {
       // apiClient response interceptor already returns res.data
-      const data = await apiClient.get('/evaluation');
+      const data = await apiClient.get(`/evaluation?academic_year=${encodeURIComponent(academicYear)}`);
       
       if (data && data.success) {
         setRubrics(data.rubrics || []);
@@ -44,8 +70,6 @@ const EvaluationSheet = () => {
     } catch (err) {
       console.error('Fetch error:', err);
       showToast('Error loading evaluation data', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -117,7 +141,7 @@ const EvaluationSheet = () => {
       const data = await apiClient.post(`/evaluation/rerun-allocation/${sub.submission_id}`);
       if (data.success) {
         showToast(`Re-allocated! Total: ${data.total}`);
-        await fetchData(); // refresh all scores before enabling UI
+        await fetchData(activeYear); // refresh all scores before enabling UI
       } else {
         showToast(data.message || 'Re-run failed', 'error');
       }
@@ -169,8 +193,14 @@ const EvaluationSheet = () => {
       
       <div className="eval-header">
         <h1>Evaluation Sheet - Sheet 1</h1>
-        <p>Faculty Appraisal Consolidated Scores</p>
+        <p>Faculty Appraisal Consolidated Scores {activeYear ? `(${activeYear})` : ''}</p>
       </div>
+
+      {!activeYear && (
+        <div className="eval-loading" style={{ height: 'auto', padding: '10px 14px', marginBottom: 12 }}>
+          No active appraisal session found. Sheet 1 will open when a session is released.
+        </div>
+      )}
 
       <div className="eval-table-wrapper">
         <table className="eval-main-table">

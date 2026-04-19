@@ -1,6 +1,23 @@
 ﻿const db = require('../config/database');
 
 let editRequestsTableEnsured = false;
+let sessionFinalLockColumnsEnsured = false;
+
+async function ensureColumnExists(tableName, columnName, definitionSql) {
+  const [rows] = await db.query(
+    `SELECT 1
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = ?
+       AND COLUMN_NAME = ?
+     LIMIT 1`,
+    [tableName, columnName]
+  );
+
+  if (rows.length === 0) {
+    await db.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definitionSql}`);
+  }
+}
 
 async function ensureEditRequestsTable() {
   if (editRequestsTableEnsured) return;
@@ -28,6 +45,14 @@ async function ensureEditRequestsTable() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   `);
   editRequestsTableEnsured = true;
+}
+
+async function ensureSessionFinalLockColumns() {
+  if (sessionFinalLockColumnsEnsured) return;
+  await ensureColumnExists('appraisal_sessions', 'final_locked', 'TINYINT(1) NOT NULL DEFAULT 0');
+  await ensureColumnExists('appraisal_sessions', 'final_locked_at', 'TIMESTAMP NULL DEFAULT NULL');
+  await ensureColumnExists('appraisal_sessions', 'final_locked_by', 'INT NULL DEFAULT NULL');
+  sessionFinalLockColumnsEnsured = true;
 }
 
 function safeJsonParse(value) {
@@ -118,6 +143,7 @@ function requireSectionEditAccess(sectionKey) {
   return async (req, res, next) => {
     try {
       await ensureEditRequestsTable();
+      await ensureSessionFinalLockColumns();
 
       if (!req.user) {
         return res.status(401).json({ success: false, message: 'Not authenticated' });
@@ -139,7 +165,7 @@ function requireSectionEditAccess(sectionKey) {
 
       // Prefer current academic year; fallback to latest submission if none in current year.
       let [rows] = await db.query(
-        `SELECT id, status, academic_year
+        `SELECT id, status, academic_year, COALESCE(locked, 0) as locked
          FROM submissions
          WHERE faculty_id = ? AND academic_year = ?
          ORDER BY id DESC
@@ -149,7 +175,7 @@ function requireSectionEditAccess(sectionKey) {
 
       if (!fromSession && rows.length === 0) {
         [rows] = await db.query(
-          `SELECT id, status, academic_year
+          `SELECT id, status, academic_year, COALESCE(locked, 0) as locked
            FROM submissions
            WHERE faculty_id = ?
            ORDER BY id DESC
@@ -165,6 +191,30 @@ function requireSectionEditAccess(sectionKey) {
 
       const submission = rows[0];
       const status = submission.status;
+
+      if (Number(submission.locked || 0) === 1) {
+        return res.status(403).json({
+          success: false,
+          code: 'SUBMISSION_LOCKED',
+          message: 'This submission is locked by DoFA for the current session.'
+        });
+      }
+
+      const [sessionRows] = await db.query(
+        `SELECT COALESCE(final_locked, 0) as final_locked
+         FROM appraisal_sessions
+         WHERE academic_year = ?
+         ORDER BY id DESC
+         LIMIT 1`,
+        [submission.academic_year]
+      );
+      if (sessionRows.length > 0 && Number(sessionRows[0].final_locked || 0) === 1) {
+        return res.status(403).json({
+          success: false,
+          code: 'SESSION_FINAL_LOCKED',
+          message: `Session ${submission.academic_year} is final-locked by DoFA.`
+        });
+      }
 
       if (status === 'draft') {
         return next();

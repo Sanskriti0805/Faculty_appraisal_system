@@ -193,6 +193,7 @@ const MySubmissionView = () => {
   const isPastDeadline   = sessionInfo?.pastDeadline || false;
   const pendingRequest   = editRequests.find(r => r.status === 'pending');
   const approvedRequest  = editRequests.find(r => r.status === 'approved');
+  const isFormA = String(submissionData?.submission?.form_type || 'A').trim().toUpperCase() === 'A';
   const submittedStatuses = new Set(['submitted', 'submitted_hod']);
   const approvedStatuses = new Set(['approved', 'hod_approved']);
   const underReviewStatuses = new Set(['under_review', 'under_review_hod']);
@@ -202,6 +203,7 @@ const MySubmissionView = () => {
   const isUnderReviewStatus = underReviewStatuses.has(submissionData?.submission?.status);
   const isSentBackStatus = sentBackStatuses.has(submissionData?.submission?.status);
   const canRequestEdits  =
+    isFormA &&
     isSubmittedStatus &&
     !isPastDeadline && !pendingRequest;
 
@@ -469,7 +471,7 @@ const MySubmissionView = () => {
       </div>
 
       {/* Edit Request Panel */}
-      {(isSubmittedStatus || pendingRequest || approvedRequest) && (
+      {((isFormA && isSubmittedStatus) || pendingRequest || approvedRequest) && (
         <div className="msv-edit-panel">
           <div className="msv-edit-panel-header" onClick={() => setEditPanelOpen(o => !o)}>
             <div className="msv-edit-panel-header-left">

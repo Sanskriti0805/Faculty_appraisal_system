@@ -2,6 +2,23 @@
 const emailService = require('../services/emailService');
 
 let editRequestsTableEnsured = false;
+let sessionFinalLockColumnsEnsured = false;
+
+async function ensureColumnExists(tableName, columnName, definitionSql) {
+  const [rows] = await db.query(
+    `SELECT 1
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = ?
+       AND COLUMN_NAME = ?
+     LIMIT 1`,
+    [tableName, columnName]
+  );
+
+  if (rows.length === 0) {
+    await db.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definitionSql}`);
+  }
+}
 
 async function ensureEditRequestsTable() {
   if (editRequestsTableEnsured) return;
@@ -31,6 +48,28 @@ async function ensureEditRequestsTable() {
   editRequestsTableEnsured = true;
 }
 
+async function ensureSessionFinalLockColumns() {
+  if (sessionFinalLockColumnsEnsured) return;
+  await ensureColumnExists('appraisal_sessions', 'final_locked', 'TINYINT(1) NOT NULL DEFAULT 0');
+  await ensureColumnExists('appraisal_sessions', 'final_locked_at', 'TIMESTAMP NULL DEFAULT NULL');
+  await ensureColumnExists('appraisal_sessions', 'final_locked_by', 'INT NULL DEFAULT NULL');
+  sessionFinalLockColumnsEnsured = true;
+}
+
+async function isSessionFinalLocked(academicYear) {
+  if (!academicYear) return false;
+  await ensureSessionFinalLockColumns();
+  const [rows] = await db.query(
+    `SELECT COALESCE(final_locked, 0) as final_locked
+     FROM appraisal_sessions
+     WHERE academic_year = ?
+     ORDER BY id DESC
+     LIMIT 1`,
+    [academicYear]
+  );
+  return rows.length > 0 && Number(rows[0].final_locked || 0) === 1;
+}
+
 // Section labels for display/email
 const SECTION_LABELS = {
   teaching_learning: 'Teaching and Learning',
@@ -58,6 +97,12 @@ const SECTION_LABELS = {
   teaching_plan: 'Teaching Plan',
   part_b: 'Part B (Goal Setting)',
 };
+
+const FORM_A_ALLOWED_REQUEST_SECTIONS = new Set([
+  'teaching_learning',
+  'research_development',
+  'other_institutional_activities'
+]);
 
 const resolveSectionLabels = async (sections = []) => {
   const list = Array.isArray(sections) ? sections : [];
@@ -109,6 +154,28 @@ exports.createEditRequest = async (req, res) => {
     }
 
     const submission = submissions[0];
+    if (await isSessionFinalLocked(submission.academic_year)) {
+      return res.status(423).json({
+        success: false,
+        message: `Session ${submission.academic_year} is final-locked. Edit requests are disabled.`
+      });
+    }
+    const formType = String(submission.form_type || 'A').trim().toUpperCase();
+
+    if (formType !== 'A') {
+      return res.status(403).json({
+        success: false,
+        message: 'Edit section requests are allowed only for Form A submissions.'
+      });
+    }
+
+    const invalidSections = requested_sections.filter((sectionKey) => !FORM_A_ALLOWED_REQUEST_SECTIONS.has(sectionKey));
+    if (invalidSections.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only Teaching and Learning, Research and Development, and Other Institutional Activities can be requested for Form A.'
+      });
+    }
 
     // Check deadline has not passed
     const [sessions] = await db.query(
@@ -315,6 +382,13 @@ exports.reviewEditRequest = async (req, res) => {
     }
 
     const editRequest = requests[0];
+
+    if (await isSessionFinalLocked(editRequest.academic_year)) {
+      return res.status(423).json({
+        success: false,
+        message: `Session ${editRequest.academic_year} is final-locked. Edit-request review is disabled.`
+      });
+    }
 
     // Update the request
     await db.query(

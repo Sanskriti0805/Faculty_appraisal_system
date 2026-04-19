@@ -17,6 +17,10 @@ router.get('/stats', authenticate, submissionsController.getSubmissionStats);
 // Export bulk excel 
 router.get('/export/excel/:academic_year', authenticate, submissionsController.exportComprehensiveExcel);
 
+// Session-level final lock state and controls
+router.get('/session-lock', authenticate, submissionsController.getSessionFinalLockState);
+router.put('/session-lock', authenticate, submissionsController.setSessionFinalLock);
+
 // ── PDF download — MUST be before /:id ──────────────────────────────────────
 router.get('/:id/pdf', authenticate, pdfController.generateSubmissionPdf);
 

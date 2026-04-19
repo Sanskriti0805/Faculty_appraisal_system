@@ -24,21 +24,36 @@ const DofaOfficeDashboard = () => {
   const [DofaNote, setDofaNote] = useState('');
   const [reviewLoading, setReviewLoading] = useState(null);
   const [filter, setFilter] = useState('all');
-  const [yearFilter, setYearFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('');
+  const [activeSessionYear, setActiveSessionYear] = useState('');
   const [loading, setLoading] = useState(true);
-  const [availableYears, setAvailableYears] = useState([]);
   const [downloadModal, setDownloadModal] = useState({ open: false, submission: null });
   const [downloadingFormat, setDownloadingFormat] = useState(null);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [exportLoading, setExportLoading] = useState(null); // 'forms' | 'summary'
   const [activeFormType, setActiveFormType] = useState('A');
+  const [selectedYearLockState, setSelectedYearLockState] = useState(null);
+  const [sessionLockLoading, setSessionLockLoading] = useState(false);
   const exportDropdownRef = useRef(null);
 
   useEffect(() => {
+    fetchActiveSessionYear();
+  }, []);
+
+  useEffect(() => {
+    if (!yearFilter) return;
     fetchStats();
     fetchSubmissions();
     fetchEditRequests();
   }, [filter, yearFilter]);
+
+  useEffect(() => {
+    if (!yearFilter) {
+      setSelectedYearLockState(null);
+      return;
+    }
+    fetchSessionLockState(yearFilter);
+  }, [yearFilter]);
 
   // Close export dropdown when clicking outside
   useEffect(() => {
@@ -53,7 +68,7 @@ const DofaOfficeDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const params = yearFilter !== 'all' ? `?academic_year=${yearFilter}` : '';
+      const params = yearFilter ? `?academic_year=${yearFilter}` : '';
       const response = await fetch(`${API}/submissions/stats${params}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
       });
@@ -70,7 +85,7 @@ const DofaOfficeDashboard = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (yearFilter !== 'all') params.set('academic_year', yearFilter);
+      if (yearFilter) params.set('academic_year', yearFilter);
 
       const url = `${API}/submissions${params.toString() ? '?' + params.toString() : ''}`;
       const res = await fetch(url, {
@@ -79,8 +94,6 @@ const DofaOfficeDashboard = () => {
       const data = await res.json();
       if (data.success) {
         setSubmissions(data.data);
-        const years = [...new Set(data.data.map(s => s.academic_year).filter(Boolean))].sort().reverse();
-        setAvailableYears(years);
       }
     } catch (error) {
       console.error('Error fetching submissions:', error);
@@ -92,7 +105,9 @@ const DofaOfficeDashboard = () => {
   const fetchEditRequests = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch(`${API}/edit-requests`, {
+      const url = new URL(`${API}/edit-requests`);
+      if (yearFilter) url.searchParams.append('academic_year', yearFilter);
+      const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -102,6 +117,70 @@ const DofaOfficeDashboard = () => {
     } catch (err) {
       console.error('Error fetching edit requests:', err);
       setEditRequests([]);
+    }
+  };
+
+  const fetchActiveSessionYear = async () => {
+    try {
+      const res = await fetch(`${API}/sessions/active`);
+      const data = await res.json();
+      const activeYear = data?.data?.academic_year || '';
+      setActiveSessionYear(activeYear);
+      setYearFilter(activeYear);
+      if (!activeYear) setLoading(false);
+    } catch (error) {
+      console.error('Error fetching active session year:', error);
+      setActiveSessionYear('');
+      setYearFilter('');
+      setLoading(false);
+    }
+  };
+
+  const fetchSessionLockState = async (academicYear) => {
+    if (!academicYear || academicYear === 'all') return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API}/submissions/session-lock?academic_year=${encodeURIComponent(academicYear)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setSelectedYearLockState(data.data);
+      else setSelectedYearLockState({ academic_year: academicYear, locked: false });
+    } catch {
+      setSelectedYearLockState({ academic_year: academicYear, locked: false });
+    }
+  };
+
+  const handleFinalSessionLock = async () => {
+    if (!yearFilter) {
+      window.appToast('No active academic session found to lock.');
+      return;
+    }
+
+    const targetYear = yearFilter;
+    if (!(await showConfirm(`Final-lock session ${targetYear}? This will auto-approve non-approved submissions, lock all actions (except view/download), and freeze this session until DoFA unlocks.`))) {
+      return;
+    }
+
+    setSessionLockLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API}/submissions/session-lock`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ academic_year: targetYear, locked: true })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.appToast(data.message || `Session ${targetYear} locked successfully.`);
+        await Promise.all([fetchSubmissions(), fetchStats(), fetchEditRequests(), fetchSessionLockState(targetYear)]);
+      } else {
+        window.appToast(data.message || 'Failed to lock session.');
+      }
+    } catch (error) {
+      window.appToast(`Lock failed: ${error.message}`);
+    } finally {
+      setSessionLockLoading(false);
     }
   };
 
@@ -370,8 +449,8 @@ const DofaOfficeDashboard = () => {
     setExportLoading('summary');
     setExportDropdownOpen(false);
     try {
-      const yearLabel = yearFilter === 'all' ? 'All Academic Years' : yearFilter;
-      const subs = yearFilter === 'all' ? submissions : submissions.filter(s => s.academic_year === yearFilter);
+      const yearLabel = yearFilter || 'Active Academic Year';
+      const subs = submissions;
 
       const formatExplicitStatus = (submission) => {
         const formType = String(submission?.form_type || 'A').toUpperCase() === 'B' ? 'Form B' : 'Form A';
@@ -455,8 +534,8 @@ const DofaOfficeDashboard = () => {
     setExportLoading('forms');
     setExportDropdownOpen(false);
     try {
-      const yearLabel = yearFilter === 'all' ? 'All Academic Years' : yearFilter;
-      const subs = yearFilter === 'all' ? submissions : submissions.filter(s => s.academic_year === yearFilter);
+      const yearLabel = yearFilter || 'Active Academic Year';
+      const subs = submissions;
 
       if (subs.length === 0) {
         window.appToast('No submissions found for the selected academic year.');
@@ -609,6 +688,12 @@ ${facultySections}
   const pendingEditRequests = editRequests.filter((r) => r.status === 'pending');
   const reviewedEditRequests = editRequests.filter((r) => r.status !== 'pending');
   const visibleEditRequests = editRequestsTab === 'pending' ? pendingEditRequests : reviewedEditRequests;
+  const sessionLockedYears = new Set(
+    submissions
+      .filter((s) => Number(s.session_locked || 0) === 1)
+      .map((s) => String(s.academic_year || '').trim())
+      .filter(Boolean)
+  );
 
   const getWorkflowStage = (submission) => {
     const formType = String(submission?.form_type || 'A').toUpperCase();
@@ -680,7 +765,7 @@ ${facultySections}
     return acc;
   }, {});
 
-  const yearsToShow = yearFilter === 'all' ? Object.keys(grouped).sort().reverse() : [yearFilter];
+  const yearsToShow = yearFilter ? [yearFilter] : [];
 
   return (
     <div className="Dofa-office-dashboard">
@@ -690,61 +775,34 @@ ${facultySections}
           <p className="dashboard-subtitle">Academic year-wise faculty appraisal management</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <select
-            value={yearFilter}
-            onChange={e => setYearFilter(e.target.value)}
-            className="year-filter-select"
+          <span className="year-filter-select" style={{ minWidth: 220, fontWeight: 700 }}>
+            Active Session: {activeSessionYear || 'N/A'}
+          </span>
+
+          <Link
+            to="/Dofa-office/logs"
+            className="export-btn"
+            style={{ textDecoration: 'none' }}
+            title="Open previous session logs"
           >
-            <option value="all">All Academic Years</option>
-            {availableYears.map(yr => (
-              <option key={yr} value={yr}>{yr}</option>
-            ))}
-          </select>
+            <LayoutList size={16} />Logs
+          </Link>
 
-          {/* Export Dropdown */}
-          <div className="export-dropdown-wrapper" ref={exportDropdownRef}>
-            <button
-              className={`export-btn ${exportLoading ? 'export-btn-loading' : ''}`}
-              onClick={() => setExportDropdownOpen(o => !o)}
-              disabled={!!exportLoading}
-            >
-              {exportLoading ? (
-                <><span className="export-spinner" />Exporting...</>
-              ) : (
-                <><Download size={16} />Export Data<ChevronDown size={14} style={{ marginLeft: 2 }} /></>
-              )}
-            </button>
-
-            {exportDropdownOpen && (
-              <div className="export-dropdown-menu">
-                <button
-                  className="export-dropdown-item"
-                  onClick={handleExportFormsPDF}
-                >
-                  <div className="export-item-icon" style={{ background: '#fef3c7', color: '#92400e' }}>
-                    <FileText size={16} />
-                  </div>
-                  <div className="export-item-text">
-                    <strong>Faculty Forms PDF</strong>
-                    <span>Full appraisal forms for all faculty - combined PDF</span>
-                  </div>
-                </button>
-
-                <button
-                  className="export-dropdown-item"
-                  onClick={handleExportSummaryPDF}
-                >
-                  <div className="export-item-icon" style={{ background: '#dbeafe', color: '#1e40af' }}>
-                    <LayoutList size={16} />
-                  </div>
-                  <div className="export-item-text">
-                    <strong>Submission Summary PDF</strong>
-                    <span>Dashboard overview - name, dept, status, date, etc.</span>
-                  </div>
-                </button>
-              </div>
+          <button
+            className={`export-btn ${sessionLockLoading ? 'export-btn-loading' : ''}`}
+            disabled={!yearFilter || !!sessionLockLoading || !!selectedYearLockState?.locked}
+            onClick={handleFinalSessionLock}
+            title={!yearFilter ? 'No active session year found' : selectedYearLockState?.locked ? 'Session already locked. Unlock is allowed from DoFA dashboard only.' : 'Final-lock this academic session'}
+            style={{ background: selectedYearLockState?.locked ? '#dcfce7' : '#0f172a', borderColor: selectedYearLockState?.locked ? '#86efac' : '#0f172a', color: selectedYearLockState?.locked ? '#166534' : '#fff' }}
+          >
+            {sessionLockLoading ? (
+              <><span className="export-spinner" />Locking...</>
+            ) : selectedYearLockState?.locked ? (
+              <><Lock size={16} />Session Locked ({yearFilter})</>
+            ) : (
+              <><Lock size={16} />Final Lock Session</>
             )}
-          </div>
+          </button>
         </div>
       </div>
 
@@ -874,7 +932,7 @@ ${facultySections}
                       <td>{formatDate(req.created_at)}</td>
                       <td>
                         <div className="action-buttons">
-                          {req.status === 'pending' ? (
+                          {req.status === 'pending' && !sessionLockedYears.has(String(req.academic_year || '').trim()) ? (
                             <button
                               className="action-btn btn-approve"
                               title="Review & Approve/Deny"
@@ -966,6 +1024,8 @@ ${facultySections}
                       const isFormB = entry.selectedFormType === 'B';
                       const isPendingHod = isFormB && ['submitted_hod', 'under_review_hod'].includes(submission.status);
                       const canDofaReview = !isPendingHod;
+                      const isSessionLocked = Number(submission.session_locked || 0) === 1;
+                      const canMutate = canDofaReview && !isSessionLocked;
 
                       return (
                       <tr key={entry.key}>
@@ -1009,7 +1069,7 @@ ${facultySections}
                               <Download size={16} />
                             </button>
 
-                            {submission.status !== 'approved' && canDofaReview && (
+                            {submission.status !== 'approved' && canMutate && (
                               <button
                                 className="action-btn btn-approve"
                                 onClick={() => handleUpdateStatus(submission.id, 'approved', submission.faculty_name)}
@@ -1019,7 +1079,7 @@ ${facultySections}
                               </button>
                             )}
 
-                            {submission.status !== 'sent_back' && submission.status !== 'draft' && canDofaReview && (
+                            {submission.status !== 'sent_back' && submission.status !== 'draft' && canMutate && (
                               <button
                                 className="action-btn btn-send-back"
                                 onClick={() => handleUpdateStatus(submission.id, 'sent_back', submission.faculty_name)}
@@ -1029,18 +1089,21 @@ ${facultySections}
                               </button>
                             )}
 
-                            <button
-                              className={`action-btn ${submission.locked ? 'btn-unlock' : 'btn-lock'}`}
-                              onClick={() => handleToggleLock(submission.id, submission.locked)}
-                              title={submission.locked ? 'Unlock' : 'Lock'}
-                            >
-                              {submission.locked ? <Unlock size={16} /> : <Lock size={16} />}
-                            </button>
+                            {!isSessionLocked && (
+                              <button
+                                className={`action-btn ${submission.locked ? 'btn-unlock' : 'btn-lock'}`}
+                                onClick={() => handleToggleLock(submission.id, submission.locked)}
+                                title={submission.locked ? 'Unlock' : 'Lock'}
+                              >
+                                {submission.locked ? <Unlock size={16} /> : <Lock size={16} />}
+                              </button>
+                            )}
 
                             <button
                               className="action-btn btn-reminder"
                               onClick={() => handleSendReminder(submission.id, submission.email, submission.faculty_name)}
                               title="Send Reminder Email"
+                              disabled={isSessionLocked}
                             >
                               <Mail size={16} />
                             </button>

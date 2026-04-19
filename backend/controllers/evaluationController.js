@@ -1,9 +1,75 @@
 ﻿const db = require('../config/database');
 
+let sessionFinalLockColumnsEnsured = false;
+
+async function ensureColumnExists(tableName, columnName, definitionSql) {
+  const [rows] = await db.query(
+    `SELECT 1
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = ?
+       AND COLUMN_NAME = ?
+     LIMIT 1`,
+    [tableName, columnName]
+  );
+
+  if (rows.length === 0) {
+    await db.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definitionSql}`);
+  }
+}
+
+async function ensureSessionFinalLockColumns() {
+  if (sessionFinalLockColumnsEnsured) return;
+  await ensureColumnExists('appraisal_sessions', 'final_locked', 'TINYINT(1) NOT NULL DEFAULT 0');
+  await ensureColumnExists('appraisal_sessions', 'final_locked_at', 'TIMESTAMP NULL DEFAULT NULL');
+  await ensureColumnExists('appraisal_sessions', 'final_locked_by', 'INT NULL DEFAULT NULL');
+  sessionFinalLockColumnsEnsured = true;
+}
+
+async function getTargetAcademicYear() {
+  const [sessionRows] = await db.query(
+    `SELECT academic_year
+     FROM appraisal_sessions
+     WHERE status = 'open'
+     ORDER BY is_released DESC, created_at DESC, id DESC
+     LIMIT 1`
+  );
+
+  if (sessionRows.length > 0 && sessionRows[0].academic_year) {
+    return sessionRows[0].academic_year;
+  }
+
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  return month >= 7 ? `${year}-${String(year + 1).slice(-2)}` : `${year - 1}-${String(year).slice(-2)}`;
+}
+
+async function isSessionFinalLocked(academicYear) {
+  if (!academicYear) return false;
+  await ensureSessionFinalLockColumns();
+  const [rows] = await db.query(
+    `SELECT COALESCE(final_locked, 0) as final_locked
+     FROM appraisal_sessions
+     WHERE academic_year = ?
+     ORDER BY id DESC
+     LIMIT 1`,
+    [academicYear]
+  );
+  return rows.length > 0 && Number(rows[0].final_locked || 0) === 1;
+}
+
+function getRequestedAcademicYear(req) {
+  const year = String(req?.query?.academic_year || '').trim();
+  return year || null;
+}
+
 // GET /api/evaluation
 // Returns: rubrics (granular), submissions, scores (granular), remarks
 exports.getEvaluationData = async (req, res) => {
   try {
+    const academicYear = getRequestedAcademicYear(req) || await getTargetAcademicYear();
+
     // 1. All rubrics for the evaluation structure
     const [rubrics] = await db.query(
       'SELECT id, section_name, sub_section, max_marks FROM Dofa_rubrics ORDER BY id ASC'
@@ -18,8 +84,9 @@ exports.getEvaluationData = async (req, res) => {
       JOIN users u ON s.faculty_id = u.id
       LEFT JOIN faculty_information f ON f.id = u.id
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
+        AND s.academic_year = ?
       ORDER BY u.name ASC
-    `);
+    `, [academicYear]);
 
     if (submissions.length === 0) {
       return res.json({ success: true, rubrics, submissions: [], scores: [], remarks: [] });
@@ -57,6 +124,8 @@ exports.getEvaluationData = async (req, res) => {
 // GET /api/evaluation/sheet2
 exports.getSheet2Data = async (req, res) => {
   try {
+    const academicYear = getRequestedAcademicYear(req) || await getTargetAcademicYear();
+
     // 1. Get submissions with basic info
     const [submissions] = await db.query(`
       SELECT s.id as submission_id, u.name as faculty_name, u.department, f.designation
@@ -64,8 +133,9 @@ exports.getSheet2Data = async (req, res) => {
       JOIN users u ON s.faculty_id = u.id
       LEFT JOIN faculty_information f ON f.id = u.id
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
+        AND s.academic_year = ?
       ORDER BY u.name ASC
-    `);
+    `, [academicYear]);
 
     if (submissions.length === 0) {
       return res.json({ success: true, data: [], gradingParameters: [] });
@@ -145,6 +215,13 @@ exports.saveSheet2Remarks = async (req, res) => {
     }
     const { faculty_id, academic_year } = subRows[0];
 
+    if (await isSessionFinalLocked(academic_year)) {
+      return res.status(423).json({
+        success: false,
+        message: `Session ${academic_year} is final-locked. Sheet 2 updates are disabled.`
+      });
+    }
+
     // If final_grade is being changed, delete old increment entries for this submission
     // to prevent orphaned records when the grade changes
     if (field === 'final_grade' && value) {
@@ -188,6 +265,11 @@ exports.getGradingParameters = async (req, res) => {
 // POST /api/evaluation/grading-parameters
 exports.saveGradingParameters = async (req, res) => {
   try {
+    const academicYear = await getTargetAcademicYear();
+    if (await isSessionFinalLocked(academicYear)) {
+      return res.status(423).json({ success: false, message: `Session ${academicYear} is final-locked. Grading parameters cannot be modified.` });
+    }
+
     const { parameters } = req.body; // Array of {condition_op, threshold_value, grade}
     
     // Simple approach: Delete all and re-insert
@@ -207,6 +289,11 @@ exports.saveGradingParameters = async (req, res) => {
 // POST /api/evaluation/apply-grading
 exports.applyGrading = async (req, res) => {
   try {
+    const academicYear = await getTargetAcademicYear();
+    if (await isSessionFinalLocked(academicYear)) {
+      return res.status(423).json({ success: false, message: `Session ${academicYear} is final-locked. Apply grading is disabled.` });
+    }
+
     // 1. Fetch all active submissions with Sheet 1 total scores.
     //    LEFT JOIN keeps submissions with no saved rubric scores (treated as 0).
     const [scores] = await db.query(`
@@ -226,8 +313,9 @@ exports.applyGrading = async (req, res) => {
       ) es_latest ON es_latest.submission_id = s.id
       LEFT JOIN Dofa_rubrics r ON r.id = es_latest.rubric_id
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
+        AND s.academic_year = ?
       GROUP BY s.id, s.faculty_id, s.academic_year
-    `);
+    `, [academicYear]);
 
     // 2. Fetch parameters
     const [params] = await db.query('SELECT * FROM Dofa_grading_parameters ORDER BY threshold_value DESC');
@@ -282,12 +370,15 @@ exports.applyGrading = async (req, res) => {
 // GET /api/evaluation/sheet3
 exports.getSheet3Data = async (req, res) => {
   try {
+    const academicYear = getRequestedAcademicYear(req) || await getTargetAcademicYear();
+
     // 1. Get submissions with Name, Dept, Score (Sheet 1), Grade (Sheet 2) and Increment (Sheet 3)
     // Use proper joins to get only the latest/correct increment for each submission
     const [submissions] = await db.query(`
       SELECT s.id as submission_id, 
              u.name as faculty_name, 
              u.department,
+              s.academic_year,
              (
                SELECT COALESCE(SUM(esd.score), 0)
                FROM (
@@ -317,8 +408,9 @@ exports.getSheet3Data = async (req, res) => {
         WHERE e3x.submission_id = s.id
       )
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
+        AND s.academic_year = ?
       ORDER BY u.name ASC
-    `);
+    `, [academicYear]);
 
     // 2. Get unique grades for the configuration UI
     const [grades] = await db.query(`
@@ -330,10 +422,11 @@ exports.getSheet3Data = async (req, res) => {
         WHERE e2x.submission_id = s.id
       )
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
+        AND s.academic_year = ?
         AND e2.final_grade IS NOT NULL
         AND TRIM(e2.final_grade) != ''
       ORDER BY final_grade ASC
-    `);
+    `, [academicYear]);
 
     // 3. Get existing grade-increment mappings
     const [increments] = await db.query('SELECT * FROM Dofa_grade_increments ORDER BY grade ASC');
@@ -363,6 +456,11 @@ exports.getGradeIncrements = async (req, res) => {
 // POST /api/evaluation/grade-increments
 exports.saveGradeIncrements = async (req, res) => {
   try {
+    const academicYear = await getTargetAcademicYear();
+    if (await isSessionFinalLocked(academicYear)) {
+      return res.status(423).json({ success: false, message: `Session ${academicYear} is final-locked. Grade increments cannot be modified.` });
+    }
+
     const { increments } = req.body; // Array of {grade, increment_percentage}
     
     // We can use INSERT ... ON DUPLICATE KEY UPDATE or delete and re-insert
@@ -387,6 +485,11 @@ exports.saveGradeIncrements = async (req, res) => {
 // POST /api/evaluation/apply-increments
 exports.applyIncrements = async (req, res) => {
   try {
+    const academicYear = await getTargetAcademicYear();
+    if (await isSessionFinalLocked(academicYear)) {
+      return res.status(423).json({ success: false, message: `Session ${academicYear} is final-locked. Apply increments is disabled.` });
+    }
+
     // 1. Get all submissions with grades
     const [submissions] = await db.query(`
       SELECT e2.submission_id, e2.final_grade, s.faculty_id, s.academic_year
@@ -397,9 +500,10 @@ exports.applyIncrements = async (req, res) => {
         WHERE e2x.submission_id = s.id
       )
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
+        AND s.academic_year = ?
         AND e2.final_grade IS NOT NULL
         AND TRIM(e2.final_grade) != ''
-    `);
+    `, [academicYear]);
     
     // 2. Get mapping
     const [mappingRows] = await db.query('SELECT * FROM Dofa_grade_increments');
@@ -448,6 +552,17 @@ exports.saveScore = async (req, res) => {
 
     if (!submission_id || !rubric_id) {
       return res.status(400).json({ success: false, message: 'submission_id and rubric_id required' });
+    }
+
+    const [submissionRows] = await db.query('SELECT academic_year FROM submissions WHERE id = ? LIMIT 1', [submission_id]);
+    if (submissionRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+    if (await isSessionFinalLocked(submissionRows[0].academic_year)) {
+      return res.status(423).json({
+        success: false,
+        message: `Session ${submissionRows[0].academic_year} is final-locked. Sheet 1 scores cannot be modified.`
+      });
     }
 
     // Validate against max marks
@@ -501,6 +616,17 @@ exports.saveRemark = async (req, res) => {
       return res.status(400).json({ success: false, message: 'submission_id required' });
     }
 
+    const [submissionRows] = await db.query('SELECT academic_year FROM submissions WHERE id = ? LIMIT 1', [submission_id]);
+    if (submissionRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+    if (await isSessionFinalLocked(submissionRows[0].academic_year)) {
+      return res.status(423).json({
+        success: false,
+        message: `Session ${submissionRows[0].academic_year} is final-locked. Remarks cannot be modified.`
+      });
+    }
+
     const [existing] = await db.query(
       'SELECT id FROM Dofa_evaluation_remarks WHERE submission_id = ? ORDER BY created_at DESC LIMIT 1',
       [submission_id]
@@ -537,6 +663,12 @@ exports.rerunAllocation = async (req, res) => {
     }
 
     const { faculty_id, academic_year } = rows[0];
+    if (await isSessionFinalLocked(academic_year)) {
+      return res.status(423).json({
+        success: false,
+        message: `Session ${academic_year} is final-locked. Re-allocation is disabled.`
+      });
+    }
     await autoAllocateMarks(submissionId, faculty_id, academic_year);
 
     // Return updated scores

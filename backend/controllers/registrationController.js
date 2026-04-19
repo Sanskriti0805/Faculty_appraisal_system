@@ -94,6 +94,11 @@ exports.runMigrations = async () => {
     await ensureColumn('Dofa_rubrics', 'data_source', 'data_source VARCHAR(64) NULL');
     await ensureColumn('Dofa_rubrics', 'rule_config', 'rule_config JSON NULL');
 
+    // Session finalization controls for year-level lock/unlock.
+    await ensureColumn('appraisal_sessions', 'final_locked', 'final_locked TINYINT(1) NOT NULL DEFAULT 0');
+    await ensureColumn('appraisal_sessions', 'final_locked_at', 'final_locked_at TIMESTAMP NULL DEFAULT NULL');
+    await ensureColumn('appraisal_sessions', 'final_locked_by', 'final_locked_by INT NULL DEFAULT NULL');
+
     // Ensure workflow tables used by edit-request and lock guards exist.
     await db.query(`
       CREATE TABLE IF NOT EXISTS edit_requests (

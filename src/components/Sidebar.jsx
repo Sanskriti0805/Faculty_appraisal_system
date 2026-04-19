@@ -253,6 +253,7 @@ const Sidebar = () => {
   if (isDofaRoute || isDofaOfficeRoute) {
     const DofaNavItems = [
       { name: 'Dashboard', path: '/Dofa/dashboard' },
+      { name: 'Logs', path: '/Dofa/logs' },
       { name: 'Form Release', path: '/Dofa/form-release' },
       { name: 'Rubrics Management', path: '/Dofa/rubrics' },
       { name: 'Sheet 1 - Evaluation', path: '/Dofa/sheet1' },
@@ -265,6 +266,7 @@ const Sidebar = () => {
 
     const DofaOfficeNavItems = [
       { name: 'Dashboard', path: '/Dofa-office/dashboard' },
+      { name: 'Logs', path: '/Dofa-office/logs' },
       { name: 'Form Release', path: '/Dofa-office/form-release' },
       { name: 'Rubrics Management', path: '/Dofa-office/rubrics' },
       { name: 'Sheet 1 - Evaluation', path: '/Dofa-office/sheet1' },
