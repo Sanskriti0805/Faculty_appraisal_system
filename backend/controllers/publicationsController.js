@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { getCurrentSessionWindow, appendCreatedAtWindow } = require('../utils/sessionScope');
 
 const toNumberOrNull = (value) => {
   const num = Number(value);
@@ -82,6 +83,7 @@ exports.getPublicationsByFaculty = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
 
     if (!facultyInfoId) {
       return res.json({
@@ -97,16 +99,23 @@ exports.getPublicationsByFaculty = async (req, res) => {
     }
 
     // Get publications with pagination
+    const scopedData = appendCreatedAtWindow(
+      'SELECT * FROM research_publications WHERE faculty_id = ?',
+      [facultyInfoId],
+      sessionWindow
+    );
     const [publications] = await db.query(
-      'SELECT * FROM research_publications WHERE faculty_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-      [facultyInfoId, parseInt(limit), parseInt(offset)]
+      `${scopedData.sql} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [...scopedData.params, parseInt(limit), parseInt(offset)]
     );
 
     // Get total count for pagination
-    const [countResult] = await db.query(
+    const scopedCount = appendCreatedAtWindow(
       'SELECT COUNT(*) as total FROM research_publications WHERE faculty_id = ?',
-      [facultyInfoId]
+      [facultyInfoId],
+      sessionWindow
     );
+    const [countResult] = await db.query(scopedCount.sql, scopedCount.params);
     const total = countResult[0].total;
 
     // Get all authors for these publications in one query

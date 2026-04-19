@@ -1,5 +1,35 @@
 ﻿const db = require('../config/database');
 
+let editRequestsTableEnsured = false;
+
+async function ensureEditRequestsTable() {
+  if (editRequestsTableEnsured) return;
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS edit_requests (
+      id INT NOT NULL AUTO_INCREMENT,
+      submission_id INT NOT NULL,
+      faculty_id INT NOT NULL,
+      requested_sections JSON NOT NULL,
+      request_message TEXT DEFAULT NULL,
+      status ENUM('pending','approved','denied') DEFAULT 'pending',
+      approved_sections JSON DEFAULT NULL,
+      reviewed_by INT DEFAULT NULL,
+      reviewed_at TIMESTAMP NULL DEFAULT NULL,
+      Dofa_note TEXT DEFAULT NULL,
+      created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY submission_id (submission_id),
+      KEY faculty_id (faculty_id),
+      KEY reviewed_by (reviewed_by),
+      CONSTRAINT edit_requests_ibfk_1 FOREIGN KEY (submission_id) REFERENCES submissions (id) ON DELETE CASCADE,
+      CONSTRAINT edit_requests_ibfk_2 FOREIGN KEY (faculty_id) REFERENCES users (id) ON DELETE CASCADE,
+      CONSTRAINT edit_requests_ibfk_3 FOREIGN KEY (reviewed_by) REFERENCES users (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  `);
+  editRequestsTableEnsured = true;
+}
+
 function safeJsonParse(value) {
   if (!value) return null;
   if (Array.isArray(value)) return value;
@@ -10,6 +40,47 @@ function safeJsonParse(value) {
     return null;
   }
 }
+
+const SECTION_GROUP_EXPANSIONS = {
+  teaching_learning: [
+    'faculty_info',
+    'courses_taught',
+    'new_courses',
+    'courseware',
+    'teaching_innovation'
+  ],
+  research_development: [
+    'research_publications',
+    'research_grants',
+    'patents',
+    'technology_transfer',
+    'paper_review',
+    'conference_sessions',
+    'keynotes_talks',
+    'consultancy',
+    'part_b',
+    'research_plan'
+  ],
+  other_institutional_activities: [
+    'awards_honours',
+    'continuing_education',
+    'institutional_contributions',
+    'other_activities',
+    'teaching_plan'
+  ]
+};
+
+const expandApprovedSectionKeys = (approvedSections = []) => {
+  const expanded = new Set();
+  (approvedSections || []).forEach((key) => {
+    expanded.add(key);
+    const groupMembers = SECTION_GROUP_EXPANSIONS[key];
+    if (Array.isArray(groupMembers)) {
+      groupMembers.forEach((member) => expanded.add(member));
+    }
+  });
+  return expanded;
+};
 
 async function getTargetAcademicYear() {
   const [sessionRows] = await db.query(
@@ -46,6 +117,8 @@ function getCurrentAcademicYear() {
 function requireSectionEditAccess(sectionKey) {
   return async (req, res, next) => {
     try {
+      await ensureEditRequestsTable();
+
       if (!req.user) {
         return res.status(401).json({ success: false, message: 'Not authenticated' });
       }
@@ -125,7 +198,9 @@ function requireSectionEditAccess(sectionKey) {
         return next();
       }
 
-      if (approvedSections.includes(sectionKey)) {
+      const expandedApproved = expandApprovedSectionKeys(approvedSections);
+
+      if (expandedApproved.has(sectionKey)) {
         return next();
       }
 

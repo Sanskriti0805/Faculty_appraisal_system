@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
+const { getCurrentSessionWindow, appendCreatedAtWindow } = require('../utils/sessionScope');
 
 const parseJsonArrayField = (value) => {
   if (Array.isArray(value)) return value;
@@ -21,10 +22,16 @@ exports.getPatentsByFaculty = async (req, res) => {
     if (!facultyInfoId) {
       return res.json({ success: true, data: [] });
     }
+    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+    const scoped = appendCreatedAtWindow(
+      'SELECT * FROM patents WHERE faculty_id = ?',
+      [facultyInfoId],
+      sessionWindow
+    );
 
     const [patents] = await db.query(
-      'SELECT * FROM patents WHERE faculty_id = ? ORDER BY created_at DESC',
-      [facultyInfoId]
+      `${scoped.sql} ORDER BY created_at DESC`,
+      scoped.params
     );
 
     // Get authors for each patent

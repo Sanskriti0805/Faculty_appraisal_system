@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
+const { getCurrentSessionWindow, appendCreatedAtWindow } = require('../utils/sessionScope');
 
 // Get all reviews for a faculty
 exports.getReviewsByFaculty = async (req, res) => {
@@ -8,10 +9,16 @@ exports.getReviewsByFaculty = async (req, res) => {
     if (!facultyInfoId) {
       return res.json({ success: true, data: [] });
     }
+    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+    const scoped = appendCreatedAtWindow(
+      'SELECT * FROM paper_reviews WHERE faculty_id = ?',
+      [facultyInfoId],
+      sessionWindow
+    );
 
     const [rows] = await db.query(
-      'SELECT * FROM paper_reviews WHERE faculty_id = ? ORDER BY created_at DESC',
-      [facultyInfoId]
+      `${scoped.sql} ORDER BY created_at DESC`,
+      scoped.params
     );
     res.json({ success: true, data: rows });
   } catch (error) {

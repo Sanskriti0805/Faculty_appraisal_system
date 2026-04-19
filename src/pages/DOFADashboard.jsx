@@ -20,6 +20,7 @@ const DofaDashboard = () => {
   const [submissions, setSubmissions] = useState([]);
   const [editRequests, setEditRequests] = useState([]);
   const [editRequestsOpen, setEditRequestsOpen] = useState(true);
+  const [editRequestsTab, setEditRequestsTab] = useState('pending');
   const [reviewingRequest, setReviewingRequest] = useState(null);
   const [approvedSections, setApprovedSections] = useState([]);
   const [DofaNote, setDofaNote] = useState('');
@@ -74,7 +75,7 @@ const DofaDashboard = () => {
   const fetchEditRequests = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch(`${API}/edit-requests?status=pending`, {
+      const res = await fetch(`${API}/edit-requests`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -199,6 +200,10 @@ const DofaDashboard = () => {
     });
   };
 
+  const pendingEditRequests = editRequests.filter((r) => r.status === 'pending');
+  const reviewedEditRequests = editRequests.filter((r) => r.status !== 'pending');
+  const visibleEditRequests = editRequestsTab === 'pending' ? pendingEditRequests : reviewedEditRequests;
+
   const startReview = (req) => {
     setReviewingRequest(req);
     setApprovedSections(req.requested_sections || []);
@@ -285,21 +290,22 @@ const DofaDashboard = () => {
             <h3 className="stat-value">{stats.approved}</h3>
           </div>
         </div>
-        {editRequests.length > 0 && (
+        {pendingEditRequests.length > 0 && (
           <div className="stat-card" style={{ borderColor: '#fcd34d' }}>
             <div className="stat-icon" style={{ background: '#fef9c3', color: '#92400e' }}>
               <Bell size={18} />
             </div>
             <div className="stat-content">
               <p className="stat-label">Edit Requests</p>
-              <h3 className="stat-value" style={{ color: '#92400e' }}>{editRequests.length}</h3>
+              <h3 className="stat-value" style={{ color: '#92400e' }}>{pendingEditRequests.length}</h3>
             </div>
           </div>
         )}
       </div>
 
       {/* Edit Requests Panel */}
-      {editRequests.length > 0 && (
+      {
+        (
         <div className="submissions-card" style={{ marginBottom: 20, borderColor: '#fcd34d' }}>
           <div
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: editRequestsOpen ? 16 : 0 }}
@@ -318,70 +324,101 @@ const DofaDashboard = () => {
                 fontWeight: 700,
                 letterSpacing: '0.3px'
               }}>
-                {editRequests.length} PENDING
+                {pendingEditRequests.length} PENDING
               </span>
             </h2>
             {editRequestsOpen ? <ChevronUp size={15} color="#94a3b8" /> : <ChevronDown size={15} color="#94a3b8" />}
           </div>
 
           {editRequestsOpen && (
-            <div className="table-container">
-              <table className="submissions-table">
-                <thead>
-                  <tr>
-                    <th>Faculty</th>
-                    <th>Academic Year</th>
-                    <th>Sections Requested</th>
-                    <th>Message</th>
-                    <th>Requested On</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {editRequests.map(req => (
-                    <tr key={req.id}>
-                      <td>
-                        <div className="faculty-info">
-                          <span className="faculty-name">{req.faculty_name}</span>
-                          <span className="faculty-email">{req.faculty_email}</span>
-                        </div>
-                      </td>
-                      <td>{req.academic_year}</td>
-                      <td>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {req.requested_sections?.map(s => (
-                            <span key={s} style={{
-                              background: '#eff6ff',
-                              color: '#1e40af',
-                              border: '1px solid #bfdbfe',
-                              padding: '2px 7px',
-                              borderRadius: 4,
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              letterSpacing: '0.2px'
-                            }}>{s}</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{ maxWidth: 200, fontSize: '0.8125rem', color: '#64748b' }}>{req.request_message || '-'}</td>
-                      <td>{formatDate(req.created_at)}</td>
-                      <td>
-                        <div className="action-buttons">
-                          <button
-                            className="action-btn btn-approve"
-                            title="Review & Approve/Deny"
-                            onClick={() => startReview(req)}
-                            style={{ gap: 5, paddingLeft: 10, paddingRight: 10 }}
-                          >
-                            <Eye size={13} /> Review
-                          </button>
-                        </div>
-                      </td>
+            <>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <button
+                  className="filter-btn"
+                  style={{ padding: '6px 12px', minWidth: 90, background: editRequestsTab === 'pending' ? '#0f172a' : '#f8fafc', color: editRequestsTab === 'pending' ? '#fff' : '#475569' }}
+                  onClick={() => setEditRequestsTab('pending')}
+                >
+                  Pending ({pendingEditRequests.length})
+                </button>
+                <button
+                  className="filter-btn"
+                  style={{ padding: '6px 12px', minWidth: 90, background: editRequestsTab === 'reviewed' ? '#0f172a' : '#f8fafc', color: editRequestsTab === 'reviewed' ? '#fff' : '#475569' }}
+                  onClick={() => setEditRequestsTab('reviewed')}
+                >
+                  Reviewed ({reviewedEditRequests.length})
+                </button>
+              </div>
+
+              {visibleEditRequests.length === 0 ? (
+              <div className="empty-state" style={{ margin: 0 }}>
+                <p>{editRequestsTab === 'pending' ? 'No pending edit requests right now.' : 'No reviewed requests yet.'}</p>
+              </div>
+            ) : (
+              <div className="table-container">
+                <table className="submissions-table">
+                  <thead>
+                    <tr>
+                      <th>Faculty</th>
+                      <th>Academic Year</th>
+                      <th>Sections Requested</th>
+                      <th>Message</th>
+                      <th>Requested On</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {visibleEditRequests.map(req => (
+                      <tr key={req.id}>
+                        <td>
+                          <div className="faculty-info">
+                            <span className="faculty-name">{req.faculty_name}</span>
+                            <span className="faculty-email">{req.faculty_email}</span>
+                          </div>
+                        </td>
+                        <td>{req.academic_year}</td>
+                        <td>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {req.requested_sections?.map(s => (
+                              <span key={s} style={{
+                                background: '#eff6ff',
+                                color: '#1e40af',
+                                border: '1px solid #bfdbfe',
+                                padding: '2px 7px',
+                                borderRadius: 4,
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                letterSpacing: '0.2px'
+                              }}>{req.section_labels?.[s] || s}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td style={{ maxWidth: 200, fontSize: '0.8125rem', color: '#64748b' }}>{req.request_message || '-'}</td>
+                        <td>{formatDate(req.created_at)}</td>
+                        <td>
+                          <div className="action-buttons">
+                            {req.status === 'pending' ? (
+                              <button
+                                className="action-btn btn-approve"
+                                title="Review & Approve/Deny"
+                                onClick={() => startReview(req)}
+                                style={{ gap: 5, paddingLeft: 10, paddingRight: 10 }}
+                              >
+                                <Eye size={13} /> Review
+                              </button>
+                            ) : (
+                              <span className={`status-badge ${req.status === 'approved' ? 'status-approved' : 'status-sent-back'}`}>
+                                {String(req.status).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            </>
           )}
         </div>
       )}
@@ -433,7 +470,7 @@ const DofaDashboard = () => {
                     onChange={() => toggleSection(s)}
                     style={{ accentColor: '#1d4ed8' }}
                   />
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: '#334155' }}>{s}</span>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: '#334155' }}>{reviewingRequest.section_labels?.[s] || s}</span>
                 </label>
               ))}
             </div>

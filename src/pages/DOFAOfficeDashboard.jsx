@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { Lock, Unlock, Mail, Download, Users, FileText, Clock, CheckSquare, Eye, CheckCircle, XCircle, Calendar, FileCode, Table, X, ChevronDown, LayoutList } from 'lucide-react';
+import { Lock, Unlock, Mail, Download, Users, FileText, Clock, CheckSquare, Eye, CheckCircle, XCircle, Calendar, FileCode, Table, X, ChevronDown, ChevronUp, LayoutList, Bell } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import './DofaOfficeDashboard.css';
 import { showConfirm } from '../utils/appDialogs';
@@ -16,6 +16,13 @@ const DofaOfficeDashboard = () => {
     approved: 0
   });
   const [submissions, setSubmissions] = useState([]);
+  const [editRequests, setEditRequests] = useState([]);
+  const [editRequestsOpen, setEditRequestsOpen] = useState(true);
+  const [editRequestsTab, setEditRequestsTab] = useState('pending');
+  const [reviewingRequest, setReviewingRequest] = useState(null);
+  const [approvedSections, setApprovedSections] = useState([]);
+  const [DofaNote, setDofaNote] = useState('');
+  const [reviewLoading, setReviewLoading] = useState(null);
   const [filter, setFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -30,6 +37,7 @@ const DofaOfficeDashboard = () => {
   useEffect(() => {
     fetchStats();
     fetchSubmissions();
+    fetchEditRequests();
   }, [filter, yearFilter]);
 
   // Close export dropdown when clicking outside
@@ -78,6 +86,73 @@ const DofaOfficeDashboard = () => {
       console.error('Error fetching submissions:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEditRequests = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API}/edit-requests`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditRequests(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching edit requests:', err);
+      setEditRequests([]);
+    }
+  };
+
+  const startReview = (req) => {
+    setReviewingRequest(req);
+    setApprovedSections(req.requested_sections || []);
+    setDofaNote('');
+  };
+
+  const toggleSection = (key) => {
+    setApprovedSections((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  const handleReviewSubmit = async (status) => {
+    if (status === 'approved' && approvedSections.length === 0) {
+      window.appToast('Please select at least one section to approve.');
+      return;
+    }
+
+    if (!reviewingRequest?.id) return;
+
+    setReviewLoading(status);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API}/edit-requests/${reviewingRequest.id}/review`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          status,
+          approved_sections: status === 'approved' ? approvedSections : [],
+          Dofa_note: DofaNote || null
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.appToast(data.message || 'Request reviewed successfully.');
+        setReviewingRequest(null);
+        setApprovedSections([]);
+        setDofaNote('');
+        fetchEditRequests();
+        fetchSubmissions();
+        fetchStats();
+      } else {
+        window.appToast('Error: ' + (data.message || 'Failed to review request.'));
+      }
+    } catch (err) {
+      window.appToast('Request failed: ' + err.message);
+    } finally {
+      setReviewLoading(null);
     }
   };
 
@@ -531,6 +606,10 @@ ${facultySections}
     return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
+  const pendingEditRequests = editRequests.filter((r) => r.status === 'pending');
+  const reviewedEditRequests = editRequests.filter((r) => r.status !== 'pending');
+  const visibleEditRequests = editRequestsTab === 'pending' ? pendingEditRequests : reviewedEditRequests;
+
   const getWorkflowStage = (submission) => {
     const formType = String(submission?.form_type || 'A').toUpperCase();
     const status = String(submission?.status || '').toLowerCase();
@@ -699,6 +778,126 @@ ${facultySections}
             <h3 className="stat-value">{stats.approved}</h3>
           </div>
         </div>
+        <div className="stat-card" style={{ borderColor: '#fcd34d' }}>
+          <div className="stat-icon" style={{ background: '#fef9c3', color: '#92400e' }}>
+            <Bell size={24} />
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">Edit Requests</p>
+            <h3 className="stat-value" style={{ color: '#92400e' }}>{pendingEditRequests.length}</h3>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Requests Panel */}
+      <div className="submissions-card" style={{ marginBottom: '1.5rem', borderColor: '#fcd34d' }}>
+        <div
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: editRequestsOpen ? 16 : 0 }}
+          onClick={() => setEditRequestsOpen((o) => !o)}
+        >
+          <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#92400e', marginBottom: 0 }}>
+            <Bell size={16} />
+            Edit Requests
+            <span style={{
+              background: '#fef3c7',
+              color: '#92400e',
+              border: '1px solid #fcd34d',
+              borderRadius: 4,
+              padding: '1px 8px',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              letterSpacing: '0.3px'
+            }}>
+              {pendingEditRequests.length} PENDING
+            </span>
+          </h2>
+          {editRequestsOpen ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
+        </div>
+
+        {editRequestsOpen && (
+          <>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <button
+                className="filter-btn"
+                style={{ padding: '6px 12px', minWidth: 90, background: editRequestsTab === 'pending' ? '#0f172a' : '#f8fafc', color: editRequestsTab === 'pending' ? '#fff' : '#475569' }}
+                onClick={() => setEditRequestsTab('pending')}
+              >
+                Pending ({pendingEditRequests.length})
+              </button>
+              <button
+                className="filter-btn"
+                style={{ padding: '6px 12px', minWidth: 90, background: editRequestsTab === 'reviewed' ? '#0f172a' : '#f8fafc', color: editRequestsTab === 'reviewed' ? '#fff' : '#475569' }}
+                onClick={() => setEditRequestsTab('reviewed')}
+              >
+                Reviewed ({reviewedEditRequests.length})
+              </button>
+            </div>
+
+            {visibleEditRequests.length === 0 ? (
+            <div className="empty-state" style={{ margin: 0 }}>
+              <p>{editRequestsTab === 'pending' ? 'No pending edit requests right now.' : 'No reviewed requests yet.'}</p>
+            </div>
+          ) : (
+            <div className="table-container">
+              <table className="submissions-table">
+                <thead>
+                  <tr>
+                    <th>Faculty</th>
+                    <th>Academic Year</th>
+                    <th>Sections Requested</th>
+                    <th>Message</th>
+                    <th>Requested On</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleEditRequests.map((req) => (
+                    <tr key={req.id}>
+                      <td>
+                        <div className="faculty-info">
+                          <span className="faculty-name">{req.faculty_name}</span>
+                          <span className="faculty-email">{req.faculty_email}</span>
+                        </div>
+                      </td>
+                      <td>{req.academic_year}</td>
+                      <td>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {req.requested_sections?.map((s) => (
+                            <span key={s} style={{
+                              background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe',
+                              padding: '2px 7px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.2px'
+                            }}>{req.section_labels?.[s] || s}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td style={{ maxWidth: 220, fontSize: '0.8125rem', color: '#64748b' }}>{req.request_message || '-'}</td>
+                      <td>{formatDate(req.created_at)}</td>
+                      <td>
+                        <div className="action-buttons">
+                          {req.status === 'pending' ? (
+                            <button
+                              className="action-btn btn-approve"
+                              title="Review & Approve/Deny"
+                              onClick={() => startReview(req)}
+                              style={{ gap: 5, paddingLeft: 10, paddingRight: 10 }}
+                            >
+                              <Eye size={13} /> Review
+                            </button>
+                          ) : (
+                            <span className={`status-badge ${req.status === 'approved' ? 'status-approved' : 'status-sent-back'}`}>
+                              {String(req.status).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          </>
+        )}
       </div>
 
       {/* Status Filters */}
@@ -927,6 +1126,83 @@ ${facultySections}
                   {downloadingFormat === 'csv' && <div className="spinner"></div>}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {reviewingRequest && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: 24
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 10, padding: '28px 32px', maxWidth: 560, width: '100%',
+            border: '1px solid #e2e8f0', boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+          }}>
+            <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #f1f5f9' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: '0 0 4px' }}>Review Edit Request</h2>
+              <p style={{ color: '#64748b', margin: 0, fontSize: '0.8125rem' }}>
+                <strong style={{ color: '#334155' }}>{reviewingRequest.faculty_name}</strong>
+                <span style={{ margin: '0 6px', color: '#cbd5e1' }}> | </span>
+                {reviewingRequest.academic_year}
+              </p>
+            </div>
+
+            <p style={{ fontWeight: 600, fontSize: '0.8rem', color: '#475569', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              Select sections to approve
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px,1fr))', gap: 6, marginBottom: 18 }}>
+              {reviewingRequest.requested_sections?.map((s) => (
+                <label key={s} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+                  border: `1px solid ${approvedSections.includes(s) ? '#93c5fd' : '#e2e8f0'}`,
+                  borderRadius: 6, cursor: 'pointer',
+                  background: approvedSections.includes(s) ? '#eff6ff' : '#fafafa'
+                }}>
+                  <input type="checkbox" checked={approvedSections.includes(s)} onChange={() => toggleSection(s)} style={{ accentColor: '#1d4ed8' }} />
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: '#334155' }}>{reviewingRequest.section_labels?.[s] || s}</span>
+                </label>
+              ))}
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.8rem', color: '#475569', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                Note to Faculty <span style={{ fontWeight: 400, color: '#94a3b8', textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+              </label>
+              <textarea
+                value={DofaNote}
+                onChange={(e) => setDofaNote(e.target.value)}
+                placeholder="Optional feedback"
+                rows={3}
+                style={{ width: '100%', padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: '0.8125rem', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', color: '#334155' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+              <button
+                onClick={() => setReviewingRequest(null)}
+                disabled={!!reviewLoading}
+                style={{ padding: '8px 18px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', cursor: reviewLoading ? 'not-allowed' : 'pointer', fontSize: '0.8125rem', fontWeight: 600, color: '#475569', opacity: reviewLoading ? 0.5 : 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleReviewSubmit('denied')}
+                disabled={!!reviewLoading}
+                style={{ padding: '8px 18px', borderRadius: 6, border: '1px solid #fecaca', background: '#fff5f5', color: '#b91c1c', cursor: reviewLoading ? 'not-allowed' : 'pointer', fontSize: '0.8125rem', fontWeight: 600, opacity: reviewLoading && reviewLoading !== 'denied' ? 0.5 : 1 }}
+              >
+                {reviewLoading === 'denied' ? 'Denying...' : 'Deny'}
+              </button>
+              <button
+                onClick={() => handleReviewSubmit('approved')}
+                disabled={!!reviewLoading}
+                style={{ padding: '8px 20px', borderRadius: 6, border: 'none', background: '#0f172a', color: '#fff', cursor: reviewLoading ? 'not-allowed' : 'pointer', fontSize: '0.8125rem', fontWeight: 600, opacity: reviewLoading && reviewLoading !== 'approved' ? 0.5 : 1 }}
+              >
+                {reviewLoading === 'approved' ? 'Approving...' : 'Approve Selected'}
+              </button>
             </div>
           </div>
         </div>

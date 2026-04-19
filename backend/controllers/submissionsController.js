@@ -63,6 +63,52 @@ function getCurrentAcademicYear() {
   }
 }
 
+async function getSessionWindowByAcademicYear(academicYear) {
+  if (!academicYear) return null;
+
+  const [rows] = await db.query(
+    `SELECT start_date, COALESCE(deadline, end_date) AS effective_end_date
+     FROM appraisal_sessions
+     WHERE academic_year = ?
+     ORDER BY created_at DESC, id DESC
+     LIMIT 1`,
+    [academicYear]
+  );
+
+  if (rows.length === 0) return null;
+
+  const startDate = rows[0].start_date ? new Date(rows[0].start_date) : null;
+  const endDate = rows[0].effective_end_date ? new Date(rows[0].effective_end_date) : null;
+
+  if (!startDate || !endDate || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return null;
+  }
+
+  // Use an exclusive upper bound to include the full end date.
+  const endExclusive = new Date(endDate);
+  endExclusive.setDate(endExclusive.getDate() + 1);
+  endExclusive.setHours(0, 0, 0, 0);
+
+  return { startDate, endExclusive };
+}
+
+const queryFacultySectionRows = async ({ tableName, facultyInfoId, sessionWindow, extraWhere = '', extraParams = [] }) => {
+  let sql = `SELECT * FROM ${tableName} WHERE faculty_id = ?`;
+  const params = [facultyInfoId];
+
+  if (extraWhere) {
+    sql += ` AND ${extraWhere}`;
+    params.push(...extraParams);
+  }
+
+  if (sessionWindow) {
+    sql += ' AND created_at >= ? AND created_at < ?';
+    params.push(sessionWindow.startDate, sessionWindow.endExclusive);
+  }
+
+  return db.query(sql, params);
+};
+
 const normalizeFormType = (value) => String(value || 'A').trim().toUpperCase();
 
 const resolveHodDepartmentContext = async (user = {}) => {
@@ -284,6 +330,7 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
   });
   const fid = resolvedFacultyInfoId || Number(user_id) || null;
   const yearNum = academicYear.split('-')[0];
+  const sessionWindow = await getSessionWindowByAcademicYear(academicYear);
 
   const [
     facultyInfo,
@@ -311,21 +358,33 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
     dynamicData
   ] = await Promise.all([
     db.query('SELECT * FROM faculty_information WHERE id = ?', [fid]),
-    db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM research_publications WHERE faculty_id = ? AND year_of_publication >= ?', [fid, yearNum]),
-    db.query('SELECT * FROM research_grants WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM patents WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM awards_honours WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM new_courses WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM submitted_proposals WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM paper_reviews WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM technology_transfer WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM conference_sessions WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM keynotes_talks WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM consultancy WHERE faculty_id = ? AND year >= ?', [fid, yearNum]),
-    db.query('SELECT * FROM teaching_innovation WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM institutional_contributions WHERE faculty_id = ?', [fid]),
-    db.query('SELECT * FROM faculty_goals WHERE faculty_id = ?', [fid]),
+    queryFacultySectionRows({ tableName: 'courses_taught', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({
+      tableName: 'research_publications',
+      facultyInfoId: fid,
+      sessionWindow,
+      extraWhere: 'year_of_publication >= ?',
+      extraParams: [yearNum]
+    }),
+    queryFacultySectionRows({ tableName: 'research_grants', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({ tableName: 'patents', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({ tableName: 'awards_honours', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({ tableName: 'new_courses', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({ tableName: 'submitted_proposals', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({ tableName: 'paper_reviews', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({ tableName: 'technology_transfer', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({ tableName: 'conference_sessions', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({ tableName: 'keynotes_talks', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({
+      tableName: 'consultancy',
+      facultyInfoId: fid,
+      sessionWindow,
+      extraWhere: 'year >= ?',
+      extraParams: [yearNum]
+    }),
+    queryFacultySectionRows({ tableName: 'teaching_innovation', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({ tableName: 'institutional_contributions', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({ tableName: 'faculty_goals', facultyInfoId: fid, sessionWindow }),
     db.query(`
       SELECT rc.*, COALESCE(NULLIF(rc.section_name, ''), 'General') as section_name,
              NULLIF(rc.section_key, '') as section_key, u.name as reviewer_name, u.designation
@@ -597,11 +656,12 @@ exports.getSubmissionById = async (req, res) => {
     
     // Helper to get year from academic_year string (e.g. "2025-26" -> 2025)
     const yearNum = academicYear.split('-')[0];
+    const sessionWindow = await getSessionWindowByAcademicYear(academicYear);
 
     // HOD must only review Form B content. Do not return Form A sections.
     if (role === 'hod' && formType === 'B') {
       const [facultyInfo] = await db.query('SELECT * FROM faculty_information WHERE id = ?', [fid]);
-      const [goals] = await db.query('SELECT * FROM faculty_goals WHERE faculty_id = ?', [fid]);
+      const [goals] = await queryFacultySectionRows({ tableName: 'faculty_goals', facultyInfoId: fid, sessionWindow });
       const dynamicData = await fetchDynamicSectionData({
         facultyIds: [sub.faculty_id, fid],
         submissionId: id,
@@ -651,49 +711,61 @@ exports.getSubmissionById = async (req, res) => {
     const [facultyInfo] = await db.query('SELECT * FROM faculty_information WHERE id = ?', [fid]);
 
     // Get courses taught
-    const [courses] = await db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [fid]);
+    const [courses] = await queryFacultySectionRows({ tableName: 'courses_taught', facultyInfoId: fid, sessionWindow });
 
     // Get publications - Filter by year if possible, but keep all as requested for now if no specific year matching logic exists
-    const [publications] = await db.query('SELECT * FROM research_publications WHERE faculty_id = ? AND year_of_publication >= ?', [fid, yearNum]);
+    const [publications] = await queryFacultySectionRows({
+      tableName: 'research_publications',
+      facultyInfoId: fid,
+      sessionWindow,
+      extraWhere: 'year_of_publication >= ?',
+      extraParams: [yearNum]
+    });
 
     // Get grants
-    const [grants] = await db.query('SELECT * FROM research_grants WHERE faculty_id = ?', [fid]);
+    const [grants] = await queryFacultySectionRows({ tableName: 'research_grants', facultyInfoId: fid, sessionWindow });
 
     // Get patents
-    const [patents] = await db.query('SELECT * FROM patents WHERE faculty_id = ?', [fid]);
+    const [patents] = await queryFacultySectionRows({ tableName: 'patents', facultyInfoId: fid, sessionWindow });
 
     // Get awards
-    const [awards] = await db.query('SELECT * FROM awards_honours WHERE faculty_id = ?', [fid]);
+    const [awards] = await queryFacultySectionRows({ tableName: 'awards_honours', facultyInfoId: fid, sessionWindow });
 
     // Get new courses developed
-    const [newCourses] = await db.query('SELECT * FROM new_courses WHERE faculty_id = ?', [fid]);
+    const [newCourses] = await queryFacultySectionRows({ tableName: 'new_courses', facultyInfoId: fid, sessionWindow });
 
     // Get submitted proposals
-    const [proposals] = await db.query('SELECT * FROM submitted_proposals WHERE faculty_id = ?', [fid]);
+    const [proposals] = await queryFacultySectionRows({ tableName: 'submitted_proposals', facultyInfoId: fid, sessionWindow });
 
     // Get paper reviews
-    const [paperReviews] = await db.query('SELECT * FROM paper_reviews WHERE faculty_id = ?', [fid]);
+    const [paperReviews] = await queryFacultySectionRows({ tableName: 'paper_reviews', facultyInfoId: fid, sessionWindow });
 
     // Get technology transfer
-    const [techTransfer] = await db.query('SELECT * FROM technology_transfer WHERE faculty_id = ?', [fid]);
+    const [techTransfer] = await queryFacultySectionRows({ tableName: 'technology_transfer', facultyInfoId: fid, sessionWindow });
 
     // Get conference sessions
-    const [conferenceSessions] = await db.query('SELECT * FROM conference_sessions WHERE faculty_id = ?', [fid]);
+    const [conferenceSessions] = await queryFacultySectionRows({ tableName: 'conference_sessions', facultyInfoId: fid, sessionWindow });
 
     // Get keynotes and talks
-    const [keynotesTalks] = await db.query('SELECT * FROM keynotes_talks WHERE faculty_id = ?', [fid]);
+    const [keynotesTalks] = await queryFacultySectionRows({ tableName: 'keynotes_talks', facultyInfoId: fid, sessionWindow });
 
     // Get consultancy
-    const [consultancy] = await db.query('SELECT * FROM consultancy WHERE faculty_id = ? AND year >= ?', [fid, yearNum]);
+    const [consultancy] = await queryFacultySectionRows({
+      tableName: 'consultancy',
+      facultyInfoId: fid,
+      sessionWindow,
+      extraWhere: 'year >= ?',
+      extraParams: [yearNum]
+    });
 
     // Get teaching innovation
-    const [teachingInnovation] = await db.query('SELECT * FROM teaching_innovation WHERE faculty_id = ?', [fid]);
+    const [teachingInnovation] = await queryFacultySectionRows({ tableName: 'teaching_innovation', facultyInfoId: fid, sessionWindow });
 
     // Get institutional contributions
-    const [institutionalContributions] = await db.query('SELECT * FROM institutional_contributions WHERE faculty_id = ?', [fid]);
+    const [institutionalContributions] = await queryFacultySectionRows({ tableName: 'institutional_contributions', facultyInfoId: fid, sessionWindow });
 
     // Get Part B goals
-    const [goals] = await db.query('SELECT * FROM faculty_goals WHERE faculty_id = ?', [fid]);
+    const [goals] = await queryFacultySectionRows({ tableName: 'faculty_goals', facultyInfoId: fid, sessionWindow });
 
     // Get legacy section content stored separately from the core submission tables.
     const [courseware, continuingEducation, otherActivities, researchPlan, teachingPlan] = await Promise.all([

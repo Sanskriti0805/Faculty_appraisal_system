@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const upload = require('../middleware/upload');
+const { getCurrentSessionWindow, appendCreatedAtWindow } = require('../utils/sessionScope');
 
 let coursesTaughtColumnsCache = null;
 
@@ -81,6 +82,7 @@ exports.getCoursesByFaculty = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
 
     if (!facultyInfoId) {
       return res.json({
@@ -95,15 +97,22 @@ exports.getCoursesByFaculty = async (req, res) => {
       });
     }
 
+    const scopedData = appendCreatedAtWindow(
+      'SELECT * FROM courses_taught WHERE faculty_id = ?',
+      [facultyInfoId],
+      sessionWindow
+    );
     const [rows] = await db.query(
-      'SELECT * FROM courses_taught WHERE faculty_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-      [facultyInfoId, parseInt(limit), parseInt(offset)]
+      `${scopedData.sql} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [...scopedData.params, parseInt(limit), parseInt(offset)]
     );
 
-    const [countResult] = await db.query(
+    const scopedCount = appendCreatedAtWindow(
       'SELECT COUNT(*) as total FROM courses_taught WHERE faculty_id = ?',
-      [facultyInfoId]
+      [facultyInfoId],
+      sessionWindow
     );
+    const [countResult] = await db.query(scopedCount.sql, scopedCount.params);
 
     res.json({
       success: true,
@@ -402,6 +411,7 @@ exports.getNewCoursesByFaculty = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
 
     if (!facultyInfoId) {
       return res.json({
@@ -416,15 +426,22 @@ exports.getNewCoursesByFaculty = async (req, res) => {
       });
     }
 
+    const scopedData = appendCreatedAtWindow(
+      'SELECT * FROM new_courses WHERE faculty_id = ?',
+      [facultyInfoId],
+      sessionWindow
+    );
     const [rows] = await db.query(
-      'SELECT * FROM new_courses WHERE faculty_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-      [facultyInfoId, parseInt(limit), parseInt(offset)]
+      `${scopedData.sql} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [...scopedData.params, parseInt(limit), parseInt(offset)]
     );
 
-    const [countResult] = await db.query(
+    const scopedCount = appendCreatedAtWindow(
       'SELECT COUNT(*) as total FROM new_courses WHERE faculty_id = ?',
-      [facultyInfoId]
+      [facultyInfoId],
+      sessionWindow
     );
+    const [countResult] = await db.query(scopedCount.sql, scopedCount.params);
 
     res.json({
       success: true,

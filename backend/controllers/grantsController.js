@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { getCurrentSessionWindow, appendCreatedAtWindow } = require('../utils/sessionScope');
 
 const toNumberOrNull = (value) => {
   const num = Number(value);
@@ -67,10 +68,16 @@ exports.getGrantsByFaculty = async (req, res) => {
     if (!facultyInfoId) {
       return res.json({ success: true, data: [] });
     }
+    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+    const scoped = appendCreatedAtWindow(
+      'SELECT * FROM research_grants WHERE faculty_id = ?',
+      [facultyInfoId],
+      sessionWindow
+    );
 
     const [rows] = await db.query(
-      'SELECT * FROM research_grants WHERE faculty_id = ? ORDER BY created_at DESC',
-      [facultyInfoId]
+      `${scoped.sql} ORDER BY created_at DESC`,
+      scoped.params
     );
     res.json({ success: true, data: rows });
   } catch (error) {
@@ -189,10 +196,16 @@ exports.getProposalsByFaculty = async (req, res) => {
     if (!facultyInfoId) {
       return res.json({ success: true, data: [] });
     }
+    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+    const scoped = appendCreatedAtWindow(
+      'SELECT * FROM submitted_proposals WHERE faculty_id = ?',
+      [facultyInfoId],
+      sessionWindow
+    );
 
     const [rows] = await db.query(
-      'SELECT * FROM submitted_proposals WHERE faculty_id = ? ORDER BY created_at DESC',
-      [facultyInfoId]
+      `${scoped.sql} ORDER BY created_at DESC`,
+      scoped.params
     );
     res.json({ success: true, data: rows });
   } catch (error) {

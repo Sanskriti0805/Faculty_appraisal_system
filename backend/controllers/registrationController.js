@@ -94,6 +94,44 @@ exports.runMigrations = async () => {
     await ensureColumn('Dofa_rubrics', 'data_source', 'data_source VARCHAR(64) NULL');
     await ensureColumn('Dofa_rubrics', 'rule_config', 'rule_config JSON NULL');
 
+    // Ensure workflow tables used by edit-request and lock guards exist.
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS edit_requests (
+        id INT NOT NULL AUTO_INCREMENT,
+        submission_id INT NOT NULL,
+        faculty_id INT NOT NULL,
+        requested_sections JSON NOT NULL,
+        request_message TEXT DEFAULT NULL,
+        status ENUM('pending','approved','denied') DEFAULT 'pending',
+        approved_sections JSON DEFAULT NULL,
+        reviewed_by INT DEFAULT NULL,
+        reviewed_at TIMESTAMP NULL DEFAULT NULL,
+        Dofa_note TEXT DEFAULT NULL,
+        created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY submission_id (submission_id),
+        KEY faculty_id (faculty_id),
+        KEY reviewed_by (reviewed_by),
+        CONSTRAINT edit_requests_ibfk_1 FOREIGN KEY (submission_id) REFERENCES submissions (id) ON DELETE CASCADE,
+        CONSTRAINT edit_requests_ibfk_2 FOREIGN KEY (faculty_id) REFERENCES users (id) ON DELETE CASCADE,
+        CONSTRAINT edit_requests_ibfk_3 FOREIGN KEY (reviewed_by) REFERENCES users (id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+    `);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS submission_locks (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        submission_id INT NOT NULL,
+        locked_by INT DEFAULT NULL,
+        locked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        unlocked_at TIMESTAMP NULL,
+        is_locked BOOLEAN DEFAULT TRUE,
+        FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
+        FOREIGN KEY (locked_by) REFERENCES users(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+    `);
+
     console.log('Migration: archive columns ensured');
   } catch (err) {
     console.log('Migration note:', err.message);

@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
+const { getCurrentSessionWindow, appendCreatedAtWindow } = require('../utils/sessionScope');
 
 // Create a new award
 const createAward = async (req, res) => {
@@ -40,9 +41,16 @@ const getAwards = async (req, res) => {
             return res.json([]);
         }
 
+        const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+        const scoped = appendCreatedAtWindow(
+            'SELECT * FROM awards_honours WHERE faculty_id = ?',
+            [facultyInfoId],
+            sessionWindow
+        );
+
         const [awards] = await db.query(
-            'SELECT * FROM awards_honours WHERE faculty_id = ? ORDER BY created_at DESC',
-            [facultyInfoId]
+            `${scoped.sql} ORDER BY created_at DESC`,
+            scoped.params
         );
 
         res.json(awards);

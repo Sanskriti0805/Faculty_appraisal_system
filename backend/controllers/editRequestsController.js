@@ -1,8 +1,41 @@
 ﻿const db = require('../config/database');
 const emailService = require('../services/emailService');
 
+let editRequestsTableEnsured = false;
+
+async function ensureEditRequestsTable() {
+  if (editRequestsTableEnsured) return;
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS edit_requests (
+      id INT NOT NULL AUTO_INCREMENT,
+      submission_id INT NOT NULL,
+      faculty_id INT NOT NULL,
+      requested_sections JSON NOT NULL,
+      request_message TEXT DEFAULT NULL,
+      status ENUM('pending','approved','denied') DEFAULT 'pending',
+      approved_sections JSON DEFAULT NULL,
+      reviewed_by INT DEFAULT NULL,
+      reviewed_at TIMESTAMP NULL DEFAULT NULL,
+      Dofa_note TEXT DEFAULT NULL,
+      created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY submission_id (submission_id),
+      KEY faculty_id (faculty_id),
+      KEY reviewed_by (reviewed_by),
+      CONSTRAINT edit_requests_ibfk_1 FOREIGN KEY (submission_id) REFERENCES submissions (id) ON DELETE CASCADE,
+      CONSTRAINT edit_requests_ibfk_2 FOREIGN KEY (faculty_id) REFERENCES users (id) ON DELETE CASCADE,
+      CONSTRAINT edit_requests_ibfk_3 FOREIGN KEY (reviewed_by) REFERENCES users (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  `);
+  editRequestsTableEnsured = true;
+}
+
 // Section labels for display/email
 const SECTION_LABELS = {
+  teaching_learning: 'Teaching and Learning',
+  research_development: 'Research and Development',
+  other_institutional_activities: 'Other Institutional Activities',
   faculty_info: 'Faculty Information',
   courses_taught: 'Courses Taught',
   new_courses: 'New Courses Developed',
@@ -56,6 +89,8 @@ const resolveSectionLabels = async (sections = []) => {
  */
 exports.createEditRequest = async (req, res) => {
   try {
+    await ensureEditRequestsTable();
+
     const { submission_id, requested_sections, request_message } = req.body;
     const facultyId = req.user.id;
 
@@ -147,6 +182,8 @@ exports.createEditRequest = async (req, res) => {
  */
 exports.getEditRequests = async (req, res) => {
   try {
+    await ensureEditRequestsTable();
+
     const user = req.user;
     const { status, submission_id } = req.query;
 
@@ -205,6 +242,8 @@ exports.getEditRequests = async (req, res) => {
  */
 exports.getRequestsForSubmission = async (req, res) => {
   try {
+    await ensureEditRequestsTable();
+
     const { submissionId } = req.params;
     const facultyId = req.user.id;
 
@@ -242,6 +281,8 @@ exports.getRequestsForSubmission = async (req, res) => {
  */
 exports.reviewEditRequest = async (req, res) => {
   try {
+    await ensureEditRequestsTable();
+
     const { id } = req.params;
     const { status, approved_sections, Dofa_note } = req.body;
     const reviewedBy = req.user.id;
@@ -333,6 +374,8 @@ exports.reviewEditRequest = async (req, res) => {
  */
 exports.getPendingCount = async (req, res) => {
   try {
+    await ensureEditRequestsTable();
+
     const [rows] = await db.query(
       "SELECT COUNT(*) as count FROM edit_requests WHERE status = 'pending'"
     );

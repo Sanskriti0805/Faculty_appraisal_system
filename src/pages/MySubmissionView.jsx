@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, FileText, Send, CheckCircle, Clock,
@@ -11,7 +11,16 @@ import { useAuth } from '../context/AuthContext';
 
 const API = `http://${window.location.hostname}:5000/api`;
 
-const EDITABLE_SECTIONS = [
+const REQUESTABLE_SECTION_GROUPS = [
+  { key: 'teaching_learning', label: 'Teaching and Learning' },
+  { key: 'research_development', label: 'Research and Development' },
+  { key: 'other_institutional_activities', label: 'Other Institutional Activities' },
+];
+
+const SECTION_LABELS = [
+  { key: 'teaching_learning',           label: 'Teaching and Learning' },
+  { key: 'research_development',        label: 'Research and Development' },
+  { key: 'other_institutional_activities', label: 'Other Institutional Activities' },
   { key: 'faculty_info',                label: 'Faculty Information' },
   { key: 'courses_taught',              label: 'Courses Taught' },
   { key: 'new_courses',                 label: 'New Courses Developed' },
@@ -32,13 +41,19 @@ const EDITABLE_SECTIONS = [
   { key: 'research_plan',               label: 'Research Plan' },
   { key: 'teaching_plan',               label: 'Teaching Plan' },
   { key: 'part_b',                      label: 'Part B (Goal Setting)' },
-];
+].reduce((acc, item) => {
+  acc[item.key] = item.label;
+  return acc;
+}, {});
 
 const STATUS_LABELS = {
   draft:        'Draft',
   submitted:    'Submitted',
+  submitted_hod: 'Submitted',
   under_review: 'Under Review',
+  under_review_hod: 'Under Review',
   approved:     'Approved',
+  hod_approved: 'Approved',
   sent_back:    'Sent Back',
 };
 
@@ -178,8 +193,16 @@ const MySubmissionView = () => {
   const isPastDeadline   = sessionInfo?.pastDeadline || false;
   const pendingRequest   = editRequests.find(r => r.status === 'pending');
   const approvedRequest  = editRequests.find(r => r.status === 'approved');
+  const submittedStatuses = new Set(['submitted', 'submitted_hod']);
+  const approvedStatuses = new Set(['approved', 'hod_approved']);
+  const underReviewStatuses = new Set(['under_review', 'under_review_hod']);
+  const sentBackStatuses = new Set(['sent_back']);
+  const isSubmittedStatus = submittedStatuses.has(submissionData?.submission?.status);
+  const isApprovedStatus = approvedStatuses.has(submissionData?.submission?.status);
+  const isUnderReviewStatus = underReviewStatuses.has(submissionData?.submission?.status);
+  const isSentBackStatus = sentBackStatuses.has(submissionData?.submission?.status);
   const canRequestEdits  =
-    submissionData?.submission?.status === 'submitted' &&
+    isSubmittedStatus &&
     !isPastDeadline && !pendingRequest;
 
   /* -- PDF download -- */
@@ -216,8 +239,7 @@ const MySubmissionView = () => {
     String(key || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   const resolveSectionLabel = (sectionKey) => {
-    const base = EDITABLE_SECTIONS.find(e => e.key === sectionKey);
-    if (base) return base.label;
+    if (SECTION_LABELS[sectionKey]) return SECTION_LABELS[sectionKey];
     const knownDynamic = dynamicSectionOptions.find((s) => s.key === sectionKey);
     if (knownDynamic) return knownDynamic.label;
     const dynamicMatch = String(sectionKey || '').match(/^dynamic_section_(\d+)$/);
@@ -369,7 +391,7 @@ const MySubmissionView = () => {
 
   const dynamicEditableSections = dynamicSectionOptions;
 
-  const editableSections = [...EDITABLE_SECTIONS, ...dynamicEditableSections];
+  const editableSections = REQUESTABLE_SECTION_GROUPS;
 
   const statusLabel = STATUS_LABELS[submission?.status] || submission?.status;
 
@@ -423,19 +445,19 @@ const MySubmissionView = () => {
       {/* Status Bar */}
       <div className={`msv-status-bar status-${submission.status}`}>
         <div className="msv-status-icon">
-          {submission.status === 'submitted' || submission.status === 'approved'
+          {isSubmittedStatus || isApprovedStatus
             ? <CheckCircle size={22} />
-            : submission.status === 'sent_back'
+            : isSentBackStatus
               ? <RefreshCw size={22} />
               : <Clock size={22} />}
         </div>
         <div className="msv-status-info">
           <h3>
-            {submission.status === 'submitted'    && 'Form Successfully Submitted'}
-            {submission.status === 'approved'     && 'Form Approved by DoFA'}
-            {submission.status === 'sent_back'    && 'Edit Access Granted'}
+            {isSubmittedStatus    && 'Form Successfully Submitted'}
+            {isApprovedStatus     && 'Form Approved by DoFA'}
+            {isSentBackStatus     && 'Edit Access Granted'}
             {submission.status === 'draft'        && 'Draft - Not Yet Submitted'}
-            {submission.status === 'under_review' && 'Under Review'}
+            {isUnderReviewStatus  && 'Under Review'}
           </h3>
           <p>
             Submitted on <strong>{formatDate(submission.submitted_at)}</strong>
@@ -447,7 +469,7 @@ const MySubmissionView = () => {
       </div>
 
       {/* Edit Request Panel */}
-      {(submission.status === 'submitted' || pendingRequest || approvedRequest) && (
+      {(isSubmittedStatus || pendingRequest || approvedRequest) && (
         <div className="msv-edit-panel">
           <div className="msv-edit-panel-header" onClick={() => setEditPanelOpen(o => !o)}>
             <div className="msv-edit-panel-header-left">
@@ -739,7 +761,7 @@ const MySubmissionView = () => {
           <div className="msv-section-card">
             <h3 className="msv-section-title">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              Comments from DoFA
+              Comments from Dofa
             </h3>
             {comments.length > 0 && (
               <div className="msv-comment-view-tabs" role="tablist" aria-label="Comment status filters">
@@ -758,7 +780,7 @@ const MySubmissionView = () => {
                 .map((c, i) => (
                   <div key={`pending-${i}-${c.id || ''}`} className="msv-request-item" style={{ marginBottom: '0.5rem' }}>
                     <div className="msv-request-item-content">
-                      <p><strong>{c.reviewer_name || 'DoFA Office'}</strong> | {formatDate(c.created_at)}</p>
+                      <p><strong>{c.reviewer_name || 'Dofa Office'}</strong> | {formatDate(c.created_at)}</p>
                       <div className="msv-comment-section-row">
                         <span className="msv-comment-section-badge">{c.section_name || 'General'}</span>
                       </div>
@@ -772,7 +794,7 @@ const MySubmissionView = () => {
                 .map((c, i) => (
                   <div key={`resolved-${i}-${c.id || ''}`} className="msv-request-item" style={{ marginBottom: '0.5rem' }}>
                     <div className="msv-request-item-content">
-                      <p><strong>{c.reviewer_name || 'DoFA Office'}</strong> | {formatDate(c.created_at)}</p>
+                      <p><strong>{c.reviewer_name || 'Dofa Office'}</strong> | {formatDate(c.created_at)}</p>
                       <div className="msv-comment-section-row">
                         <span className="msv-comment-section-badge">{c.section_name || 'General'}</span>
                         <span className="msv-comment-resolved-badge">
