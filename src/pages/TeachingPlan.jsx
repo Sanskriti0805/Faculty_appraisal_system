@@ -63,7 +63,7 @@ const TeachingPlan = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Your teaching plan and preferences for next three years</h1>
-          <p className="page-subtitle">Section 24</p>
+          <p className="page-subtitle">Teaching Plan and Preferences</p>
         </div>
       </div>
 

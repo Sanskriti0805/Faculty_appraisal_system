@@ -55,7 +55,7 @@ const OtherImportantActivities = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Any other Important Activity not covered above</h1>
-          <p className="page-subtitle">Section 22</p>
+          <p className="page-subtitle">Other Important Activities</p>
         </div>
       </div>
 

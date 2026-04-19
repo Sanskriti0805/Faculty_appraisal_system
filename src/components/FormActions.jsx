@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Save, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
 import { FORM_SEQUENCE, getNextPath, getPreviousPath } from '../constants/navigation';
 import { useAuth } from '../context/AuthContext';
+import { showConfirm } from '../utils/appDialogs';
 
 /**
  * FormActions - Standardized action buttons for appraisal forms
@@ -196,6 +197,18 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
   const handleSaveAndNext = async () => {
     try {
       if (!validateMandatoryFields()) return;
+
+      // Custom confirmation for specific sections before moving ahead.
+      if (typeof onSubmit !== 'function' && currentPath === '/courses-taught') {
+        const proceed = await showConfirm({
+          title: 'Confirm Before Proceeding',
+          message: 'Before you continue, please confirm that you have completed both sections: 4.1 Courses Taught and 4.2 Projects Guided (for all applicable semesters). Do you want to save and proceed?',
+          confirmText: 'Yes, Save and Next',
+          cancelText: 'Review Again'
+        });
+        if (!proceed) return;
+      }
+
       if (nextLabel === 'Submit for Review' && onSubmit) {
         await onSubmit();
         return;

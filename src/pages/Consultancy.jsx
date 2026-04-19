@@ -286,7 +286,7 @@ const Consultancy = ({ initialData, readOnly }) => {
         <div className="page-header">
           <div>
             <h1 className="page-title">Consultancy, if any (Please provide details.)</h1>
-            <p className="page-subtitle">Section 20</p>
+            <p className="page-subtitle">Consultancy Details</p>
           </div>
         </div>
       )}

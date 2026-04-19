@@ -419,7 +419,7 @@ const NewCourses = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">New Courses Developed</h1>
-          <p className="page-subtitle">Section 6: New Courses Developed</p>
+          <p className="page-subtitle">New Courses Developed</p>
         </div>
       </div>
 

@@ -148,7 +148,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
         <div className="page-header">
           <div>
             <h1 className="page-title">Any effective or successful innovation in terms of teaching-learning</h1>
-            <p className="page-subtitle">Section 8</p>
+            <p className="page-subtitle">Teaching-Learning Innovations</p>
           </div>
         </div>
       )}

@@ -79,7 +79,7 @@ const OtherActivities = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Other Activities</h1>
-          <p className="page-subtitle">Section 18: Other Activities</p>
+          <p className="page-subtitle">Other Activities</p>
         </div>
       </div>
 

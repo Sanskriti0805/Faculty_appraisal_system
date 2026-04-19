@@ -71,7 +71,7 @@ const Courseware = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Courseware / Course Material / Laboratory Manual Developed / Text-Books / Course Notes Published</h1>
-          <p className="page-subtitle">Section 7</p>
+          <p className="page-subtitle">Courseware and Learning Materials</p>
         </div>
       </div>
 

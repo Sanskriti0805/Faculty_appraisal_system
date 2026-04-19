@@ -232,7 +232,7 @@ const PaperReview = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Review of research papers for Tier-1/2 refereed internal research journals (please provide details in bullet points)</h1>
-          <p className="page-subtitle">Section 14</p>
+          <p className="page-subtitle">Review of Research Papers</p>
         </div>
       </div>
 

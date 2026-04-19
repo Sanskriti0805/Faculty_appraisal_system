@@ -60,7 +60,7 @@ const ContinuingEducation = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Continuing Education Activities</h1>
-          <p className="page-subtitle">Section 21: Continuing Education Activities</p>
+          <p className="page-subtitle">Continuing Education Activities</p>
         </div>
       </div>
 

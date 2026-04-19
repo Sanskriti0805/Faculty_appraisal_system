@@ -55,7 +55,7 @@ const ResearchPlan = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Your research plan for next three years, if available</h1>
-          <p className="page-subtitle">Section 23</p>
+          <p className="page-subtitle">Research Plan for Next Three Years</p>
         </div>
       </div>
 

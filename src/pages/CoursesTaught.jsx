@@ -55,10 +55,12 @@ const hasProjectRowData = (project) => {
   )
 }
 
+const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== ''
+
 const CoursesTaught = ({ initialData, readOnly }) => {
   const { user } = useAuth()
-  const [selectedSection, setSelectedSection] = useState('courses')
-  const [selectedSemester, setSelectedSemester] = useState('fall')
+  const [selectedSection, setSelectedSection] = useState('')
+  const [selectedSemester, setSelectedSemester] = useState('')
   const [persistedCourseIds, setPersistedCourseIds] = useState([])
 
   const [fallCourses, setFallCourses] = useState([
@@ -212,9 +214,6 @@ const CoursesTaught = ({ initialData, readOnly }) => {
         setSpringProjects(springProjectsRows.length ? springProjectsRows : [{ id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null }])
         setSummerProjects(summerProjectsRows.length ? summerProjectsRows : [{ id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null }])
 
-        if (fall.length > 0) setSelectedSemester('fall')
-        else if (spring.length > 0) setSelectedSemester('spring')
-        else if (summer.length > 0) setSelectedSemester('summer')
       } catch (error) {
         console.error('Failed to prefill courses taught:', error)
       }
@@ -347,9 +346,78 @@ const CoursesTaught = ({ initialData, readOnly }) => {
     }
   }
 
+  const getIncompleteCourseRows = () => {
+    const allCourses = [
+      ...fallCourses,
+      ...springCourses,
+      ...summerCourses
+    ]
+
+    return allCourses
+      .map((course, idx) => ({
+        idx: idx + 1,
+        started: hasCourseRowData(course),
+        complete: hasValue(course.title) && hasValue(course.percentage) && hasValue(course.students) && hasValue(course.feedback)
+      }))
+      .filter((row) => row.started && !row.complete)
+      .map((row) => row.idx)
+  }
+
+  const getIncompleteProjectRows = () => {
+    const allProjects = [
+      ...fallProjects,
+      ...springProjects,
+      ...summerProjects
+    ]
+
+    return allProjects
+      .map((project, idx) => ({
+        idx: idx + 1,
+        started: hasProjectRowData(project),
+        complete:
+          hasValue(project.projectTitle) &&
+          hasValue(project.projectType) &&
+          hasValue(project.role) &&
+          hasValue(project.studentName) &&
+          hasValue(project.duration)
+      }))
+      .filter((row) => row.started && !row.complete)
+      .map((row) => row.idx)
+  }
+
+  const validateTeachingLearningRows = () => {
+    const incompleteCourses = getIncompleteCourseRows()
+    const incompleteProjects = getIncompleteProjectRows()
+
+    // If user has not started filling 4.1 and 4.2 at all, allow continuing without required warnings.
+    if (incompleteCourses.length === 0 && incompleteProjects.length === 0) {
+      return true
+    }
+
+    const parts = []
+    if (incompleteCourses.length > 0) {
+      parts.push(`4.1 Courses Taught: Row ${incompleteCourses.join(', ')}`)
+    }
+    if (incompleteProjects.length > 0) {
+      parts.push(`4.2 Projects Guided: Row ${incompleteProjects.join(', ')}`)
+    }
+
+    window.appToast(`Please complete all compulsory fields in: ${parts.join(' | ')}. Remarks can be left blank.`)
+    return false
+  }
+
   const handleSave = async () => {
     if (readOnly) return false;
     try {
+      if (!selectedSection || !selectedSemester) {
+        window.appToast('Please select both Section and Semester before entering or saving data.');
+        return false;
+      }
+
+      if (!validateTeachingLearningRows()) {
+        return false;
+      }
+
       const authUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
       const facultyId = authUser?.id;
       if (!facultyId) {
@@ -449,6 +517,8 @@ const CoursesTaught = ({ initialData, readOnly }) => {
   }
 
   const getCurrentItems = () => {
+    if (!selectedSection || !selectedSemester) return []
+
     if (selectedSection === 'courses') {
       if (selectedSemester === 'fall') return fallCourses
       if (selectedSemester === 'spring') return springCourses
@@ -461,6 +531,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
   }
 
   const getSemesterLabel = () => {
+    if (!selectedSemester) return ''
     if (selectedSemester === 'fall') return 'Fall / Odd Semester'
     if (selectedSemester === 'spring') return 'Spring / Even Semester'
     return 'Summer Term'
@@ -468,9 +539,12 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
   const getSectionTitle = () => {
     if (selectedSection === 'courses') {
-      return '4.1: Courses Taught'
+      return 'Courses Taught'
     }
-    return '4.2: BTech/MTech/MS/LUSIP/SLI/Ph.D./Other Projects Guided / Co-Advised / Mentored'
+    if (selectedSection === 'projects') {
+      return 'BTech/MTech/MS/LUSIP/SLI/Ph.D./Other Projects Guided / Co-Advised / Mentored'
+    }
+    return 'Please select both Section and Semester to start filling this form.'
   }
 
   const renderTable = (semester, items, semesterLabel) => {
@@ -501,11 +575,11 @@ const CoursesTaught = ({ initialData, readOnly }) => {
       <table className="courses-table">
         <thead>
           <tr>
-            <th style={{ width: '8%' }}>Course</th>
-            <th style={{ width: '25%' }}>Course Title/Name</th>
-            <th style={{ width: '20%' }}>% of Course taught alone</th>
-            <th style={{ width: '15%' }}>Students Taught</th>
-            <th style={{ width: '20%' }}>Feedback Score</th>
+            <th style={{ width: '8%' }}>Sr. No.</th>
+            <th style={{ width: '25%' }}>Course Name <span className="required-star">*</span></th>
+            <th style={{ width: '20%' }}>% of Course taught alone <span className="required-star">*</span></th>
+            <th style={{ width: '15%' }}>Students Taught <span className="required-star">*</span></th>
+            <th style={{ width: '20%' }}>Feedback Score <span className="required-star">*</span></th>
             <th style={{ width: '12%' }}>Remarks</th>
             {!readOnly && <th style={{ width: '5%' }}>Action</th>}
           </tr>
@@ -513,7 +587,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
         <tbody>
           {courses.map((course, index) => (
             <tr key={course.id}>
-              <td className="course-number">Course-{index + 1}</td>
+              <td className="course-number">Course {index + 1}</td>
               <td>
                 <ReadOnlyField readOnly={readOnly} value={course.title}>
                   <input
@@ -521,7 +595,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                     value={course.title}
                     onChange={(e) => handleInputChange(semester, index, 'title', e.target.value)}
                     disabled={readOnly}
-                    placeholder={readOnly ? '' : "Enter course title"}
+                    placeholder={readOnly ? '' : "Enter course name"}
                   />
                 </ReadOnlyField>
               </td>
@@ -636,11 +710,11 @@ const CoursesTaught = ({ initialData, readOnly }) => {
       <table className="courses-table">
         <thead>
           <tr>
-            <th style={{ width: '15%' }}>Project Title</th>
-            <th style={{ width: '12%' }}>Type</th>
-            <th style={{ width: '12%' }}>Role</th>
-            <th style={{ width: '15%' }}>Student</th>
-            <th style={{ width: '10%' }}>Duration</th>
+            <th style={{ width: '15%' }}>Project Title <span className="required-star">*</span></th>
+            <th style={{ width: '12%' }}>Type <span className="required-star">*</span></th>
+            <th style={{ width: '12%' }}>Role <span className="required-star">*</span></th>
+            <th style={{ width: '15%' }}>Student <span className="required-star">*</span></th>
+            <th style={{ width: '10%' }}>Duration <span className="required-star">*</span></th>
             <th style={{ width: '12%' }}>Outcome</th>
             <th style={{ width: '12%' }}>Remarks</th>
             <th style={{ width: '7%' }}>Evidence</th>
@@ -768,8 +842,9 @@ const CoursesTaught = ({ initialData, readOnly }) => {
             onChange={(e) => setSelectedSection(e.target.value)}
             className="section-dropdown"
           >
-            <option value="courses">4.1: Courses Taught</option>
-            <option value="projects">4.2: Projects Guided</option>
+            <option value="" disabled>Select Section</option>
+            <option value="courses">Courses Taught</option>
+            <option value="projects">Projects Guided</option>
           </select>
         </div>
 
@@ -781,6 +856,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
             onChange={(e) => setSelectedSemester(e.target.value)}
             className="semester-dropdown"
           >
+            <option value="" disabled>Select Semester</option>
             <option value="fall">Fall / Odd Semester</option>
             <option value="spring">Spring / Even Semester</option>
             <option value="summer">Summer Term</option>
@@ -788,7 +864,15 @@ const CoursesTaught = ({ initialData, readOnly }) => {
         </div>
       </div>
 
-      {renderTable(selectedSemester, getCurrentItems(), getSemesterLabel())}
+      {!selectedSection || !selectedSemester ? (
+        <div className="semester-section" style={{ padding: '1rem 1.25rem' }}>
+          <p style={{ margin: 0, color: '#475569', fontWeight: 500 }}>
+            Please select both Section and Semester to proceed with data entry.
+          </p>
+        </div>
+      ) : (
+        renderTable(selectedSemester, getCurrentItems(), getSemesterLabel())
+      )}
       
       {!readOnly && (
         <FormActions 

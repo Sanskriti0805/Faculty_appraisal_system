@@ -315,7 +315,7 @@ const ConferenceSessions = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Conference Sessions Chaired, if any</h1>
-          <p className="page-subtitle">Section 15</p>
+          <p className="page-subtitle">Conference Sessions Chaired</p>
         </div>
       </div>
 

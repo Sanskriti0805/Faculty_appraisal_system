@@ -180,7 +180,7 @@ const Patents = ({ initialData, readOnly }) => {
         <div className="page-header">
           <div>
             <h1 className="page-title">Patents</h1>
-            <p className="page-subtitle">Section 12: Patents Information</p>
+            <p className="page-subtitle">Patents Information</p>
           </div>
         </div>
       )}

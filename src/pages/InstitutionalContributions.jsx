@@ -343,7 +343,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
         <div className="page-header">
           <div>
             <h1 className="page-title">Contributions, towards Institutional Development or any significant Institutional Contributions not covered above</h1>
-            <p className="page-subtitle">Section 21</p>
+            <p className="page-subtitle">Institutional Contributions</p>
           </div>
         </div>
       )}

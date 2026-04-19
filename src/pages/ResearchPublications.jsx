@@ -1734,7 +1734,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         <div className="page-header">
           <div>
             <h1 className="page-title">Research Publications</h1>
-            <p className="page-subtitle">Section 5.1: Publications in Refereed Journals & Conferences</p>
+            <p className="page-subtitle">Publications in Refereed Journals & Conferences</p>
           </div>
         </div>
       )}
