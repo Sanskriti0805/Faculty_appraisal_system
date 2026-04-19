@@ -1,6 +1,8 @@
 const db = require('../config/database');
 const { getCurrentSessionWindow } = require('../utils/sessionScope');
 
+let ensuredTechnologyTypeColumn = false;
+
 const toNumberOrNull = (value) => {
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
@@ -65,6 +67,22 @@ const resolveFacultyInfoId = async ({ facultyId, email }) => {
   return null;
 };
 
+const ensureTechnologyTypeColumn = async () => {
+  if (ensuredTechnologyTypeColumn) return;
+
+  const [rows] = await db.query(
+    `SELECT COLUMN_NAME
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'technology_transfer' AND COLUMN_NAME = 'technology_type'`
+  );
+
+  if (rows.length === 0) {
+    await db.query("ALTER TABLE technology_transfer ADD COLUMN technology_type VARCHAR(64) NULL AFTER title");
+  }
+
+  ensuredTechnologyTypeColumn = true;
+};
+
 // --- Paper Reviews ---
 exports.createPaperReview = async (req, res) => {
     try {
@@ -110,8 +128,10 @@ exports.deletePaperReview = async (req, res) => {
 // --- Technology Transfer ---
 exports.createTechTransfer = async (req, res) => {
     try {
-    const { faculty_id, title, agency, date, existing_evidence_file } = req.body;
+  const { faculty_id, title, description, technology_type, agency, date, existing_evidence_file } = req.body;
   const sessionId = await getCurrentSessionWindow(db);
+
+    await ensureTechnologyTypeColumn();
         
         const facultyInfoId = await resolveFacultyInfoId({
           facultyId: faculty_id || req.user?.id,
@@ -124,9 +144,9 @@ exports.createTechTransfer = async (req, res) => {
 
         const evidence_file = req.file ? req.file.filename : (existing_evidence_file || null);
         const [result] = await db.query(
-          `INSERT INTO technology_transfer (faculty_id, session_id, title, agency, date, evidence_file) 
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [facultyInfoId, sessionId, title, agency, date, evidence_file]
+          `INSERT INTO technology_transfer (faculty_id, session_id, title, technology_type, description, agency, date, evidence_file) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [facultyInfoId, sessionId, title, technology_type || null, description || null, agency, date, evidence_file]
         );
         res.status(201).json({ success: true, id: result.insertId });
     } catch (error) {
