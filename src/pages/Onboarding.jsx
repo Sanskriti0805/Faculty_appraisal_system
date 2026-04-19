@@ -12,7 +12,7 @@ const API_BASE = `http://${window.location.hostname}:5001/api`;
 
 const DESIGNATIONS = ['Professor', 'Associate Professor', 'Assistant Professor', 'Lecturer', 'Visiting Faculty'];
 const SALUTATIONS = ['Prof', 'Dr', 'Mr', 'Ms'];
-const EMPLOYMENT_TYPES = [{ value: 'fixed', label: 'Fixed' }, { value: 'contractual', label: 'Contractual' }];
+const EMPLOYMENT_TYPES = [{ value: 'regular', label: 'Regular' }, { value: 'contractual', label: 'Contractual' }];
 
 const Onboarding = () => {
   const { user, token, needsOnboarding, refreshUser, logout } = useAuth();
@@ -29,7 +29,7 @@ const Onboarding = () => {
     name: '',
     designation: '',
     employee_id: '',
-    employment_type: 'fixed',
+    employment_type: 'regular',
     date_of_joining: '',
     department_id: ''
   });

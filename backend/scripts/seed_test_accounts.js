@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-// employment_type ENUM: 'fixed' | 'contractual'
+// employment_type ENUM: 'regular' | 'contractual'
 // salutation ENUM:      'Prof' | 'Dr' | 'Mr' | 'Ms'
 const ACCOUNTS = [
   {
@@ -19,7 +19,7 @@ const ACCOUNTS = [
     designation: 'Assistant Professor',
     salutation: 'Dr',
     employee_id: 'FAC001',
-    employment_type: 'fixed',
+    employment_type: 'regular',
   },
   {
     name: 'Test HOD',
@@ -30,7 +30,7 @@ const ACCOUNTS = [
     designation: 'Head of Department',
     salutation: 'Prof',
     employee_id: 'HOD001',
-    employment_type: 'fixed',
+    employment_type: 'regular',
   },
   {
     name: 'Test Dofa',
@@ -41,7 +41,7 @@ const ACCOUNTS = [
     designation: 'Dean of Faculty Affairs',
     salutation: 'Prof',
     employee_id: 'Dofa01',
-    employment_type: 'fixed',
+    employment_type: 'regular',
   },
   {
     name: 'Test Dofa Office',
@@ -52,7 +52,7 @@ const ACCOUNTS = [
     designation: 'Dofa Office Staff',
     salutation: 'Mr',
     employee_id: 'DofaOFF01',
-    employment_type: 'fixed',
+    employment_type: 'regular',
   },
   {
     name: 'Test Admin',
@@ -63,7 +63,7 @@ const ACCOUNTS = [
     designation: 'System Administrator',
     salutation: 'Mr',
     employee_id: 'ADMIN01',
-    employment_type: 'fixed',
+    employment_type: 'regular',
   },
 ];
 

@@ -385,8 +385,8 @@ const HODDashboard = () => {
                     <td>{f.employee_id || '-'}</td>
                     <td>
                       {f.employment_type ? (
-                        <span className={`admin-badge ${f.employment_type === 'fixed' ? 'faculty' : 'hod'}`}>
-                          {f.employment_type}
+                        <span className={`admin-badge ${(f.employment_type === 'regular' || f.employment_type === 'fixed') ? 'faculty' : 'hod'}`}>
+                          {f.employment_type === 'contractual' ? 'Contractual' : 'Regular'}
                         </span>
                       ) : '-'}
                     </td>
@@ -584,7 +584,7 @@ const HODDashboard = () => {
               {[
                 { icon: <Mail size={16} />, label: 'Email', value: selected.email },
                 { icon: <Hash size={16} />, label: 'Employee ID', value: selected.employee_id || '-' },
-                { icon: <Briefcase size={16} />, label: 'Employment Type', value: selected.employment_type ? (selected.employment_type === 'fixed' ? 'Fixed' : 'Contractual') : '-' },
+                { icon: <Briefcase size={16} />, label: 'Employment Type', value: selected.employment_type ? (selected.employment_type === 'regular' ? 'Regular' : 'Contractual') : '-' },
                 { icon: <Calendar size={16} />, label: 'Date of Joining', value: formatDate(selected.date_of_joining) },
                 { icon: <Building2 size={16} />, label: 'Department', value: deptInfo?.name || '-' },
               ].map(item => (

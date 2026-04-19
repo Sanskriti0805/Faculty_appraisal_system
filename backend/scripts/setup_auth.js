@@ -35,7 +35,7 @@ async function migrate() {
     // 3. Add new columns to users table (skip if already exists)
     const columnsToAdd = [
       { name: 'employee_id', def: "VARCHAR(50) DEFAULT NULL" },
-      { name: 'employment_type', def: "ENUM('fixed','contractual') DEFAULT NULL" },
+      { name: 'employment_type', def: "ENUM('regular','contractual') DEFAULT NULL" },
       { name: 'date_of_joining', def: "DATE DEFAULT NULL" },
       { name: 'salutation', def: "ENUM('Prof','Dr','Mr','Ms') DEFAULT NULL" },
       { name: 'department_id', def: "INT DEFAULT NULL" },

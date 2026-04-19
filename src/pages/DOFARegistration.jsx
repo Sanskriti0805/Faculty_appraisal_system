@@ -12,7 +12,7 @@ const API_BASE = `http://${window.location.hostname}:5001/api`;
 
 const DESIGNATIONS = ['Professor', 'Associate Professor', 'Assistant Professor', 'Lecturer', 'Visiting Faculty'];
 const SALUTATIONS = ['Prof', 'Dr', 'Mr', 'Ms'];
-const EMPLOYMENT_TYPES = [{ value: 'fixed', label: 'Fixed' }, { value: 'contractual', label: 'Contractual' }];
+const EMPLOYMENT_TYPES = [{ value: 'regular', label: 'Regular' }, { value: 'contractual', label: 'Contractual' }];
 
 const DofaRegistration = () => {
   const { user, token } = useAuth();
@@ -43,7 +43,7 @@ const DofaRegistration = () => {
   const [deptForm, setDeptForm] = useState({ name: '', code: '', hod_email: '', hod_name: '' });
   const [facultyForm, setFacultyForm] = useState({
     salutation: 'Dr', name: '', designation: '', email: '',
-    employee_id: '', employment_type: 'fixed', date_of_joining: '', department_id: ''
+    employee_id: '', employment_type: 'regular', date_of_joining: '', department_id: ''
   });
 
   // Bulk invite state
@@ -126,7 +126,7 @@ const DofaRegistration = () => {
       const data = await res.json();
       if (data.success) {
         setFacultyModal(false);
-        setFacultyForm({ salutation: 'Dr', name: '', designation: '', email: '', employee_id: '', employment_type: 'fixed', date_of_joining: '', department_id: '' });
+        setFacultyForm({ salutation: 'Dr', name: '', designation: '', email: '', employee_id: '', employment_type: 'regular', date_of_joining: '', department_id: '' });
         showToast('Faculty registered. Password setup email sent.');
         loadData();
       } else {
@@ -578,8 +578,8 @@ const DofaRegistration = () => {
                       <td>{u.employee_id || '-'}</td>
                       <td>
                         {u.employment_type ? (
-                          <span className={`admin-badge ${u.employment_type === 'fixed' ? 'faculty' : 'hod'}`}>
-                            {u.employment_type}
+                          <span className={`admin-badge ${(u.employment_type === 'regular' || u.employment_type === 'fixed') ? 'faculty' : 'hod'}`}>
+                            {u.employment_type === 'contractual' ? 'Contractual' : 'Regular'}
                           </span>
                         ) : '-'}
                       </td>

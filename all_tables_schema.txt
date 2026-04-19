@@ -578,7 +578,7 @@ CREATE TABLE `users` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `employee_id` varchar(50) DEFAULT NULL,
-  `employment_type` enum('fixed','contractual') DEFAULT NULL,
+  `employment_type` enum('regular','contractual') DEFAULT NULL,
   `date_of_joining` date DEFAULT NULL,
   `salutation` enum('Prof','Dr','Mr','Ms') DEFAULT NULL,
   `department_id` int DEFAULT NULL,
