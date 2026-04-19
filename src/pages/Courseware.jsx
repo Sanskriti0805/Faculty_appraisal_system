@@ -71,14 +71,13 @@ const Courseware = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Courseware / Course Material / Laboratory Manual Developed / Text-Books / Course Notes Published</h1>
-          <p className="page-subtitle">Courseware and Learning Materials</p>
         </div>
       </div>
 
       <div className="form-card">
         <div className="form-section">
           <div className="form-field-vertical">
-            <label>Select Type:</label>
+            <label>Select Type</label>
             <select
               value={formData.type}
               onChange={(e) => handleInputChange('type', e.target.value)}
@@ -105,7 +104,7 @@ const Courseware = () => {
           )}
 
           <div className="form-field-vertical">
-            <label>Details:</label>
+            <label>Details</label>
             <textarea
               rows="8"
               value={formData.courseware}
@@ -117,7 +116,7 @@ const Courseware = () => {
 
           {formData.type === 'Laboratory Manual Developed' && (
             <div className="form-field-vertical" style={{ flexDirection: 'row', alignItems: 'center', gap: '1rem' }}>
-              <label style={{ marginBottom: 0 }}>Upload Lab Manual (PDF):</label>
+              <label style={{ marginBottom: 0 }}>Upload Lab Manual (PDF)</label>
               <div className="compact-upload-wrapper" style={{ justifyContent: 'flex-start' }}>
                 <input
                   type="file"

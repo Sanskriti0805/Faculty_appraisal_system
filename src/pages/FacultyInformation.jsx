@@ -75,7 +75,7 @@ const FacultyInformation = () => {
         
         <div className="form-grid">
           <div className="form-field">
-            <label>1. Name:</label>
+            <label>1. Name</label>
             {isEditing ? (
               <input
                 type="text"
@@ -88,7 +88,7 @@ const FacultyInformation = () => {
           </div>
 
           <div className="form-field">
-            <label>2. Designation:</label>
+            <label>2. Designation</label>
             {isEditing ? (
               <input
                 type="text"
@@ -101,7 +101,7 @@ const FacultyInformation = () => {
           </div>
 
           <div className="form-field">
-            <label>3. Department:</label>
+            <label>3. Department</label>
             {isEditing ? (
               <input
                 type="text"
@@ -114,7 +114,7 @@ const FacultyInformation = () => {
           </div>
 
           <div className="form-field">
-            <label>4. Date of Joining:</label>
+            <label>4. Date of Joining</label>
             {isEditing ? (
               <input
                 type="text"

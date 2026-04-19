@@ -422,7 +422,6 @@ const ResearchGrants = ({ initialData, readOnly }) => {
         <div className="page-header">
           <div>
             <h1 className="page-title">External Sponsored Research & Development Grants received/submitted during this Academic Session</h1>
-            <p className="page-subtitle">External Sponsored Research Grants & Submitted Proposals</p>
           </div>
         </div>
       )}

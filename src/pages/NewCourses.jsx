@@ -250,7 +250,7 @@ const NewCourses = () => {
         <h3>{section === 'ug' ? 'UG' : section === 'masters' ? 'Masters Level' : 'Doctoral Level'}</h3>
         {showProgramDropdown && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontWeight: '500' }}>Select Program:</label>
+            <label style={{ fontWeight: '500' }}>Select Program</label>
             <select
               value={selectedProgram}
               onChange={(e) => setProgram(e.target.value)}
@@ -419,7 +419,6 @@ const NewCourses = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">New Courses Developed</h1>
-          <p className="page-subtitle">New Courses Developed</p>
         </div>
       </div>
 
