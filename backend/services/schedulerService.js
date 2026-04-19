@@ -36,8 +36,8 @@ class SchedulerService {
       );
     });
 
-    // Job 3: Check every hour for expired sessions
-    cron.schedule('0 * * * *', () => {
+    // Job 3: Check every minute for expired sessions (close at 23:59:59 of deadline)
+    cron.schedule('* * * * *', () => {
       this.checkExpiredSessions().catch(err =>
         console.error('Scheduler error (expired):', err.message)
       );
@@ -152,16 +152,18 @@ class SchedulerService {
    * Job 3: Auto-close sessions that are past their deadline
    */
   async checkExpiredSessions() {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
 
+    // Close sessions whose deadline day has passed its end-of-day (23:59:59)
+    // Use CONCAT(deadline, ' 23:59:59') to compare the deadline's end-of-day datetime.
     const [result] = await db.query(`
       UPDATE appraisal_sessions
       SET is_released = 0
       WHERE status = 'open'
         AND is_released = 1
         AND deadline IS NOT NULL
-        AND deadline < ?
-    `, [today]);
+        AND CONCAT(deadline, ' 23:59:59') < ?
+    `, [now]);
 
     if (result.affectedRows > 0) {
       console.log(`⏰ Auto-closed ${result.affectedRows} expired session(s).`);

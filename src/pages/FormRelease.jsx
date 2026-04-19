@@ -16,7 +16,6 @@ const FormRelease = () => {
   const [newSession, setNewSession] = useState({
     academic_year: '',
     start_date: '',
-    end_date: '',
     deadline: '',
     reminder_days: 2,
     reminder_time: '08:00'
@@ -40,6 +39,9 @@ const FormRelease = () => {
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('10:00');
+
+  const [showExtendForm, setShowExtendForm] = useState(false);
+  const [extendedDeadline, setExtendedDeadline] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -87,7 +89,7 @@ const FormRelease = () => {
       if (data.success) {
         showToast('Appraisal session created successfully.');
         setShowCreateForm(false);
-        setNewSession({ academic_year: '', start_date: '', end_date: '', deadline: '', reminder_days: 2, reminder_time: '08:00' });
+        setNewSession({ academic_year: '', start_date: '', deadline: '', reminder_days: 2, reminder_time: '08:00' });
         fetchData();
       } else {
         showToast(data.message || 'Failed to create session', 'error');
@@ -152,6 +154,48 @@ const FormRelease = () => {
       if (data.success) { showToast('Scheduled release cancelled.'); fetchData(); }
     } catch { showToast('Failed to cancel schedule', 'error'); }
     finally { setActionLoading(false); }
+  };
+
+  const handleExtendDeadline = async (e) => {
+    e.preventDefault();
+    if (!extendedDeadline) {
+      showToast('Please select a new deadline', 'error');
+      return;
+    }
+    
+    const newDate = new Date(extendedDeadline);
+    const currentDeadline = activeSession.deadline ? new Date(activeSession.deadline) : new Date();
+    
+    if (newDate <= currentDeadline) {
+      showToast('New deadline must be after the current deadline', 'error');
+      return;
+    }
+    
+    if (!(await showConfirm(`Extend deadline to ${new Date(extendedDeadline).toLocaleDateString()}? Notification emails will be sent to all faculty.`))) {
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      const response = await fetch(`${API}/sessions/${activeSession.id}/extend-deadline`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newDeadline: extendedDeadline })
+      });
+      const data = await response.json();
+      if (data.success) {
+        showToast('Deadline extended successfully. Notification emails are being sent to faculty.');
+        setShowExtendForm(false);
+        setExtendedDeadline('');
+        fetchData();
+      } else {
+        showToast(data.message || 'Failed to extend deadline', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to extend deadline', 'error');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleUpdateReminder = async (e) => {
@@ -465,6 +509,42 @@ const FormRelease = () => {
             </div>
           )}
 
+          {/* Extend Deadline Section */}
+          {activeSession.is_released === 1 && (
+            <>
+              <button className="fr-btn fr-btn-primary" onClick={() => setShowExtendForm(!showExtendForm)} style={{ marginTop: '15px' }}>
+                <Calendar size={14} />
+                {showExtendForm ? 'Cancel' : 'Extend Deadline'}
+              </button>
+
+              {showExtendForm && (
+                <div className="fr-schedule-form-wrapper" style={{ marginTop: '15px' }}>
+                  <form className="fr-schedule-form" onSubmit={handleExtendDeadline}>
+                    <h3><Calendar size={15} /> Extend Submission Deadline</h3>
+                    <p style={{ color: '#718096', fontSize: '13px', marginTop: '0' }}>
+                      Current deadline: <strong>{formatDate(activeSession?.deadline)}</strong>
+                    </p>
+                    <div className="fr-form-group">
+                      <label>New Deadline</label>
+                      <input type="date" value={extendedDeadline}
+                        onChange={(e) => setExtendedDeadline(e.target.value)}
+                        min={new Date(activeSession.deadline).toISOString().split('T')[0]}
+                        required />
+                      <span className="fr-form-hint">Must be after the current deadline</span>
+                    </div>
+                    <div className="fr-form-actions">
+                      <button type="submit" className="fr-btn fr-btn-primary" disabled={actionLoading}>
+                        {actionLoading ? <Loader2 className="spin" size={15} /> : <CheckCircle2 size={15} />}
+                        Confirm Extension
+                      </button>
+                      <button type="button" className="fr-btn fr-btn-ghost" onClick={() => setShowExtendForm(false)}>Cancel</button>
+                    </div>
+                  </form>
+                </div>
+              )}
+            </>
+          )}
+
           <div className="fr-session-actions">
             <button className="fr-btn fr-btn-danger-outline" onClick={() => handleCloseSession(activeSession.id)} disabled={actionLoading}>
               <XCircle size={14} />
@@ -498,15 +578,12 @@ const FormRelease = () => {
                     onChange={(e) => setNewSession({...newSession, start_date: e.target.value})} required />
                 </div>
                 <div className="fr-form-group">
-                  <label>End Date</label>
-                  <input type="date" value={newSession.end_date}
-                    onChange={(e) => setNewSession({...newSession, end_date: e.target.value})} required />
+                  <label>Submission Deadline</label>
+                  <input type="date" value={newSession.deadline}
+                    onChange={(e) => setNewSession({...newSession, deadline: e.target.value})} required />
                 </div>
               </div>
               <div className="fr-form-group">
-                <label>Submission Deadline</label>
-                <input type="date" value={newSession.deadline}
-                  onChange={(e) => setNewSession({...newSession, deadline: e.target.value})} required />
                 <span className="fr-form-hint">Faculty must submit forms before this date</span>
               </div>
               <div className="fr-form-row">
@@ -544,8 +621,7 @@ const FormRelease = () => {
                 <tr>
                   <th>Academic Year</th>
                   <th>Start Date</th>
-                  <th>End Date</th>
-                  <th>Deadline</th>
+                  <th>Submission Deadline</th>
                   <th>Released On</th>
                   <th>Status</th>
                 </tr>
@@ -555,8 +631,7 @@ const FormRelease = () => {
                   <tr key={session.id}>
                     <td><strong>{session.academic_year}</strong></td>
                     <td>{formatDate(session.start_date)}</td>
-                    <td>{formatDate(session.end_date)}</td>
-                    <td>{formatDate(session.deadline)}</td>
+                    <td>{formatDate(session.deadline || session.end_date)}</td>
                     <td>{formatDateTime(session.release_date)}</td>
                     <td><span className="fr-badge fr-badge-closed">Closed</span></td>
                   </tr>

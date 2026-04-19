@@ -110,9 +110,12 @@ exports.createSession = async (req, res) => {
       });
     }
 
+    // Auto-set end_date = deadline if end_date not provided
+    const finalEndDate = end_date || deadline;
+
     const [result] = await db.query(
       'INSERT INTO appraisal_sessions (academic_year, start_date, end_date, deadline, status, created_by, reminder_days, reminder_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [academic_year, start_date, end_date, deadline || end_date, status || 'open', created_by, reminder_days || 2, reminder_time || '08:00:00']
+      [academic_year, start_date, finalEndDate, deadline || finalEndDate, status || 'open', created_by, reminder_days || 2, reminder_time || '08:00:00']
     );
 
     res.status(201).json({
@@ -131,9 +134,12 @@ exports.updateSession = async (req, res) => {
     const { id } = req.params;
     const { academic_year, start_date, end_date, deadline, status, reminder_days, reminder_time } = req.body;
 
+    // Auto-set end_date = deadline if end_date not provided
+    const finalEndDate = end_date || deadline;
+
     const [result] = await db.query(
       'UPDATE appraisal_sessions SET academic_year = ?, start_date = ?, end_date = ?, deadline = ?, status = ?, reminder_days = ?, reminder_time = ? WHERE id = ?',
-      [academic_year, start_date, end_date, deadline || end_date, status, reminder_days || 2, reminder_time || '08:00:00', id]
+      [academic_year, start_date, finalEndDate, deadline || finalEndDate, status, reminder_days || 2, reminder_time || '08:00:00', id]
     );
 
     if (result.affectedRows === 0) {
@@ -345,3 +351,132 @@ async function sendReleaseEmails(session) {
 
 // Exported for use by scheduler
 exports.sendReleaseEmails = sendReleaseEmails;
+
+/**
+ * Extend deadline for current session
+ * PUT /api/sessions/:id/extend-deadline
+ */
+exports.extendDeadline = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newDeadline } = req.body;
+
+    if (!newDeadline) {
+      return res.status(400).json({ success: false, message: 'New deadline is required.' });
+    }
+
+    const newDate = new Date(newDeadline);
+    
+    // Get the session
+    const [sessions] = await db.query('SELECT * FROM appraisal_sessions WHERE id = ?', [id]);
+    if (sessions.length === 0) {
+      return res.status(404).json({ success: false, message: 'Session not found' });
+    }
+
+    const session = sessions[0];
+    const currentDeadline = session.deadline ? new Date(session.deadline) : null;
+
+    // Validate new deadline is after current deadline
+    if (currentDeadline && newDate <= currentDeadline) {
+      return res.status(400).json({
+        success: false,
+        message: 'New deadline must be after the current deadline.'
+      });
+    }
+
+    // Set original_deadline on first extension
+    const originalDeadline = session.original_deadline || session.deadline;
+    
+    // Format dates for email
+    const oldDeadlineStr = currentDeadline
+      ? currentDeadline.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+      : 'N/A';
+    
+    const newDeadlineStr = newDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    // Convert dates to MySQL DATE format (YYYY-MM-DD)
+    const newDateStr = newDate.toISOString().split('T')[0];
+    const originalDeadlineStr = originalDeadline instanceof Date 
+      ? originalDeadline.toISOString().split('T')[0]
+      : originalDeadline;
+
+    // Update session - be resilient if migration not applied (missing columns)
+    try {
+      await db.query(
+        `UPDATE appraisal_sessions 
+         SET deadline = ?, 
+             original_deadline = ?, 
+             deadline_extension_count = deadline_extension_count + 1, 
+             last_extended_at = NOW(),
+             is_released = 1,
+             reminder_sent = 0
+         WHERE id = ?`,
+        [newDateStr, originalDeadlineStr, id]
+      );
+    } catch (err) {
+      // If columns are missing (Unknown column ... in 'field list'), try to add them and retry
+      if (err && /Unknown column 'original_deadline' in 'field list'/.test(err.message)) {
+        try {
+          await db.query(`ALTER TABLE appraisal_sessions ADD COLUMN IF NOT EXISTS original_deadline DATE DEFAULT NULL`);
+          await db.query(`ALTER TABLE appraisal_sessions ADD COLUMN IF NOT EXISTS deadline_extension_count INT DEFAULT 0`);
+          await db.query(`ALTER TABLE appraisal_sessions ADD COLUMN IF NOT EXISTS last_extended_at TIMESTAMP NULL DEFAULT NULL`);
+
+          // Retry update
+          await db.query(
+            `UPDATE appraisal_sessions 
+             SET deadline = ?, 
+                 original_deadline = ?, 
+                 deadline_extension_count = deadline_extension_count + 1, 
+                 last_extended_at = NOW(),
+                 is_released = 1,
+                 reminder_sent = 0
+             WHERE id = ?`,
+            [newDateStr, originalDeadlineStr, id]
+          );
+        } catch (innerErr) {
+          console.error('Failed to add missing columns and retry update:', innerErr.message);
+          return res.status(500).json({ success: false, message: innerErr.message });
+        }
+      } else {
+        throw err;
+      }
+    }
+
+    // Send notification emails to all faculty
+    try {
+      const [faculty] = await db.query(
+        "SELECT id, name, email FROM users WHERE role = 'faculty'"
+      );
+
+      if (faculty.length > 0) {
+        console.log(`📧 Sending deadline extension notification to ${faculty.length} faculty members...`);
+
+        for (const member of faculty) {
+          try {
+            await emailService.sendDeadlineExtensionNotification({
+              to: member.email,
+              name: member.name,
+              academicYear: session.academic_year,
+              oldDeadline: oldDeadlineStr,
+              newDeadline: newDeadlineStr
+            });
+          } catch (err) {
+            console.error(`  ❌ Failed to email ${member.email}: ${err.message}`);
+          }
+        }
+
+        console.log('📧 Deadline extension notification emails sent.');
+      }
+    } catch (emailErr) {
+      console.error('Error sending extension emails:', emailErr.message);
+      // Don't fail the extension just because emails failed
+    }
+
+    res.json({
+      success: true,
+      message: `Deadline extended to ${newDeadlineStr}. Notification emails are being sent to all faculty.`
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
