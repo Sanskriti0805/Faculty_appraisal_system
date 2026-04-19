@@ -270,6 +270,62 @@ class EmailService {
     });
   }
 
+  // --- Deadline Extension Notification Email ---------------------------
+
+  /**
+   * Notify faculty that the appraisal submission deadline has been extended
+   */
+  async sendDeadlineExtensionNotification({ to, name, academicYear, oldDeadline, newDeadline }) {
+    const siteUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    const bodyHtml = `
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <p>Dear <b>${name}</b>,</p>
+                    <p>We are pleased to inform you that the submission deadline for the <b>Faculty Appraisal Forms</b> for the academic year <b>${academicYear}</b> has been <b style="color: #059669;">extended</b>.</p>
+
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 20px 24px; margin: 20px 0;">
+                      <div style="display: flex; justify-content: space-around; align-items: center; text-align: center;">
+                        <div>
+                          <p style="margin: 0 0 8px 0; font-size: 12px; opacity: 0.8; color: #047857;">OLD DEADLINE</p>
+                          <p style="margin: 0; font-size: 16px; text-decoration: line-through; color: #dc2626;">${oldDeadline}</p>
+                        </div>
+                        <div style="font-size: 24px; color: #059669;">→</div>
+                        <div>
+                          <p style="margin: 0 0 8px 0; font-size: 12px; opacity: 0.8; color: #047857;">NEW DEADLINE</p>
+                          <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #059669; letter-spacing: 0.5px;">${newDeadline}</h2>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p>All previously filled information in your forms has been preserved. You can now continue filling and submitting your forms with the new extended deadline.</p>
+                    
+                    <p>If you have any questions, please contact the Dofa office at webmaster@lnmiit.ac.in.</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 30px;margin:0;text-align:left; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                    <div style="text-align:center;margin:24px 0;">
+                      <a href="${siteUrl}/login" style="display:inline-block;padding:14px 40px;background-color:#059669;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600;">
+                        Access Your Appraisal Forms
+                      </a>
+                    </div>
+                    <br/>
+                    <p>Best regards,</p>
+                    <p><b>Webmaster LNMIIT</b></p>
+                    <p>webmaster@lnmiit.ac.in</p>
+                  </td>
+                </tr>`;
+
+    const html = this.buildLNMIITTemplate({ recipientName: name, bodyHtml });
+
+    await this._send({
+      to,
+      subject: `Deadline Extended - ${academicYear} Faculty Appraisal | New Deadline: ${newDeadline}`,
+      html
+    });
+  }
+
   // --- Legacy: Password Setup Email (reset link for registration) --------
   // Kept for backward compatibility but no longer used by registration flow
 

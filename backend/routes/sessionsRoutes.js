@@ -34,4 +34,7 @@ router.post('/cancel-schedule', sessionsController.cancelSchedule);
 // Un-release forms (close access)
 router.post('/unrelease', sessionsController.unreleaseForms);
 
+// Extend deadline for active session
+router.put('/:id/extend-deadline', sessionsController.extendDeadline);
+
 module.exports = router;
