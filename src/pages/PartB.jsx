@@ -97,12 +97,15 @@ const PartB = ({ initialData, readOnly }) => {
   const { user, token } = useAuth()
   const [submissionId, setSubmissionId] = useState(null)
   const [submissionStatus, setSubmissionStatus] = useState(null)
+  const [submissionAcademicYear, setSubmissionAcademicYear] = useState('')
   const [sessionDeadline, setSessionDeadline] = useState(null)
   const [selectedSemester, setSelectedSemester] = useState('Odd Semester')
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const draftStorageKey = useMemo(() => (
-    user?.id ? `partb_draft_${user.id}` : 'partb_draft_anonymous'
-  ), [user?.id])
+    user?.id
+      ? `partb_draft_${user.id}_${submissionAcademicYear || 'nosession'}`
+      : 'partb_draft_anonymous'
+  ), [submissionAcademicYear, user?.id])
   const [goals, setGoals] = useState([
     { id: 1, semester: 'Odd Semester', teaching: '', research: '', contribution: '', outreach: '', description: '', evidenceFile: null }
   ])
@@ -119,6 +122,7 @@ const PartB = ({ initialData, readOnly }) => {
         if (data.success) {
           setSubmissionId(data.data.id)
           setSubmissionStatus(data.data.status)
+          setSubmissionAcademicYear(String(data.data.academic_year || ''))
         }
 
         // Also fetch active session deadline for popup
@@ -161,7 +165,7 @@ const PartB = ({ initialData, readOnly }) => {
 
   useEffect(() => {
     // In editable mode, prefill with saved Part B data so sent_back edits never open as blank.
-    if (readOnly || (initialData && Array.isArray(initialData) && initialData.length > 0) || !user?.id || !token) {
+    if (readOnly || (initialData && Array.isArray(initialData) && initialData.length > 0) || !user?.id || !token || !submissionAcademicYear) {
       return
     }
 
@@ -213,7 +217,7 @@ const PartB = ({ initialData, readOnly }) => {
     }
 
     fetchGoals()
-  }, [draftStorageKey, initialData, readOnly, token, user])
+  }, [draftStorageKey, initialData, readOnly, submissionAcademicYear, token, user])
 
   useEffect(() => {
     if (readOnly) return

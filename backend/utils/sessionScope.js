@@ -45,11 +45,22 @@ async function getSessionFromSettings(db) {
 
 async function getCurrentSessionWindow(db) {
   const fromSettings = await getSessionFromSettings(db);
-  if (fromSettings) {
-    return fromSettings;
+  const fromActiveSession = await getTargetAcademicYear(db);
+
+  if (fromSettings && fromActiveSession && fromSettings !== fromActiveSession) {
+    try {
+      await db.query(
+        `UPDATE settings
+         SET value = ?
+         WHERE \`key\` = 'current_session'`,
+        [fromActiveSession]
+      );
+    } catch (error) {
+      // Keep request resilient even if settings write fails.
+    }
   }
 
-  return getTargetAcademicYear(db);
+  return fromActiveSession || fromSettings || null;
 }
 
 function appendCreatedAtWindow(sql, params, sessionWindow, column = 'created_at') {

@@ -14,22 +14,14 @@ const { generateHtml } = require('../utils/pdfTemplate');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 
 /* -- helpers copied from submissionsController -- */
-async function fetchLegacySectionContent(facultyId, academicYear, sectionKey) {
+async function fetchLegacySectionContent(facultyId, sessionId, sectionKey) {
   const [rows] = await db.query(
     `SELECT content_json FROM legacy_section_entries
-     WHERE faculty_id = ? AND section_key = ? AND academic_year = ?
+     WHERE faculty_id = ? AND section_key = ? AND session_id = ?
      ORDER BY updated_at DESC LIMIT 1`,
-    [facultyId, sectionKey, academicYear]
+    [facultyId, sectionKey, sessionId]
   );
-  if (rows.length > 0) return rows[0].content_json || null;
-
-  const [fallback] = await db.query(
-    `SELECT content_json FROM legacy_section_entries
-     WHERE faculty_id = ? AND section_key = ?
-     ORDER BY updated_at DESC LIMIT 1`,
-    [facultyId, sectionKey]
-  );
-  return fallback.length > 0 ? fallback[0].content_json || null : null;
+  return rows.length > 0 ? rows[0].content_json || null : null;
 }
 
 /* -- query dynamic responses for this faculty -- */
@@ -151,7 +143,7 @@ exports.generateSubmissionPdf = async (req, res) => {
       db.query('SELECT * FROM consultancy WHERE faculty_id = ? AND year >= ?', [fid, yearNum]).then(r => r[0] || []),
       db.query('SELECT * FROM teaching_innovation WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
       db.query('SELECT * FROM institutional_contributions WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM faculty_goals WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
+      db.query('SELECT * FROM faculty_goals WHERE faculty_id = ? AND session_id = ?', [fid, sub.academic_year]).then(r => r[0] || []),
       fetchLegacySectionContent(sub.faculty_id, sub.academic_year, 'courseware'),
       fetchLegacySectionContent(sub.faculty_id, sub.academic_year, 'continuing_education'),
       fetchLegacySectionContent(sub.faculty_id, sub.academic_year, 'other_activities'),
