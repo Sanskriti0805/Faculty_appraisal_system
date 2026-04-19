@@ -96,6 +96,11 @@
   line-height: 1.5;
 }
 
+.required-asterisk {
+  color: #dc2626;
+  font-weight: 700;
+}
+
 .form-field-vertical input,
 .form-field-vertical textarea,
 .form-field-vertical select {

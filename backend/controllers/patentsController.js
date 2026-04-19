@@ -79,7 +79,7 @@ exports.createPatent = async (req, res) => {
 
     const parsedAuthors = parseJsonArrayField(authors);
 
-    const certificate_file = req.file ? req.file.filename : null;
+    const certificate_file = req.file ? req.file.filename : (req.body.certificate_file || null);
     
     // Insert patent
     const [result] = await connection.query(
