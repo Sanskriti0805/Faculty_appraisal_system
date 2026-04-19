@@ -174,8 +174,9 @@ exports.generateSubmissionPdf = async (req, res) => {
     // -- 4. Launch Puppeteer -> PDF -----------------------------------------
     let browser;
     try {
+      console.log(`[PDF] Launching browser for submission ${id}...`);
       browser = await puppeteer.launch({
-        headless: 'new',
+        headless: true,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -187,8 +188,10 @@ exports.generateSubmissionPdf = async (req, res) => {
       const page = await browser.newPage();
 
       // Inject HTML directly (faster than navigating to a URL)
-      await page.setContent(html, { waitUntil: 'networkidle0' });
+      console.log(`[PDF] Setting content for submission ${id}...`);
+      await page.setContent(html, { waitUntil: 'load', timeout: 30000 });
 
+      console.log(`[PDF] Generating PDF for submission ${id}...`);
       const pdfBuffer = await page.pdf({
         format:           'A4',
         printBackground:  true,
@@ -204,6 +207,7 @@ exports.generateSubmissionPdf = async (req, res) => {
 
       await browser.close();
       browser = null;
+      console.log(`[PDF] PDF generated successfully for submission ${id}. Size: ${pdfBuffer.length} bytes`);
 
       // -- 5. Stream the PDF back ----------------------------------------
       const safeName = (sub.faculty_name || 'faculty').replace(/[^a-zA-Z0-9]/g, '_');
@@ -222,6 +226,20 @@ exports.generateSubmissionPdf = async (req, res) => {
 
   } catch (err) {
     console.error('PDF generation error:', err);
+    try {
+      const fs = require('fs');
+      const logPath = require('path').join(__dirname, '../pdf_error.log');
+      const timestamp = new Date().toISOString();
+      const logEntry = `\n[${timestamp}] Submission ID: ${id}\nError: ${err.stack}\n`;
+      fs.appendFileSync(logPath, logEntry);
+      
+      // Also dump the HTML if it was generated
+      if (typeof html !== 'undefined') {
+        fs.writeFileSync(require('path').join(__dirname, '../last_failed_pdf.html'), html);
+      }
+    } catch (logErr) {
+      console.error('Failed to write to PDF log file:', logErr);
+    }
     return res.status(500).json({ success: false, message: 'PDF generation failed: ' + err.message });
   }
 };

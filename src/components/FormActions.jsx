@@ -99,7 +99,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
     const loadAccess = async () => {
       try {
-        const subRes = await fetch(`http://${window.location.hostname}:5000/api/submissions/my`, {
+        const subRes = await fetch(`http://${window.location.hostname}:5001/api/submissions/my`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const subData = await subRes.json();
@@ -119,7 +119,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
           return;
         }
 
-        const reqRes = await fetch(`http://${window.location.hostname}:5000/api/edit-requests/my-submission/${subData.data.id}`, {
+        const reqRes = await fetch(`http://${window.location.hostname}:5001/api/edit-requests/my-submission/${subData.data.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const reqData = await reqRes.json();

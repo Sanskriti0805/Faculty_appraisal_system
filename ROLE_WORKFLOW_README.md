@@ -168,7 +168,7 @@ cd backend
 npm install
 npm start
 ```
-Server runs on http://localhost:5000
+Server runs on http://localhost:5001
 
 ### Frontend
 ```bash

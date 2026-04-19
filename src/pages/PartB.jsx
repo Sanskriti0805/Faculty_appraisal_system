@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { showConfirm } from '../utils/appDialogs'
 
-const API_BASE = `http://${window.location.hostname}:5000/api`
+const API_BASE = `http://${window.location.hostname}:5001/api`
 
 const toText = (value) => (value === null || value === undefined ? '' : String(value))
 
@@ -539,7 +539,7 @@ const PartB = ({ initialData, readOnly }) => {
                     {readOnly ? (
                       goal.evidenceFile && (
                         <a
-                          href={`http://${window.location.hostname}:5000/uploads/${goal.evidenceFile}`}
+                          href={`http://${window.location.hostname}:5001/uploads/${goal.evidenceFile}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="evidence-link"

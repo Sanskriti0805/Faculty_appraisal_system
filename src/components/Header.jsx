@@ -3,7 +3,7 @@ import { LogOut, Settings, X, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from
 import { useAuth } from '../context/AuthContext'
 import './Header.css'
 
-const API_BASE = `http://${window.location.hostname}:5000/api`;
+const API_BASE = `http://${window.location.hostname}:5001/api`;
 
 const Header = ({ onLogout }) => {
   const { user, token } = useAuth()

@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import './LoginPage.css';
 
-const API_BASE = `http://${window.location.hostname}:5000/api`;
+const API_BASE = `http://${window.location.hostname}:5001/api`;
 
 const ResetPassword = () => {
   const { token } = useParams();

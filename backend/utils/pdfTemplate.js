@@ -48,7 +48,7 @@ const dataTable = (rows = [], preferCols = []) => {
       <table>
         <thead><tr>${cols.map(c => `<th>${esc(toLabel(c))}</th>`).join('')}</tr></thead>
         <tbody>${safeRows.map(row =>
-    `<tr>${cols.map(c => `<td>${esc(fmtDate.applied ? row[c] : (String(row[c] ?? '—')))}</td>`).join('')}</tr>`
+    `<tr>${cols.map(c => `<td>${(c.toLowerCase().includes('date') || c.toLowerCase().includes('year') || c.toLowerCase().includes('at')) ? esc(fmtDate(row[c])) : esc(String(row[c] ?? '—'))}</td>`).join('')}</tr>`
   ).join('')}</tbody>
       </table>
     </div>`;

@@ -50,7 +50,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
 
     const fetchExisting = async () => {
       try {
-        const res = await fetch(`http://${window.location.hostname}:5000/api/innovation/teaching/${user.id}`)
+        const res = await fetch(`http://${window.location.hostname}:5001/api/innovation/teaching/${user.id}`)
         const data = await res.json()
         if (!data.success || !Array.isArray(data.data)) return
 
@@ -102,7 +102,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
 
       const saveData = async (type, description, file, existingId) => {
         if (existingId) {
-          await fetch(`http://${window.location.hostname}:5000/api/innovation/teaching/${existingId}`, {
+          await fetch(`http://${window.location.hostname}:5001/api/innovation/teaching/${existingId}`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` }
           })
@@ -118,7 +118,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
           formData.append('evidence_file', file)
         }
 
-        return fetch('http://localhost:5000/api/innovation/teaching', {
+        return fetch('http://localhost:5001/api/innovation/teaching', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formData
@@ -171,7 +171,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                 {readOnly ? (
                   formData.onCampusFile && (
                     <a
-                      href={`http://${window.location.hostname}:5000/uploads/${formData.onCampusFile}`}
+                      href={`http://${window.location.hostname}:5001/uploads/${formData.onCampusFile}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="evidence-link"
@@ -252,7 +252,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                 {readOnly ? (
                   formData.onlineFile && (
                     <a
-                      href={`http://${window.location.hostname}:5000/uploads/${formData.onlineFile}`}
+                      href={`http://${window.location.hostname}:5001/uploads/${formData.onlineFile}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="evidence-link"
@@ -333,7 +333,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                 {readOnly ? (
                   formData.evaluationFile && (
                     <a
-                      href={`http://${window.location.hostname}:5000/uploads/${formData.evaluationFile}`}
+                      href={`http://${window.location.hostname}:5001/uploads/${formData.evaluationFile}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="evidence-link"

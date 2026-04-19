@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { FileText, Clock, AlertTriangle, CheckCircle, CalendarOff, Calendar, Archive, Send } from 'lucide-react'
 import './Dashboard.css'
 
-const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`
+const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5001/api`
 
 const Dashboard = () => {
   const navigate = useNavigate()

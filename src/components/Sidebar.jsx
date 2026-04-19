@@ -19,7 +19,7 @@ const Sidebar = () => {
   React.useEffect(() => {
     const fetchDynamicSections = async () => {
       try {
-        const response = await fetch(`http://${window.location.hostname}:5000/api/form-builder/schema`);
+        const response = await fetch(`http://${window.location.hostname}:5001/api/form-builder/schema`);
         const data = await response.json();
         if (data.success) {
           setDynamicSections(data.data || []);
@@ -38,7 +38,7 @@ const Sidebar = () => {
 
     const checkReleaseStatus = async () => {
       try {
-        const res = await fetch(`http://${window.location.hostname}:5000/api/sessions/active`);
+        const res = await fetch(`http://${window.location.hostname}:5001/api/sessions/active`);
         const data = await res.json();
         if (data.success) {
           setFormsReleased(data.released === true);
@@ -58,7 +58,7 @@ const Sidebar = () => {
     const run = async () => {
       try {
         // Step 1: find out which academic year the ACTIVE session is for
-        const sessionRes = await fetch(`http://${window.location.hostname}:5000/api/sessions/active`)
+        const sessionRes = await fetch(`http://${window.location.hostname}:5001/api/sessions/active`)
         const sessionData = await sessionRes.json()
         const activeYear = sessionData?.data?.academic_year
 
@@ -72,7 +72,7 @@ const Sidebar = () => {
 
         // Step 2: fetch this faculty's submission for ONLY the active session year
         const subRes = await fetch(
-          `http://${window.location.hostname}:5000/api/submissions?faculty_id=${user.id}&academic_year=${encodeURIComponent(activeYear)}&limit=1`,
+          `http://${window.location.hostname}:5001/api/submissions?faculty_id=${user.id}&academic_year=${encodeURIComponent(activeYear)}&limit=1`,
           { headers: { Authorization: `Bearer ${token}` } }
         )
         const subData = await subRes.json()
@@ -94,7 +94,7 @@ const Sidebar = () => {
           return
         }
 
-        const reqRes = await fetch(`http://${window.location.hostname}:5000/api/edit-requests/my-submission/${submission.id}`, {
+        const reqRes = await fetch(`http://${window.location.hostname}:5001/api/edit-requests/my-submission/${submission.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
         const reqData = await reqRes.json()

@@ -74,7 +74,7 @@ const TechnologyTransfer = () => {
       }
 
       if (technologyTransferId) {
-        await fetch(`http://localhost:5000/api/activities/tech-transfer/${technologyTransferId}`, {
+        await fetch(`http://localhost:5001/api/activities/tech-transfer/${technologyTransferId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         })
@@ -97,7 +97,7 @@ const TechnologyTransfer = () => {
         formDataObj.append('existing_evidence_file', persistedEvidenceFile)
       }
 
-      const response = await fetch('http://localhost:5000/api/activities/tech-transfer', {
+      const response = await fetch('http://localhost:5001/api/activities/tech-transfer', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formDataObj

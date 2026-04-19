@@ -5,7 +5,7 @@ import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
 
-const API_BASE = `http://${window.location.hostname}:5000/api`
+const API_BASE = `http://${window.location.hostname}:5001/api`
 
 const normalizeText = (value = '') => String(value).toLowerCase().replace(/[^a-z0-9]/g, '')
 
@@ -383,7 +383,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
               {readOnly ? (
                 files.dean && (
                   <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.dean}`}
+                    href={`http://${window.location.hostname}:5001/uploads/${files.dean}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="evidence-link"
@@ -426,7 +426,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
               {readOnly ? (
                 files.hod && (
                   <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.hod}`}
+                    href={`http://${window.location.hostname}:5001/uploads/${files.hod}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="evidence-link"
@@ -469,7 +469,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
               {readOnly ? (
                 files.warden && (
                   <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.warden}`}
+                    href={`http://${window.location.hostname}:5001/uploads/${files.warden}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="evidence-link"
@@ -512,7 +512,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
               {readOnly ? (
                 files.centreLead && (
                   <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.centreLead}`}
+                    href={`http://${window.location.hostname}:5001/uploads/${files.centreLead}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="evidence-link"
@@ -555,7 +555,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
               {readOnly ? (
                 files.committee && (
                   <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.committee}`}
+                    href={`http://${window.location.hostname}:5001/uploads/${files.committee}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="evidence-link"
@@ -598,7 +598,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
               {readOnly ? (
                 files.facultyInCharge && (
                   <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.facultyInCharge}`}
+                    href={`http://${window.location.hostname}:5001/uploads/${files.facultyInCharge}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="evidence-link"
@@ -641,7 +641,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
               {readOnly ? (
                 files.otherResponsibility && (
                   <a
-                    href={`http://${window.location.hostname}:5000/uploads/${files.otherResponsibility}`}
+                    href={`http://${window.location.hostname}:5001/uploads/${files.otherResponsibility}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="evidence-link"

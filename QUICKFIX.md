@@ -31,7 +31,7 @@ mysql -u root -p faculty_appraisal < database\migrations\add_status_columns.sql
 Check that you see:
 ```
 ✅ Database connected successfully
-🚀 Server is running on http://localhost:5000
+🚀 Server is running on http://localhost:5001
 ```
 
 ## What Was Fixed

@@ -4,7 +4,7 @@ import { Eye, CheckCircle, XCircle, MessageSquare, FileText, Users, Clock, Check
 import './DofaDashboard.css';
 import { showConfirm, showPrompt } from '../utils/appDialogs';
 
-const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`;
+const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5001/api`;
 
 const DofaDashboard = () => {
   const navigate = useNavigate();

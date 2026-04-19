@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { showConfirm } from '../utils/appDialogs';
 import './DofaRegistration.css';
 
-const API_BASE = `http://${window.location.hostname}:5000/api`;
+const API_BASE = `http://${window.location.hostname}:5001/api`;
 
 const DESIGNATIONS = ['Professor', 'Associate Professor', 'Assistant Professor', 'Lecturer', 'Visiting Faculty'];
 const SALUTATIONS = ['Prof', 'Dr', 'Mr', 'Ms'];

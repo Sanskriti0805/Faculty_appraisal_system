@@ -8,7 +8,7 @@ export const SubmissionProvider = ({ children }) => {
   const [submissionData, setSubmissionData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API = `http://${window.location.hostname}:5000/api`;
+  const API = `http://${window.location.hostname}:5001/api`;
 
   const fetchSubmissionData = async () => {
     if (!token || user?.role !== 'faculty') {

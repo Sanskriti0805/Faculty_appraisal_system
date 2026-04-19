@@ -152,7 +152,7 @@ const PaperReview = () => {
         return true
       }
 
-      await Promise.all(persistedReviewIds.map((id) => fetch(`http://localhost:5000/api/activities/paper-reviews/${id}`, {
+      await Promise.all(persistedReviewIds.map((id) => fetch(`http://${window.location.hostname}:5001/api/activities/paper-reviews/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       })))
@@ -172,7 +172,7 @@ const PaperReview = () => {
           formDataObj.append('existing_evidence_file', entry.evidence_file)
         }
 
-        return fetch('http://localhost:5000/api/activities/paper-reviews', {
+        return fetch(`http://${window.location.hostname}:5001/api/activities/paper-reviews`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formDataObj

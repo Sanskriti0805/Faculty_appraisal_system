@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { confirmLogout, showConfirm } from '../utils/appDialogs';
 import './HODDashboard.css';
 
-const API_BASE = `http://${window.location.hostname}:5000/api`;
+const API_BASE = `http://${window.location.hostname}:5001/api`;
 
 const HODDashboard = () => {
   const { user, token, logout } = useAuth();
@@ -314,7 +314,7 @@ const HODDashboard = () => {
       <main className="admin-main">
         {/* Welcome + Dept Info */}
         <div className="admin-welcome">
-          <h1>Welcome, {user?.name || 'HoD'}</h1>
+          <h1>Welcome, HOD {deptInfo?.code || user?.department || ''}</h1>
           <p>View and manage faculty members registered in your department.</p>
         </div>
 

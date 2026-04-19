@@ -563,7 +563,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
                   {readOnly ? (
                     course.evidence_file ? (
-                      <a href={`http://${window.location.hostname}:5000/uploads/${course.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
+                      <a href={`http://${window.location.hostname}:5001/uploads/${course.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
                         <ExternalLink size={18} />
                       </a>
                     ) : null
@@ -691,7 +691,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
               <td>
                 {readOnly ? (
                   project.evidence_file ? (
-                    <a href={`http://${window.location.hostname}:5000/uploads/${project.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
+                    <a href={`http://${window.location.hostname}:5001/uploads/${project.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
                       <ExternalLink size={18} />
                     </a>
                   ) : <span style={{ color: '#ccc' }}>None</span>

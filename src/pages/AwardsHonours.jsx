@@ -133,7 +133,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
   }
 
   const handleViewEvidence = (filename) => {
-    const baseUrl = `http://${window.location.hostname}:5000`;
+    const baseUrl = `http://${window.location.hostname}:5001`;
     window.open(`${baseUrl}/uploads/${filename}`, '_blank')
   }
 

@@ -142,7 +142,7 @@ const Consultancy = ({ initialData, readOnly }) => {
       }
 
       await deleteIgnoringNotFound(
-        (id) => `http://${window.location.hostname}:5000/api/consultancy/${id}`,
+        (id) => `http://${window.location.hostname}:5001/api/consultancy/${id}`,
         persistedConsultancyIds,
         token
       )
@@ -164,7 +164,7 @@ const Consultancy = ({ initialData, readOnly }) => {
             formData.append('existing_evidence_file', c.evidence_file);
           }
 
-          return fetch(`http://${window.location.hostname}:5000/api/consultancy`, {
+          return fetch(`http://${window.location.hostname}:5001/api/consultancy`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: formData
@@ -226,7 +226,7 @@ const Consultancy = ({ initialData, readOnly }) => {
   const renderEvidenceCell = (consultancy) => {
     if (readOnly) {
       if (consultancy.evidence_file) {
-        const baseUrl = `http://${window.location.hostname}:5000`;
+        const baseUrl = `http://${window.location.hostname}:5001`;
         return (
           <a
             href={`${baseUrl}/uploads/${consultancy.evidence_file}`}

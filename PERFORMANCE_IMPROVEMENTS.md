@@ -155,21 +155,21 @@ No new dependencies required (uses built-in React.lazy)
 ### Test Pagination
 ```bash
 # Get page 2 with 20 items per page
-curl "http://localhost:5000/api/courses/faculty/1?page=2&limit=20"
+curl "http://localhost:5001/api/courses/faculty/1?page=2&limit=20"
 ```
 
 ### Test Caching
 ```bash
 # First request - slow (cache miss)
-curl "http://localhost:5000/api/faculty"
+curl "http://localhost:5001/api/faculty"
 
 # Second request - fast (cache hit)
-curl "http://localhost:5000/api/faculty"
+curl "http://localhost:5001/api/faculty"
 ```
 
 ### Test Multi-file Upload
 ```bash
-curl -X POST http://localhost:5000/api/courses/new \
+curl -X POST http://localhost:5001/api/courses/new \
   -F "faculty_id=1" \
   -F "course_name=Test" \
   -F "documents=@file1.pdf" \

@@ -6,7 +6,7 @@ const getDefaultUploadsBaseUrl = () => {
     return ''
   }
 
-  return `http://${window.location.hostname}:5000/uploads/`
+  return `http://${window.location.hostname}:5001/uploads/`
 }
 
 const FilePreviewButton = ({

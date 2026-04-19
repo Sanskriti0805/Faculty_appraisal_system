@@ -132,7 +132,7 @@ const KeynotesTalks = () => {
         return false
       }
       
-      await Promise.all(persistedTalkIds.map(id => fetch(`http://localhost:5000/api/activities/keynotes-talks/${id}`, {
+      await Promise.all(persistedTalkIds.map(id => fetch(`http://localhost:5001/api/activities/keynotes-talks/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       })))
@@ -163,7 +163,7 @@ const KeynotesTalks = () => {
           formDataObj.append('existing_evidence_file', talk.evidence_file)
         }
 
-        return fetch('http://localhost:5000/api/activities/keynotes-talks', {
+        return fetch('http://localhost:5001/api/activities/keynotes-talks', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formDataObj

@@ -174,7 +174,7 @@ const ConferenceSessions = () => {
         return false
       }
       
-      await Promise.all(persistedSessionIds.map(id => fetch(`http://localhost:5000/api/activities/conference-sessions/${id}`, {
+      await Promise.all(persistedSessionIds.map(id => fetch(`http://localhost:5001/api/activities/conference-sessions/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       })))
@@ -208,7 +208,7 @@ const ConferenceSessions = () => {
           formDataObj.append('existing_evidence_file', session.evidence_file)
         }
 
-        return fetch('http://localhost:5000/api/activities/conference-sessions', {
+        return fetch('http://localhost:5001/api/activities/conference-sessions', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formDataObj

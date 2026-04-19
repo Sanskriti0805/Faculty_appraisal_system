@@ -3,7 +3,7 @@ import { Calendar, Clock, Send, PlayCircle, StopCircle, Timer, CheckCircle2, XCi
 import { showConfirm } from '../utils/appDialogs';
 import './FormRelease.css';
 
-const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`;
+const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5001/api`;
 
 const FormRelease = () => {
   const [sessions, setSessions] = useState([]);

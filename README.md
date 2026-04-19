@@ -1,4 +1,4 @@
-﻿# [doc] Faculty Appraisal System - LNMIIT
+# [doc] Faculty Appraisal System - LNMIIT
 ### A Full-Stack Web Application for End-to-End Annual Faculty Performance Appraisal Management
 
 ## ðŸ“Œ Table of Contents
@@ -930,7 +930,7 @@ Scheduler: `backend/services/schedulerService.js` (node-cron)
 
 ## 18. API Reference
 
-### Base URL: `http://localhost:5000/api`
+### Base URL: `http://localhost:5001/api`
 
 ### Authentication
 | Method | Endpoint | Description |
@@ -1198,7 +1198,7 @@ This creates (or resets) the default admin account:
 ```bash
 # Terminal 1 - Backend
 cd backend
-npm run dev    # nodemon -> http://localhost:5000
+npm run dev    # nodemon → http://localhost:5001
 
 # Terminal 2 - Frontend
 npm run dev    # Vite -> http://localhost:5173
