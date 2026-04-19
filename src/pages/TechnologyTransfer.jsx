@@ -74,15 +74,26 @@ const TechnologyTransfer = () => {
       }
 
       if (technologyTransferId) {
-        await fetch(`http://localhost:5001/api/activities/tech-transfer/${technologyTransferId}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        try {
+          await fetch(`http://localhost:5001/api/activities/tech-transfer/${technologyTransferId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        } catch (e) {
+          console.warn('Old tech transfer could not be deleted (might be already gone):', e)
+        }
       }
 
       if (!formData.technologyInfo.trim()) {
         window.appToast('Data saved successfully!')
         return true
+      }
+
+      // Mandatory evidence check
+      if (!evidenceFile && !persistedEvidenceFile) {
+        window.appToast('Upload Evidence is mandatory when Technology Developed/Transferred details are provided.')
+        setLoading(false)
+        return false
       }
 
       const formDataObj = new FormData()
@@ -107,7 +118,9 @@ const TechnologyTransfer = () => {
       if (data.success) {
         setTechnologyTransferId(data.id || data?.data?.id || technologyTransferId)
         if (evidenceFile) {
+          // Update persistent name to avoid repeat-mandate on immediate double-save
           setPersistedEvidenceFile(evidenceFile.name)
+          setEvidenceFile(null)
         }
         window.appToast('Data saved successfully!')
         return true
@@ -128,14 +141,13 @@ const TechnologyTransfer = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Technology Developed/Transferred</h1>
-          <p className="page-subtitle">Technology Developed/Transferred, if any</p>
         </div>
       </div>
 
       <div className="form-card">
         <div className="form-section">
           <div className="form-field-vertical">
-            <label>Technology Developed/Transferred, if any:</label>
+            <label>Technology Developed/Transferred</label>
             <textarea
               rows="8"
               value={formData.technologyInfo}

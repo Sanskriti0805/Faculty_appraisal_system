@@ -87,7 +87,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
       id: 1,
       projectName: '',
       fundingAgency: '',
-      currency: 'INR',
+      currency: '',
       grantAmount: '',
       amountInLakhs: '',
       duration: '',
@@ -102,7 +102,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
       id: 1,
       title: '',
       fundingAgency: '',
-      currency: 'INR',
+      currency: '',
       grantAmount: '',
       amountInLakhs: '',
       duration: '',
@@ -211,7 +211,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
       id: Date.now(),
       projectName: '',
       fundingAgency: '',
-      currency: 'INR',
+      currency: '',
       grantAmount: '',
       amountInLakhs: '',
       duration: '',
@@ -247,7 +247,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
       id: Date.now(),
       title: '',
       fundingAgency: '',
-      currency: 'INR',
+      currency: '',
       grantAmount: '',
       amountInLakhs: '',
       duration: '',
@@ -315,8 +315,24 @@ const ResearchGrants = ({ initialData, readOnly }) => {
         const currentIds = new Set()
 
         for (const grant of grants) {
-          if (!grant.projectName && !grant.fundingAgency && !grant.grantAmount && !grant.amountInLakhs && !grant.duration && !grant.researchers && !grant.role && !grant.evidenceFile) {
-            continue
+          const hasAny = (
+            grant.projectName?.trim() || 
+            grant.fundingAgency?.trim() || 
+            grant.currency || 
+            grant.grantAmount?.trim() || 
+            grant.amountInLakhs?.trim() || 
+            grant.duration?.trim() || 
+            grant.researchers?.trim() || 
+            grant.role?.trim() || 
+            grant.evidenceFile || 
+            grant.evidence_file
+          );
+
+          if (!hasAny) continue;
+
+          if (!grant.projectName?.trim() || !grant.fundingAgency?.trim() || !grant.currency || !grant.grantAmount?.trim() || !grant.amountInLakhs?.trim() || !grant.duration?.trim() || !grant.researchers?.trim() || !grant.role?.trim() || (!grant.evidenceFile && !grant.evidence_file)) {
+            window.appToast('Please fill all fields for External Grant: ' + (grant.projectName || 'Entry #' + (grants.indexOf(grant) + 1)));
+            return false;
           }
 
           const grantData = {
@@ -358,8 +374,24 @@ const ResearchGrants = ({ initialData, readOnly }) => {
         const currentIds = new Set()
 
         for (const proposal of proposals) {
-          if (!proposal.title && !proposal.fundingAgency && !proposal.grantAmount && !proposal.amountInLakhs && !proposal.duration && !proposal.submissionDate && !proposal.status && !proposal.role && !proposal.evidenceFile) {
-            continue
+          const hasAny = (
+            proposal.title?.trim() || 
+            proposal.fundingAgency?.trim() || 
+            proposal.currency || 
+            proposal.grantAmount?.trim() || 
+            proposal.amountInLakhs?.trim() || 
+            proposal.duration?.trim() || 
+            proposal.submissionDate || 
+            proposal.role?.trim() || 
+            proposal.evidenceFile || 
+            proposal.evidence_file
+          );
+
+          if (!hasAny) continue;
+
+          if (!proposal.title?.trim() || !proposal.fundingAgency?.trim() || !proposal.currency || !proposal.grantAmount?.trim() || !proposal.amountInLakhs?.trim() || !proposal.duration?.trim() || !proposal.submissionDate || !proposal.role?.trim() || (!proposal.evidenceFile && !proposal.evidence_file)) {
+            window.appToast('Please fill all fields for Research Proposal: ' + (proposal.title || 'Entry #' + (proposals.indexOf(proposal) + 1)));
+            return false;
           }
 
           const proposalData = {
@@ -484,15 +516,15 @@ const ResearchGrants = ({ initialData, readOnly }) => {
               <table className="courses-table">
                 <thead>
                   <tr>
-                    <th style={{ width: '12%' }}>Name of Externally Sponsored Projects Sanctioned</th>
-                    <th style={{ width: '10%' }}>Funding Agency</th>
-                    <th style={{ width: '7%' }}>Currency</th>
-                    <th style={{ width: '9%' }}>Approved Grant Amount</th>
-                    <th style={{ width: '9%' }}>Amount in Lakhs</th>
-                    <th style={{ width: '12%' }}>Duration (in years) and Type of Project</th>
-                    <th style={{ width: '10%' }}>Number of JRFs/SRFs/PDFs supported</th>
-                    <th style={{ width: '9%' }}>Your Role</th>
-                    <th style={{ width: '11%' }}>{readOnly ? 'Evidence' : 'Upload Evidence'}</th>
+                    <th style={{ width: '12%' }}>Name of Externally Sponsored Projects Sanctioned<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '10%' }}>Funding Agency<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '7%' }}>Currency<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '9%' }}>Approved Grant Amount<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '9%' }}>Amount in Lakhs<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '12%' }}>Duration (in years)<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '10%' }}>Number of JRFs/SRFs/PDFs supported<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '9%' }}>Your Role<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '11%' }}>{readOnly ? 'Evidence' : 'Upload Evidence'}<span style={{ color: '#d64550' }}>*</span></th>
                     {!readOnly && <th style={{ width: '5%' }}>Action</th>}
                   </tr>
                 </thead>
@@ -539,6 +571,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                             }}
                             disabled={readOnly}
                           >
+                            <option value="">Select</option>
                             <option value="INR">INR</option>
                             <option value="USD">USD</option>
                             <option value="EUR">EUR</option>
@@ -577,7 +610,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                             type="text"
                             value={grant.duration}
                             onChange={(e) => handleGrantInputChange(index, 'duration', e.target.value)}
-                            placeholder={readOnly ? '' : 'Duration and type'}
+                            placeholder={readOnly ? '' : 'Duration'}
                             disabled={readOnly}
                             style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
                           />
@@ -614,7 +647,6 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                             <option value="">Select</option>
                             <option value="PI">PI</option>
                             <option value="Co-PI">Co-PI</option>
-                            <option value="Co-Investigator">Co-Investigator</option>
                           </select>
                         </ReadOnlyField>
                       </td>
@@ -721,15 +753,15 @@ const ResearchGrants = ({ initialData, readOnly }) => {
               <table className="courses-table">
                 <thead>
                   <tr>
-                    <th style={{ width: '16%' }}>Title of the External Project Proposal Submitted</th>
-                    <th style={{ width: '14%' }}>Funding Agency</th>
-                    <th style={{ width: '8%' }}>Currency</th>
-                    <th style={{ width: '11%' }}>Amount of Grant Sought</th>
-                    <th style={{ width: '11%' }}>Amount in Lakhs</th>
-                    <th style={{ width: '12%' }}>Duration of Project as Proposed</th>
-                    <th style={{ width: '12%' }}>Date of Submission and Current Status</th>
-                    <th style={{ width: '10%' }}>Your Role</th>
-                    <th style={{ width: '11%' }}>{readOnly ? 'Evidence' : 'Upload Evidence'}</th>
+                    <th style={{ width: '16%' }}>Title of the External Project Proposal Submitted<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '14%' }}>Funding Agency<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '8%' }}>Currency<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '11%' }}>Amount of Grant Sought<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '11%' }}>Amount in Lakhs<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '12%' }}>Duration (in years)<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '12%' }}>Date of Submission<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '10%' }}>Your Role<span style={{ color: '#d64550' }}>*</span></th>
+                    <th style={{ width: '11%' }}>{readOnly ? 'Evidence' : 'Upload Evidence'}<span style={{ color: '#d64550' }}>*</span></th>
                     {!readOnly && <th style={{ width: '5%' }}>Action</th>}
                   </tr>
                 </thead>
@@ -776,6 +808,7 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                             }}
                             disabled={readOnly}
                           >
+                            <option value="">Select</option>
                             <option value="INR">INR</option>
                             <option value="USD">USD</option>
                             <option value="EUR">EUR</option>
@@ -851,7 +884,6 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                             <option value="">Select</option>
                             <option value="PI">PI</option>
                             <option value="Co-PI">Co-PI</option>
-                            <option value="Co-Investigator">Co-Investigator</option>
                           </select>
                         </ReadOnlyField>
                       </td>

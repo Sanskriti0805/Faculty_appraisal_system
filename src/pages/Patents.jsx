@@ -6,6 +6,21 @@ import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
 
+const isNotFoundError = (error) => error?.response?.status === 404
+
+const deleteIgnoringNotFound = async (deleteFn, ids) => {
+  const validIds = (ids || []).filter(id => Number.isFinite(Number(id)))
+  const results = await Promise.allSettled(validIds.map(id => deleteFn(id)))
+
+  const firstRealError = results.find(
+    result => result.status === 'rejected' && !isNotFoundError(result.reason)
+  )
+
+  if (firstRealError) {
+    throw firstRealError.reason
+  }
+}
+
 const Patents = ({ initialData, readOnly }) => {
   const { user } = useAuth()
   const [formData, setFormData] = useState({
@@ -106,21 +121,17 @@ const Patents = ({ initialData, readOnly }) => {
       // Save each patent type if it has content AND doesn't already exist in database
       const promises = []
 
-      if (patentIds.granted) {
-        promises.push(patentsService.deletePatent(patentIds.granted))
-      }
-      if (patentIds.published) {
-        promises.push(patentsService.deletePatent(patentIds.published))
-      }
-      if (patentIds.applied) {
-        promises.push(patentsService.deletePatent(patentIds.applied))
-      }
-
-      await Promise.all(promises)
+      const idsToDelete = [patentIds.granted, patentIds.published, patentIds.applied]
+      await deleteIgnoringNotFound(patentsService.deletePatent, idsToDelete)
 
       const createPromises = []
 
       if (formData.patentsGranted.trim()) {
+        if (!certificateFiles.granted) {
+          window.appToast('Please upload the Certificate for Patents granted.');
+          setLoading(false);
+          return false;
+        }
         createPromises.push(patentsService.createPatent({
           faculty_id: facultyId,
           patent_type: 'Patents granted',
@@ -133,6 +144,11 @@ const Patents = ({ initialData, readOnly }) => {
       }
 
       if (formData.patentsPublished.trim()) {
+        if (!certificateFiles.published) {
+          window.appToast('Please upload the Certificate for Patents published.');
+          setLoading(false);
+          return false;
+        }
         createPromises.push(patentsService.createPatent({
           faculty_id: facultyId,
           patent_type: 'Patents published',
@@ -145,6 +161,11 @@ const Patents = ({ initialData, readOnly }) => {
       }
 
       if (formData.patentsApplied.trim()) {
+        if (!certificateFiles.applied) {
+          window.appToast('Please upload the Application Document for Patents applied for.');
+          setLoading(false);
+          return false;
+        }
         createPromises.push(patentsService.createPatent({
           faculty_id: facultyId,
           patent_type: 'Patents applied for',
@@ -180,7 +201,6 @@ const Patents = ({ initialData, readOnly }) => {
         <div className="page-header">
           <div>
             <h1 className="page-title">Patents</h1>
-            <p className="page-subtitle">Patents Information</p>
           </div>
         </div>
       )}
@@ -188,7 +208,7 @@ const Patents = ({ initialData, readOnly }) => {
       <div className="form-card">
         <div className="form-section">
           <div className="form-field-vertical">
-            <label>a) Patents granted: (Name, Patent number, granting agency)</label>
+            <label>a) Patents granted</label>
             <textarea
               rows="5"
               value={formData.patentsGranted}
@@ -201,7 +221,7 @@ const Patents = ({ initialData, readOnly }) => {
 
           {/* Certificate Upload for Patents Granted */}
           <div className="form-field-vertical">
-            <label>{readOnly ? 'Evidence (if granted)' : 'Upload Certificate (if granted)'}</label>
+            <label>{readOnly ? 'Evidence' : 'Upload Certificate'}</label>
             {readOnly ? (
               certificateFiles.granted && (
                 <a
@@ -277,7 +297,7 @@ const Patents = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>b) Patents published:</label>
+            <label>b) Patents published</label>
             <textarea
               rows="5"
               value={formData.patentsPublished}
@@ -290,7 +310,7 @@ const Patents = ({ initialData, readOnly }) => {
 
           {/* Certificate Upload for Patents Published */}
           <div className="form-field-vertical">
-            <label>{readOnly ? 'Evidence (if available)' : 'Upload Certificate (if available)'}</label>
+            <label>{readOnly ? 'Evidence' : 'Upload Certificate'}</label>
             {readOnly ? (
               certificateFiles.published && (
                 <a
@@ -366,7 +386,7 @@ const Patents = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>c) Patents applied for:</label>
+            <label>c) Patents applied for</label>
             <textarea
               rows="5"
               value={formData.patentsApplied}
@@ -379,7 +399,7 @@ const Patents = ({ initialData, readOnly }) => {
 
           {/* Certificate Upload for Patents Applied */}
           <div className="form-field-vertical">
-            <label>{readOnly ? 'Evidence (if available)' : 'Upload Application Document (if available)'}</label>
+            <label>{readOnly ? 'Evidence' : 'Upload Application Document'}</label>
             {readOnly ? (
               certificateFiles.applied && (
                 <a
