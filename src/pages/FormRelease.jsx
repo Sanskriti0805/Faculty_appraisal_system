@@ -22,6 +22,17 @@ const FormRelease = () => {
     reminder_time: '08:00'
   });
 
+  const generateAcademicYears = (startYear = 2023, count = 60) => {
+    const years = [];
+    for (let i = 0; i < count; i++) {
+      const y = startYear + i;
+      const shortNext = String((y + 1) % 100).padStart(2, '0');
+      const label = `${y}–${shortNext}`;
+      years.push(label);
+    }
+    return years;
+  };
+
   const [showReminderForm, setShowReminderForm] = useState(false);
   const [editReminderDays, setEditReminderDays] = useState(2);
   const [editReminderTime, setEditReminderTime] = useState('08:00');
@@ -471,10 +482,14 @@ const FormRelease = () => {
             <form onSubmit={handleCreateSession}>
               <div className="fr-form-group">
                 <label>Academic Year</label>
-                <input type="text" placeholder="e.g., 2025–26"
-                  value={newSession.academic_year}
-                  onChange={(e) => setNewSession({...newSession, academic_year: e.target.value})}
-                  required />
+                <select value={newSession.academic_year}
+                  onChange={(e) => setNewSession({ ...newSession, academic_year: e.target.value })}
+                  required>
+                  <option value="">Select academic year</option>
+                  {generateAcademicYears(2023, 60).map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
               </div>
               <div className="fr-form-row">
                 <div className="fr-form-group">
