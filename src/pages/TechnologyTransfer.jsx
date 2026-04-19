@@ -145,7 +145,7 @@ const TechnologyTransfer = () => {
     const newEntry = {
       localId: createLocalId(),
       id: null,
-      technologyType: 'Technology developed and transferred',
+      technologyType: '',
       description: '',
       file: null,
       isCollapsed: false
