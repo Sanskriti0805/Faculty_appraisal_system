@@ -749,7 +749,19 @@ ${facultySections}
   const selectedRows = combinedEntries
     .map((entry) => {
       const selectedFormType = activeFormType;
-      const selectedSubmission = entry.forms[selectedFormType];
+      const selectedSubmission = entry.forms[selectedFormType] || {
+        id: null,
+        faculty_id: entry.faculty_id,
+        faculty_name: entry.faculty_name,
+        email: entry.email,
+        department: entry.department,
+        academic_year: entry.academic_year,
+        form_type: selectedFormType,
+        status: 'draft',
+        submitted_at: null,
+        locked: 0,
+        session_locked: Number(entry.forms.A?.session_locked || entry.forms.B?.session_locked || 0)
+      };
       return {
         ...entry,
         selectedFormType,
@@ -1021,9 +1033,12 @@ ${facultySections}
                   <tbody>
                     {grouped[yr].map(entry => {
                       const submission = entry.selectedSubmission;
+                      const hasRealSubmission = Number(submission?.id || 0) > 0;
                       const isFormB = entry.selectedFormType === 'B';
                       const isPendingHod = isFormB && ['submitted_hod', 'under_review_hod'].includes(submission.status);
+                      const isDraft = String(submission?.status || '').toLowerCase() === 'draft';
                       const canDofaReview = !isPendingHod;
+                      const canOpenSubmission = hasRealSubmission && canDofaReview && !isDraft;
                       const isSessionLocked = Number(submission.session_locked || 0) === 1;
                       const canMutate = canDofaReview && !isSessionLocked;
 
@@ -1054,8 +1069,8 @@ ${facultySections}
                             <button
                               className="action-btn btn-view"
                               onClick={() => navigate(`/Dofa-office/review/${submission.id}`)}
-                              title={canDofaReview ? 'View Full Form' : 'Available after HoD approval'}
-                              disabled={!canDofaReview}
+                              title={canOpenSubmission ? 'View Full Form' : (isDraft ? 'Available after faculty submission' : 'Available after HoD approval')}
+                              disabled={!canOpenSubmission}
                             >
                               <Eye size={16} />
                             </button>
@@ -1064,12 +1079,12 @@ ${facultySections}
                               className="action-btn btn-download"
                               onClick={() => setDownloadModal({ open: true, submission })}
                               title={canDofaReview ? 'Download Form' : 'Available after HoD approval'}
-                              disabled={!canDofaReview}
+                              disabled={!canDofaReview || !hasRealSubmission}
                             >
                               <Download size={16} />
                             </button>
 
-                            {submission.status !== 'approved' && canMutate && (
+                            {hasRealSubmission && submission.status !== 'approved' && canMutate && (
                               <button
                                 className="action-btn btn-approve"
                                 onClick={() => handleUpdateStatus(submission.id, 'approved', submission.faculty_name)}
@@ -1079,7 +1094,7 @@ ${facultySections}
                               </button>
                             )}
 
-                            {submission.status !== 'sent_back' && submission.status !== 'draft' && canMutate && (
+                            {hasRealSubmission && submission.status !== 'sent_back' && submission.status !== 'draft' && canMutate && (
                               <button
                                 className="action-btn btn-send-back"
                                 onClick={() => handleUpdateStatus(submission.id, 'sent_back', submission.faculty_name)}
@@ -1089,7 +1104,7 @@ ${facultySections}
                               </button>
                             )}
 
-                            {!isSessionLocked && (
+                            {hasRealSubmission && !isSessionLocked && (
                               <button
                                 className={`action-btn ${submission.locked ? 'btn-unlock' : 'btn-lock'}`}
                                 onClick={() => handleToggleLock(submission.id, submission.locked)}
@@ -1103,7 +1118,7 @@ ${facultySections}
                               className="action-btn btn-reminder"
                               onClick={() => handleSendReminder(submission.id, submission.email, submission.faculty_name)}
                               title="Send Reminder Email"
-                              disabled={isSessionLocked}
+                              disabled={isSessionLocked || !hasRealSubmission}
                             >
                               <Mail size={16} />
                             </button>
