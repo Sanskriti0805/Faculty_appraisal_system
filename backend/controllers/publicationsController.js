@@ -83,7 +83,7 @@ exports.getPublicationsByFaculty = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
-    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+    const sessionWindow = await getCurrentSessionWindow(db);
 
     if (!facultyInfoId) {
       return res.json({
@@ -204,6 +204,7 @@ exports.createPublication = async (req, res) => {
       editors,
       status = 'draft'
     } = req.body;
+    const sessionId = await getCurrentSessionWindow(db);
 
     const facultyInfoId = await resolveFacultyInfoId({
       facultyId: faculty_id || req.user?.id,
@@ -241,12 +242,12 @@ exports.createPublication = async (req, res) => {
     // Insert publication
     const [result] = await connection.query(
       `INSERT INTO research_publications 
-      (faculty_id, publication_type, sub_type, title, year_of_publication, journal_name, 
+      (faculty_id, session_id, publication_type, sub_type, title, year_of_publication, journal_name, 
        conference_name, abbreviation, volume, number, pages_from, pages_to, date_from, 
        date_to, type_of_conference, city, state, country, publication_agency, title_of_book, 
        publication_id, details, evidence_file, status) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [facultyInfoId, publication_type, sub_type, title, year_of_publication, journal_name,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [facultyInfoId, sessionId, publication_type, sub_type, title, year_of_publication, journal_name,
         conference_name, abbreviation, volume, number, pages_from, pages_to, normalizedDateFrom,
         normalizedDateTo, type_of_conference, city, state, country, publication_agency, title_of_book,
         publication_id, details, evidence_file, status]
@@ -292,7 +293,8 @@ exports.createPublication = async (req, res) => {
 // Delete publication
 exports.deletePublication = async (req, res) => {
   try {
-    const [result] = await db.query('DELETE FROM research_publications WHERE id = ?', [req.params.id]);
+    const sessionId = await getCurrentSessionWindow(db);
+    const [result] = await db.query('DELETE FROM research_publications WHERE id = ? AND session_id = ?', [req.params.id, sessionId]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Publication not found' });

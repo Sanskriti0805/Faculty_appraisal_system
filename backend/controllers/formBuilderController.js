@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { getCurrentSessionWindow } = require('../utils/sessionScope');
 
 let sectionSchemaCapabilities = null;
 
@@ -256,12 +257,13 @@ exports.updateFieldOrder = async (req, res) => {
 exports.saveResponses = async (req, res) => {
     try {
         const { faculty_id, submission_id, responses } = req.body;
+        const sessionId = await getCurrentSessionWindow(db);
         for (const resp of responses) {
             await db.query(
-                `INSERT INTO dynamic_responses (faculty_id, field_id, submission_id, value) 
-                 VALUES (?, ?, ?, ?) 
+                `INSERT INTO dynamic_responses (faculty_id, session_id, field_id, submission_id, value) 
+                 VALUES (?, ?, ?, ?, ?) 
                  ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = CURRENT_TIMESTAMP`,
-                [faculty_id, resp.field_id, submission_id || null, JSON.stringify(resp.value)]
+                [faculty_id, sessionId, resp.field_id, submission_id || null, JSON.stringify(resp.value)]
             );
         }
         res.status(200).json({ success: true, message: 'Responses saved' });
@@ -277,8 +279,9 @@ exports.saveResponses = async (req, res) => {
 exports.getResponses = async (req, res) => {
     try {
         const { faculty_id, submission_id } = req.query;
-        let query = 'SELECT * FROM dynamic_responses WHERE faculty_id = ?';
-        let params = [faculty_id];
+        const sessionId = await getCurrentSessionWindow(db);
+        let query = 'SELECT * FROM dynamic_responses WHERE faculty_id = ? AND session_id = ?';
+        let params = [faculty_id, sessionId];
         if (submission_id) {
             query += ' AND submission_id = ?';
             params.push(submission_id);

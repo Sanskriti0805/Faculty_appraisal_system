@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { getCurrentSessionWindow } = require('../utils/sessionScope');
 
 const toNumberOrNull = (value) => {
   const num = Number(value);
@@ -68,6 +69,7 @@ const resolveFacultyInfoId = async ({ facultyId, email }) => {
 exports.createPaperReview = async (req, res) => {
     try {
     const { faculty_id, journal_name, review_type, tier, number_of_papers, month_of_review, existing_evidence_file } = req.body;
+  const sessionId = await getCurrentSessionWindow(db);
         
         const facultyInfoId = await resolveFacultyInfoId({
           facultyId: faculty_id || req.user?.id,
@@ -80,9 +82,9 @@ exports.createPaperReview = async (req, res) => {
 
         const evidence_file = req.file ? req.file.filename : (existing_evidence_file || null);
         const [result] = await db.query(
-            `INSERT INTO paper_reviews (faculty_id, journal_name, review_type, tier, number_of_papers, month_of_review, evidence_file) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [facultyInfoId, journal_name, review_type, tier, number_of_papers, month_of_review, evidence_file]
+          `INSERT INTO paper_reviews (faculty_id, session_id, journal_name, review_type, tier, number_of_papers, month_of_review, evidence_file) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [facultyInfoId, sessionId, journal_name, review_type, tier, number_of_papers, month_of_review, evidence_file]
         );
         res.status(201).json({ success: true, id: result.insertId });
     } catch (error) {
@@ -92,7 +94,8 @@ exports.createPaperReview = async (req, res) => {
 
 exports.deletePaperReview = async (req, res) => {
     try {
-        const [result] = await db.query('DELETE FROM paper_reviews WHERE id = ?', [req.params.id]);
+    const sessionId = await getCurrentSessionWindow(db);
+    const [result] = await db.query('DELETE FROM paper_reviews WHERE id = ? AND session_id = ?', [req.params.id, sessionId]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Paper review not found' });
@@ -108,6 +111,7 @@ exports.deletePaperReview = async (req, res) => {
 exports.createTechTransfer = async (req, res) => {
     try {
     const { faculty_id, title, agency, date, existing_evidence_file } = req.body;
+  const sessionId = await getCurrentSessionWindow(db);
         
         const facultyInfoId = await resolveFacultyInfoId({
           facultyId: faculty_id || req.user?.id,
@@ -120,9 +124,9 @@ exports.createTechTransfer = async (req, res) => {
 
         const evidence_file = req.file ? req.file.filename : (existing_evidence_file || null);
         const [result] = await db.query(
-            `INSERT INTO technology_transfer (faculty_id, title, agency, date, evidence_file) 
-             VALUES (?, ?, ?, ?, ?)`,
-            [facultyInfoId, title, agency, date, evidence_file]
+          `INSERT INTO technology_transfer (faculty_id, session_id, title, agency, date, evidence_file) 
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [facultyInfoId, sessionId, title, agency, date, evidence_file]
         );
         res.status(201).json({ success: true, id: result.insertId });
     } catch (error) {
@@ -134,6 +138,7 @@ exports.createTechTransfer = async (req, res) => {
 exports.createConferenceSession = async (req, res) => {
     try {
   const { faculty_id, conference_name, session_title, role, location, date, existing_evidence_file } = req.body;
+  const sessionId = await getCurrentSessionWindow(db);
         
         const facultyInfoId = await resolveFacultyInfoId({
           facultyId: faculty_id || req.user?.id,
@@ -146,9 +151,9 @@ exports.createConferenceSession = async (req, res) => {
 
         const evidence_file = req.file ? req.file.filename : (existing_evidence_file || null);
         const [result] = await db.query(
-          `INSERT INTO conference_sessions (faculty_id, conference_name, session_title, date, role, location, evidence_file) 
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [facultyInfoId, conference_name, session_title, date || null, role, location, evidence_file]
+          `INSERT INTO conference_sessions (faculty_id, session_id, conference_name, session_title, date, role, location, evidence_file) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [facultyInfoId, sessionId, conference_name, session_title, date || null, role, location, evidence_file]
         );
         res.status(201).json({ success: true, id: result.insertId });
     } catch (error) {
@@ -158,7 +163,8 @@ exports.createConferenceSession = async (req, res) => {
 
 exports.deleteConferenceSession = async (req, res) => {
     try {
-        const [result] = await db.query('DELETE FROM conference_sessions WHERE id = ?', [req.params.id]);
+    const sessionId = await getCurrentSessionWindow(db);
+    const [result] = await db.query('DELETE FROM conference_sessions WHERE id = ? AND session_id = ?', [req.params.id, sessionId]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Conference session not found' });
@@ -174,6 +180,7 @@ exports.deleteConferenceSession = async (req, res) => {
 exports.createKeynoteTalk = async (req, res) => {
     try {
   const { faculty_id, event_name, title, event_type, audience_type, date, location, existing_evidence_file } = req.body;
+  const sessionId = await getCurrentSessionWindow(db);
         
         const facultyInfoId = await resolveFacultyInfoId({
           facultyId: faculty_id || req.user?.id,
@@ -186,9 +193,9 @@ exports.createKeynoteTalk = async (req, res) => {
 
         const evidence_file = req.file ? req.file.filename : (existing_evidence_file || null);
         const [result] = await db.query(
-          `INSERT INTO keynotes_talks (faculty_id, event_name, title, date, location, event_type, audience_type, evidence_file) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [facultyInfoId, event_name, title, date || null, location || null, event_type, audience_type, evidence_file]
+          `INSERT INTO keynotes_talks (faculty_id, session_id, event_name, title, date, location, event_type, audience_type, evidence_file) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [facultyInfoId, sessionId, event_name, title, date || null, location || null, event_type, audience_type, evidence_file]
         );
         res.status(201).json({ success: true, id: result.insertId });
     } catch (error) {
@@ -198,7 +205,8 @@ exports.createKeynoteTalk = async (req, res) => {
 
 exports.deleteKeynoteTalk = async (req, res) => {
     try {
-        const [result] = await db.query('DELETE FROM keynotes_talks WHERE id = ?', [req.params.id]);
+    const sessionId = await getCurrentSessionWindow(db);
+    const [result] = await db.query('DELETE FROM keynotes_talks WHERE id = ? AND session_id = ?', [req.params.id, sessionId]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Keynote/talk not found' });
@@ -212,7 +220,8 @@ exports.deleteKeynoteTalk = async (req, res) => {
 
 exports.deleteTechTransfer = async (req, res) => {
     try {
-        const [result] = await db.query('DELETE FROM technology_transfer WHERE id = ?', [req.params.id]);
+    const sessionId = await getCurrentSessionWindow(db);
+    const [result] = await db.query('DELETE FROM technology_transfer WHERE id = ? AND session_id = ?', [req.params.id, sessionId]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Technology transfer entry not found' });

@@ -6,14 +6,14 @@ const { getCurrentSessionWindow, appendCreatedAtWindow } = require('../utils/ses
 exports.getGoalsByFaculty = async (req, res) => {
     try {
         const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+        const sessionId = await getCurrentSessionWindow(db);
         if (!facultyInfoId) {
             return res.json({ success: true, data: [] });
         }
-        const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
         const scoped = appendCreatedAtWindow(
             'SELECT * FROM faculty_goals WHERE faculty_id = ?',
             [facultyInfoId],
-            sessionWindow
+            sessionId
         );
 
         const [rows] = await db.query(
@@ -31,6 +31,7 @@ exports.saveGoals = async (req, res) => {
     try {
         await connection.beginTransaction();
         const { faculty_id, goals } = req.body;
+        const sessionId = await getCurrentSessionWindow(db);
 
         const toText = (value) => (value === null || value === undefined ? '' : String(value));
         const isMeaningfulGoal = (goal = {}) => {
@@ -52,7 +53,7 @@ exports.saveGoals = async (req, res) => {
         }
 
         // Delete existing goals for this faculty for a clean save (simple approach)
-        await connection.query('DELETE FROM faculty_goals WHERE faculty_id = ?', [facultyInfoId]);
+        await connection.query('DELETE FROM faculty_goals WHERE faculty_id = ? AND session_id = ?', [facultyInfoId, sessionId]);
 
         // Insert new goals
         if (goals && Array.isArray(goals)) {
@@ -60,10 +61,11 @@ exports.saveGoals = async (req, res) => {
             for (const goal of cleanedGoals) {
                 await connection.query(
                     `INSERT INTO faculty_goals 
-          (faculty_id, semester, teaching, research, contribution, outreach, description) 
-          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          (faculty_id, session_id, semester, teaching, research, contribution, outreach, description) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         facultyInfoId,
+                        sessionId,
                         goal.semester || null,
                         toText(goal.teaching).trim() || null,
                         toText(goal.research).trim() || null,

@@ -26,37 +26,30 @@ async function getTargetAcademicYear(db) {
   return getCurrentAcademicYear();
 }
 
-async function getSessionWindowByAcademicYear(db, academicYear) {
-  if (!academicYear) return null;
+async function getSessionFromSettings(db) {
+  try {
+    const [rows] = await db.query(
+      'SELECT value FROM settings WHERE `key` = ? LIMIT 1',
+      ['current_session']
+    );
 
-  const [rows] = await db.query(
-    `SELECT start_date, COALESCE(deadline, end_date) AS effective_end_date
-     FROM appraisal_sessions
-     WHERE academic_year = ?
-     ORDER BY created_at DESC, id DESC
-     LIMIT 1`,
-    [academicYear]
-  );
-
-  if (rows.length === 0) return null;
-
-  const startDate = rows[0].start_date ? new Date(rows[0].start_date) : null;
-  const endDate = rows[0].effective_end_date ? new Date(rows[0].effective_end_date) : null;
-
-  if (!startDate || !endDate || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    return null;
+    if (rows.length > 0 && rows[0].value) {
+      return String(rows[0].value).trim();
+    }
+  } catch (error) {
+    // settings table may not exist in older deployments; fallback handled below.
   }
 
-  const endExclusive = new Date(endDate);
-  endExclusive.setDate(endExclusive.getDate() + 1);
-  endExclusive.setHours(0, 0, 0, 0);
-
-  return { startDate, endExclusive };
+  return null;
 }
 
 async function getCurrentSessionWindow(db) {
-  const academicYear = await getTargetAcademicYear(db);
-  return getSessionWindowByAcademicYear(db, academicYear);
+  const fromSettings = await getSessionFromSettings(db);
+  if (fromSettings) {
+    return fromSettings;
+  }
+
+  return getTargetAcademicYear(db);
 }
 
 function appendCreatedAtWindow(sql, params, sessionWindow, column = 'created_at') {
@@ -65,8 +58,8 @@ function appendCreatedAtWindow(sql, params, sessionWindow, column = 'created_at'
   }
 
   return {
-    sql: `${sql} AND ${column} >= ? AND ${column} < ?`,
-    params: [...params, sessionWindow.startDate, sessionWindow.endExclusive]
+    sql: `${sql} AND session_id = ?`,
+    params: [...params, sessionWindow]
   };
 }
 

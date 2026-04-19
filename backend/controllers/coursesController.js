@@ -82,7 +82,7 @@ exports.getCoursesByFaculty = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
-    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+    const sessionWindow = await getCurrentSessionWindow(db);
 
     if (!facultyInfoId) {
       return res.json({
@@ -153,6 +153,7 @@ exports.createCourse = async (req, res) => {
       existing_evidence_file,
       status = 'draft'
     } = req.body;
+    const sessionId = await getCurrentSessionWindow(db);
     const evidence_file = req.file ? req.file.filename : (existing_evidence_file || null);
 
     const parsedFeedback = feedback_score === undefined || feedback_score === null || feedback_score === ''
@@ -198,6 +199,7 @@ exports.createCourse = async (req, res) => {
     const availableColumns = await getCoursesTaughtColumns();
     const insertColumns = [
       'faculty_id',
+      'session_id',
       'section',
       'semester',
       'course_code',
@@ -209,6 +211,7 @@ exports.createCourse = async (req, res) => {
 
     const insertValues = [
       facultyInfoId,
+      sessionId,
       section ?? null,
       semester ?? null,
       course_code ?? null,
@@ -294,6 +297,7 @@ exports.createCourse = async (req, res) => {
 exports.updateCourse = async (req, res) => {
   try {
     const { id } = req.params;
+    const sessionId = await getCurrentSessionWindow(db);
     const {
       semester,
       course_code,
@@ -314,10 +318,10 @@ exports.updateCourse = async (req, res) => {
     if (availableColumns.has('feedback_score')) { setClauses.push('feedback_score = ?'); values.push(feedback_score ?? null); }
     if (availableColumns.has('status')) { setClauses.push('status = ?'); values.push(status); }
 
-    values.push(id);
+    values.push(id, sessionId);
 
     const [result] = await db.query(
-      `UPDATE courses_taught SET ${setClauses.join(', ')} WHERE id = ?`,
+      `UPDATE courses_taught SET ${setClauses.join(', ')} WHERE id = ? AND session_id = ?`,
       values
     );
 
@@ -345,6 +349,7 @@ exports.createNewCourse = async (req, res) => {
       existing_cif_file,
       status = 'draft'
     } = req.body;
+    const sessionId = await getCurrentSessionWindow(db);
     const cif_file = req.file ? req.file.filename : (existing_cif_file || null);
 
     const hasMeaningfulPayload = Boolean(
@@ -371,8 +376,8 @@ exports.createNewCourse = async (req, res) => {
     }
 
     const [result] = await db.query(
-      'INSERT INTO new_courses (faculty_id, level_type, program, course_name, course_code, level, remarks, cif_file, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [facultyInfoId, level_type, program, course_name, course_code, level, remarks, cif_file, status]
+      'INSERT INTO new_courses (faculty_id, session_id, level_type, program, course_name, course_code, level, remarks, cif_file, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [facultyInfoId, sessionId, level_type, program, course_name, course_code, level, remarks, cif_file, status]
     );
 
     res.status(201).json({
@@ -387,13 +392,14 @@ exports.createNewCourse = async (req, res) => {
 
 exports.deleteNewCourse = async (req, res) => {
   try {
+    const sessionId = await getCurrentSessionWindow(db);
     const facultyInfoId = await resolveFacultyInfoId({ email: req.user?.email, facultyId: req.user?.id });
 
     if (!facultyInfoId) {
       return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
     }
 
-    const [result] = await db.query('DELETE FROM new_courses WHERE id = ? AND faculty_id = ?', [req.params.id, facultyInfoId]);
+    const [result] = await db.query('DELETE FROM new_courses WHERE id = ? AND faculty_id = ? AND session_id = ?', [req.params.id, facultyInfoId, sessionId]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'New course not found' });
@@ -411,7 +417,7 @@ exports.getNewCoursesByFaculty = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
-    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+    const sessionWindow = await getCurrentSessionWindow(db);
 
     if (!facultyInfoId) {
       return res.json({
@@ -461,13 +467,14 @@ exports.getNewCoursesByFaculty = async (req, res) => {
 // Delete course
 exports.deleteCourse = async (req, res) => {
   try {
+    const sessionId = await getCurrentSessionWindow(db);
     const facultyInfoId = await resolveFacultyInfoId({ email: req.user?.email, facultyId: req.user?.id });
 
     if (!facultyInfoId) {
       return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
     }
 
-    const [result] = await db.query('DELETE FROM courses_taught WHERE id = ? AND faculty_id = ?', [req.params.id, facultyInfoId]);
+    const [result] = await db.query('DELETE FROM courses_taught WHERE id = ? AND faculty_id = ? AND session_id = ?', [req.params.id, facultyInfoId, sessionId]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Course not found' });

@@ -182,13 +182,14 @@ async function bootstrapDatabaseTables() {
       CREATE TABLE IF NOT EXISTS dynamic_responses (
         id INT NOT NULL AUTO_INCREMENT,
         faculty_id INT NOT NULL,
+        session_id VARCHAR(20) NOT NULL,
         field_id INT NOT NULL,
         submission_id INT DEFAULT NULL,
         value JSON DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
-        UNIQUE KEY unique_resp (faculty_id, field_id, submission_id),
+        UNIQUE KEY unique_resp_session (faculty_id, session_id, field_id, submission_id),
         FOREIGN KEY (faculty_id) REFERENCES users (id) ON DELETE CASCADE,
         FOREIGN KEY (field_id) REFERENCES dynamic_fields (id) ON DELETE CASCADE,
         FOREIGN KEY (submission_id) REFERENCES submissions (id) ON DELETE CASCADE
@@ -264,6 +265,7 @@ async function bootstrapDatabaseTables() {
       CREATE TABLE IF NOT EXISTS faculty_goals (
         id INT PRIMARY KEY AUTO_INCREMENT,
         faculty_id INT NOT NULL,
+        session_id VARCHAR(20) NOT NULL,
         submission_id INT DEFAULT NULL,
         semester VARCHAR(50),
         teaching DECIMAL(5,2) DEFAULT 0,
@@ -283,11 +285,12 @@ async function bootstrapDatabaseTables() {
         id INT PRIMARY KEY AUTO_INCREMENT,
         faculty_id INT NOT NULL,
         academic_year VARCHAR(20) NOT NULL,
+        session_id VARCHAR(20) NOT NULL,
         section_key VARCHAR(100) NOT NULL,
         content_json JSON,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_legacy_section_year (faculty_id, academic_year, section_key),
+        UNIQUE KEY uq_legacy_section_session (faculty_id, session_id, section_key),
         FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     `);
