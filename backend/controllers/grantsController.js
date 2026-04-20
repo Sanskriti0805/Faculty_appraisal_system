@@ -68,7 +68,7 @@ exports.getGrantsByFaculty = async (req, res) => {
     if (!facultyInfoId) {
       return res.json({ success: true, data: [] });
     }
-    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+    const sessionWindow = await getCurrentSessionWindow(db);
     const scoped = appendCreatedAtWindow(
       'SELECT * FROM research_grants WHERE faculty_id = ?',
       [facultyInfoId],
@@ -100,6 +100,7 @@ exports.createGrant = async (req, res) => {
       researchers,
       role
     } = req.body;
+    const sessionId = await getCurrentSessionWindow(db);
 
     const facultyInfoId = await resolveFacultyInfoId({
       facultyId: faculty_id || req.user?.id,
@@ -114,10 +115,10 @@ exports.createGrant = async (req, res) => {
 
     const [result] = await db.query(
       `INSERT INTO research_grants 
-      (faculty_id, grant_type, project_name, funding_agency, currency, grant_amount, 
+      (faculty_id, session_id, grant_type, project_name, funding_agency, currency, grant_amount, 
        amount_in_lakhs, duration, researchers, role, evidence_file) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [facultyInfoId, grant_type, project_name, funding_agency, currency, grant_amount,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [facultyInfoId, sessionId, grant_type, project_name, funding_agency, currency, grant_amount,
         amount_in_lakhs, duration, researchers, role, evidence_file]
     );
 
@@ -134,6 +135,7 @@ exports.createGrant = async (req, res) => {
 // Update grant
 exports.updateGrant = async (req, res) => {
   try {
+    const sessionId = await getCurrentSessionWindow(db);
     const {
       grant_type,
       project_name,
@@ -174,8 +176,8 @@ exports.updateGrant = async (req, res) => {
       values.push(req.file.filename);
     }
 
-    query += ' WHERE id = ? AND faculty_id = ?';
-    values.push(req.params.id, facultyInfoId);
+    query += ' WHERE id = ? AND faculty_id = ? AND session_id = ?';
+    values.push(req.params.id, facultyInfoId, sessionId);
 
     const [result] = await db.query(query, values);
 
@@ -196,7 +198,7 @@ exports.getProposalsByFaculty = async (req, res) => {
     if (!facultyInfoId) {
       return res.json({ success: true, data: [] });
     }
-    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+    const sessionWindow = await getCurrentSessionWindow(db);
     const scoped = appendCreatedAtWindow(
       'SELECT * FROM submitted_proposals WHERE faculty_id = ?',
       [facultyInfoId],
@@ -228,6 +230,7 @@ exports.createProposal = async (req, res) => {
       status,
       role
     } = req.body;
+    const sessionId = await getCurrentSessionWindow(db);
 
     const facultyInfoId = await resolveFacultyInfoId({
       facultyId: faculty_id || req.user?.id,
@@ -260,10 +263,10 @@ exports.createProposal = async (req, res) => {
 
     const [result] = await db.query(
       `INSERT INTO submitted_proposals 
-      (faculty_id, title, funding_agency, currency, grant_amount, amount_in_lakhs, 
+      (faculty_id, session_id, title, funding_agency, currency, grant_amount, amount_in_lakhs, 
        duration, submission_date, status, role, evidence_file) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [facultyInfoId, title, funding_agency, currency, grant_amount, amount_in_lakhs,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [facultyInfoId, sessionId, title, funding_agency, currency, grant_amount, amount_in_lakhs,
         duration, submission_date, status, role, evidence_file]
     );
 
@@ -281,6 +284,7 @@ exports.createProposal = async (req, res) => {
 // Update proposal
 exports.updateProposal = async (req, res) => {
   try {
+    const sessionId = await getCurrentSessionWindow(db);
     const {
       title,
       funding_agency,
@@ -321,8 +325,8 @@ exports.updateProposal = async (req, res) => {
       values.push(req.file.filename);
     }
 
-    query += ' WHERE id = ? AND faculty_id = ?';
-    values.push(req.params.id, facultyInfoId);
+    query += ' WHERE id = ? AND faculty_id = ? AND session_id = ?';
+    values.push(req.params.id, facultyInfoId, sessionId);
 
     const [result] = await db.query(query, values);
 
@@ -339,13 +343,14 @@ exports.updateProposal = async (req, res) => {
 // Delete grant
 exports.deleteGrant = async (req, res) => {
   try {
+    const sessionId = await getCurrentSessionWindow(db);
     const facultyInfoId = await resolveFacultyInfoId({ email: req.user?.email, facultyId: req.user?.id });
 
     if (!facultyInfoId) {
       return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
     }
 
-    await db.query('DELETE FROM research_grants WHERE id = ? AND faculty_id = ?', [req.params.id, facultyInfoId]);
+    await db.query('DELETE FROM research_grants WHERE id = ? AND faculty_id = ? AND session_id = ?', [req.params.id, facultyInfoId, sessionId]);
     res.json({ success: true, message: 'Grant deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -355,13 +360,14 @@ exports.deleteGrant = async (req, res) => {
 // Delete proposal
 exports.deleteProposal = async (req, res) => {
   try {
+    const sessionId = await getCurrentSessionWindow(db);
     const facultyInfoId = await resolveFacultyInfoId({ email: req.user?.email, facultyId: req.user?.id });
 
     if (!facultyInfoId) {
       return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
     }
 
-    await db.query('DELETE FROM submitted_proposals WHERE id = ? AND faculty_id = ?', [req.params.id, facultyInfoId]);
+    await db.query('DELETE FROM submitted_proposals WHERE id = ? AND faculty_id = ? AND session_id = ?', [req.params.id, facultyInfoId, sessionId]);
     res.json({ success: true, message: 'Proposal deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

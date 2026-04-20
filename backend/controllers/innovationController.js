@@ -7,6 +7,7 @@ const { getCurrentSessionWindow, appendCreatedAtWindow } = require('../utils/ses
 exports.createTeachingInnovation = async (req, res) => {
     try {
         const { faculty_id, description, impact } = req.body;
+        const sessionId = await getCurrentSessionWindow(db);
         const facultyInfoId = await resolveFacultyInfoId({
             facultyId: faculty_id || req.user?.id,
             email: req.user?.email
@@ -19,9 +20,9 @@ exports.createTeachingInnovation = async (req, res) => {
         const evidence_file = req.file ? req.file.filename : null;
 
         const [result] = await db.query(
-            `INSERT INTO teaching_innovation (faculty_id, description, impact, evidence_file) 
-             VALUES (?, ?, ?, ?)`,
-            [facultyInfoId, description, impact, evidence_file]
+            `INSERT INTO teaching_innovation (faculty_id, session_id, description, impact, evidence_file) 
+             VALUES (?, ?, ?, ?, ?)`,
+            [facultyInfoId, sessionId, description, impact, evidence_file]
         );
 
         res.status(201).json({ success: true, id: result.insertId });
@@ -37,7 +38,7 @@ exports.getTeachingInnovations = async (req, res) => {
         if (!facultyInfoId) {
             return res.json({ success: true, data: [] });
         }
-        const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+        const sessionWindow = await getCurrentSessionWindow(db);
         const scoped = appendCreatedAtWindow(
             'SELECT * FROM teaching_innovation WHERE faculty_id = ?',
             [facultyInfoId],
@@ -58,6 +59,7 @@ exports.getTeachingInnovations = async (req, res) => {
 exports.createInstitutionalContribution = async (req, res) => {
     try {
         const { faculty_id, contribution_type, title, description, year, existing_evidence_file } = req.body;
+        const sessionId = await getCurrentSessionWindow(db);
         const facultyInfoId = await resolveFacultyInfoId({
             facultyId: faculty_id || req.user?.id,
             email: req.user?.email
@@ -72,9 +74,9 @@ exports.createInstitutionalContribution = async (req, res) => {
         let result;
         try {
             const [insertResult] = await db.query(
-                `INSERT INTO institutional_contributions (faculty_id, contribution_type, title, description, year, evidence_file) 
-                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [facultyInfoId, contribution_type, title || null, description || null, year || new Date().getFullYear(), evidence_file]
+                `INSERT INTO institutional_contributions (faculty_id, session_id, contribution_type, title, description, year, evidence_file) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [facultyInfoId, sessionId, contribution_type, title || null, description || null, year || new Date().getFullYear(), evidence_file]
             );
             result = insertResult;
         } catch (insertError) {
@@ -83,9 +85,9 @@ exports.createInstitutionalContribution = async (req, res) => {
             if (insertError && (insertError.code === 'ER_BAD_FIELD_ERROR' || insertError.errno === 1054)) {
                 console.warn('[institutional_contributions] evidence_file column missing; saving without evidence_file for backward compatibility.');
                 const [insertResult] = await db.query(
-                    `INSERT INTO institutional_contributions (faculty_id, contribution_type, title, description, year)
-                     VALUES (?, ?, ?, ?, ?)`,
-                    [facultyInfoId, contribution_type, title || null, description || null, year || new Date().getFullYear()]
+                    `INSERT INTO institutional_contributions (faculty_id, session_id, contribution_type, title, description, year)
+                     VALUES (?, ?, ?, ?, ?, ?)`,
+                    [facultyInfoId, sessionId, contribution_type, title || null, description || null, year || new Date().getFullYear()]
                 );
                 result = insertResult;
             } else {
@@ -106,7 +108,7 @@ exports.getInstitutionalContributions = async (req, res) => {
         if (!facultyInfoId) {
             return res.json({ success: true, data: [] });
         }
-        const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+        const sessionWindow = await getCurrentSessionWindow(db);
         const scoped = appendCreatedAtWindow(
             'SELECT * FROM institutional_contributions WHERE faculty_id = ?',
             [facultyInfoId],
@@ -125,7 +127,8 @@ exports.getInstitutionalContributions = async (req, res) => {
 // Delete generic innovation/contribution (needs specific tables but for now keep it simple)
 exports.deleteTeachingInnovation = async (req, res) => {
     try {
-        await db.query('DELETE FROM teaching_innovation WHERE id = ?', [req.params.id]);
+        const sessionId = await getCurrentSessionWindow(db);
+        await db.query('DELETE FROM teaching_innovation WHERE id = ? AND session_id = ?', [req.params.id, sessionId]);
         res.json({ success: true, message: 'Deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -134,7 +137,8 @@ exports.deleteTeachingInnovation = async (req, res) => {
 
 exports.deleteInstitutionalContribution = async (req, res) => {
     try {
-        await db.query('DELETE FROM institutional_contributions WHERE id = ?', [req.params.id]);
+        const sessionId = await getCurrentSessionWindow(db);
+        await db.query('DELETE FROM institutional_contributions WHERE id = ? AND session_id = ?', [req.params.id, sessionId]);
         res.json({ success: true, message: 'Deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

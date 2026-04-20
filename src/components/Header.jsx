@@ -24,11 +24,34 @@ const Header = ({ onLogout }) => {
       setMessage("New passwords do not match.")
       return
     }
-    if (passwordForm.newPassword.length < 6) {
-      setIsError(true)
-      setMessage("New password must be at least 6 characters.")
-      return
+
+    const pwd = passwordForm.newPassword;
+    if (pwd.length < 8) {
+      setIsError(true);
+      setMessage("Password must be at least 8 characters.");
+      return;
     }
+    if (!/[A-Z]/.test(pwd)) {
+      setIsError(true);
+      setMessage("Password must contain at least one uppercase letter (A-Z).");
+      return;
+    }
+    if (!/[a-z]/.test(pwd)) {
+      setIsError(true);
+      setMessage("Password must contain at least one lowercase letter (a-z).");
+      return;
+    }
+    if (!/[0-9]/.test(pwd)) {
+      setIsError(true);
+      setMessage("Password must contain at least one number (0-9).");
+      return;
+    }
+    if (!/[!@#$%^&*()[\]{}|<>?_~+-]/.test(pwd)) {
+      setIsError(true);
+      setMessage("Password must contain at least one special character.");
+      return;
+    }
+
     setLoading(true)
     try {
       const res = await fetch(`${API_BASE}/auth/change-password`, {
@@ -176,19 +199,32 @@ const Header = ({ onLogout }) => {
                 <div className="admin-form-field">
                   <label className="admin-form-label"><Lock size={14} style={{ display: 'inline', marginRight: '4px' }} /> New Password</label>
                   <div className="login-password-wrapper" style={{ position: 'relative' }}>
-                    <input type={showPassword.new ? 'text' : 'password'} className="admin-form-input" required minLength={6} placeholder="Min. 6 characters"
-                      value={passwordForm.newPassword} onChange={e => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))} />
+                    <input type={showPassword.new ? 'text' : 'password'} className="admin-form-input" required minLength={8} placeholder="New password"
+                      value={passwordForm.newPassword} onChange={e => {
+                        setPasswordForm(p => ({ ...p, newPassword: e.target.value }));
+                        setIsError(false);
+                        setMessage('');
+                      }} />
                     <button type="button" style={{ position: 'absolute', right: '10px', top: '10px', background: 'none', border: 'none', color: '#a0aec0', cursor: 'pointer' }}
                       onClick={() => setShowPassword(p => ({ ...p, new: !p.new }))}>
                       {showPassword.new ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
                   </div>
+                  {passwordForm.newPassword && (
+                    <div style={{ marginTop: '8px', fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ color: passwordForm.newPassword.length >= 8 ? '#38a169' : '#718096' }}>{passwordForm.newPassword.length >= 8 ? '✓' : '○'} Min. 8 characters</div>
+                      <div style={{ color: /[A-Z]/.test(passwordForm.newPassword) ? '#38a169' : '#718096' }}>{/[A-Z]/.test(passwordForm.newPassword) ? '✓' : '○'} Uppercase letter (A-Z)</div>
+                      <div style={{ color: /[a-z]/.test(passwordForm.newPassword) ? '#38a169' : '#718096' }}>{/[a-z]/.test(passwordForm.newPassword) ? '✓' : '○'} Lowercase letter (a-z)</div>
+                      <div style={{ color: /[0-9]/.test(passwordForm.newPassword) ? '#38a169' : '#718096' }}>{/[0-9]/.test(passwordForm.newPassword) ? '✓' : '○'} Number (0-9)</div>
+                      <div style={{ color: /[!@#$%^&*()[\]{}|<>?_~+-]/.test(passwordForm.newPassword) ? '#38a169' : '#718096' }}>{/[!@#$%^&*()[\]{}|<>?_~+-]/.test(passwordForm.newPassword) ? '✓' : '○'} Special character</div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="admin-form-field">
                   <label className="admin-form-label"><Lock size={14} style={{ display: 'inline', marginRight: '4px' }} /> Confirm New Password</label>
                   <div className="login-password-wrapper" style={{ position: 'relative' }}>
-                    <input type={showPassword.confirm ? 'text' : 'password'} className="admin-form-input" required minLength={6}
+                    <input type={showPassword.confirm ? 'text' : 'password'} className="admin-form-input" required minLength={8}
                       value={passwordForm.confirmPassword} onChange={e => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))} />
                     <button type="button" style={{ position: 'absolute', right: '10px', top: '10px', background: 'none', border: 'none', color: '#a0aec0', cursor: 'pointer' }}
                       onClick={() => setShowPassword(p => ({ ...p, confirm: !p.confirm }))}>

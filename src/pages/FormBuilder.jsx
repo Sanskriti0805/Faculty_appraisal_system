@@ -776,7 +776,7 @@ const FormBuilder = () => {
                     className={`mini-section-item mini-section-child ${activeSection?.id === child.id ? 'active' : ''}`}
                     onClick={() => setActiveSection(child)}
                   >
-                      <span>-> {child.title}</span>
+                      <span>{'-> '}{child.title}</span>
                     <button
                       className="mini-section-delete"
                       onClick={e => { e.stopPropagation(); handleDeleteSection(child.id); }}

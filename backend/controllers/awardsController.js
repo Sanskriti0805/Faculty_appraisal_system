@@ -6,6 +6,7 @@ const { getCurrentSessionWindow, appendCreatedAtWindow } = require('../utils/ses
 const createAward = async (req, res) => {
     try {
         const { faculty_id, honor_type, award_name, description } = req.body;
+        const sessionId = await getCurrentSessionWindow(db);
         const facultyInfoId = await resolveFacultyInfoId({
             facultyId: faculty_id || req.user?.id,
             email: req.user?.email
@@ -18,8 +19,8 @@ const createAward = async (req, res) => {
         const evidence_file = req.file ? req.file.filename : null;
 
         const [result] = await db.query(
-            'INSERT INTO awards_honours (faculty_id, honor_type, award_name, description, evidence_file) VALUES (?, ?, ?, ?, ?)',
-            [facultyInfoId, honor_type, award_name, description, evidence_file]
+            'INSERT INTO awards_honours (faculty_id, session_id, honor_type, award_name, description, evidence_file) VALUES (?, ?, ?, ?, ?, ?)',
+            [facultyInfoId, sessionId, honor_type, award_name, description, evidence_file]
         );
 
         res.status(201).json({
@@ -41,7 +42,7 @@ const getAwards = async (req, res) => {
             return res.json([]);
         }
 
-        const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+        const sessionWindow = await getCurrentSessionWindow(db);
         const scoped = appendCreatedAtWindow(
             'SELECT * FROM awards_honours WHERE faculty_id = ?',
             [facultyInfoId],
@@ -64,8 +65,9 @@ const getAwards = async (req, res) => {
 const deleteAward = async (req, res) => {
     try {
         const { id } = req.params;
+        const sessionId = await getCurrentSessionWindow(db);
 
-        await db.query('DELETE FROM awards_honours WHERE id = ?', [id]);
+        await db.query('DELETE FROM awards_honours WHERE id = ? AND session_id = ?', [id, sessionId]);
 
         res.json({ message: 'Award deleted successfully' });
     } catch (error) {

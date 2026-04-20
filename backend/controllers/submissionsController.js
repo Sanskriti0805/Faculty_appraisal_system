@@ -114,32 +114,7 @@ function getCurrentAcademicYear() {
 }
 
 async function getSessionWindowByAcademicYear(academicYear) {
-  if (!academicYear) return null;
-
-  const [rows] = await db.query(
-    `SELECT start_date, COALESCE(deadline, end_date) AS effective_end_date
-     FROM appraisal_sessions
-     WHERE academic_year = ?
-     ORDER BY created_at DESC, id DESC
-     LIMIT 1`,
-    [academicYear]
-  );
-
-  if (rows.length === 0) return null;
-
-  const startDate = rows[0].start_date ? new Date(rows[0].start_date) : null;
-  const endDate = rows[0].effective_end_date ? new Date(rows[0].effective_end_date) : null;
-
-  if (!startDate || !endDate || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    return null;
-  }
-
-  // Use an exclusive upper bound to include the full end date.
-  const endExclusive = new Date(endDate);
-  endExclusive.setDate(endExclusive.getDate() + 1);
-  endExclusive.setHours(0, 0, 0, 0);
-
-  return { startDate, endExclusive };
+  return academicYear || null;
 }
 
 const queryFacultySectionRows = async ({ tableName, facultyInfoId, sessionWindow, extraWhere = '', extraParams = [] }) => {
@@ -152,8 +127,8 @@ const queryFacultySectionRows = async ({ tableName, facultyInfoId, sessionWindow
   }
 
   if (sessionWindow) {
-    sql += ' AND created_at >= ? AND created_at < ?';
-    params.push(sessionWindow.startDate, sessionWindow.endExclusive);
+    sql += ' AND session_id = ?';
+    params.push(sessionWindow);
   }
 
   return db.query(sql, params);
@@ -257,7 +232,7 @@ const coerceSnapshotData = (data) => {
   };
 };
 
-const fetchDynamicSectionData = async ({ facultyIds = [], submissionId = null, formType = null }) => {
+const fetchDynamicSectionData = async ({ facultyIds = [], submissionId = null, formType = null, sessionId = null }) => {
   const ids = Array.from(new Set((facultyIds || []).map((id) => Number(id)).filter(Number.isFinite)));
   if (ids.length === 0) return [];
 
@@ -274,6 +249,10 @@ const fetchDynamicSectionData = async ({ facultyIds = [], submissionId = null, f
   if (submissionId) {
     responseFilterSql = ' AND (dr.submission_id = ? OR dr.submission_id IS NULL)';
     responseParams.push(submissionId);
+  }
+  if (sessionId) {
+    responseFilterSql += ' AND dr.session_id = ?';
+    responseParams.push(sessionId);
   }
 
   const [sectionRows] = await db.query(
@@ -451,7 +430,8 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
     fetchDynamicSectionData({
       facultyIds: [sub.faculty_id, fid],
       submissionId,
-      formType: sub.form_type || null
+      formType: sub.form_type || null,
+      sessionId: academicYear
     })
   ]);
 
@@ -530,26 +510,13 @@ async function fetchLegacySectionContent(facultyId, academicYear, sectionKey) {
   const [rows] = await db.query(
     `SELECT content_json
      FROM legacy_section_entries
-     WHERE faculty_id = ? AND section_key = ? AND academic_year = ?
+     WHERE faculty_id = ? AND section_key = ? AND session_id = ?
      ORDER BY updated_at DESC
      LIMIT 1`,
     [facultyId, sectionKey, academicYear]
   );
 
-  if (rows.length > 0) {
-    return rows[0].content_json || null;
-  }
-
-  const [fallbackRows] = await db.query(
-    `SELECT content_json
-     FROM legacy_section_entries
-     WHERE faculty_id = ? AND section_key = ?
-     ORDER BY updated_at DESC
-     LIMIT 1`,
-    [facultyId, sectionKey]
-  );
-
-  return fallbackRows.length > 0 ? fallbackRows[0].content_json || null : null;
+  return rows.length > 0 ? rows[0].content_json || null : null;
 }
 
 
@@ -734,7 +701,8 @@ exports.getSubmissionById = async (req, res) => {
       const dynamicData = await fetchDynamicSectionData({
         facultyIds: [sub.faculty_id, fid],
         submissionId: id,
-        formType: 'B'
+        formType: 'B',
+        sessionId: academicYear
       });
 
       const [comments] = await db.query(`
@@ -848,7 +816,8 @@ exports.getSubmissionById = async (req, res) => {
     const dynamicData = await fetchDynamicSectionData({
       facultyIds: [sub.faculty_id, fid],
       submissionId: id,
-      formType: sub.form_type || null
+      formType: sub.form_type || null,
+      sessionId: academicYear
     });
 
     // Get review comments
@@ -1231,16 +1200,17 @@ exports.saveConsultancy = async (req, res) => {
   try {
     await connection.beginTransaction();
     const { faculty_id, consultancy } = req.body;
+    const sessionId = await getTargetAcademicYear();
 
-    await connection.query('DELETE FROM consultancy WHERE faculty_id = ?', [faculty_id]);
+    await connection.query('DELETE FROM consultancy WHERE faculty_id = ? AND session_id = ?', [faculty_id, sessionId]);
 
     if (consultancy && Array.isArray(consultancy)) {
       for (const item of consultancy) {
         await connection.query(
           `INSERT INTO consultancy 
-          (faculty_id, organization, project_title, role, duration, amount, year) 
-          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [faculty_id, item.organisation, item.project, item.role, item.duration, item.amount, item.year]
+          (faculty_id, session_id, organization, project_title, role, duration, amount, year) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [faculty_id, sessionId, item.organisation, item.project, item.role, item.duration, item.amount, item.year]
         );
       }
     }
@@ -1597,7 +1567,7 @@ exports.exportComprehensiveExcel = async (req, res) => {
       });
 
       // Publications
-      const [publications] = await db.query('SELECT * FROM research_publications WHERE faculty_id = ? AND year_of_publication >= ?', [fid, yearNum]);
+      const [publications] = await db.query('SELECT * FROM research_publications WHERE faculty_id = ? AND session_id = ? AND year_of_publication >= ?', [fid, sub.academic_year, yearNum]);
       publications.forEach(p => publicationsData.push({
         'Faculty Name': sub.faculty_name,
         'Type': p.publication_type,
@@ -1609,7 +1579,7 @@ exports.exportComprehensiveExcel = async (req, res) => {
       }));
 
       // Courses
-      const [courses] = await db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [fid]); // Assuming courses are tied to the session/year somehow
+      const [courses] = await db.query('SELECT * FROM courses_taught WHERE faculty_id = ? AND session_id = ?', [fid, sub.academic_year]);
       courses.forEach(c => coursesData.push({
         'Faculty Name': sub.faculty_name,
         'Course Name': c.course_name,
@@ -1621,7 +1591,7 @@ exports.exportComprehensiveExcel = async (req, res) => {
       }));
 
       // Grants
-      const [grants] = await db.query('SELECT * FROM research_grants WHERE faculty_id = ?', [fid]);
+      const [grants] = await db.query('SELECT * FROM research_grants WHERE faculty_id = ? AND session_id = ?', [fid, sub.academic_year]);
       grants.forEach(g => grantsData.push({
         'Faculty Name': sub.faculty_name,
         'Project Name': g.project_name,
@@ -1632,7 +1602,7 @@ exports.exportComprehensiveExcel = async (req, res) => {
       }));
 
       // Patents
-      const [patents] = await db.query('SELECT * FROM patents WHERE faculty_id = ?', [fid]);
+      const [patents] = await db.query('SELECT * FROM patents WHERE faculty_id = ? AND session_id = ?', [fid, sub.academic_year]);
       patents.forEach(p => patentsData.push({
         'Faculty Name': sub.faculty_name,
         'Patent Type': p.patent_type,
@@ -1642,7 +1612,7 @@ exports.exportComprehensiveExcel = async (req, res) => {
       }));
 
       // Awards
-      const [awards] = await db.query('SELECT * FROM awards_honours WHERE faculty_id = ?', [fid]);
+      const [awards] = await db.query('SELECT * FROM awards_honours WHERE faculty_id = ? AND session_id = ?', [fid, sub.academic_year]);
       awards.forEach(a => awardsData.push({
         'Faculty Name': sub.faculty_name,
         'Award Name': a.award_name,

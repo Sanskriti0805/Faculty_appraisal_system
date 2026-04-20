@@ -18,8 +18,20 @@ const ResetPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.password || form.password.length < 6) {
-      setError('Password must be at least 6 characters'); return;
+    if (!form.password || form.password.length < 8) {
+      setError('Password must be at least 8 characters'); return;
+    }
+    if (!/[A-Z]/.test(form.password)) {
+      setError("Password must contain at least one uppercase letter (A-Z)."); return;
+    }
+    if (!/[a-z]/.test(form.password)) {
+      setError("Password must contain at least one lowercase letter (a-z)."); return;
+    }
+    if (!/[0-9]/.test(form.password)) {
+      setError("Password must contain at least one number (0-9)."); return;
+    }
+    if (!/[!@#$%^&*()[\]{}|<>?_~+-]/.test(form.password)) {
+      setError("Password must contain at least one special character."); return;
     }
     if (form.password !== form.confirm) {
       setError('Passwords do not match'); return;
@@ -101,7 +113,7 @@ const ResetPassword = () => {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     className="login-input"
-                    placeholder="Min. 6 characters"
+                    placeholder="Min. 8 characters, uppercase, digit, symbol"
                     value={form.password}
                     onChange={e => { setForm(p => ({ ...p, password: e.target.value })); setError(''); }}
                     autoFocus
@@ -111,11 +123,12 @@ const ResetPassword = () => {
                   </button>
                 </div>
                 {form.password && (
-                  <div style={{ marginTop: '8px' }}>
-                    <div style={{ height: '4px', borderRadius: '2px', background: '#e2e8f0', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: strength.width, background: strength.color, transition: 'all 0.3s' }} />
-                    </div>
-                    <span style={{ fontSize: '11px', color: strength.color, fontWeight: '500' }}>{strength.label}</span>
+                  <div style={{ marginTop: '8px', fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ color: form.password.length >= 8 ? '#38a169' : '#718096' }}>{form.password.length >= 8 ? '✓' : '○'} Min. 8 characters</div>
+                    <div style={{ color: /[A-Z]/.test(form.password) ? '#38a169' : '#718096' }}>{/[A-Z]/.test(form.password) ? '✓' : '○'} Uppercase letter (A-Z)</div>
+                    <div style={{ color: /[a-z]/.test(form.password) ? '#38a169' : '#718096' }}>{/[a-z]/.test(form.password) ? '✓' : '○'} Lowercase letter (a-z)</div>
+                    <div style={{ color: /[0-9]/.test(form.password) ? '#38a169' : '#718096' }}>{/[0-9]/.test(form.password) ? '✓' : '○'} Number (0-9)</div>
+                    <div style={{ color: /[!@#$%^&*()[\]{}|<>?_~+-]/.test(form.password) ? '#38a169' : '#718096' }}>{/[!@#$%^&*()[\]{}|<>?_~+-]/.test(form.password) ? '✓' : '○'} Special character</div>
                   </div>
                 )}
               </div>

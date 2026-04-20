@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { getCurrentSessionWindow } = require('../utils/sessionScope');
 
 function getCurrentAcademicYear() {
   const now = new Date();
@@ -11,61 +12,24 @@ function getCurrentAcademicYear() {
 }
 
 async function resolveAcademicYearForFaculty(facultyId) {
-  const currentYear = getCurrentAcademicYear();
-  const [rows] = await db.query(
-    `SELECT academic_year
-     FROM submissions
-     WHERE faculty_id = ? AND academic_year = ?
-     ORDER BY id DESC
-     LIMIT 1`,
-    [facultyId, currentYear]
-  );
-
-  if (rows.length > 0) {
-    return rows[0].academic_year;
-  }
-
-  const [latestRows] = await db.query(
-    `SELECT academic_year
-     FROM submissions
-     WHERE faculty_id = ?
-     ORDER BY id DESC
-     LIMIT 1`,
-    [facultyId]
-  );
-
-  if (latestRows.length > 0) {
-    return latestRows[0].academic_year;
-  }
-
-  return currentYear;
+  const currentSession = await getCurrentSessionWindow(db);
+  return currentSession || getCurrentAcademicYear();
 }
 
 exports.getMySectionData = async (req, res) => {
   try {
     const facultyId = req.user.id;
     const { sectionKey } = req.params;
-    const academicYear = await resolveAcademicYearForFaculty(facultyId);
+    const sessionId = await resolveAcademicYearForFaculty(facultyId);
 
-    let [rows] = await db.query(
+    const [rows] = await db.query(
       `SELECT content_json
        FROM legacy_section_entries
-       WHERE faculty_id = ? AND section_key = ? AND academic_year = ?
+       WHERE faculty_id = ? AND section_key = ? AND session_id = ?
        ORDER BY updated_at DESC
        LIMIT 1`,
-      [facultyId, sectionKey, academicYear]
+      [facultyId, sectionKey, sessionId]
     );
-
-    if (rows.length === 0) {
-      [rows] = await db.query(
-        `SELECT content_json
-         FROM legacy_section_entries
-         WHERE faculty_id = ? AND section_key = ?
-         ORDER BY updated_at DESC
-         LIMIT 1`,
-        [facultyId, sectionKey]
-      );
-    }
 
     const content = rows.length > 0 ? rows[0].content_json : null;
     return res.json({ success: true, data: content || null });
@@ -85,15 +49,15 @@ exports.saveMySectionData = async (req, res) => {
       return res.status(400).json({ success: false, message: 'content is required' });
     }
 
-    const academicYear = await resolveAcademicYearForFaculty(facultyId);
+    const sessionId = await resolveAcademicYearForFaculty(facultyId);
 
     await db.query(
-      `INSERT INTO legacy_section_entries (faculty_id, academic_year, section_key, content_json)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO legacy_section_entries (faculty_id, academic_year, session_id, section_key, content_json)
+       VALUES (?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          content_json = VALUES(content_json),
          updated_at = CURRENT_TIMESTAMP`,
-      [facultyId, academicYear, sectionKey, JSON.stringify(content)]
+      [facultyId, sessionId, sessionId, sectionKey, JSON.stringify(content)]
     );
 
     return res.json({ success: true, message: 'Section data saved successfully' });

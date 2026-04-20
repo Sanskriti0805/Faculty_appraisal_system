@@ -1,24 +1,40 @@
 const db = require('../config/database');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
-const { getCurrentSessionWindow, appendCreatedAtWindow } = require('../utils/sessionScope');
+const { getCurrentSessionWindow } = require('../utils/sessionScope');
+
+let goalsSessionColumnEnsured = false;
+
+async function ensureGoalsSessionColumn() {
+    if (goalsSessionColumnEnsured) return;
+
+    const [rows] = await db.query(
+        `SELECT 1
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'faculty_goals'
+           AND COLUMN_NAME = 'session_id'
+         LIMIT 1`
+    );
+
+    if (rows.length === 0) {
+        await db.query('ALTER TABLE faculty_goals ADD COLUMN session_id VARCHAR(20) NULL AFTER faculty_id');
+    }
+
+    goalsSessionColumnEnsured = true;
+}
 
 // Get goals by faculty
 exports.getGoalsByFaculty = async (req, res) => {
     try {
+        await ensureGoalsSessionColumn();
         const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+        const sessionId = await getCurrentSessionWindow(db);
         if (!facultyInfoId) {
             return res.json({ success: true, data: [] });
         }
-        const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
-        const scoped = appendCreatedAtWindow(
-            'SELECT * FROM faculty_goals WHERE faculty_id = ?',
-            [facultyInfoId],
-            sessionWindow
-        );
-
         const [rows] = await db.query(
-            `${scoped.sql} ORDER BY created_at DESC`,
-            scoped.params
+            'SELECT * FROM faculty_goals WHERE faculty_id = ? AND session_id = ? ORDER BY created_at DESC',
+            [facultyInfoId, sessionId]
         );
         res.json({ success: true, data: rows });
     } catch (error) {
@@ -29,8 +45,10 @@ exports.getGoalsByFaculty = async (req, res) => {
 exports.saveGoals = async (req, res) => {
     const connection = await db.getConnection();
     try {
+        await ensureGoalsSessionColumn();
         await connection.beginTransaction();
         const { faculty_id, goals } = req.body;
+        const sessionId = await getCurrentSessionWindow(db);
 
         const toText = (value) => (value === null || value === undefined ? '' : String(value));
         const isMeaningfulGoal = (goal = {}) => {
@@ -52,7 +70,7 @@ exports.saveGoals = async (req, res) => {
         }
 
         // Delete existing goals for this faculty for a clean save (simple approach)
-        await connection.query('DELETE FROM faculty_goals WHERE faculty_id = ?', [facultyInfoId]);
+        await connection.query('DELETE FROM faculty_goals WHERE faculty_id = ? AND session_id = ?', [facultyInfoId, sessionId]);
 
         // Insert new goals
         if (goals && Array.isArray(goals)) {
@@ -60,10 +78,11 @@ exports.saveGoals = async (req, res) => {
             for (const goal of cleanedGoals) {
                 await connection.query(
                     `INSERT INTO faculty_goals 
-          (faculty_id, semester, teaching, research, contribution, outreach, description) 
-          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          (faculty_id, session_id, semester, teaching, research, contribution, outreach, description) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         facultyInfoId,
+                        sessionId,
                         goal.semester || null,
                         toText(goal.teaching).trim() || null,
                         toText(goal.research).trim() || null,

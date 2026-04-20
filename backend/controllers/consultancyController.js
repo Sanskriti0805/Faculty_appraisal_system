@@ -32,6 +32,7 @@ const getConsultancyFileColumn = async () => {
 exports.createConsultancy = async (req, res) => {
     try {
         const { faculty_id, organization, project_title, role, amount, duration, year, existing_evidence_file } = req.body;
+        const sessionId = await getCurrentSessionWindow(db);
         const facultyInfoId = await resolveFacultyInfoId({
             facultyId: faculty_id || req.user?.id,
             email: req.user?.email
@@ -50,17 +51,17 @@ exports.createConsultancy = async (req, res) => {
         if (fileColumn) {
             const [insertResult] = await db.query(
                 `INSERT INTO consultancy 
-                (faculty_id, organization, project_title, role, amount, duration, year, ${fileColumn}) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [facultyInfoId, organization, project_title, role, normalizedAmount, duration, normalizedYear, evidence_file]
+                (faculty_id, session_id, organization, project_title, role, amount, duration, year, ${fileColumn}) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [facultyInfoId, sessionId, organization, project_title, role, normalizedAmount, duration, normalizedYear, evidence_file]
             );
             result = insertResult;
         } else {
             const [insertResult] = await db.query(
                 `INSERT INTO consultancy 
-                (faculty_id, organization, project_title, role, amount, duration, year) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [facultyInfoId, organization, project_title, role, normalizedAmount, duration, normalizedYear]
+                (faculty_id, session_id, organization, project_title, role, amount, duration, year) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [facultyInfoId, sessionId, organization, project_title, role, normalizedAmount, duration, normalizedYear]
             );
             result = insertResult;
         }
@@ -78,7 +79,7 @@ exports.getConsultancyByFaculty = async (req, res) => {
         if (!facultyInfoId) {
             return res.json({ success: true, data: [] });
         }
-        const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+        const sessionWindow = await getCurrentSessionWindow(db);
         const scoped = appendCreatedAtWindow(
             'SELECT * FROM consultancy WHERE faculty_id = ?',
             [facultyInfoId],
@@ -103,7 +104,8 @@ exports.getConsultancyByFaculty = async (req, res) => {
 
 exports.deleteConsultancy = async (req, res) => {
     try {
-        await db.query('DELETE FROM consultancy WHERE id = ?', [req.params.id]);
+        const sessionId = await getCurrentSessionWindow(db);
+        await db.query('DELETE FROM consultancy WHERE id = ? AND session_id = ?', [req.params.id, sessionId]);
         res.json({ success: true, message: 'Deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

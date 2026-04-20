@@ -22,11 +22,31 @@ const ensureRuleDrivenColumns = async () => {
     }
   };
 
+  const ensureScoringTypeSupportsRule = async () => {
+    const [rows] = await db.query(
+      `SELECT DATA_TYPE, COLUMN_TYPE
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Dofa_rubrics' AND COLUMN_NAME = 'scoring_type'`
+    );
+
+    if (rows.length === 0) {
+      return;
+    }
+
+    const dataType = String(rows[0].DATA_TYPE || '').toLowerCase();
+    const columnType = String(rows[0].COLUMN_TYPE || '').toLowerCase();
+
+    if (dataType === 'enum' && !columnType.includes("'rule'")) {
+      await db.query("ALTER TABLE Dofa_rubrics MODIFY COLUMN scoring_type ENUM('manual','count_based','text_exists','rule') NOT NULL DEFAULT 'manual'");
+    }
+  };
+
   await ensureColumn('scoring_type', "scoring_type VARCHAR(20) NOT NULL DEFAULT 'manual'");
   await ensureColumn('per_unit_marks', 'per_unit_marks DECIMAL(10,2) NULL');
   await ensureColumn('dynamic_section_id', 'dynamic_section_id INT NULL');
   await ensureColumn('rule_config', 'rule_config JSON NULL');
   await ensureColumn('data_source', 'data_source VARCHAR(64) NULL');
+  await ensureScoringTypeSupportsRule();
 
   ensuredRuleColumns = true;
 };
@@ -195,6 +215,15 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
     // -- Helper: safely parse float -----------------------------------------
     const f = (v) => parseFloat(v) || 0;
     const norm = (v) => String(v || '').toLowerCase();
+    const resolveTechnologyType = (row = {}) => {
+      const explicit = norm(row.technology_type);
+      if (explicit.includes('software developed and deployed') || explicit.includes('software')) return 'software_developed_and_deployed';
+      if (explicit.includes('technology developed and transferred') || explicit.includes('technology') || explicit.includes('transfer')) return 'technology_developed_and_transferred';
+
+      const mergedText = `${norm(row.title)} ${norm(row.description)} ${norm(row.agency)}`;
+      if (mergedText.includes('software')) return 'software_developed_and_deployed';
+      return 'technology_developed_and_transferred';
+    };
     const parseResponseValue = (raw) => {
       if (raw === null || raw === undefined) return null;
       if (typeof raw === 'object') return raw;
@@ -526,14 +555,16 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
       // -- 9. Technology Contribution -------------------------------------
       else if (sec.includes('technology contribution')) {
-        if (sub.includes('software')) {
-          score = techTransfer.filter(tt =>
-            norm(tt.description).includes('software') ||
-            norm(tt.title).includes('software') ||
-            norm(tt.agency).includes('software')
-          ).length > 0 ? max : 0;
+        const getCountForType = (typeName) => techTransfer.filter((tt) => resolveTechnologyType(tt) === typeName).length;
+        const softwareCount = getCountForType('software_developed_and_deployed');
+        const technologyCount = getCountForType('technology_developed_and_transferred');
+
+        if (sub.includes('software developed and deployed') || sub.includes('software')) {
+          score = softwareCount * max;
+        } else if (sub.includes('technology developed and transferred') || sub.includes('technology')) {
+          score = technologyCount * max;
         } else {
-          score = techTransfer.length > 0 ? max : 0;
+          score = (softwareCount + technologyCount) * max;
         }
       }
 

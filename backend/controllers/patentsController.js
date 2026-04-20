@@ -22,7 +22,7 @@ exports.getPatentsByFaculty = async (req, res) => {
     if (!facultyInfoId) {
       return res.json({ success: true, data: [] });
     }
-    const sessionWindow = req.user?.role === 'faculty' ? await getCurrentSessionWindow(db) : null;
+    const sessionWindow = await getCurrentSessionWindow(db);
     const scoped = appendCreatedAtWindow(
       'SELECT * FROM patents WHERE faculty_id = ?',
       [facultyInfoId],
@@ -65,6 +65,7 @@ exports.createPatent = async (req, res) => {
       publication_id,
       authors
     } = req.body;
+    const sessionId = await getCurrentSessionWindow(db);
 
     const facultyInfoId = await resolveFacultyInfoId({
       facultyId: faculty_id || req.user?.id,
@@ -78,14 +79,14 @@ exports.createPatent = async (req, res) => {
 
     const parsedAuthors = parseJsonArrayField(authors);
 
-    const certificate_file = req.file ? req.file.filename : null;
+    const certificate_file = req.file ? req.file.filename : (req.body.certificate_file || null);
     
     // Insert patent
     const [result] = await connection.query(
       `INSERT INTO patents 
-      (faculty_id, patent_type, title, agency, month, certificate_file, publication_id) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [facultyInfoId, patent_type, title, agency, month, certificate_file, publication_id]
+      (faculty_id, session_id, patent_type, title, agency, month, certificate_file, publication_id) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [facultyInfoId, sessionId, patent_type, title, agency, month, certificate_file, publication_id]
     );
 
     const patentId = result.insertId;
@@ -118,7 +119,8 @@ exports.createPatent = async (req, res) => {
 // Delete patent
 exports.deletePatent = async (req, res) => {
   try {
-    const [result] = await db.query('DELETE FROM patents WHERE id = ?', [req.params.id]);
+    const sessionId = await getCurrentSessionWindow(db);
+    const [result] = await db.query('DELETE FROM patents WHERE id = ? AND session_id = ?', [req.params.id, sessionId]);
     
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Patent not found' });
