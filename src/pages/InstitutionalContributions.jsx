@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Upload, ExternalLink, X } from 'lucide-react'
+import { Upload, ExternalLink, X, Plus, Trash2 } from 'lucide-react'
 import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
@@ -26,6 +26,7 @@ const FIELD_TYPE_ALIASES = {
   warden: [
     'Warden/Chief Warden',
     'Chief Warden / Associate Chief Warden / Warden',
+    'Chief Warden / Associate Chief Warden / Assistant Warden / Warden',
     'Administrative Positions: Chief Warden',
     'Administrative Positions: Associate Chief Warden',
     'Administrative Positions: Warden',
@@ -42,6 +43,7 @@ const FIELD_TYPE_ALIASES = {
     'Committee Member/Convener',
     'Committee Member/Convenor',
     'Chairman / Vice Chairman / Convener / Member',
+    'Chairperson / Vice Chairperson / Convener / Commitee Member',
     'Other Significant: Chairperson of one or more significant committees',
     'Other Significant: Convenor of one or more significant committees',
     'Other Significant: Committee Member (up to a maximum of 5 points)',
@@ -49,11 +51,13 @@ const FIELD_TYPE_ALIASES = {
   facultyInCharge: [
     'Faculty-in-Charge/Cell Member',
     'Faculty-in-Charge / Member of any Cell',
+    'Faculty In-Charge / Faculty Mentor / Cell Member',
     'Other Significant: Faculty Mentor of any Cell (Mentorship)',
   ],
   otherResponsibility: [
     'Other Major Responsibility',
     'leader / contributing member of any other major responsibility not covered above',
+    'Member of Major Responsibilities / Conduct of New Certificate / Scholarly Articles in Reputed Newspapers / Magazines',
     'Other Significant: Member of Major responsibilities (Admissions, Accreditations, etc)',
     'Other Significant: Conduct of new certificate programmes',
     'Other Significant: Scholarly articles in reputed newspapers/magazines (max 9 points)',
@@ -70,103 +74,57 @@ const getValue = (row, keys) => {
 
 const buildSectionState = (rows = []) => {
   const normalizedRows = Array.isArray(rows) ? rows : []
-
-  const findContribution = (field) => {
-    const aliasSet = new Set(FIELD_TYPE_ALIASES[field].map(normalizeText))
-    return normalizedRows.find((row) => {
-      const rawType = getValue(row, ['contribution_type', 'activity', 'category'])
-      return aliasSet.has(normalizeText(rawType))
-    })
+  const newState = {
+    dean: [],
+    hod: [],
+    warden: [],
+    centreLead: [],
+    committee: [],
+    facultyInCharge: [],
+    otherResponsibility: []
   }
 
-  const dean = findContribution('dean')
-  const hod = findContribution('hod')
-  const warden = findContribution('warden')
-  const centreLead = findContribution('centreLead')
-  const committee = findContribution('committee')
-  const facultyInCharge = findContribution('facultyInCharge')
-  const otherResponsibility = findContribution('otherResponsibility')
+  normalizedRows.forEach(row => {
+    const rawType = getValue(row, ['contribution_type', 'activity', 'category'])
+    const normalized = normalizeText(rawType)
 
-  return {
-    formData: {
-      dean: getValue(dean, ['description', 'details']) || '',
-      hod: getValue(hod, ['description', 'details']) || '',
-      warden: getValue(warden, ['description', 'details']) || '',
-      centreLead: getValue(centreLead, ['description', 'details']) || '',
-      committee: getValue(committee, ['description', 'details']) || '',
-      facultyInCharge: getValue(facultyInCharge, ['description', 'details']) || '',
-      otherResponsibility: getValue(otherResponsibility, ['description', 'details']) || '',
-    },
-    positions: {
-      dean: getValue(dean, ['title', 'role']) || '',
-      hod: getValue(hod, ['title', 'role']) || '',
-      warden: getValue(warden, ['title', 'role']) || '',
-      centreLead: getValue(centreLead, ['title', 'role']) || '',
-      committee: getValue(committee, ['title', 'role']) || '',
-      facultyInCharge: getValue(facultyInCharge, ['title', 'role']) || '',
-      otherResponsibility: getValue(otherResponsibility, ['title', 'role']) || '',
-    },
-    contributionIds: {
-      dean: dean?.id || null,
-      hod: hod?.id || null,
-      warden: warden?.id || null,
-      centreLead: centreLead?.id || null,
-      committee: committee?.id || null,
-      facultyInCharge: facultyInCharge?.id || null,
-      otherResponsibility: otherResponsibility?.id || null,
-    },
-    files: {
-      dean: getValue(dean, ['evidence_file']) || null,
-      hod: getValue(hod, ['evidence_file']) || null,
-      warden: getValue(warden, ['evidence_file']) || null,
-      centreLead: getValue(centreLead, ['evidence_file']) || null,
-      committee: getValue(committee, ['evidence_file']) || null,
-      facultyInCharge: getValue(facultyInCharge, ['evidence_file']) || null,
-      otherResponsibility: getValue(otherResponsibility, ['evidence_file']) || null,
-    },
-  }
+    for (const [field, aliases] of Object.entries(FIELD_TYPE_ALIASES)) {
+      if (aliases.map(normalizeText).includes(normalized)) {
+        newState[field].push({
+          localId: row.id,
+          dbId: row.id,
+          details: getValue(row, ['description', 'details']) || '',
+          position: getValue(row, ['title', 'role']) || '',
+          file: getValue(row, ['evidence_file']) || null
+        })
+        break
+      }
+    }
+  })
+
+  // Ensure every section has at least one entry
+  Object.keys(newState).forEach(key => {
+    if (newState[key].length === 0) {
+      newState[key].push({ localId: Date.now() + Math.random(), dbId: null, details: '', position: '', file: null })
+    }
+  })
+
+  return newState
 }
 
 const InstitutionalContributions = ({ initialData, readOnly }) => {
   const { user, token } = useAuth()
-  const [contributionIds, setContributionIds] = useState({
-    dean: null,
-    hod: null,
-    warden: null,
-    centreLead: null,
-    committee: null,
-    facultyInCharge: null,
-    otherResponsibility: null,
-  })
-  const [formData, setFormData] = useState({
-    dean: '',
-    hod: '',
-    warden: '',
-    centreLead: '',
-    committee: '',
-    facultyInCharge: '',
-    otherResponsibility: '',
-  })
-  const [positions, setPositions] = useState({
-    dean: '',
-    hod: '',
-    warden: '',
-    centreLead: '',
-    committee: '',
-    facultyInCharge: '',
-    otherResponsibility: '',
-  })
-
-  const [files, setFiles] = useState({
-    dean: null,
-    hod: null,
-    warden: null,
-    centreLead: null,
-    committee: null,
-    facultyInCharge: null,
-    otherResponsibility: null,
+  const [sections, setSections] = useState({
+    dean: [{ localId: Date.now() + 1, dbId: null, details: '', position: '', file: null }],
+    hod: [{ localId: Date.now() + 2, dbId: null, details: '', position: '', file: null }],
+    warden: [{ localId: Date.now() + 3, dbId: null, details: '', position: '', file: null }],
+    centreLead: [{ localId: Date.now() + 4, dbId: null, details: '', position: '', file: null }],
+    committee: [{ localId: Date.now() + 5, dbId: null, details: '', position: '', file: null }],
+    facultyInCharge: [{ localId: Date.now() + 6, dbId: null, details: '', position: '', file: null }],
+    otherResponsibility: [{ localId: Date.now() + 7, dbId: null, details: '', position: '', file: null }],
   })
   const [loading, setLoading] = useState(false)
+  const [removedIds, setRemovedIds] = useState([])
 
   const positionOptions = {
     dean: ['Dean', 'Associate Dean', 'Assistant Dean'],
@@ -174,17 +132,14 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
     warden: ['Chief Warden', 'Associate Chief Warden', 'Warden', 'Assistant Warden'],
     centreLead: ['Centre Lead', 'Centre Co-Lead', 'Nucleus Member'],
     committee: ['Chairperson', 'Vice Chairperson', 'Convenor', 'Committee Member'],
-    facultyInCharge: ['Faculty In-Charge', 'Cell Member', 'Faculty Mentor'],
-    otherResponsibility: ['Major Responsibilities', 'Certificate Programme', 'Scholarly Contribution'],
+    facultyInCharge: ['Faculty In-Charge / Faculty Mentor', 'Cell Member'],
+    otherResponsibility: ['Major Responsibilities (Admissions, Accreditations, etc.)', 'Conduct of New Certificate Programmes', 'Scholarly Articles in Reputed Newspapers / Magazines (upto a maximum of 9 pages)'],
   }
 
   useEffect(() => {
     if (initialData && Array.isArray(initialData)) {
       const state = buildSectionState(initialData)
-      setFormData(state.formData)
-      setPositions(state.positions)
-      setContributionIds(state.contributionIds)
-      setFiles(state.files)
+      setSections(state)
     }
   }, [initialData])
 
@@ -198,10 +153,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
         if (!data.success || !Array.isArray(data.data)) return
 
         const state = buildSectionState(data.data)
-        setFormData(state.formData)
-        setPositions(state.positions)
-        setContributionIds(state.contributionIds)
-        setFiles(state.files)
+        setSections(state)
       } catch (error) {
         console.error('Failed to prefill institutional contributions:', error)
       }
@@ -210,30 +162,59 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
     fetchExisting()
   }, [initialData, readOnly, user])
 
-  const handleInputChange = (field, value) => {
-    setFormData({ ...formData, [field]: value })
+  const handleInputChange = (field, id, value) => {
+    setSections(prev => ({
+      ...prev,
+      [field]: prev[field].map(item => item.localId === id ? { ...item, details: value } : item)
+    }))
   }
 
-  const handlePositionChange = (field, value) => {
-    setPositions({ ...positions, [field]: value })
+  const handlePositionChange = (field, id, value) => {
+    setSections(prev => ({
+      ...prev,
+      [field]: prev[field].map(item => item.localId === id ? { ...item, position: value } : item)
+    }))
   }
 
-  const handleFileChange = (field, file) => {
-    setFiles({ ...files, [field]: file })
+  const handleFileChange = (field, id, file) => {
+    setSections(prev => ({
+      ...prev,
+      [field]: prev[field].map(item => item.localId === id ? { ...item, file: file } : item)
+    }))
   }
 
-  const renderUploadControl = (field) => (
-    <label style={{ cursor: 'pointer', padding: '0.5rem', border: '1px dashed #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <Upload size={16} color={files[field] ? '#28a745' : '#666'} />
-      <span style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{files[field] ? 'Uploaded' : 'Evidence'}</span>
-      <FilePreviewButton file={files[field]} style={{ width: '30px', height: '30px' }} />
-      {files[field] && (
+  const handleAddEntry = (field) => {
+    setSections(prev => ({
+      ...prev,
+      [field]: [...prev[field], { localId: Date.now(), dbId: null, details: '', position: '', file: null }]
+    }))
+  }
+
+  const handleRemoveEntry = (field, localId, dbId) => {
+    if (dbId) {
+      setRemovedIds(prev => [...prev, dbId])
+    }
+    setSections(prev => {
+      const updated = prev[field].filter(item => item.localId !== localId)
+      return {
+        ...prev,
+        [field]: updated.length > 0 ? updated : [{ localId: Date.now(), dbId: null, details: '', position: '', file: null }]
+      }
+    })
+  }
+
+  const renderUploadControl = (field, item) => (
+    <label style={{ cursor: 'pointer', padding: '0.5rem', border: '1px dashed #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '150px' }}>
+      <Upload size={16} color={item.file ? '#28a745' : '#666'} />
+      <span style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{item.file ? 'Uploaded' : 'Evidence'}</span>
+      <FilePreviewButton file={item.file} style={{ width: '30px', height: '30px' }} />
+      {item.file && (
         <button
           type="button"
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            handleFileChange(field, null)
+            handleFileChange(field, item.localId, null)
           }}
           title="Remove uploaded document"
           style={{
@@ -251,82 +232,109 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           <X size={13} />
         </button>
       )}
-      <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange(field, e.target.files[0])} />
+      <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange(field, item.localId, e.target.files[0])} />
     </label>
   )
 
   const handleSave = async () => {
+    // Validation
+    const categories = [
+      { key: 'dean', label: 'Dean/Associate/Assistant Dean' },
+      { key: 'hod', label: 'HoD/Deputy HoD' },
+      { key: 'warden', label: 'Chief Warden / Associate Chief Warden / Assistant Warden / Warden' },
+      { key: 'centreLead', label: 'Centre-Lead/Nucleus Member' },
+      { key: 'committee', label: 'Chairperson / Vice Chairperson / Convener / Commitee Member' },
+      { key: 'facultyInCharge', label: 'Faculty In-Charge / Faculty Mentor / Cell Member' },
+      { key: 'otherResponsibility', label: 'Member of Major Responsibilities / Conduct of New Certificate / Scholarly Articles in Reputed Newspapers / Magazines' }
+    ]
+
+    for (const cat of categories) {
+      const items = sections[cat.key] || []
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        const details = item.details?.trim()
+        const position = item.position
+        const file = item.file
+
+        const hasContent = details || position
+        const hasFile = !!file
+
+        if (hasContent && !hasFile) {
+          window.appToast(`Please upload evidence for entry #${i + 1} in ${cat.label}`)
+          return false
+        }
+        if (hasFile && (!details || !position)) {
+          window.appToast(`Please fill in both the position and details for entry #${i + 1} in ${cat.label} where evidence is uploaded`)
+          return false
+        }
+      }
+    }
+
     setLoading(true)
     try {
-      const facultyId = user?.id
-      if (!facultyId || !token) {
+      if (!user?.id || !token) {
         window.appToast('Unable to identify logged-in faculty. Please login again.')
         return false
       }
 
-      const saveData = async (type, label, description, selectedPosition, file, existingId) => {
-        if (existingId) {
-          const deleteRes = await fetch(`${API_BASE}/innovation/institutional/${existingId}`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${token}` }
-          })
-
-          if (!deleteRes.ok && deleteRes.status !== 404) {
-            const errorText = await deleteRes.text()
-            throw new Error(errorText || `Failed to update ${type} entry`)
-          }
-        }
-
-        if (!description && !selectedPosition) return;
-
-        const formDataObj = new FormData()
-        formDataObj.append('faculty_id', facultyId)
-        formDataObj.append('contribution_type', label)
-        formDataObj.append('title', selectedPosition || '')
-        formDataObj.append('description', description)
-        formDataObj.append('year', new Date().getFullYear())
-        if (file && typeof file !== 'string') {
-          formDataObj.append('evidence_file', file)
-        }
-        if (typeof file === 'string' && file.trim()) {
-          formDataObj.append('existing_evidence_file', file)
-        }
-
-        const saveRes = await fetch(`${API_BASE}/innovation/institutional`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: formDataObj
+      // 1. Handle Deletions
+      for (const id of removedIds) {
+        await fetch(`${API_BASE}/innovation/institutional/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
         })
-
-        if (!saveRes.ok) {
-          const errorText = await saveRes.text()
-          throw new Error(errorText || `Failed to save ${type} entry`)
-        }
-
-        return saveRes.json()
       }
 
-      const savedRows = await Promise.all([
-        saveData('dean', 'Dean/Associate/Assistant Dean', formData.dean, positions.dean, files.dean, contributionIds.dean),
-        saveData('hod', 'HoD/Deputy HoD', formData.hod, positions.hod, files.hod, contributionIds.hod),
-        saveData('warden', 'Warden/Chief Warden', formData.warden, positions.warden, files.warden, contributionIds.warden),
-        saveData('centreLead', 'Centre-Lead/Nucleus Member', formData.centreLead, positions.centreLead, files.centreLead, contributionIds.centreLead),
-        saveData('committee', 'Committee Member/Convener', formData.committee, positions.committee, files.committee, contributionIds.committee),
-        saveData('facultyInCharge', 'Faculty-in-Charge/Cell Member', formData.facultyInCharge, positions.facultyInCharge, files.facultyInCharge, contributionIds.facultyInCharge),
-        saveData('otherResponsibility', 'Other Major Responsibility', formData.otherResponsibility, positions.otherResponsibility, files.otherResponsibility, contributionIds.otherResponsibility)
-      ])
+      // 2. Handle Saves (Upserts via DELETE+POST pattern used in this app)
+      const savePromises = []
+      categories.forEach(cat => {
+        sections[cat.key].forEach(item => {
+          if (!item.details && !item.position && !item.file) return // Skip completely empty items
 
-      setContributionIds((prev) => ({
-        dean: savedRows[0]?.id || prev.dean,
-        hod: savedRows[1]?.id || prev.hod,
-        warden: savedRows[2]?.id || prev.warden,
-        centreLead: savedRows[3]?.id || prev.centreLead,
-        committee: savedRows[4]?.id || prev.committee,
-        facultyInCharge: savedRows[5]?.id || prev.facultyInCharge,
-        otherResponsibility: savedRows[6]?.id || prev.otherResponsibility,
-      }))
+          const formDataObj = new FormData()
+          formDataObj.append('faculty_id', user.id)
+          formDataObj.append('contribution_type', cat.label)
+          formDataObj.append('title', item.position || '')
+          formDataObj.append('description', item.details || '')
+          formDataObj.append('year', new Date().getFullYear())
 
+          if (item.file && typeof item.file !== 'string') {
+            formDataObj.append('evidence_file', item.file)
+          } else if (typeof item.file === 'string' && item.file.trim()) {
+            formDataObj.append('existing_evidence_file', item.file)
+          }
+
+          const saveAction = async () => {
+            if (item.dbId) {
+              await fetch(`${API_BASE}/innovation/institutional/${item.dbId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+              })
+            }
+            const res = await fetch(`${API_BASE}/innovation/institutional`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+              body: formDataObj
+            })
+            if (!res.ok) throw new Error(`Failed to save ${cat.key} entry`)
+            return res.json()
+          }
+          savePromises.push(saveAction())
+        })
+      })
+
+      await Promise.all(savePromises)
+
+      setRemovedIds([])
       window.appToast('Data saved successfully!')
+
+      // Refresh state from server to get new dbIds
+      const res = await fetch(`${API_BASE}/innovation/institutional/${user.id}`)
+      const data = await res.json()
+      if (data.success && Array.isArray(data.data)) {
+        setSections(buildSectionState(data.data))
+      }
+
       return true
     } catch (error) {
       console.error('Error saving contributions:', error)
@@ -335,6 +343,148 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const renderSectionGroup = (category, label, placeholder) => {
+    const items = sections[category] || []
+
+    return (
+      <div className="section-group" style={{ marginBottom: '2.5rem', borderBottom: '1px solid #edf2f7', paddingBottom: '2.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
+          <label style={{ fontSize: '1rem', fontWeight: '600', color: '#2d3748', margin: 0 }}>
+            {label} <span style={{ color: '#d64550' }}>*</span>
+          </label>
+          {!readOnly && (
+            <button
+              onClick={() => handleAddEntry(category)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.4rem 0.8rem',
+                backgroundColor: '#f0fff4',
+                color: '#2f855a',
+                border: '1px solid #c6f6d5',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Plus size={14} /> Add Another
+            </button>
+          )}
+        </div>
+
+        {items.map((item, index) => (
+          <div key={item.localId} style={{
+            position: 'relative',
+            backgroundColor: '#fff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '1.2rem',
+            marginBottom: '1rem',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+          }}>
+            {!readOnly && items.length > 1 && (
+              <button
+                onClick={() => handleRemoveEntry(category, item.localId, item.dbId)}
+                style={{
+                  position: 'absolute',
+                  top: '0.6rem',
+                  right: '0.6rem',
+                  background: '#fff5f5',
+                  border: '1px solid #fed7d7',
+                  color: '#e53e3e',
+                  borderRadius: '6px',
+                  width: '28px',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 1
+                }}
+                title="Remove entry"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+
+            <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <select
+                  value={item.position}
+                  onChange={(e) => handlePositionChange(category, item.localId, e.target.value)}
+                  disabled={readOnly}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem',
+                    borderRadius: '6px',
+                    border: readOnly ? 'none' : '1px solid #cbd5e0',
+                    background: readOnly ? 'transparent' : '#fff',
+                    fontSize: '0.95rem'
+                  }}
+                >
+                  <option value="">Select position</option>
+                  {positionOptions[category].map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+                <textarea
+                  rows="3"
+                  value={item.details}
+                  onChange={(e) => handleInputChange(category, item.localId, e.target.value)}
+                  placeholder={placeholder}
+                  disabled={readOnly}
+                  style={{
+                    width: '100%',
+                    padding: '0.7rem',
+                    borderRadius: '6px',
+                    border: readOnly ? 'none' : '1px solid #cbd5e0',
+                    background: readOnly ? 'transparent' : '#fff',
+                    fontSize: '0.95rem',
+                    resize: 'vertical',
+                    minHeight: '80px'
+                  }}
+                />
+              </div>
+              <div style={{ alignSelf: 'stretch', display: 'flex', alignItems: 'center' }}>
+                {readOnly ? (
+                  item.file && (
+                    <a
+                      href={`http://${window.location.hostname}:5001/uploads/${item.file}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="evidence-link"
+                      style={{
+                        padding: '0.6rem 1rem',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        backgroundColor: '#edf2f7',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        textDecoration: 'none',
+                        color: '#3182ce',
+                        fontWeight: '500',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      <ExternalLink size={16} />
+                      <span>View Evidence</span>
+                    </a>
+                  )
+                ) : (
+                  renderUploadControl(category, item)
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
   }
 
   return (
@@ -347,317 +497,23 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
         </div>
       )}
 
-      <div className="form-card">
-        <div className="form-section">
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#2c3e50', marginBottom: '1rem' }}>
-            Contributions towards Institutional Development or any significant Institutional Contributions not covered above
-          </h3>
+      <div className="form-card" style={{ padding: '2rem' }}>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1a202c', marginBottom: '2rem', borderBottom: '2px solid #3182ce', paddingBottom: '0.5rem', display: 'inline-block' }}>
+          Contributions towards Institutional Development
+        </h3>
 
-          <div className="form-field-vertical">
-            <label>As a Dean / Associate Dean / Assistant Dean</label>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <select
-                  value={positions.dean}
-                  onChange={(e) => handlePositionChange('dean', e.target.value)}
-                  disabled={readOnly}
-                  style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white', padding: '0.6rem', borderRadius: '4px' }}
-                >
-                  <option value="">Select position</option>
-                  {positionOptions.dean.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-                <textarea
-                  rows="3"
-                  value={formData.dean}
-                  onChange={(e) => handleInputChange('dean', e.target.value)}
-                  placeholder="Enter details of contributions as Dean/Associate Dean/Assistant Dean..."
-                  style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-              </div>
-              {readOnly ? (
-                files.dean && (
-                  <a
-                    href={`http://${window.location.hostname}:5001/uploads/${files.dean}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
-                    <ExternalLink size={16} />
-                    <span style={{ fontSize: '0.8rem' }}>View</span>
-                  </a>
-                )
-              ) : (
-                renderUploadControl('dean')
-              )}
-            </div>
-          </div>
+        {renderSectionGroup('dean', 'As a Dean / Associate Dean / Assistant Dean', 'Enter details of contributions as Dean/Associate Dean/Assistant Dean...')}
+        {renderSectionGroup('hod', 'As an HoD / Deputy HoD', 'Enter details of contributions as HoD/Deputy HoD...')}
+        {renderSectionGroup('warden', 'As Chief Warden / Associate Chief Warden / Assistant Warden / Warden', 'Enter details of contributions as Warden...')}
+        {renderSectionGroup('centreLead', 'As Centre-Lead / Co-Lead / Nucleus Member', 'Enter details of contributions as Centre-Lead/Co-Lead/Nucleus Member...')}
+        {renderSectionGroup('committee', 'As Chairperson / Vice Chairperson / Convener / Commitee Member of one or more significant committees that involved significant efforts and time', 'Enter details of committee contributions...')}
+        {renderSectionGroup('facultyInCharge', 'As Faculty In-Charge / Faculty Mentor / Cell Member of any Cell', 'Enter details of contributions as Faculty-in-Charge/Member of any Cell...')}
+        {renderSectionGroup('otherResponsibility', 'Member of Major Responsibilities / Conduct of New Certificate / Scholarly Articles in Reputed Newspapers / Magazines not covered above', 'Enter details of any other major responsibility...')}
 
-          <div className="form-field-vertical">
-            <label>As an HoD / Deputy HoD</label>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <select
-                  value={positions.hod}
-                  onChange={(e) => handlePositionChange('hod', e.target.value)}
-                  disabled={readOnly}
-                  style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white', padding: '0.6rem', borderRadius: '4px' }}
-                >
-                  <option value="">Select position</option>
-                  {positionOptions.hod.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-                <textarea
-                  rows="3"
-                  value={formData.hod}
-                  onChange={(e) => handleInputChange('hod', e.target.value)}
-                  placeholder="Enter details of contributions as HoD/Deputy HoD..."
-                  style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-              </div>
-              {readOnly ? (
-                files.hod && (
-                  <a
-                    href={`http://${window.location.hostname}:5001/uploads/${files.hod}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
-                    <ExternalLink size={16} />
-                    <span style={{ fontSize: '0.8rem' }}>View</span>
-                  </a>
-                )
-              ) : (
-                renderUploadControl('hod')
-              )}
-            </div>
-          </div>
-
-          <div className="form-field-vertical">
-            <label>As Chief Warden / Associate Chief Warden / Warden</label>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <select
-                  value={positions.warden}
-                  onChange={(e) => handlePositionChange('warden', e.target.value)}
-                  disabled={readOnly}
-                  style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white', padding: '0.6rem', borderRadius: '4px' }}
-                >
-                  <option value="">Select position</option>
-                  {positionOptions.warden.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-                <textarea
-                  rows="3"
-                  value={formData.warden}
-                  onChange={(e) => handleInputChange('warden', e.target.value)}
-                  placeholder="Enter details of contributions as Warden..."
-                  style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-              </div>
-              {readOnly ? (
-                files.warden && (
-                  <a
-                    href={`http://${window.location.hostname}:5001/uploads/${files.warden}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
-                    <ExternalLink size={16} />
-                    <span style={{ fontSize: '0.8rem' }}>View</span>
-                  </a>
-                )
-              ) : (
-                renderUploadControl('warden')
-              )}
-            </div>
-          </div>
-
-          <div className="form-field-vertical">
-            <label>As Centre-Lead / Co-Lead / Nucleus Member</label>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <select
-                  value={positions.centreLead}
-                  onChange={(e) => handlePositionChange('centreLead', e.target.value)}
-                  disabled={readOnly}
-                  style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white', padding: '0.6rem', borderRadius: '4px' }}
-                >
-                  <option value="">Select position</option>
-                  {positionOptions.centreLead.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-                <textarea
-                  rows="3"
-                  value={formData.centreLead}
-                  onChange={(e) => handleInputChange('centreLead', e.target.value)}
-                  placeholder="Enter details of contributions as Centre-Lead/Co-Lead/Nucleus Member..."
-                  style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-              </div>
-              {readOnly ? (
-                files.centreLead && (
-                  <a
-                    href={`http://${window.location.hostname}:5001/uploads/${files.centreLead}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
-                    <ExternalLink size={16} />
-                    <span style={{ fontSize: '0.8rem' }}>View</span>
-                  </a>
-                )
-              ) : (
-                renderUploadControl('centreLead')
-              )}
-            </div>
-          </div>
-
-          <div className="form-field-vertical">
-            <label>As Chairman / Vice Chairman / Convener / Member of one or more significant committees that involved significant efforts and time</label>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <select
-                  value={positions.committee}
-                  onChange={(e) => handlePositionChange('committee', e.target.value)}
-                  disabled={readOnly}
-                  style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white', padding: '0.6rem', borderRadius: '4px' }}
-                >
-                  <option value="">Select position</option>
-                  {positionOptions.committee.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-                <textarea
-                  rows="3"
-                  value={formData.committee}
-                  onChange={(e) => handleInputChange('committee', e.target.value)}
-                  placeholder="Enter details of committee contributions..."
-                  style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-              </div>
-              {readOnly ? (
-                files.committee && (
-                  <a
-                    href={`http://${window.location.hostname}:5001/uploads/${files.committee}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
-                    <ExternalLink size={16} />
-                    <span style={{ fontSize: '0.8rem' }}>View</span>
-                  </a>
-                )
-              ) : (
-                renderUploadControl('committee')
-              )}
-            </div>
-          </div>
-
-          <div className="form-field-vertical">
-            <label>As Faculty-in-Charge / Member of any Cell</label>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <select
-                  value={positions.facultyInCharge}
-                  onChange={(e) => handlePositionChange('facultyInCharge', e.target.value)}
-                  disabled={readOnly}
-                  style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white', padding: '0.6rem', borderRadius: '4px' }}
-                >
-                  <option value="">Select position</option>
-                  {positionOptions.facultyInCharge.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-                <textarea
-                  rows="3"
-                  value={formData.facultyInCharge}
-                  onChange={(e) => handleInputChange('facultyInCharge', e.target.value)}
-                  placeholder="Enter details of contributions as Faculty-in-Charge/Member of any Cell..."
-                  style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-              </div>
-              {readOnly ? (
-                files.facultyInCharge && (
-                  <a
-                    href={`http://${window.location.hostname}:5001/uploads/${files.facultyInCharge}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
-                    <ExternalLink size={16} />
-                    <span style={{ fontSize: '0.8rem' }}>View</span>
-                  </a>
-                )
-              ) : (
-                renderUploadControl('facultyInCharge')
-              )}
-            </div>
-          </div>
-
-          <div className="form-field-vertical">
-            <label>As leader / contributing member of any other major responsibility not covered above</label>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <select
-                  value={positions.otherResponsibility}
-                  onChange={(e) => handlePositionChange('otherResponsibility', e.target.value)}
-                  disabled={readOnly}
-                  style={{ border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white', padding: '0.6rem', borderRadius: '4px' }}
-                >
-                  <option value="">Select position</option>
-                  {positionOptions.otherResponsibility.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-                <textarea
-                  rows="3"
-                  value={formData.otherResponsibility}
-                  onChange={(e) => handleInputChange('otherResponsibility', e.target.value)}
-                  placeholder="Enter details of any other major responsibility..."
-                  style={{ flex: 1, border: readOnly ? 'none' : '1px solid #ddd', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-              </div>
-              {readOnly ? (
-                files.otherResponsibility && (
-                  <a
-                    href={`http://${window.location.hostname}:5001/uploads/${files.otherResponsibility}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="evidence-link"
-                    style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#5b8fc7' }}
-                  >
-                    <ExternalLink size={16} />
-                    <span style={{ fontSize: '0.8rem' }}>View</span>
-                  </a>
-                )
-              ) : (
-                renderUploadControl('otherResponsibility')
-              )}
-            </div>
-          </div>
-        </div>
         {!readOnly && (
-        <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
-      )}
-    </div>
+          <FormActions onSave={handleSave} currentPath={window.location.pathname} loading={loading} />
+        )}
+      </div>
     </div>
   )
 }

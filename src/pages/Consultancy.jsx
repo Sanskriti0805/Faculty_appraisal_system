@@ -33,7 +33,7 @@ const Consultancy = ({ initialData, readOnly }) => {
       id: 1,
       organisation: '',
       project: '',
-      role: '',
+      role: 'Select',
       duration: '',
       amount: '',
       year: '2026',
@@ -48,7 +48,7 @@ const Consultancy = ({ initialData, readOnly }) => {
         id: c.id || index + 1,
         organisation: c.organization || '',
         project: c.project_title || '',
-        role: c.role || '',
+        role: c.role || 'Select',
         duration: c.duration || '',
         amount: c.amount || '',
         year: c.year || '2026',
@@ -71,7 +71,7 @@ const Consultancy = ({ initialData, readOnly }) => {
           id: c.id || index + 1,
           organisation: c.organization || '',
           project: c.project_title || '',
-          role: c.role || '',
+          role: c.role || 'Select',
           duration: c.duration || '',
           amount: c.amount || '',
           year: c.year || '2026',
@@ -93,7 +93,7 @@ const Consultancy = ({ initialData, readOnly }) => {
       id: newId,
       organisation: '',
       project: '',
-      role: '',
+      role: 'Select',
       duration: '',
       amount: '',
       year: '2026',
@@ -133,6 +133,26 @@ const Consultancy = ({ initialData, readOnly }) => {
 
   const handleSave = async () => {
     if (readOnly) return true;
+
+    // Validation
+    for (const c of consultancies) {
+      const isRoleSelected = c.role && c.role !== 'Select';
+      const hasOtherFields = c.organisation || c.project || c.duration || c.amount;
+      const hasEvidence = !!(c.evidenceFile || c.evidence_file);
+
+      // If any field is partially filled, evidence is mandatory
+      if ((hasOtherFields || isRoleSelected) && !hasEvidence) {
+        window.appToast(`Please upload evidence for the consultancy: ${c.project || 'Untitled Project'}`);
+        return false;
+      }
+
+      // If evidence is present, all fields (except maybe year) must be filled
+      if (hasEvidence && (!c.organisation || !c.project || !isRoleSelected || !c.duration || !c.amount)) {
+        window.appToast(`Please fill Organisation, Project Title, Role, Duration, and Amount for the consultancy where evidence is uploaded.`);
+        return false;
+      }
+    }
+
     setLoading(true);
     try {
       const facultyId = user?.id;
@@ -147,33 +167,39 @@ const Consultancy = ({ initialData, readOnly }) => {
         token
       )
 
-      const promises = consultancies
-        .filter(c => c.organisation && c.project)
-        .map(c => {
-          const formData = new FormData();
-          formData.append('faculty_id', facultyId);
-          formData.append('organization', c.organisation);
-          formData.append('project_title', c.project);
-          formData.append('role', c.role);
-          formData.append('duration', c.duration);
-          formData.append('amount', c.amount);
-          formData.append('year', c.year);
-          if (c.evidenceFile) {
-            formData.append('evidence_file', c.evidenceFile);
-          } else if (c.evidence_file) {
-            formData.append('existing_evidence_file', c.evidence_file);
-          }
+      // Only save rows that are not completely empty
+      const validConsultancies = consultancies.filter(c => {
+        const isRoleSelected = c.role && c.role !== 'Select';
+        return c.organisation || c.project || isRoleSelected || c.duration || c.amount || c.evidenceFile || c.evidence_file;
+      });
 
-          return fetch(`http://${window.location.hostname}:5001/api/consultancy`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
-            body: formData
-          });
+      const promises = validConsultancies.map(c => {
+        const formData = new FormData();
+        formData.append('faculty_id', facultyId);
+        formData.append('organization', c.organisation);
+        formData.append('project_title', c.project);
+        formData.append('role', c.role);
+        formData.append('duration', c.duration);
+        formData.append('amount', c.amount);
+        formData.append('year', c.year);
+        if (c.evidenceFile) {
+          formData.append('evidence_file', c.evidenceFile);
+        } else if (c.evidence_file) {
+          formData.append('existing_evidence_file', c.evidence_file);
+        }
+
+        return fetch(`http://${window.location.hostname}:5001/api/consultancy`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
         });
+      });
 
       if (promises.length === 0) {
-        window.appToast('Please fill at least one consultancy row with Organisation and Project.');
-        return false;
+        // If they had something before but cleared it, we already deleted it above.
+        // We might want to allow saving an empty form if they have no consultancies.
+        window.appToast('Data saved successfully!');
+        return true;
       }
 
       const createdResponses = await Promise.all(promises);
@@ -296,13 +322,13 @@ const Consultancy = ({ initialData, readOnly }) => {
           <table className="courses-table" style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8f9fa' }}>
-                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Organisation</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Project</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Role</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Duration</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Amount</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6', width: '100px' }}>Year</th>
-                <th style={{ padding: '0.75rem', textAlign: 'center', borderBottom: '2px solid #dee2e6', width: '80px' }}>Evidence</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Organisation<span style={{ color: '#d64550' }}>*</span></th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Project Title<span style={{ color: '#d64550' }}>*</span></th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Role<span style={{ color: '#d64550' }}>*</span></th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Duration<span style={{ color: '#d64550' }}>*</span></th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Amount (in INR lacs)<span style={{ color: '#d64550' }}>*</span></th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid #dee2e6', width: '100px' }}>Year<span style={{ color: '#d64550' }}>*</span></th>
+                <th style={{ padding: '0.75rem', textAlign: 'center', borderBottom: '2px solid #dee2e6', width: '80px' }}>Evidence<span style={{ color: '#d64550' }}>*</span></th>
                 {!readOnly && <th style={{ padding: '0.75rem', textAlign: 'center', borderBottom: '2px solid #dee2e6', width: '80px' }}>Action</th>}
               </tr>
             </thead>
@@ -330,14 +356,17 @@ const Consultancy = ({ initialData, readOnly }) => {
                     />
                   </td>
                   <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                    <input
-                      type="text"
+                    <select
                       className="table-input"
                       value={consultancy.role}
                       onChange={(e) => handleFieldChange(consultancy.id, 'role', e.target.value)}
                       disabled={readOnly}
                       style={{ width: '100%', padding: '0.4rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                    />
+                    >
+                      <option value="Select">Select</option>
+                      <option value="PI">PI</option>
+                      <option value="Co-PI">Co-PI</option>
+                    </select>
                   </td>
                   <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
                     <input
