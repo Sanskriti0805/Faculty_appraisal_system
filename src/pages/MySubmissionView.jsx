@@ -31,6 +31,7 @@ const SECTION_LABELS = [
   { key: 'patents',                     label: 'Patents' },
   { key: 'technology_transfer',         label: 'Technology Transfer' },
   { key: 'paper_review',                label: 'Paper Review' },
+  { key: 'talks_and_conferences',       label: 'Talks and Conferences' },
   { key: 'conference_sessions',         label: 'Conference Sessions' },
   { key: 'keynotes_talks',              label: 'Keynotes & Invited Talks' },
   { key: 'awards_honours',              label: 'Awards & Honours' },
@@ -668,8 +669,8 @@ const MySubmissionView = () => {
               {renderDataTable('Patents', patents, ['title', 'patent_number', 'status', 'year', 'country', 'evidence_file'])}
               {renderDataTable('Awards & Honours', awards, ['title', 'awarding_body', 'year', 'level', 'evidence_file'])}
               {renderDataTable('Paper Reviews', paperReviews, ['journal_name', 'review_count', 'year', 'details', 'evidence_file'])}
-              {renderDataTable('Conference Sessions', conferenceSessions, ['conference_name', 'role', 'date', 'location', 'evidence_file'])}
-              {renderDataTable('Keynotes & Talks', keynotesTalks, ['title', 'event_name', 'date', 'location', 'evidence_file'])}
+              {renderDataTable('Talks & Conferences (Cat 1 & 3)', conferenceSessions, ['conference_name', 'session_title', 'role', 'date', 'location', 'evidence_file'])}
+              {renderDataTable('Invited Talks (Cat 2)', keynotesTalks, ['title', 'event_type', 'audience_type', 'event_name', 'date', 'location', 'evidence_file'])}
             </>
           )}
 

@@ -1,4 +1,4 @@
-﻿const db = require('../config/database');
+const db = require('../config/database');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 const { evaluateRuleConfig } = require('./rubricRuleEngine');
 
@@ -191,10 +191,48 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
     let otherActivities = [];
     try {
-      otherActivities = await byFacultyIds('other_activities');
+      const [rows] = await db.query(
+        `SELECT content_json
+         FROM legacy_section_entries
+         WHERE faculty_id IN (${placeholders})
+           AND section_key = 'other_activities'
+           AND session_id = ?
+         ORDER BY updated_at DESC, id DESC`,
+        [...facultyIds, academicYear]
+      );
+      otherActivities = rows;
     } catch (_) {
       otherActivities = [];
     }
+
+    const parsedOtherActivityVisits = otherActivities.flatMap((row) => {
+      const raw = row?.content_json;
+      let parsed = raw;
+
+      if (typeof raw === 'string') {
+        try {
+          parsed = JSON.parse(raw);
+        } catch (_) {
+          parsed = null;
+        }
+      }
+
+      if (!parsed || typeof parsed !== 'object') return [];
+      const visits = Array.isArray(parsed.institutionalVisits) ? parsed.institutionalVisits : [];
+
+      return visits
+        .map((visit) => {
+          if (typeof visit === 'string') {
+            return { details: visit.trim(), evidence_file: '' };
+          }
+
+          return {
+            details: String(visit?.details || visit?.visit || visit?.text || '').trim(),
+            evidence_file: String(visit?.evidence_file || '').trim()
+          };
+        })
+        .filter((visit) => visit.details);
+    });
 
     let dynamicResponses = [];
     try {
@@ -616,6 +654,8 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         });
 
         const isFdpOrConferenceTalk = (talk) => {
+          const audienceText = norm(talk.audience_type);
+          if (audienceText.includes('fdp') || audienceText.includes('conference')) return true;
           const eventName = norm(talk.event_name);
           const eventType = norm(talk.event_type);
           const title = norm(talk.title);
@@ -623,11 +663,11 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         };
 
         if (sub.includes('convenor') && !sub.includes('co-convenor')) {
-          score = hasSessionMatch(({ all }) => all.includes('convenor') || all.includes('coordinator') || all.includes('workshop') || all.includes('fdp')) ? max : 0;
+          score = hasSessionMatch(({ roleText, all }) => roleText === 'convenor/coordinator' || (!roleText.includes('co-') && (all.includes('convenor') || all.includes('coordinator')))) ? max : 0;
         } else if (sub.includes('co-convenor')) {
-          score = hasSessionMatch(({ all }) => all.includes('co-convenor') || all.includes('co convenor') || all.includes('coordinator')) ? max : 0;
+          score = hasSessionMatch(({ roleText, all }) => roleText === 'co-convenor/co-coordinator/organizing chair' || all.includes('co-convenor') || all.includes('co convenor') || all.includes('co-coordinator')) ? max : 0;
         } else if (sub.includes('organizing committee')) {
-          score = hasSessionMatch(({ all }) => all.includes('organizing') || all.includes('committee')) ? max : 0;
+          score = hasSessionMatch(({ roleText, all }) => roleText === 'organizing committee member' || all.includes('organizing committee') || all.includes('committee member')) ? max : 0;
         } else if (sub.includes('fdp') || (sub.includes('invited') && sub.includes('fdp'))) {
           const fdpTalks = talks.filter(isFdpOrConferenceTalk);
           score = Math.min(fdpTalks.length * max, 10);
@@ -635,9 +675,9 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
           const invitedOther = talks.filter(talk => !isFdpOrConferenceTalk(talk));
           score = Math.min(invitedOther.length * max, 5);
         } else if (sub.includes('pc chair') || sub.includes('session chair') || sub.includes('general chair')) {
-          score = hasSessionMatch(({ all }) => all.includes('pc chair') || all.includes('session chair') || all.includes('general chair') || all.includes('chair')) ? max : 0;
+          score = hasSessionMatch(({ roleText, all }) => roleText === 'programme committee chair' || roleText === 'session chair' || roleText === 'general chair' || all.includes('pc chair') || all.includes('session chair') || all.includes('general chair') || (all.includes('chair') && !all.includes('organizing chair'))) ? max : 0;
         } else if (sub.includes('tpc') || sub.includes('other member')) {
-          score = hasSessionMatch(({ all }) => all.includes('tpc') || all.includes('technical program committee') || all.includes('member')) ? max : 0;
+          score = hasSessionMatch(({ roleText, all }) => roleText === 'tpc member' || roleText === 'other member' || all.includes('tpc') || all.includes('technical program committee') || (all.includes('member') && !all.includes('organizing committee'))) ? max : 0;
         } else {
           score = (talks.length > 0 || sessions.length > 0) ? max : 0;
         }
@@ -646,9 +686,8 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       // -- 12. Visits / Honours / Consultancy ----------------------------
       else if (sec.includes('visits') || sec.includes('honours') || sec.includes('consultancy')) {
         if (sub.includes('visits') || sub.includes('collaborative')) {
-          score = Math.min(contribs.filter(c =>
-            norm(c.contribution_type).includes('visit') || norm(c.title).includes('visit') || norm(c.description).includes('visit')
-          ).length * max, 10);
+          const visitCount = parsedOtherActivityVisits.length;
+          score = Math.min(visitCount * (max || 1), 10);
         } else if (sub.includes('international honours')) {
           score = awards.filter(a =>
             norm(a.honor_type) === 'international' ||

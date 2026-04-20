@@ -1,4 +1,4 @@
-﻿import React, { Suspense, lazy } from 'react'
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -31,9 +31,7 @@ const ResearchGrants = lazy(() => import('./pages/ResearchGrants'))
 const Patents = lazy(() => import('./pages/Patents'))
 const TechnologyTransfer = lazy(() => import('./pages/TechnologyTransfer'))
 const PaperReview = lazy(() => import('./pages/PaperReview'))
-const ConferenceSessions = lazy(() => import('./pages/ConferenceSessions'))
-const KeynotesTalks = lazy(() => import('./pages/KeynotesTalks'))
-const ConferencesOutside = lazy(() => import('./pages/ConferencesOutside'))
+const TalksAndConferences = lazy(() => import('./pages/TalksAndConferences'))
 const OtherActivities = lazy(() => import('./pages/OtherActivities'))
 const AwardsHonours = lazy(() => import('./pages/AwardsHonours'))
 const Consultancy = lazy(() => import('./pages/Consultancy'))
@@ -128,9 +126,7 @@ function App() {
               <Route path="patents" element={<Patents />} />
               <Route path="technology-transfer" element={<TechnologyTransfer />} />
               <Route path="paper-review" element={<PaperReview />} />
-              <Route path="conference-sessions" element={<ConferenceSessions />} />
-              <Route path="keynotes-talks" element={<KeynotesTalks />} />
-              <Route path="conferences-outside" element={<ConferencesOutside />} />
+              <Route path="talks-and-conferences" element={<TalksAndConferences />} />
               <Route path="other-activities" element={<OtherActivities />} />
               <Route path="awards-honours" element={<AwardsHonours />} />
               <Route path="consultancy" element={<Consultancy />} />
