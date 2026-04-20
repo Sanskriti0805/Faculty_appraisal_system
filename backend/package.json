@@ -7,6 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "migrate:employment-type": "node database/migrate_employment_type_to_regular_contractual.js",
+    "migrate:institutional-contribution-type": "node database/migrate_institutional_contribution_type_length.js",
     "migrate:session-id-varchar": "node database/migrate_session_id_to_varchar.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

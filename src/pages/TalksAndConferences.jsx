@@ -397,7 +397,13 @@ const TalksAndConferences = () => {
               <div className="form-row">
                 <div className="form-group">
                   <label>Type of Event<span className="required-star">*</span></label>
-                  <input type="text" name="eventType" value={formData.eventType} onChange={handleInputChange} placeholder="e.g. Conference, Seminar" />
+                  <select name="eventType" value={formData.eventType} onChange={handleInputChange}>
+                    <option value="Workshop">Workshop</option>
+                    <option value="Conference">Conference</option>
+                    <option value="FDP">FDP</option>
+                    <option value="Seminar">Seminar</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
                 {formData.mainCategory === '3' && (
                   <div className="form-group">
@@ -539,7 +545,7 @@ const TalksAndConferences = () => {
                         {item.title}
                       </div>
                       <div style={{ fontSize: '0.85rem', color: '#4b5563', marginBottom: '0.15rem' }}>
-                        {item.mainCategory === '2' ? `Type: ${item.cat2Category} (${item.cat2SubCategory})` : `Role: ${item.role}`} | Organizer: {item.organizer}
+                        {item.mainCategory === '2' ? `Type: ${item.cat2Category} (${item.cat2SubCategory})` : `Event: ${item.eventType} | Role: ${item.role}`} | Organizer: {item.organizer}
                       </div>
                       <div style={{ fontSize: '0.85rem', color: '#4b5563', marginBottom: '0.15rem' }}>Venue: {formatVenue(item.venue) || 'N/A'}</div>
                       <div style={{ fontSize: '0.85rem', color: '#4b5563' }}>

@@ -112,6 +112,25 @@ const buildSectionState = (rows = []) => {
   return newState
 }
 
+const getFriendlySaveErrorMessage = (sectionLabel, entryIndex, backendMessage = '') => {
+  const lower = String(backendMessage || '').toLowerCase()
+  const entryText = `entry #${entryIndex + 1} in ${sectionLabel}`
+
+  if (lower.includes('data truncated')) {
+    return `Could not save ${entryText}. One of the selected values is not accepted by the server. Please reselect the position and try again.`
+  }
+
+  if (lower.includes('max_allowed_packet') || lower.includes('too large')) {
+    return `Could not save ${entryText}. The evidence file is too large. Please upload a smaller file and try again.`
+  }
+
+  if (lower.includes('faculty profile not found')) {
+    return 'Your profile is incomplete. Please complete onboarding first, then try again.'
+  }
+
+  return `Could not save ${entryText}. Please check Position, Details, and Evidence, then try again.`
+}
+
 const InstitutionalContributions = ({ initialData, readOnly }) => {
   const { user, token } = useAuth()
   const [sections, setSections] = useState({
@@ -288,7 +307,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
       // 2. Handle Saves (Upserts via DELETE+POST pattern used in this app)
       const savePromises = []
       categories.forEach(cat => {
-        sections[cat.key].forEach(item => {
+        sections[cat.key].forEach((item, index) => {
           if (!item.details && !item.position && !item.file) return // Skip completely empty items
 
           const formDataObj = new FormData()
@@ -316,7 +335,19 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
               headers: { Authorization: `Bearer ${token}` },
               body: formDataObj
             })
-            if (!res.ok) throw new Error(`Failed to save ${cat.key} entry`)
+            if (!res.ok) {
+              let backendMessage = ''
+              try {
+                const body = await res.json()
+                backendMessage = body?.message || ''
+              } catch (_) {
+                backendMessage = ''
+              }
+
+              const err = new Error(backendMessage || `Failed to save ${cat.key} entry`)
+              err.userMessage = getFriendlySaveErrorMessage(cat.label, index, backendMessage)
+              throw err
+            }
             return res.json()
           }
           savePromises.push(saveAction())
@@ -338,7 +369,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
       return true
     } catch (error) {
       console.error('Error saving contributions:', error)
-      window.appToast('Failed to save data. Error: ' + error.message)
+      window.appToast(error?.userMessage || 'Could not save your data right now. Please try again.')
       return false
     } finally {
       setLoading(false)
