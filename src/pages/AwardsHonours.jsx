@@ -12,7 +12,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
   const [awards, setAwards] = useState([])
   const [toast, setToast] = useState(null)
   const [formData, setFormData] = useState({
-    honorType: 'National',
+    honorType: 'Select',
     awardName: '',
     description: '',
     evidenceFile: null
@@ -53,14 +53,37 @@ const AwardsHonours = ({ initialData, readOnly }) => {
   }
 
   const persistCurrentAward = async ({ showSuccessAlert = true, requireAwardName = true } = {}) => {
-    const awardName = formData.awardName?.trim()
+    const { honorType, awardName, description, evidenceFile } = formData;
+    
+    const isHonourTypeSelected = honorType && honorType !== 'Select';
+    const isNameFilled = awardName?.trim() !== '';
+    const isDetailsFilled = description?.trim() !== '';
+    const isEvidenceUploaded = !!evidenceFile;
 
-    if (!awardName) {
-      if (requireAwardName) {
-        showToast('Please enter the award name')
-        return false
-      }
-      return true
+    // Check if any field is partially filled
+    const anyFieldFilled = isHonourTypeSelected || isNameFilled || isDetailsFilled;
+
+    // Logic 1: If any detail is filled, evidence MUST be uploaded
+    if (anyFieldFilled && !isEvidenceUploaded) {
+      showToast('Please upload evidence for the award details provided');
+      return false;
+    }
+
+    // Logic 2: If evidence is uploaded, all fields (Type, Name, Details) MUST be filled
+    if (isEvidenceUploaded && (!isHonourTypeSelected || !isNameFilled || !isDetailsFilled)) {
+      showToast('Please fill in Type of Honour, Name of Honour, and Details when evidence is uploaded');
+      return false;
+    }
+
+    // Logic 3: If it's a mandatory add (handleAddAward), check if anything was entered at all
+    if (requireAwardName && !anyFieldFilled && !isEvidenceUploaded) {
+      showToast('Please enter award details');
+      return false;
+    }
+
+    // Logic 4: If everything is empty (e.g. Save and Next without typing anything), just return true
+    if (!anyFieldFilled && !isEvidenceUploaded) {
+      return true;
     }
 
     const isDuplicate = awards.some(award =>
@@ -93,7 +116,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
       await awardsService.createAward(data)
 
       setFormData({
-        honorType: 'National',
+        honorType: 'Select',
         awardName: '',
         description: '',
         evidenceFile: null
@@ -160,7 +183,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
 
             <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', marginBottom: '1rem' }}>
               <div className="form-field-vertical">
-                <label>Type of Honor<span style={{ color: '#d64550' }}>*</span></label>
+                <label>Type of Honour<span style={{ color: '#d64550' }}>*</span></label>
                 <select
                   value={formData.honorType}
                   onChange={(e) => handleInputChange('honorType', e.target.value)}
@@ -172,13 +195,14 @@ const AwardsHonours = ({ initialData, readOnly }) => {
                     fontSize: '1rem'
                   }}
                 >
+                  <option value="Select">Select</option>
                   <option value="National">National</option>
                   <option value="International">International</option>
                 </select>
               </div>
 
               <div className="form-field-vertical">
-                <label>Name of Honor<span style={{ color: '#d64550' }}>*</span></label>
+                <label>Name of Honour<span style={{ color: '#d64550' }}>*</span></label>
                 <input
                   type="text"
                   value={formData.awardName}
@@ -196,7 +220,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
             </div>
 
             <div className="form-field-vertical" style={{ marginBottom: '1rem' }}>
-              <label>Details</label>
+              <label>Details<span style={{ color: '#d64550' }}>*</span></label>
               <textarea
                 rows="3"
                 value={formData.description}
@@ -214,7 +238,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
             </div>
 
             <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-              <label>Upload Evidence</label>
+              <label>Upload Evidence<span style={{ color: '#d64550' }}>*</span></label>
               <div style={{
                 border: '2px dashed #ddd',
                 borderRadius: '8px',
@@ -316,7 +340,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
                 <thead>
                   <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
                     <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Type</th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Name of Honor</th>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Name of Honour</th>
                     <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Details</th>
                     <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Evidence</th>
                     {!readOnly && <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#495057' }}>Actions</th>}
