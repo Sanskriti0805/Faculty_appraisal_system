@@ -258,13 +258,13 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
   const handleSave = async () => {
     // Validation
     const categories = [
-      { key: 'dean', label: 'Dean/Associate/Assistant Dean' },
-      { key: 'hod', label: 'HoD/Deputy HoD' },
-      { key: 'warden', label: 'Chief Warden / Associate Chief Warden / Assistant Warden / Warden' },
-      { key: 'centreLead', label: 'Centre-Lead/Nucleus Member' },
-      { key: 'committee', label: 'Chairperson / Vice Chairperson / Convener / Commitee Member' },
-      { key: 'facultyInCharge', label: 'Faculty In-Charge / Faculty Mentor / Cell Member' },
-      { key: 'otherResponsibility', label: 'Member of Major Responsibilities / Conduct of New Certificate / Scholarly Articles in Reputed Newspapers / Magazines' }
+      { key: 'dean', label: 'Dean/Associate/Assistant Dean', shortLabel: 'Dean Role' },
+      { key: 'hod', label: 'HoD/Deputy HoD', shortLabel: 'HoD Role' },
+      { key: 'warden', label: 'Chief Warden / Associate Chief Warden / Assistant Warden / Warden', shortLabel: 'Warden Role' },
+      { key: 'centreLead', label: 'Centre-Lead/Nucleus Member', shortLabel: 'Centre Lead Role' },
+      { key: 'committee', label: 'Chairperson / Vice Chairperson / Convener / Commitee Member', shortLabel: 'Committee Role' },
+      { key: 'facultyInCharge', label: 'Faculty In-Charge / Faculty Mentor / Cell Member', shortLabel: 'Faculty In-Charge' },
+      { key: 'otherResponsibility', label: 'Member of Major Responsibilities / Conduct of New Certificate / Scholarly Articles in Reputed Newspapers / Magazines', shortLabel: 'Other Responsibilities' }
     ]
 
     for (const cat of categories) {
@@ -279,11 +279,11 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
         const hasFile = !!file
 
         if (hasContent && !hasFile) {
-          window.appToast(`Please upload evidence for entry #${i + 1} in ${cat.label}`)
+          window.appToast(`Entry #${i + 1} (${cat.shortLabel}): upload evidence before saving.`)
           return false
         }
         if (hasFile && (!details || !position)) {
-          window.appToast(`Please fill in both the position and details for entry #${i + 1} in ${cat.label} where evidence is uploaded`)
+          window.appToast(`Entry #${i + 1} (${cat.shortLabel}): select position and add details.`)
           return false
         }
       }
@@ -345,7 +345,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
               }
 
               const err = new Error(backendMessage || `Failed to save ${cat.key} entry`)
-              err.userMessage = getFriendlySaveErrorMessage(cat.label, index, backendMessage)
+              err.userMessage = getFriendlySaveErrorMessage(cat.shortLabel, index, backendMessage)
               throw err
             }
             return res.json()
