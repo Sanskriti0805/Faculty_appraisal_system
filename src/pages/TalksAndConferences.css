@@ -1,0 +1,90 @@
+.talks-conferences {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.talks-conferences .required-star {
+  color: #ef4444;
+  margin-left: 0.25rem;
+}
+
+.talks-conferences .form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.talks-conferences .form-group {
+  flex: 1;
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.talks-conferences label {
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.talks-conferences input[type="text"],
+.talks-conferences input[type="date"],
+.talks-conferences select {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  width: 100%;
+}
+
+.talks-conferences .date-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.talks-conferences .date-input-wrapper input[type="date"] {
+  width: 100%;
+}
+
+.talks-conferences .date-input-wrapper .calendar-icon {
+  position: absolute;
+  right: 0.8rem;
+  color: #64748b;
+  pointer-events: none;
+}
+
+.talks-conferences .section-fieldset {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  position: relative;
+  background-color: #f8fafc;
+}
+
+.talks-conferences .section-legend {
+  position: absolute;
+  top: -0.75rem;
+  left: 1rem;
+  background-color: #fff;
+  padding: 0 0.5rem;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.talks-conferences .venue-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.talks-conferences .venue-row .form-group {
+  flex: 1;
+  min-width: 150px;
+}
