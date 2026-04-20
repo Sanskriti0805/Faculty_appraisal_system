@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Upload, FileText, X, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, Upload, FileText, X, ExternalLink, Eye, CheckCircle, RotateCw } from 'lucide-react'
 import apiClient from '../services/api';
 import './CoursesTaught.css'
 import FormActions from '../components/FormActions'
@@ -62,6 +62,9 @@ const CoursesTaught = ({ initialData, readOnly }) => {
    const [selectedSection, setSelectedSection] = useState('')
    const [selectedSemester, setSelectedSemester] = useState('')
    const [persistedCourseIds, setPersistedCourseIds] = useState([])
+   const [showFinalSummary, setShowFinalSummary] = useState(false)
+   const [summaryData, setSummaryData] = useState({ courses: [], projects: [] })
+   const [isSaving, setIsSaving] = useState(false)
 
    const [fallCourses, setFallCourses] = useState([
       { id: 1, dbId: null, title: '', percentage: '', students: '', feedback: '', remarks: '', feedbackFile: null },
@@ -219,8 +222,36 @@ const CoursesTaught = ({ initialData, readOnly }) => {
          }
       }
 
-      hydrateFromSubmission()
+      fetchPersistedData()
    }, [initialData, readOnly, user])
+
+   const fetchPersistedData = async () => {
+      try {
+         const mySub = await apiClient.get('/submissions/my')
+         if (!mySub?.success || !mySub?.data?.id) return
+
+         const subDetails = await apiClient.get(`/submissions/${mySub.data.id}`)
+         const serverData = subDetails.data || subDetails
+         
+         const allRows = Array.isArray(serverData.courses) ? serverData.courses : []
+         
+         const newSummaryData = {
+            courses: allRows.filter(r => {
+               const sec = String(r.section || '').toLowerCase()
+               return sec === 'courses' || sec === 'course' || !sec || sec === 'teaching-learning'
+            }),
+            projects: allRows.filter(r => {
+               const sec = String(r.section || '').toLowerCase()
+               return sec === 'projects' || sec === 'project'
+            })
+         }
+         
+         setSummaryData(newSummaryData)
+         setPersistedCourseIds(allRows.map(r => r.id).filter(Boolean))
+      } catch (error) {
+         console.error('Failed to fetch persisted data:', error)
+      }
+   }
 
    const handleInputChange = (semester, index, field, value) => {
       if (readOnly) return;
@@ -464,6 +495,13 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
    const handleSave = async () => {
       if (readOnly) return false;
+      
+      // If summary is already shown, second click proceeds to next page
+      if (showFinalSummary) {
+         return true;
+      }
+
+      setIsSaving(true);
       try {
          if (!selectedSection || !selectedSemester) {
             window.appToast('Please select both Section and Semester before entering or saving data.');
@@ -483,7 +521,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
          await deleteIgnoringNotFound((id) => apiClient.delete(`/courses/${id}`), persistedCourseIds)
 
-         // Save Courses from the current form state
+         // Save Courses
          const allCourses = [
             ...fallCourses.map(c => ({ ...c, semester: 'Fall' })),
             ...springCourses.map(c => ({ ...c, semester: 'Spring' })),
@@ -491,6 +529,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
          ];
 
          const createdIds = []
+         const savedCourses = []
          for (const course of allCourses) {
             if (!hasCourseRowData(course)) continue;
 
@@ -520,18 +559,28 @@ const CoursesTaught = ({ initialData, readOnly }) => {
             }
 
             const created = await apiClient.post('/courses', formData);
-
-            if (Number.isFinite(Number(created?.data?.id))) {
+            if (created?.data?.id) {
                createdIds.push(created.data.id)
+               savedCourses.push({
+                  ...course,
+                  id: created.data.id,
+                  course_name: course.title,
+                  percentage: course.percentage,
+                  enrollment: course.students,
+                  feedback_score: course.feedback,
+                  evidence_file: created.data.fileName || course.evidence_file
+               })
             }
          }
 
+         // Save Projects
          const allProjects = [
             ...fallProjects.map(p => ({ ...p, semester: 'Fall' })),
             ...springProjects.map(p => ({ ...p, semester: 'Spring' })),
             ...summerProjects.map(p => ({ ...p, semester: 'Summer' }))
          ]
 
+         const savedProjects = []
          for (const project of allProjects) {
             if (!hasProjectRowData(project)) continue
 
@@ -555,20 +604,44 @@ const CoursesTaught = ({ initialData, readOnly }) => {
             }
 
             const created = await apiClient.post('/courses', formData)
-            if (Number.isFinite(Number(created?.data?.id))) {
+            if (created?.data?.id) {
                createdIds.push(created.data.id)
+               savedProjects.push({
+                  ...project,
+                  id: created.data.id,
+                  project_title: project.projectTitle,
+                  project_type: project.projectType,
+                  project_role: project.role,
+                  student_name: project.studentName,
+                  project_duration: project.duration,
+                  evidence_file: created.data.fileName || project.evidence_file
+               })
             }
          }
 
+         // Save Projects loop finishes...
          setPersistedCourseIds(createdIds)
+         
+         // Immediate UI population: Use the actual data from the POST responses
+         setSummaryData({
+            courses: savedCourses,
+            projects: savedProjects
+         })
+         setShowFinalSummary(true)
 
-         window.appToast('Data saved successfully!');
-         return true;
+         // Still fetch from server to get accurate IDs and any backend transformations
+         setTimeout(async () => {
+            await fetchPersistedData()
+            window.appToast('Data saved successfully! Review your entries in the summary list below.');
+         }, 800)
+         
+         return false; // Stay on page to show summary
       } catch (error) {
          console.error('Error saving courses:', error);
-         const message = error?.response?.data?.message || error.message || 'Please check the entered values.';
-         window.appToast(`Failed to save data. ${message}`);
+         window.appToast(`Failed to save data. ${error?.response?.data?.message || error.message}`);
          return false;
+      } finally {
+         setIsSaving(false)
       }
    }
 
@@ -601,6 +674,148 @@ const CoursesTaught = ({ initialData, readOnly }) => {
          return 'BTech/MTech/MS/LUSIP/SLI/Ph.D./Other Projects Guided / Co-Advised / Mentored'
       }
       return 'Please select both Section and Semester to start filling this form.'
+   }
+
+   const handleDeleteSummaryEntry = async (id) => {
+      const confirmed = await window.showConfirm({
+         title: 'Delete Entry',
+         message: 'Are you sure you want to delete this entry? This action cannot be undone.',
+         confirmText: 'Delete',
+         cancelText: 'Cancel',
+         danger: true
+      })
+
+      if (!confirmed) return
+
+      try {
+         await apiClient.delete(`/courses/${id}`)
+         await fetchPersistedData()
+         window.appToast('Entry deleted successfully.')
+      } catch (error) {
+         console.error('Failed to delete entry:', error)
+         window.appToast('Failed to delete entry. Please try again.')
+      }
+   }
+
+   const renderFinalSummary = () => {
+      const hasAnyData = (summaryData?.courses?.length || 0) > 0 || (summaryData?.projects?.length || 0) > 0
+      if (!showFinalSummary && !hasAnyData) return null
+
+      return (
+         <div className="final-summary-section" style={{ marginTop: '2rem', padding: '2rem', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '2px solid #3182ce', paddingBottom: '0.5rem' }}>
+               <h2 style={{ color: '#1e3a5f', margin: 0 }}>Final Structured List (Confirmed Entries)</h2>
+               <button 
+                  onClick={fetchPersistedData}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', color: '#4a5568', fontSize: '0.9rem' }}
+                  title="Refresh list"
+               >
+                  <RotateCw size={16} /> Refresh
+               </button>
+            </div>
+            
+            {!hasAnyData && showFinalSummary && (
+               <div style={{ textAlign: 'center', padding: '3rem', color: '#718096' }}>
+                  <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No saved entries found in the database.</p>
+                  <p style={{ fontSize: '0.9rem' }}>If you just added data, it might take a moment to reflect here. Try clicking "Save Draft" again to refresh.</p>
+               </div>
+            )}
+
+            {(summaryData?.courses?.length || 0) > 0 && (
+               <div style={{ marginBottom: '2.5rem' }}>
+                  <h3 style={{ color: '#2d3748', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                     <CheckCircle size={20} color="#38a169" /> 4.1 Courses Taught
+                  </h3>
+                  <table className="courses-table summary-table">
+                     <thead>
+                        <tr>
+                           <th>Semester</th>
+                           <th>Course Name</th>
+                           <th>% Taught Alone</th>
+                           <th>Students</th>
+                           <th>Feedback Score</th>
+                           <th>Remarks</th>
+                           <th>Evidence</th>
+                           <th style={{ width: '80px' }}>Action</th>
+                        </tr>
+                     </thead>
+                     <tbody>
+                        {summaryData.courses.map((c) => (
+                           <tr key={c.id}>
+                              <td style={{ fontWeight: 600, color: '#4a5568' }}>{c.semester}</td>
+                              <td>{c.course_name}</td>
+                              <td>{c.percentage}%</td>
+                              <td>{c.enrollment}</td>
+                              <td>{c.feedback_score}</td>
+                              <td>{c.remarks || '—'}</td>
+                              <td style={{ textAlign: 'center' }}>
+                                 {c.evidence_file ? (
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                       <a href={`http://${window.location.hostname}:5001/uploads/${c.evidence_file}`} target="_blank" rel="noopener noreferrer" title="View File" style={{ color: '#3182ce' }}>
+                                          <Eye size={18} />
+                                       </a>
+                                    </div>
+                                 ) : '—'}
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                 <button onClick={() => handleDeleteSummaryEntry(c.id)} style={{ color: '#e53e3e', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                    <Trash2 size={18} />
+                                 </button>
+                              </td>
+                           </tr>
+                        ))}
+                     </tbody>
+                  </table>
+               </div>
+            )}
+
+            {summaryData.projects.length > 0 && (
+               <div>
+                  <h3 style={{ color: '#2d3748', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                     <CheckCircle size={20} color="#38a169" /> 4.2 Projects Guided
+                  </h3>
+                  <table className="courses-table summary-table">
+                     <thead>
+                        <tr>
+                           <th>Semester</th>
+                           <th>Project Title</th>
+                           <th>Type</th>
+                           <th>Role</th>
+                           <th>Student</th>
+                           <th>Duration</th>
+                           <th>Evidence</th>
+                           <th style={{ width: '80px' }}>Action</th>
+                        </tr>
+                     </thead>
+                     <tbody>
+                        {summaryData.projects.map((p) => (
+                           <tr key={p.id}>
+                              <td style={{ fontWeight: 600, color: '#4a5568' }}>{p.semester}</td>
+                              <td>{p.project_title}</td>
+                              <td>{p.project_type}</td>
+                              <td>{p.project_role}</td>
+                              <td>{p.student_name}</td>
+                              <td>{p.project_duration}</td>
+                              <td style={{ textAlign: 'center' }}>
+                                 {p.evidence_file ? (
+                                    <a href={`http://${window.location.hostname}:5001/uploads/${p.evidence_file}`} target="_blank" rel="noopener noreferrer" title="View File" style={{ color: '#3182ce' }}>
+                                       <Eye size={18} />
+                                    </a>
+                                 ) : '—'}
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                 <button onClick={() => handleDeleteSummaryEntry(p.id)} style={{ color: '#e53e3e', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                    <Trash2 size={18} />
+                                 </button>
+                              </td>
+                           </tr>
+                        ))}
+                     </tbody>
+                  </table>
+               </div>
+            )}
+         </div>
+      )
    }
 
    const renderTable = (semester, items, semesterLabel) => {
@@ -929,10 +1144,13 @@ const CoursesTaught = ({ initialData, readOnly }) => {
             renderTable(selectedSemester, getCurrentItems(), getSemesterLabel())
          )}
 
+         {renderFinalSummary()}
+
          {!readOnly && (
             <FormActions
                onSave={handleSave}
                currentPath={window.location.pathname}
+               loading={isSaving}
             />
          )}
       </div>
