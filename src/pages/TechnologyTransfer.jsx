@@ -294,7 +294,10 @@ const TechnologyTransfer = () => {
 
       <div className="form-card">
         <div className="form-section">
-          <div className="form-field-vertical" style={{ marginBottom: '0.25rem' }}>
+          <p style={{ margin: '0 0 1rem 0', color: '#475569', fontSize: '1rem', fontWeight: '500' }}>
+            Choose the type of your technology and add as per your convenience
+          </p>
+          <div className="form-field-vertical" style={{ marginBottom: '1.25rem' }}>
             <button
               type="button"
               onClick={addEntry}

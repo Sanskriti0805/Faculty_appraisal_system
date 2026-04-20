@@ -106,13 +106,30 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
         setLoading(false)
         return false
       }
+      if (formData.onCampusFile && !(formData.onCampus && formData.onCampus.trim())) {
+        window.appToast('Please provide details for the uploaded supporting document in section (a) On-Campus.')
+        setLoading(false)
+        return false
+      }
+
       if (formData.online && formData.online.trim() && !formData.onlineFile) {
         window.appToast('Please upload a supporting document for section (b) Online.')
         setLoading(false)
         return false
       }
+      if (formData.onlineFile && !(formData.online && formData.online.trim())) {
+        window.appToast('Please provide details for the uploaded supporting document in section (b) Online.')
+        setLoading(false)
+        return false
+      }
+
       if (formData.evaluation && formData.evaluation.trim() && !formData.evaluationFile) {
         window.appToast('Please upload a supporting document for section (c) Evaluation.')
+        setLoading(false)
+        return false
+      }
+      if (formData.evaluationFile && !(formData.evaluation && formData.evaluation.trim())) {
+        window.appToast('Please provide details for the uploaded supporting document in section (c) Evaluation.')
         setLoading(false)
         return false
       }

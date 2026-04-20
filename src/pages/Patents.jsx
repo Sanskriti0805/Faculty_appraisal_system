@@ -74,7 +74,7 @@ const getFileDisplayName = (fileValue, fallbackLabel) => {
 const Patents = ({ initialData, readOnly }) => {
   const { user } = useAuth()
   const [entries, setEntries] = useState([])
-  const [selectedEntryType, setSelectedEntryType] = useState('A')
+  const [selectedEntryType, setSelectedEntryType] = useState('')
   const [loading, setLoading] = useState(false)
   const [validationErrors, setValidationErrors] = useState({})
   const entryRefs = useRef({})
@@ -317,9 +317,10 @@ const Patents = ({ initialData, readOnly }) => {
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 <select
                   value={selectedEntryType}
-                  onChange={(e) => setSelectedEntryType(String(e.target.value || 'A'))}
+                  onChange={(e) => setSelectedEntryType(String(e.target.value || ''))}
                   style={{ minWidth: 260 }}
                 >
+                  <option value="">Select Category</option>
                   <option value="A">A - Patents Granted</option>
                   <option value="B">B - Patents Published</option>
                   <option value="C">C - Patents Applied For</option>
@@ -328,6 +329,7 @@ const Patents = ({ initialData, readOnly }) => {
                 <button
                   type="button"
                   onClick={addEntry}
+                  disabled={!selectedEntryType}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -335,9 +337,9 @@ const Patents = ({ initialData, readOnly }) => {
                     padding: '0.72rem 1.1rem',
                     borderRadius: '8px',
                     border: '1px solid #3B5998',
-                    background: '#f3f7ff',
-                    color: '#1f3e73',
-                    cursor: 'pointer',
+                    background: selectedEntryType ? '#f3f7ff' : '#f1f5f9',
+                    color: selectedEntryType ? '#1f3e73' : '#94a3b8',
+                    cursor: selectedEntryType ? 'pointer' : 'not-allowed',
                     fontWeight: 600
                   }}
                 >
