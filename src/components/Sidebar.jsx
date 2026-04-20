@@ -389,7 +389,7 @@ const Sidebar = () => {
           </button>
           {partBOpen && (
             <div className="nav-section-items">
-              {renderNavLink('/part-b', 'Part B Content', 'nav-item')}
+              {renderNavLink('/part-b', 'Goal Setting', 'nav-item')}
               {dynamicSections
                 .filter(s => s.form_type === 'B' && s.is_active)
                 .map(s => renderNavLink(`/faculty/dynamic/${s.id}`, s.title, 'nav-item'))}

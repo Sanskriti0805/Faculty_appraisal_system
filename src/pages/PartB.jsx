@@ -128,12 +128,17 @@ const PartB = ({ initialData, readOnly }) => {
         // Also fetch active session deadline for popup
         const sessionRes = await fetch(`${API_BASE}/sessions/active`)
         const sessionData = await sessionRes.json()
-        if (sessionData.success && sessionData.data?.deadline) {
-          setSessionDeadline(
-            new Date(sessionData.data.deadline).toLocaleDateString('en-IN', {
-              day: '2-digit', month: 'long', year: 'numeric'
-            })
-          )
+        if (sessionData.success && sessionData.data) {
+          if (sessionData.data.deadline) {
+            setSessionDeadline(
+              new Date(sessionData.data.deadline).toLocaleDateString('en-IN', {
+                day: '2-digit', month: 'long', year: 'numeric'
+              })
+            )
+          }
+          if (sessionData.data.academic_year) {
+            setSubmissionAcademicYear(prev => prev || String(sessionData.data.academic_year))
+          }
         }
       } catch (err) {
         console.error('Failed to fetch submission:', err)
@@ -409,7 +414,7 @@ const PartB = ({ initialData, readOnly }) => {
       )}
 
       <div className="form-card">
-        <h2 className="section-header-text">Part-B: Goal setting for the academic year 2023-2024</h2>
+        <h2 className="section-header-text">Goal setting for the academic year {submissionAcademicYear}</h2>
 
         <div className="form-section">
           <div style={{ color: '#2c3e50', lineHeight: '1.6', fontSize: '1rem' }}>
