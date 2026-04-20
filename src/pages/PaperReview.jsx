@@ -9,8 +9,39 @@ import { useAuth } from '../context/AuthContext'
 const getEmptyReviewEntry = () => ({
   tier: '',
   paperType: '',
+  quartile: '',
   reviewDetails: ''
 })
+
+const JOURNAL_QUARTILES = ['Q1', 'Q2', 'Q3', 'Q4/SCOPUS', 'OTHERS']
+
+const parseReviewType = (value) => {
+  const raw = String(value || '').trim()
+  if (!raw) return { paperType: '', quartile: '' }
+
+  if (raw.toLowerCase().startsWith('journal')) {
+    const suffix = raw.includes('-') ? raw.split('-').slice(1).join('-').trim() : ''
+    const quartile = JOURNAL_QUARTILES.find((q) => q.toLowerCase() === suffix.toLowerCase()) || ''
+    return { paperType: 'Journal', quartile }
+  }
+
+  if (raw.toLowerCase().startsWith('conference')) {
+    return { paperType: 'Conference', quartile: '' }
+  }
+
+  return { paperType: raw, quartile: '' }
+}
+
+const toStoredReviewType = (paperType, quartile) => {
+  const normalizedPaperType = String(paperType || '').trim()
+  const normalizedQuartile = String(quartile || '').trim()
+
+  if (normalizedPaperType === 'Journal' && normalizedQuartile) {
+    return `Journal - ${normalizedQuartile}`
+  }
+
+  return normalizedPaperType
+}
 
 const hasReviewContent = (entry) => Boolean(
   String(entry?.tier || '').trim() ||
@@ -23,30 +54,38 @@ const hasReviewContent = (entry) => Boolean(
 const hasRequiredReviewFields = (entry) => Boolean(
   String(entry?.tier || '').trim() &&
   String(entry?.paperType || '').trim() &&
+  (String(entry?.paperType || '').trim() !== 'Journal' || String(entry?.quartile || '').trim()) &&
   String(entry?.reviewDetails || '').trim()
 )
 
 const normalizeDraftEntry = (entry) => ({
   tier: String(entry?.tier || '').trim(),
   paperType: String(entry?.paperType || '').trim(),
+  quartile: String(entry?.quartile || '').trim(),
   reviewDetails: String(entry?.reviewDetails || '').trim(),
   evidenceFile: entry?.evidenceFile || null,
   evidence_file: entry?.evidence_file || ''
 })
 
-const mapStoredReview = (row) => ({
-  id: row?.id || null,
-  tier: row?.tier || '',
-  paperType: row?.review_type || '',
-  reviewDetails: row?.journal_name || '',
-  evidenceFile: null,
-  evidence_file: row?.evidence_file || ''
-})
+const mapStoredReview = (row) => {
+  const parsedType = parseReviewType(row?.review_type)
+
+  return {
+    id: row?.id || null,
+    tier: row?.tier || '',
+    paperType: parsedType.paperType,
+    quartile: parsedType.quartile,
+    reviewDetails: row?.journal_name || '',
+    evidenceFile: null,
+    evidence_file: row?.evidence_file || ''
+  }
+}
 
 const formatReviewSummary = (entry) => {
   const parts = []
   if (entry?.tier) parts.push(`Tier ${entry.tier}`)
   if (entry?.paperType) parts.push(entry.paperType)
+  if (entry?.paperType === 'Journal' && entry?.quartile) parts.push(entry.quartile)
   return parts.length > 0 ? parts.join(' · ') : 'Untitled Review'
 }
 
@@ -112,7 +151,7 @@ const PaperReview = () => {
     }
 
     if (!hasRequiredReviewFields(draftEntry)) {
-      window.appToast('Please complete Tier, Type of Paper, and Review details before adding another section.')
+      window.appToast('Please complete Tier, Type of Paper, Quartile (for Journal), and Review details before adding another section.')
       return
     }
 
@@ -138,7 +177,7 @@ const PaperReview = () => {
       const draftHasContent = hasReviewContent(draftEntry)
 
       if (draftHasContent && !hasRequiredReviewFields(draftEntry)) {
-        window.appToast('Please complete Tier, Type of Paper, and Review details before saving.')
+        window.appToast('Please complete Tier, Type of Paper, Quartile (for Journal), and Review details before saving.')
         return false
       }
 
@@ -160,7 +199,7 @@ const PaperReview = () => {
       const responses = await Promise.all(entriesToSave.map((entry) => {
         const formDataObj = new FormData()
         formDataObj.append('faculty_id', facultyId)
-        formDataObj.append('review_type', entry.paperType || 'Journal')
+        formDataObj.append('review_type', toStoredReviewType(entry.paperType || 'Journal', entry.quartile || ''))
         formDataObj.append('journal_name', String(entry.reviewDetails || '').trim().substring(0, 255))
         formDataObj.append('tier', entry.tier)
         formDataObj.append('number_of_papers', 1)
@@ -255,7 +294,14 @@ const PaperReview = () => {
               <label>Type of Paper<span style={{ color: '#d64550' }}>*</span></label>
               <select
                 value={formData.paperType}
-                onChange={(e) => handleInputChange('paperType', e.target.value)}
+                onChange={(e) => {
+                  const nextType = e.target.value
+                  setFormData((prev) => ({
+                    ...prev,
+                    paperType: nextType,
+                    quartile: nextType === 'Journal' ? prev.quartile : ''
+                  }))
+                }}
                 style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '1rem' }}
               >
                 <option value="">-- Select Type --</option>
@@ -264,6 +310,22 @@ const PaperReview = () => {
               </select>
             </div>
           </div>
+
+          {formData.paperType === 'Journal' && (
+            <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+              <label>Quartile<span style={{ color: '#d64550' }}>*</span></label>
+              <select
+                value={formData.quartile || ''}
+                onChange={(e) => handleInputChange('quartile', e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '1rem' }}
+              >
+                <option value="">-- Select Quartile --</option>
+                {JOURNAL_QUARTILES.map((quartile) => (
+                  <option key={quartile} value={quartile}>{quartile}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="form-field-vertical">
             <label>Review of research papers for Tier-1/2 refereed internal research journals</label>
