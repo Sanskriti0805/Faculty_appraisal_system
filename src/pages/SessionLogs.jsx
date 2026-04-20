@@ -7,6 +7,20 @@ import './SessionLogs.css';
 
 const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`;
 
+const sortAcademicYearsDesc = (years = []) => {
+  const parseStart = (year) => {
+    const first = String(year || '').split('-')[0];
+    const value = Number(first);
+    return Number.isFinite(value) ? value : Number.NEGATIVE_INFINITY;
+  };
+
+  return [...years].sort((a, b) => {
+    const diff = parseStart(b) - parseStart(a);
+    if (diff !== 0) return diff;
+    return String(b || '').localeCompare(String(a || ''));
+  });
+};
+
 const SessionLogs = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -66,7 +80,12 @@ const SessionLogs = () => {
 
   const fetchSubmissions = async (currentYear = '') => {
     try {
-      const data = await apiClient.get('/submissions');
+      const [submissionsData, sessionsData] = await Promise.all([
+        apiClient.get('/submissions'),
+        apiClient.get('/sessions')
+      ]);
+
+      const data = submissionsData;
       if (!data.success) {
         setSubmissions([]);
         setAvailableYears([]);
@@ -81,11 +100,21 @@ const SessionLogs = () => {
       });
       setSubmissions(previousSessionSubs);
 
-      const historicalYears = [...new Set(
+      const submissionYears = [...new Set(
         previousSessionSubs
           .map((s) => String(s.academic_year || '').trim())
           .filter(Boolean)
-      )].sort().reverse();
+      )];
+
+      const allSessions = Array.isArray(sessionsData?.data) ? sessionsData.data : [];
+      const closedSessionYears = [...new Set(
+        allSessions
+          .filter((s) => String(s.status || '').toLowerCase() === 'closed')
+          .map((s) => String(s.academic_year || '').trim())
+          .filter((year) => !!year && year !== currentYear)
+      )];
+
+      const historicalYears = sortAcademicYearsDesc([...new Set([...submissionYears, ...closedSessionYears])]);
 
       setAvailableYears(historicalYears);
       if (historicalYears.length > 0) {
