@@ -570,19 +570,39 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
       // -- 10. Review of Research Papers ---------------------------------
       else if (sec.includes('review of research papers')) {
-        const totalPapers = reviews.reduce((sum, r) => sum + (parseInt(r.number_of_papers) || 0), 0);
-        const isHighTier = sub.includes('q1') || sub.includes('q2');
-        const highCount = reviews.filter(r =>
-          (r.review_type || '').toLowerCase().includes('q1') ||
-          (r.review_type || '').toLowerCase().includes('q2')
-        ).reduce((sum, r) => sum + (parseInt(r.number_of_papers) || 0), 0);
+        const reviewBucketCount = reviews.reduce((acc, review) => {
+          const reviewType = String(review.review_type || '').toLowerCase();
+          const paperCount = parseInt(review.number_of_papers, 10) || 0;
 
-        if (isHighTier) {
-          score = Math.min(highCount * max, 10); // max 10 pts
-        } else {
-          const lowCount = totalPapers - highCount;
-          score = Math.min(lowCount * max, 10); // max 10 pts
-        }
+          if (reviewType.includes('conference')) {
+            acc.low += paperCount;
+            return acc;
+          }
+
+          if (reviewType.includes('q1') || reviewType.includes('q2')) {
+            acc.high += paperCount;
+            return acc;
+          }
+
+          // Treat Q3/Q4/Scopus/Others and legacy journal values as low bucket.
+          if (
+            reviewType.includes('q3') ||
+            reviewType.includes('q4') ||
+            reviewType.includes('scopus') ||
+            reviewType.includes('other') ||
+            reviewType.includes('journal')
+          ) {
+            acc.low += paperCount;
+            return acc;
+          }
+
+          acc.low += paperCount;
+          return acc;
+        }, { high: 0, low: 0 });
+
+        const isHighBucketRubric = sub.includes('q1') || sub.includes('q2');
+        const applicableCount = isHighBucketRubric ? reviewBucketCount.high : reviewBucketCount.low;
+        score = Math.min(applicableCount * max, 10);
       }
 
       // -- 11. Talks and Conferences --------------------------------------

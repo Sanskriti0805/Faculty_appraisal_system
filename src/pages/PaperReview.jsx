@@ -7,7 +7,6 @@ import apiClient from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
 const getEmptyReviewEntry = () => ({
-  tier: '',
   paperType: '',
   quartile: '',
   reviewDetails: ''
@@ -20,8 +19,16 @@ const parseReviewType = (value) => {
   if (!raw) return { paperType: '', quartile: '' }
 
   if (raw.toLowerCase().startsWith('journal')) {
-    const suffix = raw.includes('-') ? raw.split('-').slice(1).join('-').trim() : ''
-    const quartile = JOURNAL_QUARTILES.find((q) => q.toLowerCase() === suffix.toLowerCase()) || ''
+    const suffix = raw.includes('-') ? raw.split('-').slice(1).join('-').trim() : raw
+    let quartile = JOURNAL_QUARTILES.find((q) => q.toLowerCase() === suffix.toLowerCase()) || ''
+    const suffixLc = suffix.toLowerCase()
+
+    if (!quartile && suffixLc.includes('q1')) quartile = 'Q1'
+    if (!quartile && suffixLc.includes('q2')) quartile = 'Q2'
+    if (!quartile && suffixLc.includes('q3')) quartile = 'Q3'
+    if (!quartile && (suffixLc.includes('q4') || suffixLc.includes('scopus'))) quartile = 'Q4/SCOPUS'
+    if (!quartile && suffixLc.includes('other')) quartile = 'OTHERS'
+
     return { paperType: 'Journal', quartile }
   }
 
@@ -44,7 +51,6 @@ const toStoredReviewType = (paperType, quartile) => {
 }
 
 const hasReviewContent = (entry) => Boolean(
-  String(entry?.tier || '').trim() ||
   String(entry?.paperType || '').trim() ||
   String(entry?.reviewDetails || '').trim() ||
   entry?.evidenceFile ||
@@ -52,14 +58,26 @@ const hasReviewContent = (entry) => Boolean(
 )
 
 const hasRequiredReviewFields = (entry) => Boolean(
-  String(entry?.tier || '').trim() &&
   String(entry?.paperType || '').trim() &&
   (String(entry?.paperType || '').trim() !== 'Journal' || String(entry?.quartile || '').trim()) &&
   String(entry?.reviewDetails || '').trim()
 )
 
+const hasEvidenceAttached = (entry) => Boolean(entry?.evidenceFile || String(entry?.evidence_file || '').trim())
+
+const hasMultiplePaperSignals = (text) => {
+  const value = String(text || '')
+  const nonEmptyLines = value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const bulletLikeCount = nonEmptyLines.filter((line) => /^(\-|\*|\u2022|\d+[.)])\s+/.test(line)).length
+
+  return nonEmptyLines.length > 1 || bulletLikeCount > 0
+}
+
 const normalizeDraftEntry = (entry) => ({
-  tier: String(entry?.tier || '').trim(),
   paperType: String(entry?.paperType || '').trim(),
   quartile: String(entry?.quartile || '').trim(),
   reviewDetails: String(entry?.reviewDetails || '').trim(),
@@ -72,7 +90,6 @@ const mapStoredReview = (row) => {
 
   return {
     id: row?.id || null,
-    tier: row?.tier || '',
     paperType: parsedType.paperType,
     quartile: parsedType.quartile,
     reviewDetails: row?.journal_name || '',
@@ -83,7 +100,6 @@ const mapStoredReview = (row) => {
 
 const formatReviewSummary = (entry) => {
   const parts = []
-  if (entry?.tier) parts.push(`Tier ${entry.tier}`)
   if (entry?.paperType) parts.push(entry.paperType)
   if (entry?.paperType === 'Journal' && entry?.quartile) parts.push(entry.quartile)
   return parts.length > 0 ? parts.join(' · ') : 'Untitled Review'
@@ -151,7 +167,17 @@ const PaperReview = () => {
     }
 
     if (!hasRequiredReviewFields(draftEntry)) {
-      window.appToast('Please complete Tier, Type of Paper, Quartile (for Journal), and Review details before adding another section.')
+      window.appToast('Please complete Type of Paper, Quartile (for Journal), and Review details before adding another section.')
+      return
+    }
+
+    if (!hasEvidenceAttached(draftEntry)) {
+      window.appToast('Please upload Evidence (PDF) before adding this section.')
+      return
+    }
+
+    if (hasMultiplePaperSignals(draftEntry.reviewDetails)) {
+      window.appToast('Add only one paper per comment box. Use Add Section for each additional paper.')
       return
     }
 
@@ -177,7 +203,29 @@ const PaperReview = () => {
       const draftHasContent = hasReviewContent(draftEntry)
 
       if (draftHasContent && !hasRequiredReviewFields(draftEntry)) {
-        window.appToast('Please complete Tier, Type of Paper, Quartile (for Journal), and Review details before saving.')
+        window.appToast('Please complete Type of Paper, Quartile (for Journal), and Review details before saving.')
+        return false
+      }
+
+      if (draftHasContent && !hasEvidenceAttached(draftEntry)) {
+        window.appToast('Please upload Evidence (PDF) before saving this section.')
+        return false
+      }
+
+      const hasMissingEvidenceInSections = submittedReviews.some((entry) => !hasEvidenceAttached(entry))
+      if (hasMissingEvidenceInSections) {
+        window.appToast('Every added section must include both details and Evidence (PDF).')
+        return false
+      }
+
+      if (draftHasContent && hasMultiplePaperSignals(draftEntry.reviewDetails)) {
+        window.appToast('Add only one paper per comment box. Use Add Section for each additional paper.')
+        return false
+      }
+
+      const hasInvalidSavedRows = submittedReviews.some((entry) => hasMultiplePaperSignals(entry.reviewDetails))
+      if (hasInvalidSavedRows) {
+        window.appToast('One or more added sections include multiple papers. Keep one paper per section.')
         return false
       }
 
@@ -201,7 +249,7 @@ const PaperReview = () => {
         formDataObj.append('faculty_id', facultyId)
         formDataObj.append('review_type', toStoredReviewType(entry.paperType || 'Journal', entry.quartile || ''))
         formDataObj.append('journal_name', String(entry.reviewDetails || '').trim().substring(0, 255))
-        formDataObj.append('tier', entry.tier)
+        formDataObj.append('tier', '')
         formDataObj.append('number_of_papers', 1)
         formDataObj.append('month_of_review', new Date().toISOString().split('T')[0])
 
@@ -276,20 +324,7 @@ const PaperReview = () => {
 
       <div className="form-card">
         <div className="form-section">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="form-field-vertical">
-              <label>Select Tier<span style={{ color: '#d64550' }}>*</span></label>
-              <select
-                value={formData.tier}
-                onChange={(e) => handleInputChange('tier', e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '1rem' }}
-              >
-                <option value="">-- Select Tier --</option>
-                <option value="1">Tier 1</option>
-                <option value="2">Tier 2</option>
-              </select>
-            </div>
-
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginBottom: '1.5rem' }}>
             <div className="form-field-vertical">
               <label>Type of Paper<span style={{ color: '#d64550' }}>*</span></label>
               <select
@@ -328,16 +363,26 @@ const PaperReview = () => {
           )}
 
           <div className="form-field-vertical">
-            <label>Review of research papers for Tier-1/2 refereed internal research journals</label>
+            <label>
+              Review of research papers for Tier-1/2 refereed internal research journals
+              <span style={{ color: '#d64550' }}>*</span>
+            </label>
+            <p style={{ margin: '0 0 0.5rem 0', color: '#5b6472', fontSize: '0.9rem' }}>
+              Add one paper in one comment box. Use Add Section for multiple papers.
+            </p>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="10"
                 value={formData.reviewDetails}
                 onChange={(e) => handleInputChange('reviewDetails', e.target.value)}
-                placeholder="Enter details in bullet points:&#10;• Journal name, paper title&#10;• Journal name, paper title&#10;..."
+                placeholder="Enter details for one paper only (e.g., Journal/Conference name, paper title, year)."
                 style={{ flex: 1 }}
               />
               <div style={{ width: '200px' }}>
+                <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: '#22314f', fontWeight: 600 }}>
+                  Upload Evidence (PDF)
+                  <span style={{ color: '#d64550' }}>*</span>
+                </div>
                 <label style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -399,7 +444,7 @@ const PaperReview = () => {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginTop: '1.25rem' }}>
             <p style={{ margin: 0, color: '#5b6472', fontSize: '0.95rem' }}>
-              Add another section to keep multiple Tier 1 or Tier 2 reviews in this submission.
+              Add another section to keep multiple reviews in this submission. Each section requires both details and evidence.
             </p>
             <button
               type="button"
@@ -407,17 +452,23 @@ const PaperReview = () => {
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '0.5rem',
-                padding: '0.75rem 1rem',
-                border: '1px solid #cfd8e3',
-                borderRadius: '8px',
-                background: '#fff',
-                color: '#22314f',
-                fontWeight: 600,
-                cursor: 'pointer'
+                minWidth: '220px',
+                minHeight: '54px',
+                padding: '0.95rem 1.4rem',
+                border: '2px solid #304c89',
+                borderRadius: '12px',
+                background: '#304c89',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '1rem',
+                letterSpacing: '0.2px',
+                cursor: 'pointer',
+                boxShadow: '0 8px 20px rgba(48, 76, 137, 0.22)'
               }}
             >
-              <Plus size={16} />
+              <Plus size={18} />
               Add Section
             </button>
           </div>
