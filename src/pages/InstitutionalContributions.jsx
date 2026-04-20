@@ -130,10 +130,10 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
     dean: ['Dean', 'Associate Dean', 'Assistant Dean'],
     hod: ['HoD', 'Deputy HoD'],
     warden: ['Chief Warden', 'Associate Chief Warden', 'Warden', 'Assistant Warden'],
-    centreLead: ['Centre Lead', 'Centre Co-Lead', 'Nucleus Member'],
+    centreLead: ['Centre Lead', 'Center Co-Lead', 'Nucleus Member'],
     committee: ['Chairperson', 'Vice Chairperson', 'Convenor', 'Committee Member'],
     facultyInCharge: ['Faculty In-Charge / Faculty Mentor', 'Cell Member'],
-    otherResponsibility: ['Major Responsibilities (Admissions, Accreditations, etc.)', 'Conduct of New Certificate Programmes', 'Scholarly Articles in Reputed Newspapers / Magazines (upto a maximum of 9 pages)'],
+    otherResponsibility: ['Major Responsibilities (Admissions, Accreditations, etc.)', 'Conduct of New Certificate Programmes', 'Scholarly Articles in Reputed Newspapers / Magazines (upto a maximum of 9 pages)', 'Others'],
   }
 
   useEffect(() => {
@@ -206,7 +206,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
   const renderUploadControl = (field, item) => (
     <label style={{ cursor: 'pointer', padding: '0.5rem', border: '1px dashed #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '150px' }}>
       <Upload size={16} color={item.file ? '#28a745' : '#666'} />
-      <span style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{item.file ? 'Uploaded' : 'Evidence'}</span>
+      <span style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{item.file ? 'Uploaded' : 'Evidence'} <span style={{ color: '#d64550' }}>*</span></span>
       <FilePreviewButton file={item.file} style={{ width: '30px', height: '30px' }} />
       {item.file && (
         <button
@@ -505,7 +505,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
         {renderSectionGroup('dean', 'As a Dean / Associate Dean / Assistant Dean', 'Enter details of contributions as Dean/Associate Dean/Assistant Dean...')}
         {renderSectionGroup('hod', 'As an HoD / Deputy HoD', 'Enter details of contributions as HoD/Deputy HoD...')}
         {renderSectionGroup('warden', 'As Chief Warden / Associate Chief Warden / Assistant Warden / Warden', 'Enter details of contributions as Warden...')}
-        {renderSectionGroup('centreLead', 'As Centre-Lead / Co-Lead / Nucleus Member', 'Enter details of contributions as Centre-Lead/Co-Lead/Nucleus Member...')}
+        {renderSectionGroup('centreLead', 'As Centre-Lead / Center Co-Lead / Nucleus Member', 'Enter details of contributions as Centre-Lead/Center Co-Lead/Nucleus Member...')}
         {renderSectionGroup('committee', 'As Chairperson / Vice Chairperson / Convener / Commitee Member of one or more significant committees that involved significant efforts and time', 'Enter details of committee contributions...')}
         {renderSectionGroup('facultyInCharge', 'As Faculty In-Charge / Faculty Mentor / Cell Member of any Cell', 'Enter details of contributions as Faculty-in-Charge/Member of any Cell...')}
         {renderSectionGroup('otherResponsibility', 'Member of Major Responsibilities / Conduct of New Certificate / Scholarly Articles in Reputed Newspapers / Magazines not covered above', 'Enter details of any other major responsibility...')}
