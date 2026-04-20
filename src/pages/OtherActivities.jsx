@@ -24,7 +24,7 @@ const normalizeVisitEntry = (entry) => {
 
   return {
     details: String(entry?.details || entry?.visit || entry?.text || '').trim(),
-    evidenceFile: null,
+    evidenceFile: entry?.evidenceFile || null,
     evidence_file: String(entry?.evidence_file || '').trim()
   }
 }
