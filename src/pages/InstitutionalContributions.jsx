@@ -26,6 +26,7 @@ const FIELD_TYPE_ALIASES = {
   warden: [
     'Warden/Chief Warden',
     'Chief Warden / Associate Chief Warden / Warden',
+    'Chief Warden / Associate Chief Warden / Assistant Warden / Warden',
     'Administrative Positions: Chief Warden',
     'Administrative Positions: Associate Chief Warden',
     'Administrative Positions: Warden',
@@ -42,6 +43,7 @@ const FIELD_TYPE_ALIASES = {
     'Committee Member/Convener',
     'Committee Member/Convenor',
     'Chairman / Vice Chairman / Convener / Member',
+    'Chairperson / Vice Chairperson / Convener / Commitee Member',
     'Other Significant: Chairperson of one or more significant committees',
     'Other Significant: Convenor of one or more significant committees',
     'Other Significant: Committee Member (up to a maximum of 5 points)',
@@ -49,11 +51,13 @@ const FIELD_TYPE_ALIASES = {
   facultyInCharge: [
     'Faculty-in-Charge/Cell Member',
     'Faculty-in-Charge / Member of any Cell',
+    'Faculty In-Charge / Faculty Mentor / Cell Member',
     'Other Significant: Faculty Mentor of any Cell (Mentorship)',
   ],
   otherResponsibility: [
     'Other Major Responsibility',
     'leader / contributing member of any other major responsibility not covered above',
+    'Member of Major Responsibilities / Conduct of New Certificate / Scholarly Articles in Reputed Newspapers / Magazines',
     'Other Significant: Member of Major responsibilities (Admissions, Accreditations, etc)',
     'Other Significant: Conduct of new certificate programmes',
     'Other Significant: Scholarly articles in reputed newspapers/magazines (max 9 points)',
@@ -174,7 +178,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
     warden: ['Chief Warden', 'Associate Chief Warden', 'Warden', 'Assistant Warden'],
     centreLead: ['Centre Lead', 'Centre Co-Lead', 'Nucleus Member'],
     committee: ['Chairperson', 'Vice Chairperson', 'Convenor', 'Committee Member'],
-    facultyInCharge: ['Faculty In-Charge', 'Cell Member', 'Faculty Mentor'],
+    facultyInCharge: ['Faculty In-Charge', 'Faculty Mentor', 'Cell Member'],
     otherResponsibility: ['Major Responsibilities', 'Certificate Programme', 'Scholarly Contribution'],
   }
 
@@ -309,11 +313,11 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
       const savedRows = await Promise.all([
         saveData('dean', 'Dean/Associate/Assistant Dean', formData.dean, positions.dean, files.dean, contributionIds.dean),
         saveData('hod', 'HoD/Deputy HoD', formData.hod, positions.hod, files.hod, contributionIds.hod),
-        saveData('warden', 'Warden/Chief Warden', formData.warden, positions.warden, files.warden, contributionIds.warden),
+        saveData('warden', 'Chief Warden / Associate Chief Warden / Assistant Warden / Warden', formData.warden, positions.warden, files.warden, contributionIds.warden),
         saveData('centreLead', 'Centre-Lead/Nucleus Member', formData.centreLead, positions.centreLead, files.centreLead, contributionIds.centreLead),
-        saveData('committee', 'Committee Member/Convener', formData.committee, positions.committee, files.committee, contributionIds.committee),
-        saveData('facultyInCharge', 'Faculty-in-Charge/Cell Member', formData.facultyInCharge, positions.facultyInCharge, files.facultyInCharge, contributionIds.facultyInCharge),
-        saveData('otherResponsibility', 'Other Major Responsibility', formData.otherResponsibility, positions.otherResponsibility, files.otherResponsibility, contributionIds.otherResponsibility)
+        saveData('committee', 'Chairperson / Vice Chairperson / Convener / Commitee Member', formData.committee, positions.committee, files.committee, contributionIds.committee),
+        saveData('facultyInCharge', 'Faculty In-Charge / Faculty Mentor / Cell Member', formData.facultyInCharge, positions.facultyInCharge, files.facultyInCharge, contributionIds.facultyInCharge),
+        saveData('otherResponsibility', 'Member of Major Responsibilities / Conduct of New Certificate / Scholarly Articles in Reputed Newspapers / Magazines', formData.otherResponsibility, positions.otherResponsibility, files.otherResponsibility, contributionIds.otherResponsibility)
       ])
 
       setContributionIds((prev) => ({
@@ -440,7 +444,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>As Chief Warden / Associate Chief Warden / Warden</label>
+            <label>As Chief Warden / Associate Chief Warden / Assistant Warden / Warden</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <select
@@ -526,7 +530,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>As Chairman / Vice Chairman / Convener / Member of one or more significant committees that involved significant efforts and time</label>
+            <label>As Chairperson / Vice Chairperson / Convener / Commitee Member of one or more significant committees that involved significant efforts and time</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <select
@@ -569,7 +573,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>As Faculty-in-Charge / Member of any Cell</label>
+            <label>As Faculty In-Charge / Faculty Mentor / Cell Member of any Cell</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <select
@@ -612,7 +616,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>As leader / contributing member of any other major responsibility not covered above</label>
+            <label>Member of Major Responsibilities / Conduct of New Certificate / Scholarly Articles in Reputed Newspapers / Magazines not covered above</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <select
