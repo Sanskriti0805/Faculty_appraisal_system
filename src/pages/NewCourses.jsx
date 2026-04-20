@@ -388,5 +388,3 @@ const NewCourses = () => {
 }
 
 export default NewCourses
-
-

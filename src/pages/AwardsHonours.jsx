@@ -149,7 +149,6 @@ const AwardsHonours = ({ initialData, readOnly }) => {
         <div className="page-header">
           <div>
             <h1 className="page-title">Significant International / National Awards and Honours</h1>
-            <p className="page-subtitle">International and National Awards and Honours</p>
           </div>
         </div>
       )}

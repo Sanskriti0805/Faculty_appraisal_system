@@ -54,15 +54,14 @@ const ResearchPlan = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Your research plan for next three years, if available</h1>
-          <p className="page-subtitle">Research Plan for Next Three Years</p>
+          <h1 className="page-title">Research Plan for Next Three Years</h1>
         </div>
       </div>
 
       <div className="form-card">
         <div className="form-section">
           <div className="form-field-vertical">
-            <label>Your research plan for next three years, if available:</label>
+            <label>Research Plan for Next Three Years</label>
             <textarea
               rows="12"
               value={formData.researchPlan}

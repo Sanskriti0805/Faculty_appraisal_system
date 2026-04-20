@@ -54,15 +54,14 @@ const OtherImportantActivities = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Any other Important Activity not covered above</h1>
-          <p className="page-subtitle">Other Important Activities</p>
+          <h1 className="page-title">Other Important Activity</h1>
         </div>
       </div>
 
       <div className="form-card">
         <div className="form-section">
           <div className="form-field-vertical">
-            <label>Any other Important Activity not covered above:</label>
+            <label>Other Important Activity (Other than those covered above)</label>
             <textarea
               rows="10"
               value={formData.activities}

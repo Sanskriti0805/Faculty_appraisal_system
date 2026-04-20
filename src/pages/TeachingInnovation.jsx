@@ -148,7 +148,6 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
         <div className="page-header">
           <div>
             <h1 className="page-title">Any effective or successful innovation in terms of teaching-learning</h1>
-            <p className="page-subtitle">Teaching-Learning Innovations</p>
           </div>
         </div>
       )}
@@ -157,7 +156,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
         <div className="form-section">
           {/* Section A */}
           <div className="form-field-vertical">
-            <label>a) For normal on-campus classes / labs / tutorials etc.:</label>
+            <label>a) For normal on-campus classes / labs / tutorials etc.</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="5"
@@ -238,7 +237,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
 
           {/* Section B */}
           <div className="form-field-vertical" style={{ marginTop: '2rem' }}>
-            <label>b) For online (off-campus) class / labs / tutorials etc.:</label>
+            <label>b) For online (off-campus) class / labs / tutorials etc.</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="5"
@@ -319,7 +318,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
 
           {/* Section C */}
           <div className="form-field-vertical" style={{ marginTop: '2rem' }}>
-            <label>c) For evaluation / assessment etc.:</label>
+            <label>c) For evaluation / assessment etc.</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="5"

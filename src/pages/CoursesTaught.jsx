@@ -835,7 +835,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
       <div className="selector-container">
         <div className="section-selector">
-          <label htmlFor="section-select">Select Section:</label>
+          <label htmlFor="section-select">Select Section</label>
           <select
             id="section-select"
             value={selectedSection}
@@ -849,7 +849,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
         </div>
 
         <div className="semester-selector">
-          <label htmlFor="semester-select">Select Semester:</label>
+          <label htmlFor="semester-select">Select Semester</label>
           <select
             id="semester-select"
             value={selectedSemester}

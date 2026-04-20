@@ -293,7 +293,6 @@ const KeynotesTalks = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Keynotes, Seminars and Invited Talks (outside LNMIIT)</h1>
-          <p className="page-subtitle">Keynotes, Seminars and Invited Talks (outside LNMIIT)</p>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -225,23 +225,23 @@ const Sidebar = () => {
         { name: 'External Sponsored Research & Development Grants received/submitted during this Academic Session', path: '/research-grants' },
         { name: 'Patents', path: '/patents' },
         { name: 'Technology Developed/Transferred', path: '/technology-transfer' },
-        { name: 'Review of research papers for Tier-1/2 refereed internal research journals (please provide details in bullet points)', path: '/paper-review' },
-        { name: 'Conference Sessions Chaired, if any', path: '/conference-sessions' },
+        { name: 'Review of research papers for Tier-1/2 refereed internal research journals', path: '/paper-review' },
+        { name: 'Conference Sessions Chaired', path: '/conference-sessions' },
         { name: 'Keynotes, Seminars and Invited Talks (outside LNMIIT)', path: '/keynotes-talks' },
         { name: 'Conferences Outside LNMIIT', path: '/conferences-outside' },
         { name: 'Other Activities', path: '/other-activities' },
         { name: 'Significant International / National Awards and Honours', path: '/awards-honours' },
-        { name: 'Consultancy, if any (Please provide details.)', path: '/consultancy' },
+        { name: 'Consultancy', path: '/consultancy' },
         { name: 'Continuing Education Activities', path: '/continuing-education' },
       ]
     },
     {
       name: 'Other Institutional Activities (Other than those covered above)',
       subItems: [
-        { name: 'Contributions, towards Institutional Development or any significant Institutional Contributions not covered above', path: '/institutional-contributions' },
-        { name: 'Any other Important Activity not covered above', path: '/other-important-activities' },
-        { name: 'Your research plan for next three years, if available', path: '/research-plan' },
-        { name: 'Your teaching plan and preferences for next three years', path: '/teaching-plan' },
+        { name: 'Other Institutional Contributions', path: '/institutional-contributions' },
+        { name: 'Other Important Activity', path: '/other-important-activities' },
+        { name: 'Research Plan for Next Three Years', path: '/research-plan' },
+        { name: 'Teaching Plan and Preferences for Next Three Years', path: '/teaching-plan' },
       ]
     },
     ...dynamicSections

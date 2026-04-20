@@ -62,15 +62,14 @@ const TeachingPlan = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Your teaching plan and preferences for next three years</h1>
-          <p className="page-subtitle">Teaching Plan and Preferences</p>
+          <h1 className="page-title">Teaching Plan and Preferences for Next Three Years</h1>
         </div>
       </div>
 
       <div className="form-card">
         <div className="form-section">
           <div className="form-field-vertical">
-            <label>A- Core UG Courses (please provide at least five UG Core Subjects, in order of preference, as per curriculum):</label>
+            <label>A- Core UG Courses (please provide at least five UG Core Subjects, in order of preference, as per curriculum)</label>
             <textarea
               rows="6"
               value={formData.coreUGCourses}
@@ -80,7 +79,7 @@ const TeachingPlan = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>B- UG Elective Courses (existing and new):</label>
+            <label>B- UG Elective Courses (existing and new)</label>
             <textarea
               rows="6"
               value={formData.ugElectives}
@@ -90,7 +89,7 @@ const TeachingPlan = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>C- Graduate (Master's & Doctoral level) Courses:</label>
+            <label>C- Graduate (Master's & Doctoral level) Courses</label>
             <textarea
               rows="6"
               value={formData.graduateCourses}

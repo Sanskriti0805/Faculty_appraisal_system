@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Upload, ExternalLink, X, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import './FormPages.css'
 import { patentsService } from '../services/patentsService'
@@ -305,7 +305,6 @@ const Patents = ({ initialData, readOnly }) => {
         <div className="page-header">
           <div>
             <h1 className="page-title">Patents</h1>
-            <p className="page-subtitle">Patents Information</p>
           </div>
         </div>
       )}

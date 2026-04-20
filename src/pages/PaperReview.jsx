@@ -231,8 +231,7 @@ const PaperReview = () => {
     <div className="form-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Review of research papers for Tier-1/2 refereed internal research journals (please provide details in bullet points)</h1>
-          <p className="page-subtitle">Review of Research Papers</p>
+          <h1 className="page-title">Review of research papers for Tier-1/2 refereed internal research journals</h1>
         </div>
       </div>
 
@@ -267,7 +266,7 @@ const PaperReview = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>Review of research papers for Tier-1/2 refereed internal research journals (please provide details in bullet points):</label>
+            <label>Review of research papers for Tier-1/2 refereed internal research journals</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="10"
