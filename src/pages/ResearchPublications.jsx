@@ -546,6 +546,11 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
           if (!hasAnything) continue
 
+          if (hasDetails && !hasQuartile) {
+            window.appToast('Please select a quartile for the journal entry.')
+            return false
+          }
+
           const evidencePayload = resolveEvidencePayload(entry.evidenceFile, entry.evidence_file)
           const hasEvidence = !!(evidencePayload.evidence_file || evidencePayload.existing_evidence_file)
           
@@ -577,6 +582,11 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           const hasAnything = hasDetails || hasType
 
           if (!hasAnything) continue
+
+          if (hasDetails && !hasType) {
+            window.appToast('Please select the type of conference for the conference entry.')
+            return false
+          }
 
           const evidencePayload = resolveEvidencePayload(entry.evidenceFile, entry.evidence_file)
           const hasEvidence = !!(evidencePayload.evidence_file || evidencePayload.existing_evidence_file)
@@ -882,7 +892,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Publication Details</label>
+            <label>Publication Details <span style={{ color: 'red' }}>*</span></label>
             <textarea
               rows="5"
               value={entry.details}
@@ -902,7 +912,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Quartile</label>
+            <label>Quartile <span style={{ color: 'red' }}>*</span></label>
             <select
               value={entry.quartile}
               onChange={(e) => updateJournalEntryField(index, 'quartile', e.target.value)}
@@ -913,7 +923,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               <option value="Q1">Q1</option>
               <option value="Q2">Q2</option>
               <option value="Q3">Q3</option>
-              <option value="Q4">Q4</option>
+              <option value="Q4">Q4 / SCOPUS</option>
+              <option value="Others">Others</option>
             </select>
           </div>
 
@@ -934,7 +945,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             )
           ) : (
             <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-              <label>Upload Evidence</label>
+              <label>Upload Evidence <span style={{ color: 'red' }}>*</span></label>
               <div style={{
                 border: '2px dashed #ddd',
                 borderRadius: '8px',
@@ -1044,7 +1055,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Conference Details</label>
+            <label>Conference Details <span style={{ color: 'red' }}>*</span></label>
             <textarea
               rows="6"
               value={entry.details}
@@ -1064,7 +1075,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Type of Conference</label>
+            <label>Type of Conference <span style={{ color: 'red' }}>*</span></label>
             <select
               value={entry.typeOfConference}
               onChange={(e) => updateConferenceEntryField(index, 'typeOfConference', e.target.value)}
@@ -1094,7 +1105,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             )
           ) : (
             <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-              <label>Upload Evidence</label>
+              <label>Upload Evidence <span style={{ color: 'red' }}>*</span></label>
               <div style={{
                 border: '2px dashed #ddd',
                 borderRadius: '8px',
@@ -1204,7 +1215,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Book Chapter Details</label>
+            <label>Book Chapter Details <span style={{ color: 'red' }}>*</span></label>
             <textarea
               rows="4"
               value={entry.details}
@@ -1240,7 +1251,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             )
           ) : (
             <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-              <label>Upload Evidence</label>
+              <label>Upload Evidence <span style={{ color: 'red' }}>*</span></label>
               <div style={{
                 border: '2px dashed #ddd',
                 borderRadius: '8px',
@@ -1341,7 +1352,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Book Details</label>
+            <label>Book Details <span style={{ color: 'red' }}>*</span></label>
             <textarea
               rows="4"
               value={entry.details}
@@ -1377,7 +1388,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             )
           ) : (
             <div className="form-field-vertical">
-              <label>Upload Evidence</label>
+              <label>Upload Evidence <span style={{ color: 'red' }}>*</span></label>
               <div style={{
                 border: '2px dashed #ddd',
                 borderRadius: '8px',
@@ -1478,7 +1489,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Book Details</label>
+            <label>Book Details <span style={{ color: 'red' }}>*</span></label>
             <textarea
               rows="4"
               value={entry.details}
@@ -1514,7 +1525,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             )
           ) : (
             <div className="form-field-vertical">
-              <label>Upload Evidence</label>
+              <label>Upload Evidence <span style={{ color: 'red' }}>*</span></label>
               <div style={{
                 border: '2px dashed #ddd',
                 borderRadius: '8px',
@@ -1635,7 +1646,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         )
       ) : (
         <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-          <label>Upload Evidence</label>
+          <label>Upload Evidence <span style={{ color: 'red' }}>*</span></label>
           <div style={{
             border: '2px dashed #ddd',
             borderRadius: '8px',

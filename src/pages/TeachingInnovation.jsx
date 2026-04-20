@@ -100,6 +100,23 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
         return false
       }
 
+      // Validate: if textarea has content, upload is required
+      if (formData.onCampus && formData.onCampus.trim() && !formData.onCampusFile) {
+        window.appToast('Please upload a supporting document for section (a) On-Campus.')
+        setLoading(false)
+        return false
+      }
+      if (formData.online && formData.online.trim() && !formData.onlineFile) {
+        window.appToast('Please upload a supporting document for section (b) Online.')
+        setLoading(false)
+        return false
+      }
+      if (formData.evaluation && formData.evaluation.trim() && !formData.evaluationFile) {
+        window.appToast('Please upload a supporting document for section (c) Evaluation.')
+        setLoading(false)
+        return false
+      }
+
       const saveData = async (type, description, file, existingId) => {
         if (existingId) {
           await fetch(`http://${window.location.hostname}:5001/api/innovation/teaching/${existingId}`, {
@@ -156,7 +173,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
         <div className="form-section">
           {/* Section A */}
           <div className="form-field-vertical">
-            <label>a) For normal on-campus classes / labs / tutorials etc.</label>
+            <label>a) For normal on-campus classes / labs / tutorials etc. <span style={{ color: 'red' }}>*</span></label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="5"
@@ -196,7 +213,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                   }}>
                     <Upload size={24} color="#666" />
                     <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
-                      {formData.onCampusFile && formData.onCampusFile.name ? formData.onCampusFile.name : formData.onCampusFile || 'Upload Supporting Document'}
+                      {formData.onCampusFile && formData.onCampusFile.name ? formData.onCampusFile.name : formData.onCampusFile || <span>Upload Supporting Document <span style={{ color: 'red' }}>*</span></span>}
                     </span>
                     <FilePreviewButton file={formData.onCampusFile} style={{ width: '32px', height: '32px' }} />
                     {formData.onCampusFile && (
@@ -237,7 +254,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
 
           {/* Section B */}
           <div className="form-field-vertical" style={{ marginTop: '2rem' }}>
-            <label>b) For online (off-campus) class / labs / tutorials etc.</label>
+            <label>b) For online (off-campus) class / labs / tutorials etc. <span style={{ color: 'red' }}>*</span></label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="5"
@@ -277,7 +294,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                   }}>
                     <Upload size={24} color="#666" />
                     <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
-                      {formData.onlineFile && formData.onlineFile.name ? formData.onlineFile.name : formData.onlineFile || 'Upload Supporting Document'}
+                      {formData.onlineFile && formData.onlineFile.name ? formData.onlineFile.name : formData.onlineFile || <span>Upload Supporting Document <span style={{ color: 'red' }}>*</span></span>}
                     </span>
                     <FilePreviewButton file={formData.onlineFile} style={{ width: '32px', height: '32px' }} />
                     {formData.onlineFile && (
@@ -318,7 +335,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
 
           {/* Section C */}
           <div className="form-field-vertical" style={{ marginTop: '2rem' }}>
-            <label>c) For evaluation / assessment etc.</label>
+            <label>c) For evaluation / assessment etc. <span style={{ color: 'red' }}>*</span></label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <textarea
                 rows="5"
@@ -358,7 +375,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                   }}>
                     <Upload size={24} color="#666" />
                     <span style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center' }}>
-                      {formData.evaluationFile && formData.evaluationFile.name ? formData.evaluationFile.name : formData.evaluationFile || 'Upload Supporting Document'}
+                      {formData.evaluationFile && formData.evaluationFile.name ? formData.evaluationFile.name : formData.evaluationFile || <span>Upload Supporting Document <span style={{ color: 'red' }}>*</span></span>}
                     </span>
                     <FilePreviewButton file={formData.evaluationFile} style={{ width: '32px', height: '32px' }} />
                     {formData.evaluationFile && (

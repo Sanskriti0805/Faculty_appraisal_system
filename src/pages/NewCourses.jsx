@@ -127,7 +127,27 @@ const NewCourses = () => {
     ))
   }
 
+  // Returns true if the row has any user-entered text/dropdown data (ignoring the CIF file)
+  const hasCourseInputData = (course) => {
+    return Boolean(
+      (course.courseName && String(course.courseName).trim()) ||
+      (course.courseCode && String(course.courseCode).trim()) ||
+      (course.levelType && String(course.levelType).trim()) ||
+      (course.remarks && String(course.remarks).trim())
+    )
+  }
+
   const handleSave = async () => {
+    // Validate: every row that has data must also have a CIF uploaded
+    const rowsWithData = courses.filter(hasCourseInputData)
+    const missingCIF = rowsWithData.find(
+      course => !course.cifFile && !course.cif_file
+    )
+    if (missingCIF) {
+      window.appToast('Please upload the CIF file for all filled course entries before proceeding.')
+      return false
+    }
+
     setLoading(true)
     try {
       const authUser = JSON.parse(localStorage.getItem('auth_user') || '{}')
@@ -194,7 +214,6 @@ const NewCourses = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">New Courses Developed</h1>
-          <p className="page-subtitle">Add details about newly developed courses</p>
         </div>
       </div>
 
@@ -204,13 +223,13 @@ const NewCourses = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '150px' }}>Course Name</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '100px' }}>Course Code</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '130px' }}>Level Type</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '140px' }}>Program</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '100px' }}>Level</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '150px' }}>Remarks</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '150px' }}>Upload CIF</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '150px' }}>Course Name <span style={{ color: 'red' }}>*</span></th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '100px' }}>Course Code <span style={{ color: 'red' }}>*</span></th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '130px' }}>Level Type <span style={{ color: 'red' }}>*</span></th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '140px' }}>Program <span style={{ color: 'red' }}>*</span></th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '100px' }}>Level <span style={{ color: 'red' }}>*</span></th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '150px' }}>Remarks <span style={{ color: 'red' }}>*</span></th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '150px' }}>Upload CIF <span style={{ color: 'red' }}>*</span></th>
                   <th style={{ padding: '0.75rem', textAlign: 'center', width: '60px' }}>Action</th>
                 </tr>
               </thead>

@@ -50,6 +50,20 @@ const Courseware = () => {
       return false
     }
 
+    const detailsFilled = formData.courseware && formData.courseware.trim()
+
+    // Lab Manual: upload required when details are entered
+    if (formData.type === 'Laboratory Manual Developed' && detailsFilled && !formData.labManualFile) {
+      window.appToast('Please upload the Lab Manual file since you have entered details.')
+      return false
+    }
+
+    // Text-Books: link required when details are entered
+    if (formData.type === 'Text-Books' && detailsFilled && !(formData.link && formData.link.trim())) {
+      window.appToast('Please provide the link to the text-book since you have entered details.')
+      return false
+    }
+
     try {
       await legacySectionsService.saveSection('courseware', {
         type: formData.type,
@@ -93,7 +107,7 @@ const Courseware = () => {
 
           {formData.type === 'Text-Books' && (
             <div className="form-field-vertical">
-              <label>Link:</label>
+              <label>Link <span style={{ color: 'red' }}>*</span></label>
               <input
                 type="text"
                 value={formData.link}
@@ -104,7 +118,7 @@ const Courseware = () => {
           )}
 
           <div className="form-field-vertical">
-            <label>Details</label>
+            <label>Details <span style={{ color: 'red' }}>*</span></label>
             <textarea
               rows="8"
               value={formData.courseware}
@@ -116,7 +130,7 @@ const Courseware = () => {
 
           {formData.type === 'Laboratory Manual Developed' && (
             <div className="form-field-vertical" style={{ flexDirection: 'row', alignItems: 'center', gap: '1rem' }}>
-              <label style={{ marginBottom: 0 }}>Upload Lab Manual (PDF)</label>
+              <label style={{ marginBottom: 0 }}>Upload Lab Manual (PDF) <span style={{ color: 'red' }}>*</span></label>
               <div className="compact-upload-wrapper" style={{ justifyContent: 'flex-start' }}>
                 <input
                   type="file"
