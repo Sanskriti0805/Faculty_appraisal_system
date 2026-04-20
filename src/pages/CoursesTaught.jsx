@@ -170,7 +170,11 @@ const CoursesTaught = ({ initialData, readOnly }) => {
             if (!subDetails?.success) return
 
             const existingRows = Array.isArray(subDetails.data?.courses) ? subDetails.data.courses : []
-            if (existingRows.length === 0) return
+            if (existingRows.length === 0) {
+               setSummaryData({ courses: [], projects: [] })
+               setShowFinalSummary(false)
+               return
+            }
 
             const existingCourses = existingRows.filter(c => (c.section || 'courses') !== 'projects')
             const existingProjects = existingRows.filter(c => c.section === 'projects')
@@ -217,12 +221,19 @@ const CoursesTaught = ({ initialData, readOnly }) => {
             setSpringProjects(springProjectsRows.length ? springProjectsRows : [{ id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null }])
             setSummerProjects(summerProjectsRows.length ? summerProjectsRows : [{ id: 1, projectTitle: '', projectType: '', role: '', studentName: '', duration: '', outcome: '', remarks: '', certificateFile: null }])
 
+            // Show persisted entries immediately when user revisits this page.
+            setSummaryData({
+               courses: existingCourses,
+               projects: existingProjects
+            })
+            setShowFinalSummary(true)
+
          } catch (error) {
             console.error('Failed to prefill courses taught:', error)
          }
       }
 
-      fetchPersistedData()
+      hydrateFromSubmission()
    }, [initialData, readOnly, user])
 
    const fetchPersistedData = async () => {
@@ -495,11 +506,6 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
    const handleSave = async () => {
       if (readOnly) return false;
-      
-      // If summary is already shown, second click proceeds to next page
-      if (showFinalSummary) {
-         return true;
-      }
 
       setIsSaving(true);
       try {
@@ -621,21 +627,17 @@ const CoursesTaught = ({ initialData, readOnly }) => {
 
          // Save Projects loop finishes...
          setPersistedCourseIds(createdIds)
-         
-         // Immediate UI population: Use the actual data from the POST responses
+
+         // Keep summary in sync when user stays on page (e.g., Save Draft).
          setSummaryData({
             courses: savedCourses,
             projects: savedProjects
          })
          setShowFinalSummary(true)
 
-         // Still fetch from server to get accurate IDs and any backend transformations
-         setTimeout(async () => {
-            await fetchPersistedData()
-            window.appToast('Data saved successfully! Review your entries in the summary list below.');
-         }, 800)
-         
-         return false; // Stay on page to show summary
+         await fetchPersistedData()
+         window.appToast('Data saved successfully!')
+         return true
       } catch (error) {
          console.error('Error saving courses:', error);
          window.appToast(`Failed to save data. ${error?.response?.data?.message || error.message}`);
@@ -852,7 +854,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                   <th style={{ width: '12%' }}>Students Taught <span className="required-star">*</span></th>
                   <th style={{ width: '12%' }}>Feedback Score <span className="required-star">*</span></th>
                   <th style={{ width: '15%' }}>Upload Feedback Evidence <span className="required-star">*</span></th>
-                  <th style={{ width: '15%' }}>Remarks <span className="required-star">*</span></th>
+                  <th style={{ width: '15%' }}>Remarks</th>
                   {!readOnly && <th style={{ width: '6%' }}>Action</th>}
                </tr>
             </thead>
@@ -986,7 +988,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                   <th style={{ width: '12%' }}>Student <span className="required-star">*</span></th>
                   <th style={{ width: '10%' }}>Duration <span className="required-star">*</span></th>
                   <th style={{ width: '10%' }}>Outcome <span className="required-star">*</span></th>
-                  <th style={{ width: '10%' }}>Remarks <span className="required-star">*</span></th>
+                  <th style={{ width: '10%' }}>Remarks</th>
                   <th style={{ width: '10%' }}>Upload Project Evidence <span className="required-star">*</span></th>
                   {!readOnly && <th style={{ width: '6%' }}>Action</th>}
                </tr>

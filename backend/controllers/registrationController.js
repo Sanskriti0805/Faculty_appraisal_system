@@ -39,7 +39,67 @@ exports.runMigrations = async () => {
       }
     };
 
+    const ensureEmploymentTypeEnum = async () => {
+      const [rows] = await db.query(
+        `SELECT COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'employment_type'
+         LIMIT 1`
+      );
+
+      if (rows.length === 0) {
+        await db.query("ALTER TABLE users ADD COLUMN employment_type ENUM('regular','contractual') NULL DEFAULT NULL");
+        console.log('Migration: added users.employment_type as regular/contractual enum');
+        return;
+      }
+
+      const currentColumnType = String(rows[0].COLUMN_TYPE || '').toLowerCase();
+      const isNullable = String(rows[0].IS_NULLABLE || '').toUpperCase() === 'YES';
+      const defaultValueRaw = rows[0].COLUMN_DEFAULT;
+
+      if (currentColumnType.includes("enum('fixed','contractual')") || currentColumnType.includes("enum('contractual','fixed')")) {
+        const defaultWidened = (() => {
+          if (defaultValueRaw === null || defaultValueRaw === undefined) return isNullable ? 'DEFAULT NULL' : "DEFAULT 'fixed'";
+          const lowered = String(defaultValueRaw).trim().toLowerCase();
+          if (lowered === 'fixed' || lowered === 'regular') return "DEFAULT 'fixed'";
+          if (lowered === 'contractual') return "DEFAULT 'contractual'";
+          return isNullable ? 'DEFAULT NULL' : "DEFAULT 'fixed'";
+        })();
+        const nullWidened = isNullable ? 'NULL' : 'NOT NULL';
+        await db.query(`ALTER TABLE users MODIFY COLUMN employment_type ENUM('fixed','regular','contractual') ${nullWidened} ${defaultWidened}`);
+      }
+
+      await db.query(
+        `UPDATE users
+         SET employment_type = CASE
+           WHEN employment_type IS NULL OR TRIM(employment_type) = '' THEN NULL
+           WHEN LOWER(TRIM(employment_type)) IN ('fixed', 'regular') THEN 'regular'
+           WHEN LOWER(TRIM(employment_type)) IN ('contractual', 'contract') THEN 'contractual'
+           ELSE NULL
+         END`
+      );
+
+      const normalizedDefault = (() => {
+        if (defaultValueRaw === null || defaultValueRaw === undefined) return null;
+        const lowered = String(defaultValueRaw).trim().toLowerCase();
+        if (lowered === 'fixed' || lowered === 'regular') return 'regular';
+        if (lowered === 'contractual') return 'contractual';
+        return null;
+      })();
+
+      const nullSql = isNullable ? 'NULL' : 'NOT NULL';
+      const defaultSql = normalizedDefault
+        ? `DEFAULT '${normalizedDefault}'`
+        : (isNullable ? 'DEFAULT NULL' : "DEFAULT 'regular'");
+
+      if (currentColumnType !== "enum('regular','contractual')") {
+        await db.query(`ALTER TABLE users MODIFY COLUMN employment_type ENUM('regular','contractual') ${nullSql} ${defaultSql}`);
+        console.log('Migration: normalized users.employment_type enum to regular/contractual');
+      }
+    };
+
     await ensureColumn('users', 'onboarding_complete', 'onboarding_complete TINYINT(1) NOT NULL DEFAULT 1');
+    await ensureEmploymentTypeEnum();
     await ensureColumn('users', 'is_archived', 'is_archived TINYINT(1) NOT NULL DEFAULT 0');
     await ensureColumn('users', 'archived_at', 'archived_at TIMESTAMP NULL DEFAULT NULL');
     await ensureColumn('users', 'archived_by', 'archived_by INT NULL DEFAULT NULL');
@@ -159,6 +219,17 @@ const normalizeOptionalDate = (value) => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed.toISOString().slice(0, 10);
+};
+
+const normalizeEmploymentType = (value) => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return null;
+
+  if (raw === 'regular' || raw === 'contractual') return raw;
+  if (raw === 'contract' || raw === 'contractual faculty') return 'contractual';
+  if (raw === 'fixed') return 'regular';
+
+  return null;
 };
 
 const resolveHodDepartmentContext = async (user) => {
@@ -323,9 +394,14 @@ exports.registerFaculty = async (req, res) => {
   try {
     const { salutation, name, designation, email, employee_id, employment_type, date_of_joining, department_id } = req.body;
     const normalizedDateOfJoining = normalizeOptionalDate(date_of_joining);
+    const normalizedEmploymentType = normalizeEmploymentType(employment_type);
 
     if (!name || !email || !department_id || !normalizedDateOfJoining) {
       return res.status(400).json({ success: false, message: 'Name, email, date of joining, and department are required' });
+    }
+
+    if (employment_type !== undefined && employment_type !== null && employment_type !== '' && !normalizedEmploymentType) {
+      return res.status(400).json({ success: false, message: 'Employment type must be Regular or Contractual.' });
     }
 
     // Check if email already exists
@@ -346,7 +422,7 @@ exports.registerFaculty = async (req, res) => {
     const [result] = await db.query(
       `INSERT INTO users (name, email, password, role, department, department_id, designation, salutation, employee_id, employment_type, date_of_joining, onboarding_complete)
        VALUES (?, ?, ?, 'faculty', ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [name, email, hashedPassword, deptName, department_id, designation, salutation, employee_id, employment_type, normalizedDateOfJoining]
+      [name, email, hashedPassword, deptName, department_id, designation, salutation, employee_id, normalizedEmploymentType, normalizedDateOfJoining]
     );
 
     // Also create a record in faculty_information table if it doesn't exist
@@ -482,9 +558,14 @@ exports.completeOnboarding = async (req, res) => {
     if (userRole === 'faculty') {
       const { salutation, name, designation, employee_id, employment_type, date_of_joining, department_id } = req.body;
       const normalizedDateOfJoining = normalizeOptionalDate(date_of_joining);
+      const normalizedEmploymentType = normalizeEmploymentType(employment_type);
 
       if (!name || !department_id) {
         return res.status(400).json({ success: false, message: 'Name and department are required' });
+      }
+
+      if (employment_type !== undefined && employment_type !== null && employment_type !== '' && !normalizedEmploymentType) {
+        return res.status(400).json({ success: false, message: 'Employment type must be Regular or Contractual.' });
       }
 
       // Get department name
@@ -497,7 +578,7 @@ exports.completeOnboarding = async (req, res) => {
           employment_type = ?, date_of_joining = ?, department = ?, department_id = ?,
           onboarding_complete = 1
          WHERE id = ?`,
-        [name, salutation, designation, employee_id, employment_type, normalizedDateOfJoining, deptName, department_id, userId]
+        [name, salutation, designation, employee_id, normalizedEmploymentType, normalizedDateOfJoining, deptName, department_id, userId]
       );
 
       // Upsert faculty_information
