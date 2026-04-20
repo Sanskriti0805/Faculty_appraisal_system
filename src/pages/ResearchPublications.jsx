@@ -30,6 +30,20 @@ const getEmptyBookChapterEntry = () => ({
   evidence_file: null
 })
 
+const getEmptyJournalEntry = () => ({
+  details: '',
+  quartile: '',
+  evidenceFile: null,
+  evidence_file: null
+})
+
+const getEmptyConferenceEntry = () => ({
+  details: '',
+  typeOfConference: '',
+  evidenceFile: null,
+  evidence_file: null
+})
+
 const getEmptyTextbookEntry = () => ({
   details: '',
   evidenceFile: null,
@@ -95,15 +109,17 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     setEvidenceFile(null)
 
     if (data.publication_type === 'Journal') {
-      setJournalData({
+      setJournalEntries([{
         details: data.details || data.title || '',
-        quartile: data.quartile || ''
-      })
+        quartile: data.quartile || '',
+        evidence_file: data.evidence_file
+      }])
     } else if (data.publication_type === 'Conference') {
-      setConferenceData({
+      setConferenceEntries([{
         details: data.details || data.title || '',
-        typeOfConference: data.type_of_conference || ''
-      })
+        typeOfConference: data.type_of_conference || '',
+        evidence_file: data.evidence_file
+      }])
     } else if (data.publication_type === 'Monographs') {
       if (data.sub_type === 'Book Chapter') {
         setBookChapterEntries([{
@@ -149,15 +165,9 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     loadAllPublications()
   }, [initialData, readOnly, user])
 
-  const [journalData, setJournalData] = useState({
-    details: '',
-    quartile: ''
-  })
+  const [journalEntries, setJournalEntries] = useState([getEmptyJournalEntry()])
 
-  const [conferenceData, setConferenceData] = useState({
-    details: '',
-    typeOfConference: ''
-  })
+  const [conferenceEntries, setConferenceEntries] = useState([getEmptyConferenceEntry()])
 
   const [bookChapterEntries, setBookChapterEntries] = useState([getEmptyBookChapterEntry()])
   const [textbookEntries, setTextbookEntries] = useState([getEmptyTextbookEntry()])
@@ -176,16 +186,19 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     const rows = Array.isArray(allPublications) ? allPublications : []
 
     if (publicationType === 'Journal') {
-      const match = [...rows].filter((p) => p.publication_type === 'Journal').sort(byLatest)[0]
-      if (match) {
-        hydrateFromPublication(match, { updateSelectors: false })
+      const journals = rows.filter((p) => p.publication_type === 'Journal')
+      if (journals.length > 0) {
+        setJournalEntries(
+          journals.map((entry) => ({
+            details: entry.details || entry.title || '',
+            quartile: entry.quartile || '',
+            evidenceFile: null,
+            evidence_file: entry.evidence_file || null
+          }))
+        )
       } else {
         setPublicationId(null)
-        setAuthors([getEmptyAuthor()])
-        setEditors([getEmptyAuthor()])
-        setJournalData({
-          details: '', quartile: ''
-        })
+        setJournalEntries([getEmptyJournalEntry()])
         setEvidenceFile(null)
         setPersistedEvidenceFile('')
       }
@@ -193,16 +206,19 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     }
 
     if (publicationType === 'Conference') {
-      const match = [...rows].filter((p) => p.publication_type === 'Conference').sort(byLatest)[0]
-      if (match) {
-        hydrateFromPublication(match, { updateSelectors: false })
+      const conferences = rows.filter((p) => p.publication_type === 'Conference')
+      if (conferences.length > 0) {
+        setConferenceEntries(
+          conferences.map((entry) => ({
+            details: entry.details || entry.title || '',
+            typeOfConference: entry.type_of_conference || '',
+            evidenceFile: null,
+            evidence_file: entry.evidence_file || null
+          }))
+        )
       } else {
         setPublicationId(null)
-        setAuthors([getEmptyAuthor()])
-        setEditors([getEmptyAuthor()])
-        setConferenceData({
-          details: '', typeOfConference: ''
-        })
+        setConferenceEntries([getEmptyConferenceEntry()])
         setEvidenceFile(null)
         setPersistedEvidenceFile('')
       }
@@ -420,6 +436,38 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     }
   }
 
+  const addJournalEntry = () => {
+    setJournalEntries([...journalEntries, getEmptyJournalEntry()])
+  }
+
+  const removeJournalEntry = (index) => {
+    if (journalEntries.length > 1) {
+      setJournalEntries(journalEntries.filter((_, i) => i !== index))
+    }
+  }
+
+  const updateJournalEntryField = (index, field, value) => {
+    const updatedEntries = [...journalEntries]
+    updatedEntries[index][field] = value
+    setJournalEntries(updatedEntries)
+  }
+
+  const addConferenceEntry = () => {
+    setConferenceEntries([...conferenceEntries, getEmptyConferenceEntry()])
+  }
+
+  const removeConferenceEntry = (index) => {
+    if (conferenceEntries.length > 1) {
+      setConferenceEntries(conferenceEntries.filter((_, i) => i !== index))
+    }
+  }
+
+  const updateConferenceEntryField = (index, field, value) => {
+    const updatedEntries = [...conferenceEntries]
+    updatedEntries[index][field] = value
+    setConferenceEntries(updatedEntries)
+  }
+
   const updateBookEditedEntryField = (index, field, value) => {
     const updatedEntries = [...bookEditedEntries]
     updatedEntries[index][field] = value
@@ -491,68 +539,68 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       }
 
       if (publicationType === 'Journal') {
-        const hasDetails = Boolean(journalData.details && journalData.details.trim())
-        const hasQuartile = Boolean(journalData.quartile)
-        const hasAnything = hasDetails || hasQuartile
+        for (const entry of journalEntries) {
+          const hasDetails = entry.details && entry.details.trim()
+          const hasQuartile = Boolean(entry.quartile)
+          const hasAnything = hasDetails || hasQuartile
 
-        // If the user hasn't filled anything, skip saving and move on
-        if (!hasAnything) {
-          window.appToast('Data saved successfully!')
-          return true
+          if (!hasAnything) continue
+
+          const evidencePayload = resolveEvidencePayload(entry.evidenceFile, entry.evidence_file)
+          const hasEvidence = !!(evidencePayload.evidence_file || evidencePayload.existing_evidence_file)
+          
+          if (!hasEvidence) {
+            window.appToast('Please upload evidence for journal paper entry.')
+            return false
+          }
+
+          const entryData = {
+            ...publicationData,
+            sub_type: 'Journal',
+            title: entry.details.substring(0, 255),
+            details: entry.details,
+            quartile: entry.quartile,
+            evidence_file: evidencePayload.evidence_file,
+            existing_evidence_file: evidencePayload.existing_evidence_file
+          }
+          await createAndTrack(entryData)
         }
-
-        // Something entered — evidence is now required
-        const evidencePayload = resolveEvidencePayload(evidenceFile, persistedEvidenceFile)
-        const hasEvidence = !!(evidencePayload.evidence_file || evidencePayload.existing_evidence_file)
-        if (!hasEvidence) {
-          window.appToast('Please upload evidence before saving.')
-          return false
-        }
-
-        publicationData.sub_type = 'Journal'
-        publicationData.title = journalData.details.substring(0, 255)
-        publicationData.details = journalData.details
-        publicationData.quartile = journalData.quartile
-        publicationData.evidence_file = evidencePayload.evidence_file
-        publicationData.existing_evidence_file = evidencePayload.existing_evidence_file
-
-        const response = await createAndTrack(publicationData)
         await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
         await refreshPublications()
-        window.appToast('Journal draft saved successfully!')
-        setPublicationId(response?.data?.id || null)
+        window.appToast('Journal drafts saved successfully!')
+        setPublicationId(null)
         return true
       } else if (publicationType === 'Conference') {
-        const hasDetails = Boolean(conferenceData.details && conferenceData.details.trim())
-        const hasType = Boolean(conferenceData.typeOfConference)
-        const hasAnything = hasDetails || hasType
-        
-        // If nothing is filled, we can move on
-        if (!hasAnything) {
-          window.appToast('Data saved successfully!')
-          return true
+        for (const entry of conferenceEntries) {
+          const hasDetails = entry.details && entry.details.trim()
+          const hasType = Boolean(entry.typeOfConference)
+          const hasAnything = hasDetails || hasType
+
+          if (!hasAnything) continue
+
+          const evidencePayload = resolveEvidencePayload(entry.evidenceFile, entry.evidence_file)
+          const hasEvidence = !!(evidencePayload.evidence_file || evidencePayload.existing_evidence_file)
+          
+          if (!hasEvidence) {
+            window.appToast('Please upload evidence for conference paper entry.')
+            return false
+          }
+
+          const entryData = {
+            ...publicationData,
+            sub_type: 'Conference',
+            title: entry.details.substring(0, 255),
+            details: entry.details,
+            type_of_conference: entry.typeOfConference,
+            evidence_file: evidencePayload.evidence_file,
+            existing_evidence_file: evidencePayload.existing_evidence_file
+          }
+          await createAndTrack(entryData)
         }
-
-        // Details or Type provided, evidence is mandatory
-        const evidencePayload = resolveEvidencePayload(evidenceFile, persistedEvidenceFile)
-        const hasEvidence = !!(evidencePayload.evidence_file || evidencePayload.existing_evidence_file)
-        if (!hasEvidence) {
-          window.appToast('Please upload evidence before saving.')
-          return false
-        }
-
-        publicationData.sub_type = 'Conference'
-        publicationData.title = conferenceData.details.substring(0, 255)
-        publicationData.details = conferenceData.details
-        publicationData.type_of_conference = conferenceData.typeOfConference
-        publicationData.evidence_file = evidencePayload.evidence_file
-        publicationData.existing_evidence_file = evidencePayload.existing_evidence_file
-
-        const response = await createAndTrack(publicationData)
         await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
         await refreshPublications()
-        window.appToast('Conference draft saved successfully!')
-        setPublicationId(response?.data?.id || null)
+        window.appToast('Conference drafts saved successfully!')
+        setPublicationId(null)
         return true
       } else if (publicationType === 'Monographs') {
         if (!bookSubType) {
@@ -819,238 +867,322 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
   const renderJournalForm = () => (
     <>
-      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-        <label>Publication Details</label>
-        <textarea
-          rows="5"
-          value={journalData.details}
-          onChange={(e) => setJournalData({ ...journalData, details: e.target.value })}
-          placeholder="Author's Name, Title of Paper, Name of Journal, Year of Publication, Pages (From - To)"
+      {journalEntries.map((entry, index) => (
+        <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0, color: '#2c3e50' }}>Journal Entry #{index + 1}</h3>
+            {!readOnly && journalEntries.length > 1 && (
+              <button
+                onClick={() => removeJournalEntry(index)}
+                style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}
+              >
+                <X size={16} /> Remove Entry
+              </button>
+            )}
+          </div>
+
+          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+            <label>Publication Details</label>
+            <textarea
+              rows="5"
+              value={entry.details}
+              onChange={(e) => updateJournalEntryField(index, 'details', e.target.value)}
+              placeholder="Author's Name, Title of Paper, Name of Journal, Year of Publication, Pages (From - To)"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: readOnly ? 'none' : '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '1rem',
+                fontFamily: 'inherit',
+                background: readOnly ? 'transparent' : 'white'
+              }}
+              disabled={readOnly}
+            />
+          </div>
+
+          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+            <label>Quartile</label>
+            <select
+              value={entry.quartile}
+              onChange={(e) => updateJournalEntryField(index, 'quartile', e.target.value)}
+              style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
+              disabled={readOnly}
+            >
+              <option value="">Select Quartile</option>
+              <option value="Q1">Q1</option>
+              <option value="Q2">Q2</option>
+              <option value="Q3">Q3</option>
+              <option value="Q4">Q4</option>
+            </select>
+          </div>
+
+          {readOnly ? (
+            entry.evidence_file && (
+              <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+                <label>Evidence</label>
+                <a
+                  href={`http://${window.location.hostname}:5001/uploads/${entry.evidence_file}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="evidence-link"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
+                >
+                  <ExternalLink size={18} /> View Journal Paper Evidence
+                </a>
+              </div>
+            )
+          ) : (
+            <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+              <label>Upload Evidence</label>
+              <div style={{
+                border: '2px dashed #ddd',
+                borderRadius: '8px',
+                padding: '1.5rem',
+                textAlign: 'center',
+                backgroundColor: '#f9f9f9'
+              }}>
+                <input
+                  type="file"
+                  id={`evidence-upload-journal-${index}`}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => updateJournalEntryField(index, 'evidenceFile', e.target.files[0])}
+                  style={{ display: 'none' }}
+                />
+                <label
+                  htmlFor={`evidence-upload-journal-${index}`}
+                  style={{
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <Upload size={32} color="#5b8fc7" />
+                  <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+                    {entry.evidenceFile?.name || entry.evidence_file || 'Click to upload or drag and drop'}
+                  </span>
+                  <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                    PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+                  </span>
+                  <FilePreviewButton file={entry.evidenceFile || entry.evidence_file} style={{ width: '32px', height: '32px' }} />
+                  {(entry.evidenceFile || entry.evidence_file) && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        updateJournalEntryField(index, 'evidenceFile', null)
+                        updateJournalEntryField(index, 'evidence_file', null)
+                      }}
+                      title="Remove uploaded document"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '1px solid #d1d8e0',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {!readOnly && (
+        <button
+          onClick={addJournalEntry}
+          disabled={!(journalEntries.length > 0 && journalEntries[journalEntries.length - 1]?.details?.trim() && (journalEntries[journalEntries.length - 1].evidenceFile || journalEntries[journalEntries.length - 1].evidence_file))}
           style={{
             width: '100%',
             padding: '0.75rem',
-            border: readOnly ? 'none' : '1px solid #ddd',
+            backgroundColor: '#5cb85c',
+            color: 'white',
+            border: 'none',
             borderRadius: '4px',
-            fontSize: '1rem',
-            fontFamily: 'inherit',
-            background: readOnly ? 'transparent' : 'white'
+            cursor: (journalEntries.length > 0 && journalEntries[journalEntries.length - 1]?.details?.trim() && (journalEntries[journalEntries.length - 1].evidenceFile || journalEntries[journalEntries.length - 1].evidence_file)) ? 'pointer' : 'not-allowed',
+            opacity: (journalEntries.length > 0 && journalEntries[journalEntries.length - 1]?.details?.trim() && (journalEntries[journalEntries.length - 1].evidenceFile || journalEntries[journalEntries.length - 1].evidence_file)) ? 1 : 0.6,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            marginTop: '1rem',
+            marginBottom: '2rem'
           }}
-          disabled={readOnly}
-        />
-      </div>
-
-      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-        <label>Quartile</label>
-        <select
-          value={journalData.quartile}
-          onChange={(e) => setJournalData({ ...journalData, quartile: e.target.value })}
-          style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
-          disabled={readOnly}
         >
-          <option value="">Select Quartile</option>
-          <option value="Q1">Q1</option>
-          <option value="Q2">Q2</option>
-          <option value="Q3">Q3</option>
-          <option value="Q4">Q4</option>
-        </select>
-      </div>
-
-      {readOnly ? (
-        initialData?.evidence_file && (
-          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Evidence</label>
-            <a
-              href={`http://${window.location.hostname}:5001/uploads/${initialData.evidence_file}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="evidence-link"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
-            >
-              <ExternalLink size={18} /> View Journal Paper Evidence
-            </a>
-          </div>
-        )
-      ) : (
-        <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-          <label>Upload Evidence</label>
-          <div style={{
-            border: '2px dashed #ddd',
-            borderRadius: '8px',
-            padding: '1.5rem',
-            textAlign: 'center',
-            backgroundColor: '#f9f9f9'
-          }}>
-            <input
-              type="file"
-              id="evidence-upload-journal"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              onChange={(e) => setEvidenceFile(e.target.files[0])}
-              style={{ display: 'none' }}
-            />
-            <label
-              htmlFor="evidence-upload-journal"
-              style={{
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <Upload size={32} color="#5b8fc7" />
-              <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-                {evidenceFile?.name || persistedEvidenceFile || 'Click to upload or drag and drop'}
-              </span>
-              <span style={{ fontSize: '0.85rem', color: '#666' }}>
-                PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
-              </span>
-              <FilePreviewButton file={evidenceFile || persistedEvidenceFile} style={{ width: '32px', height: '32px' }} />
-              {(evidenceFile || persistedEvidenceFile) && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setEvidenceFile(null)
-                    setPersistedEvidenceFile('')
-                  }}
-                  title="Remove uploaded document"
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    border: '1px solid #d1d8e0',
-                    borderRadius: '6px',
-                    background: '#fff',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </label>
-          </div>
-        </div>
+          <Plus size={18} />
+          Add Another Journal
+        </button>
       )}
     </>
   )
 
   const renderConferenceForm = () => (
     <>
-      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-        <label>Conference Details</label>
-        <textarea
-          rows="6"
-          value={conferenceData.details}
-          onChange={(e) => setConferenceData({ ...conferenceData, details: e.target.value })}
-          placeholder="Author's Name, Title of Paper, Name of Conference, Abbreviation of Conference, Date (From -To), Pages (From - To), Venue(City, State, Country), Publication Agency"
+      {conferenceEntries.map((entry, index) => (
+        <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0, color: '#2c3e50' }}>Conference Entry #{index + 1}</h3>
+            {!readOnly && conferenceEntries.length > 1 && (
+              <button
+                onClick={() => removeConferenceEntry(index)}
+                style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}
+              >
+                <X size={16} /> Remove Entry
+              </button>
+            )}
+          </div>
+
+          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+            <label>Conference Details</label>
+            <textarea
+              rows="6"
+              value={entry.details}
+              onChange={(e) => updateConferenceEntryField(index, 'details', e.target.value)}
+              placeholder="Author's Name, Title of Paper, Name of Conference, Abbreviation of Conference, Date (From -To), Pages (From - To), Venue(City, State, Country), Publication Agency"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: readOnly ? 'none' : '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '1rem',
+                fontFamily: 'inherit',
+                background: readOnly ? 'transparent' : 'white'
+              }}
+              disabled={readOnly}
+            />
+          </div>
+
+          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+            <label>Type of Conference</label>
+            <select
+              value={entry.typeOfConference}
+              onChange={(e) => updateConferenceEntryField(index, 'typeOfConference', e.target.value)}
+              style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
+              disabled={readOnly}
+            >
+              <option value="">-- Select Type --</option>
+              <option value="International">International</option>
+              <option value="National">National</option>
+            </select>
+          </div>
+
+          {readOnly ? (
+            entry.evidence_file && (
+              <div className="form-field-vertical" style={{ marginTop: '1.5rem' }}>
+                <label>Evidence</label>
+                <a
+                  href={`http://${window.location.hostname}:5001/uploads/${entry.evidence_file}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="evidence-link"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
+                >
+                  <ExternalLink size={18} /> View Conference Paper Evidence
+                </a>
+              </div>
+            )
+          ) : (
+            <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+              <label>Upload Evidence</label>
+              <div style={{
+                border: '2px dashed #ddd',
+                borderRadius: '8px',
+                padding: '1.5rem',
+                textAlign: 'center',
+                backgroundColor: '#f9f9f9'
+              }}>
+                <input
+                  type="file"
+                  id={`evidence-upload-conference-${index}`}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => updateConferenceEntryField(index, 'evidenceFile', e.target.files[0])}
+                  style={{ display: 'none' }}
+                />
+                <label
+                  htmlFor={`evidence-upload-conference-${index}`}
+                  style={{
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <Upload size={32} color="#5b8fc7" />
+                  <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+                    {entry.evidenceFile?.name || entry.evidence_file || 'Click to upload or drag and drop'}
+                  </span>
+                  <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                    PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
+                  </span>
+                  <FilePreviewButton file={entry.evidenceFile || entry.evidence_file} style={{ width: '32px', height: '32px' }} />
+                  {(entry.evidenceFile || entry.evidence_file) && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        updateConferenceEntryField(index, 'evidenceFile', null)
+                        updateConferenceEntryField(index, 'evidence_file', null)
+                      }}
+                      title="Remove uploaded document"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '1px solid #d1d8e0',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {!readOnly && (
+        <button
+          onClick={addConferenceEntry}
+          disabled={!(conferenceEntries.length > 0 && conferenceEntries[conferenceEntries.length - 1]?.details?.trim() && (conferenceEntries[conferenceEntries.length - 1].evidenceFile || conferenceEntries[conferenceEntries.length - 1].evidence_file))}
           style={{
             width: '100%',
             padding: '0.75rem',
-            border: readOnly ? 'none' : '1px solid #ddd',
+            backgroundColor: '#5cb85c',
+            color: 'white',
+            border: 'none',
             borderRadius: '4px',
-            fontSize: '1rem',
-            fontFamily: 'inherit',
-            background: readOnly ? 'transparent' : 'white'
+            cursor: (conferenceEntries.length > 0 && conferenceEntries[conferenceEntries.length - 1]?.details?.trim() && (conferenceEntries[conferenceEntries.length - 1].evidenceFile || conferenceEntries[conferenceEntries.length - 1].evidence_file)) ? 'pointer' : 'not-allowed',
+            opacity: (conferenceEntries.length > 0 && conferenceEntries[conferenceEntries.length - 1]?.details?.trim() && (conferenceEntries[conferenceEntries.length - 1].evidenceFile || conferenceEntries[conferenceEntries.length - 1].evidence_file)) ? 1 : 0.6,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            marginTop: '1rem',
+            marginBottom: '2rem'
           }}
-          disabled={readOnly}
-        />
-      </div>
-
-      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-        <label>Type of Conference</label>
-        <select
-          value={conferenceData.typeOfConference}
-          onChange={(e) => setConferenceData({ ...conferenceData, typeOfConference: e.target.value })}
-          style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
-          disabled={readOnly}
         >
-          <option value="">-- Select Type --</option>
-          <option value="International">International</option>
-          <option value="National">National</option>
-        </select>
-      </div>
-
-      {readOnly ? (
-        initialData?.evidence_file && (
-          <div className="form-field-vertical" style={{ marginTop: '1.5rem' }}>
-            <label>Evidence</label>
-            <a
-              href={`http://${window.location.hostname}:5001/uploads/${initialData.evidence_file}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="evidence-link"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
-            >
-              <ExternalLink size={18} /> View Conference Paper Evidence
-            </a>
-          </div>
-        )
-      ) : (
-        <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-          <label>Upload Evidence</label>
-          <div style={{
-            border: '2px dashed #ddd',
-            borderRadius: '8px',
-            padding: '1.5rem',
-            textAlign: 'center',
-            backgroundColor: '#f9f9f9'
-          }}>
-            <input
-              type="file"
-              id="evidence-upload-conference"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              onChange={(e) => setEvidenceFile(e.target.files[0])}
-              style={{ display: 'none' }}
-            />
-            <label
-              htmlFor="evidence-upload-conference"
-              style={{
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <Upload size={32} color="#5b8fc7" />
-              <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-                {evidenceFile?.name || persistedEvidenceFile || 'Click to upload or drag and drop'}
-              </span>
-              <span style={{ fontSize: '0.85rem', color: '#666' }}>
-                PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
-              </span>
-              <FilePreviewButton file={evidenceFile || persistedEvidenceFile} style={{ width: '32px', height: '32px' }} />
-              {(evidenceFile || persistedEvidenceFile) && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setEvidenceFile(null)
-                    setPersistedEvidenceFile('')
-                  }}
-                  title="Remove uploaded document"
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    border: '1px solid #d1d8e0',
-                    borderRadius: '6px',
-                    background: '#fff',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </label>
-          </div>
-        </div>
+          <Plus size={18} />
+          Add Another Conference
+        </button>
       )}
     </>
   )
