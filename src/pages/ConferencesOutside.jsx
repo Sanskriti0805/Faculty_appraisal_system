@@ -185,7 +185,6 @@ const ConferencesOutside = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Conferences Outside LNMIIT</h1>
-          <p className="page-subtitle">Conferences Outside LNMIIT</p>
         </div>
       </div>
 

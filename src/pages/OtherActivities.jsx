@@ -79,17 +79,14 @@ const OtherActivities = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Other Activities</h1>
-          <p className="page-subtitle">Other Activities</p>
         </div>
       </div>
 
       <div className="form-card">
         <div className="form-section">
           <div className="form-field-vertical">
-            <label>17.1 Software Developed (if any):</label>
-            <p style={{ fontSize: '0.95rem', color: '#5a6c7d', marginTop: '-0.5rem', marginBottom: '0.5rem' }}>
-              Name of software and its use and applications
-            </p>
+            <label>Software Developed</label>
+
             <textarea
               rows="6"
               value={formData.softwareDeveloped}
@@ -99,7 +96,7 @@ const OtherActivities = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>17.2 Visits to other Institutions for Research / Industries for Collaborative Work, if any:</label>
+            <label>Visits to other Institutions for Research / Industries for Collaborative Work</label>
             {formData.institutionalVisits.map((visit, index) => (
               <div key={index} style={{ marginBottom: '1.5rem', position: 'relative' }}>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>

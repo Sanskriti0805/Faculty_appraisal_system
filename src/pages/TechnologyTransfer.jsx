@@ -289,7 +289,6 @@ const TechnologyTransfer = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Technology Developed/Transferred</h1>
-          <p className="page-subtitle">Technology Developed/Transferred, if any</p>
         </div>
       </div>
 

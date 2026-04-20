@@ -342,22 +342,19 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
       {!readOnly && (
         <div className="page-header">
           <div>
-            <h1 className="page-title">Contributions, towards Institutional Development or any significant Institutional Contributions not covered above</h1>
-            <p className="page-subtitle">Institutional Contributions</p>
+            <h1 className="page-title">Other Institutional Contributions</h1>
           </div>
         </div>
       )}
 
       <div className="form-card">
-        <div className="section-header-text">OTHER INSTITUTIONAL CONTRIBUTIONS (Other than those covered above)</div>
-
         <div className="form-section">
           <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#2c3e50', marginBottom: '1rem' }}>
-            Contributions towards Institutional Development or any significant Institutional Contributions not covered above:
+            Contributions towards Institutional Development or any significant Institutional Contributions not covered above
           </h3>
 
           <div className="form-field-vertical">
-            <label>A- As a Dean / Associate Dean / Assistant Dean:</label>
+            <label>As a Dean / Associate Dean / Assistant Dean</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <select
@@ -400,7 +397,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>B- As an HoD / Deputy HoD:</label>
+            <label>As an HoD / Deputy HoD</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <select
@@ -443,7 +440,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>C- As Chief Warden / Associate Chief Warden / Warden:</label>
+            <label>As Chief Warden / Associate Chief Warden / Warden</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <select
@@ -486,7 +483,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>D- As Centre-Lead / Co-Lead / Nucleus Member:</label>
+            <label>As Centre-Lead / Co-Lead / Nucleus Member</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <select
@@ -529,7 +526,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>E- As Chairman / Vice Chairman / Convener / Member of one or more significant committees that involved significant efforts and time:</label>
+            <label>As Chairman / Vice Chairman / Convener / Member of one or more significant committees that involved significant efforts and time</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <select
@@ -572,7 +569,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>F- As Faculty-in-Charge / Member of any Cell:</label>
+            <label>As Faculty-in-Charge / Member of any Cell</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <select
@@ -615,7 +612,7 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           </div>
 
           <div className="form-field-vertical">
-            <label>G- As leader / contributing member of any other major responsibility not covered above:</label>
+            <label>As leader / contributing member of any other major responsibility not covered above</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <select

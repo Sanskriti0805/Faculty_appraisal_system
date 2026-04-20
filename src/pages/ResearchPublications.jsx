@@ -96,29 +96,13 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
     if (data.publication_type === 'Journal') {
       setJournalData({
-        titleOfPaper: data.title || '',
-        quartile: data.quartile || '',
-        yearOfPublication: data.year_of_publication || '2026',
-        nameOfJournal: data.journal_name || '',
-        volume: data.volume || '',
-        number: data.number || '',
-        pagesFrom: data.pages_from || '',
-        pagesTo: data.pages_to || ''
+        details: data.details || data.title || '',
+        quartile: data.quartile || ''
       })
     } else if (data.publication_type === 'Conference') {
       setConferenceData({
-        titleOfPaper: data.title || '',
-        fullNameOfConference: data.conference_name || '',
-        abbreviation: data.abbreviation || '',
-        dateFrom: data.date_from ? data.date_from.split('T')[0] : '',
-        dateTo: data.date_to ? data.date_to.split('T')[0] : '',
-        typeOfConference: data.type_of_conference || 'International',
-        pagesFrom: data.pages_from || '',
-        pagesTo: data.pages_to || '',
-        city: data.city || '',
-        state: data.state || '',
-        country: data.country || '',
-        publicationAgency: data.publication_agency || ''
+        details: data.details || data.title || '',
+        typeOfConference: data.type_of_conference || ''
       })
     } else if (data.publication_type === 'Monographs') {
       if (data.sub_type === 'Book Chapter') {
@@ -166,29 +150,13 @@ const ResearchPublications = ({ initialData, readOnly }) => {
   }, [initialData, readOnly, user])
 
   const [journalData, setJournalData] = useState({
-    titleOfPaper: '',
-    quartile: '',
-    yearOfPublication: '2026',
-    nameOfJournal: '',
-    volume: '',
-    number: '',
-    pagesFrom: '',
-    pagesTo: ''
+    details: '',
+    quartile: ''
   })
 
   const [conferenceData, setConferenceData] = useState({
-    titleOfPaper: '',
-    fullNameOfConference: '',
-    abbreviation: '',
-    dateFrom: '',
-    dateTo: '',
-    typeOfConference: 'International',
-    pagesFrom: '',
-    pagesTo: '',
-    city: '',
-    state: '',
-    country: '',
-    publicationAgency: ''
+    details: '',
+    typeOfConference: ''
   })
 
   const [bookChapterEntries, setBookChapterEntries] = useState([getEmptyBookChapterEntry()])
@@ -216,7 +184,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         setAuthors([getEmptyAuthor()])
         setEditors([getEmptyAuthor()])
         setJournalData({
-          titleOfPaper: '', quartile: '', yearOfPublication: '2026', nameOfJournal: '', volume: '', number: '', pagesFrom: '', pagesTo: ''
+          details: '', quartile: ''
         })
         setEvidenceFile(null)
         setPersistedEvidenceFile('')
@@ -233,7 +201,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         setAuthors([getEmptyAuthor()])
         setEditors([getEmptyAuthor()])
         setConferenceData({
-          titleOfPaper: '', fullNameOfConference: '', abbreviation: '', dateFrom: '', dateTo: '', typeOfConference: 'International', pagesFrom: '', pagesTo: '', city: '', state: '', country: '', publicationAgency: ''
+          details: '', typeOfConference: ''
         })
         setEvidenceFile(null)
         setPersistedEvidenceFile('')
@@ -470,10 +438,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         return false
       }
 
-      if (publicationType === 'Conference' && (!conferenceData.dateFrom || !conferenceData.dateTo)) {
-        window.appToast('Date From and Date To are required for conference publications.')
-        return false
-      }
+
 
       if (publicationType === 'Monographs' && !bookSubType) {
         window.appToast('Please select a monograph sub-type before saving.')
@@ -526,22 +491,28 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       }
 
       if (publicationType === 'Journal') {
-        if (!hasAuthorValue(authors) || !journalData.titleOfPaper || !journalData.nameOfJournal || !journalData.yearOfPublication) {
-          window.appToast('Please complete required Journal fields: Authors, Title, Journal Name, Year of Publication.')
+        const hasDetails = Boolean(journalData.details && journalData.details.trim())
+        const hasQuartile = Boolean(journalData.quartile)
+        const hasAnything = hasDetails || hasQuartile
+
+        // If the user hasn't filled anything, skip saving and move on
+        if (!hasAnything) {
+          window.appToast('Data saved successfully!')
+          return true
+        }
+
+        // Something entered — evidence is now required
+        const evidencePayload = resolveEvidencePayload(evidenceFile, persistedEvidenceFile)
+        const hasEvidence = !!(evidencePayload.evidence_file || evidencePayload.existing_evidence_file)
+        if (!hasEvidence) {
+          window.appToast('Please upload evidence before saving.')
           return false
         }
 
-        const evidencePayload = resolveEvidencePayload(evidenceFile, persistedEvidenceFile)
         publicationData.sub_type = 'Journal'
-        publicationData.title = journalData.titleOfPaper
-        publicationData.journal_name = journalData.nameOfJournal
-        publicationData.volume = journalData.volume
-        publicationData.number = journalData.number
-        publicationData.pages_from = journalData.pagesFrom
-        publicationData.pages_to = journalData.pagesTo
-        publicationData.year_of_publication = journalData.yearOfPublication
+        publicationData.title = journalData.details.substring(0, 255)
+        publicationData.details = journalData.details
         publicationData.quartile = journalData.quartile
-        publicationData.authors = authors
         publicationData.evidence_file = evidencePayload.evidence_file
         publicationData.existing_evidence_file = evidencePayload.existing_evidence_file
 
@@ -552,26 +523,28 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         setPublicationId(response?.data?.id || null)
         return true
       } else if (publicationType === 'Conference') {
-        if (!hasAuthorValue(authors) || !conferenceData.titleOfPaper || !conferenceData.fullNameOfConference) {
-          window.appToast('Please complete required Conference fields: Authors, Title, Full Conference Name.')
+        const hasDetails = Boolean(conferenceData.details && conferenceData.details.trim())
+        const hasType = Boolean(conferenceData.typeOfConference)
+        const hasAnything = hasDetails || hasType
+        
+        // If nothing is filled, we can move on
+        if (!hasAnything) {
+          window.appToast('Data saved successfully!')
+          return true
+        }
+
+        // Details or Type provided, evidence is mandatory
+        const evidencePayload = resolveEvidencePayload(evidenceFile, persistedEvidenceFile)
+        const hasEvidence = !!(evidencePayload.evidence_file || evidencePayload.existing_evidence_file)
+        if (!hasEvidence) {
+          window.appToast('Please upload evidence before saving.')
           return false
         }
 
-        const evidencePayload = resolveEvidencePayload(evidenceFile, persistedEvidenceFile)
         publicationData.sub_type = 'Conference'
-        publicationData.title = conferenceData.titleOfPaper
-        publicationData.conference_name = conferenceData.fullNameOfConference
-        publicationData.abbreviation = conferenceData.abbreviation
-        publicationData.date_from = conferenceData.dateFrom || null
-        publicationData.date_to = conferenceData.dateTo || null
+        publicationData.title = conferenceData.details.substring(0, 255)
+        publicationData.details = conferenceData.details
         publicationData.type_of_conference = conferenceData.typeOfConference
-        publicationData.pages_from = conferenceData.pagesFrom
-        publicationData.pages_to = conferenceData.pagesTo
-        publicationData.city = conferenceData.city
-        publicationData.state = conferenceData.state
-        publicationData.country = conferenceData.country
-        publicationData.publication_agency = conferenceData.publicationAgency
-        publicationData.authors = authors
         publicationData.evidence_file = evidencePayload.evidence_file
         publicationData.existing_evidence_file = evidencePayload.existing_evidence_file
 
@@ -846,108 +819,40 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
   const renderJournalForm = () => (
     <>
-      {renderAuthors(authors)}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="form-field-vertical">
-          <label>Title of Paper<span style={{ color: '#d64550' }}>*</span></label>
-          <input
-            type="text"
-            value={journalData.titleOfPaper}
-            onChange={(e) => setJournalData({ ...journalData, titleOfPaper: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-            disabled={readOnly}
-          />
-        </div>
-
-        <div className="form-field-vertical">
-          <label>Quartile</label>
-          <select
-            value={journalData.quartile}
-            onChange={(e) => setJournalData({ ...journalData, quartile: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
-            disabled={readOnly}
-          >
-            <option value="">Select Quartile</option>
-            <option value="Q1">Q1</option>
-            <option value="Q2">Q2</option>
-            <option value="Q3">Q3</option>
-            <option value="Q4">Q4</option>
-          </select>
-        </div>
-
-        <div className="form-field-vertical">
-          <label>Year of Publication<span style={{ color: '#d64550' }}>*</span></label>
-          <select
-            value={journalData.yearOfPublication}
-            onChange={(e) => setJournalData({ ...journalData, yearOfPublication: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
-            disabled={readOnly}
-          >
-            {Array.from({ length: 30 }, (_, i) => 2026 - i).map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
-        </div>
+      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+        <label>Publication Details</label>
+        <textarea
+          rows="5"
+          value={journalData.details}
+          onChange={(e) => setJournalData({ ...journalData, details: e.target.value })}
+          placeholder="Author's Name, Title of Paper, Name of Journal, Year of Publication, Pages (From - To)"
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: readOnly ? 'none' : '1px solid #ddd',
+            borderRadius: '4px',
+            fontSize: '1rem',
+            fontFamily: 'inherit',
+            background: readOnly ? 'transparent' : 'white'
+          }}
+          disabled={readOnly}
+        />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="form-field-vertical">
-          <label>Name of Journal<span style={{ color: '#d64550' }}>*</span></label>
-          <input
-            type="text"
-            value={journalData.nameOfJournal}
-            onChange={(e) => setJournalData({ ...journalData, nameOfJournal: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-            disabled={readOnly}
-          />
-        </div>
-
-        <div className="form-field-vertical">
-          <label>Volume<span style={{ color: '#d64550' }}>*</span></label>
-          <input
-            type="text"
-            value={journalData.volume}
-            onChange={(e) => setJournalData({ ...journalData, volume: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-            disabled={readOnly}
-          />
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="form-field-vertical">
-          <label>Number<span style={{ color: '#d64550' }}>*</span></label>
-          <input
-            type="text"
-            value={journalData.number}
-            onChange={(e) => setJournalData({ ...journalData, number: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-            disabled={readOnly}
-          />
-        </div>
-
-        <div className="form-field-vertical">
-          <label>Pages<span style={{ color: '#d64550' }}>*</span></label>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input
-              type="text"
-              placeholder="From"
-              value={journalData.pagesFrom}
-              onChange={(e) => setJournalData({ ...journalData, pagesFrom: e.target.value })}
-              style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-              disabled={readOnly}
-            />
-            <input
-              type="text"
-              placeholder="To"
-              value={journalData.pagesTo}
-              onChange={(e) => setJournalData({ ...journalData, pagesTo: e.target.value })}
-              style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-              disabled={readOnly}
-            />
-          </div>
-        </div>
+      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+        <label>Quartile</label>
+        <select
+          value={journalData.quartile}
+          onChange={(e) => setJournalData({ ...journalData, quartile: e.target.value })}
+          style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
+          disabled={readOnly}
+        >
+          <option value="">Select Quartile</option>
+          <option value="Q1">Q1</option>
+          <option value="Q2">Q2</option>
+          <option value="Q3">Q3</option>
+          <option value="Q4">Q4</option>
+        </select>
       </div>
 
       {readOnly ? (
@@ -1034,151 +939,38 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
   const renderConferenceForm = () => (
     <>
-      {renderAuthors(authors)}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="form-field-vertical">
-          <label>Title of Paper<span style={{ color: '#d64550' }}>*</span></label>
-          <input
-            type="text"
-            value={conferenceData.titleOfPaper}
-            onChange={(e) => setConferenceData({ ...conferenceData, titleOfPaper: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-            disabled={readOnly}
-          />
-        </div>
-
-        <div className="form-field-vertical">
-          <label>Full Name of Conference<span style={{ color: '#d64550' }}>*</span></label>
-          <input
-            type="text"
-            value={conferenceData.fullNameOfConference}
-            onChange={(e) => setConferenceData({ ...conferenceData, fullNameOfConference: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-            disabled={readOnly}
-          />
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="form-field-vertical">
-          <label>Abbreviation of Conference</label>
-          <input
-            type="text"
-            value={conferenceData.abbreviation}
-            onChange={(e) => setConferenceData({ ...conferenceData, abbreviation: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-            disabled={readOnly}
-          />
-        </div>
-
-        <div className="form-field-vertical">
-          <label>Date From<span style={{ color: '#d64550' }}>*</span></label>
-          <input
-            type="date"
-            value={conferenceData.dateFrom}
-            onChange={(e) => setConferenceData({ ...conferenceData, dateFrom: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-            disabled={readOnly}
-          />
-        </div>
-
-        <div className="form-field-vertical">
-          <label>Date To<span style={{ color: '#d64550' }}>*</span></label>
-          <input
-            type="date"
-            value={conferenceData.dateTo}
-            onChange={(e) => setConferenceData({ ...conferenceData, dateTo: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-            disabled={readOnly}
-          />
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="form-field-vertical">
-          <label>Type of Conference<span style={{ color: '#d64550' }}>*</span></label>
-          <select
-            value={conferenceData.typeOfConference}
-            onChange={(e) => setConferenceData({ ...conferenceData, typeOfConference: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
-            disabled={readOnly}
-          >
-            <option value="International">International</option>
-            <option value="National">National</option>
-          </select>
-        </div>
-
-        <div className="form-field-vertical">
-          <label>Pages<span style={{ color: '#d64550' }}>*</span></label>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input
-              type="text"
-              placeholder="From"
-              value={conferenceData.pagesFrom}
-              onChange={(e) => setConferenceData({ ...conferenceData, pagesFrom: e.target.value })}
-              style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-              disabled={readOnly}
-            />
-            <input
-              type="text"
-              placeholder="To"
-              value={conferenceData.pagesTo}
-              onChange={(e) => setConferenceData({ ...conferenceData, pagesTo: e.target.value })}
-              style={{ flex: 1, padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-              disabled={readOnly}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px', marginBottom: '1.5rem' }}>
-        <h4 style={{ marginTop: 0, marginBottom: '1rem', color: '#2c3e50' }}>Venue</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-          <div className="form-field-vertical">
-            <label>City<span style={{ color: '#d64550' }}>*</span></label>
-            <input
-              type="text"
-              value={conferenceData.city}
-              onChange={(e) => setConferenceData({ ...conferenceData, city: e.target.value })}
-              style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-              disabled={readOnly}
-            />
-          </div>
-
-          <div className="form-field-vertical">
-            <label>State<span style={{ color: '#d64550' }}>*</span></label>
-            <input
-              type="text"
-              value={conferenceData.state}
-              onChange={(e) => setConferenceData({ ...conferenceData, state: e.target.value })}
-              style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-              disabled={readOnly}
-            />
-          </div>
-
-          <div className="form-field-vertical">
-            <label>Country<span style={{ color: '#d64550' }}>*</span></label>
-            <input
-              type="text"
-              value={conferenceData.country}
-              onChange={(e) => setConferenceData({ ...conferenceData, country: e.target.value })}
-              style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-              disabled={readOnly}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="form-field-vertical">
-        <label>Publication Agency<span style={{ color: '#d64550' }}>*</span></label>
-        <input
-          type="text"
-          value={conferenceData.publicationAgency}
-          onChange={(e) => setConferenceData({ ...conferenceData, publicationAgency: e.target.value })}
-          style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+        <label>Conference Details</label>
+        <textarea
+          rows="6"
+          value={conferenceData.details}
+          onChange={(e) => setConferenceData({ ...conferenceData, details: e.target.value })}
+          placeholder="Author's Name, Title of Paper, Name of Conference, Abbreviation of Conference, Date (From -To), Pages (From - To), Venue(City, State, Country), Publication Agency"
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: readOnly ? 'none' : '1px solid #ddd',
+            borderRadius: '4px',
+            fontSize: '1rem',
+            fontFamily: 'inherit',
+            background: readOnly ? 'transparent' : 'white'
+          }}
           disabled={readOnly}
         />
+      </div>
+
+      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+        <label>Type of Conference</label>
+        <select
+          value={conferenceData.typeOfConference}
+          onChange={(e) => setConferenceData({ ...conferenceData, typeOfConference: e.target.value })}
+          style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
+          disabled={readOnly}
+        >
+          <option value="">-- Select Type --</option>
+          <option value="International">International</option>
+          <option value="National">National</option>
+        </select>
       </div>
 
       {readOnly ? (

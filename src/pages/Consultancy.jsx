@@ -285,8 +285,7 @@ const Consultancy = ({ initialData, readOnly }) => {
       {!readOnly && (
         <div className="page-header">
           <div>
-            <h1 className="page-title">Consultancy, if any (Please provide details.)</h1>
-            <p className="page-subtitle">Consultancy Details</p>
+            <h1 className="page-title">Consultancy</h1>
           </div>
         </div>
       )}

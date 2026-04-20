@@ -60,14 +60,13 @@ const ContinuingEducation = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Continuing Education Activities</h1>
-          <p className="page-subtitle">Continuing Education Activities</p>
         </div>
       </div>
 
       <div className="form-card">
         <div className="form-section">
           <div className="form-field-vertical">
-            <label>(iii) Name and type of Course(s) Organized (QIP, Self-financed, Industry):</label>
+            <label>(iii) Name and type of Course(s) Organized (QIP, Self-financed, Industry)</label>
             <textarea
               rows="4"
               value={formData.coursesOrganized}
@@ -77,7 +76,7 @@ const ContinuingEducation = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>(iv) Workshops/conferences organized:</label>
+            <label>(iv) Workshops/conferences organized</label>
             <textarea
               rows="4"
               value={formData.workshopsOrganized}
@@ -87,7 +86,7 @@ const ContinuingEducation = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>(v) Participation in High Level Industry-Academia Interaction:</label>
+            <label>(v) Participation in High Level Industry-Academia Interaction</label>
             <textarea
               rows="4"
               value={formData.industryInteraction}
@@ -97,7 +96,7 @@ const ContinuingEducation = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>(vi) FDPs organized (details):</label>
+            <label>(vi) FDPs organized (details)</label>
             <textarea
               rows="4"
               value={formData.fdpsOrganized}
@@ -107,7 +106,7 @@ const ContinuingEducation = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>(vii) FDPs attended:</label>
+            <label>(vii) FDPs attended</label>
             <textarea
               rows="4"
               value={formData.fdpsAttended}
@@ -117,7 +116,7 @@ const ContinuingEducation = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>(viii) Contribution as Resource Person in FDPs/Workshops:</label>
+            <label>(viii) Contribution as Resource Person in FDPs/Workshops</label>
             <textarea
               rows="4"
               value={formData.resourcePerson}
@@ -127,7 +126,7 @@ const ContinuingEducation = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>(ix) MOOC Courses Completed (Certified):</label>
+            <label>(ix) MOOC Courses Completed (Certified)</label>
             <textarea
               rows="4"
               value={formData.moocCourses}
@@ -137,7 +136,7 @@ const ContinuingEducation = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>(x) Any other:</label>
+            <label>(x) Any other</label>
             <textarea
               rows="4"
               value={formData.others}
