@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, X, Upload, ExternalLink } from 'lucide-react'
+import { Plus, X, Upload, ExternalLink, Trash2, Eye, RotateCw, CheckCircle, BookOpen, Award, FileText } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import { publicationsService } from '../services/publicationsService'
@@ -93,6 +93,19 @@ const ResearchPublications = ({ initialData, readOnly }) => {
   const [editors, setEditors] = useState([getEmptyAuthor()])
   const [loading, setLoading] = useState(false)
 
+  // Summary State for Save-to-Review workflow
+  const [showFinalSummary, setShowFinalSummary] = useState(false)
+  const [summaryData, setSummaryData] = useState([])
+
+  const fetchPersistedPublications = async () => {
+    try {
+      const res = await publicationsService.getPublicationsByFaculty(user.id)
+      setSummaryData(Array.isArray(res?.data) ? res.data : [])
+    } catch (error) {
+      console.error('Failed to refresh summary list:', error)
+    }
+  }
+
   const hydrateFromPublication = (data, options = { updateSelectors: false }) => {
     if (!data) return
 
@@ -163,6 +176,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     }
 
     loadAllPublications()
+    fetchPersistedPublications()
   }, [initialData, readOnly, user])
 
   const [journalEntries, setJournalEntries] = useState([getEmptyJournalEntry()])
@@ -475,7 +489,13 @@ const ResearchPublications = ({ initialData, readOnly }) => {
   }
 
   const handleSave = async (e) => {
+    if (readOnly) return false;
     if (e && e.preventDefault) e.preventDefault()
+
+    // Second click on 'Save and Next' navigates to next page
+    if (showFinalSummary) {
+       return true;
+    }
 
     setLoading(true)
     const createdIds = []
@@ -572,9 +592,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         }
         await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
         await refreshPublications()
-        window.appToast('Journal drafts saved successfully!')
-        setPublicationId(null)
-        return true
+        await fetchPersistedPublications()
+        setShowFinalSummary(true)
+        window.appToast('Journal drafts saved successfully! Review your entries in the summary list below.')
+        return false
       } else if (publicationType === 'Conference') {
         for (const entry of conferenceEntries) {
           const hasDetails = entry.details && entry.details.trim()
@@ -609,9 +630,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         }
         await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
         await refreshPublications()
-        window.appToast('Conference drafts saved successfully!')
-        setPublicationId(null)
-        return true
+        await fetchPersistedPublications()
+        setShowFinalSummary(true)
+        window.appToast('Conference drafts saved successfully! Review your entries in the summary list below.')
+        return false
       } else if (publicationType === 'Monographs') {
         if (!bookSubType) {
           window.appToast('Please select a monograph sub-type before saving.')
@@ -642,9 +664,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           }
           await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
           await refreshPublications()
-          window.appToast('Book chapter drafts saved successfully!')
-          setPublicationId(null)
-          return true
+          await fetchPersistedPublications()
+          setShowFinalSummary(true)
+          window.appToast('Book chapter drafts saved successfully! Review your entries in the summary list below.')
+          return false
         } else if (bookSubType === 'Book') {
           for (const entry of textbookEntries) {
             const hasDetails = entry.details && entry.details.trim();
@@ -668,9 +691,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           }
           await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
           await refreshPublications()
-          window.appToast('Book drafts saved successfully!')
-          setPublicationId(null)
-          return true
+          await fetchPersistedPublications()
+          setShowFinalSummary(true)
+          window.appToast('Book drafts saved successfully! Review your entries in the summary list below.')
+          return false
         } else if (bookSubType === 'Book Edited') {
           for (const entry of bookEditedEntries) {
             const hasDetails = entry.details && entry.details.trim();
@@ -694,9 +718,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           }
           await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
           await refreshPublications()
-          window.appToast('Book edited drafts saved successfully!')
-          setPublicationId(null)
-          return true
+          await fetchPersistedPublications()
+          setShowFinalSummary(true)
+          window.appToast('Book edited drafts saved successfully! Review your entries in the summary list below.')
+          return false
         }
       } else if (publicationType === 'Any Other') {
         if (!otherDetails || !otherDetails.trim()) {
@@ -713,9 +738,13 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         const response = await createAndTrack(publicationData)
         await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
         await refreshPublications()
-        window.appToast('Draft saved successfully!')
-        setPublicationId(response?.data?.id || null)
-        return true
+        
+        // Populate summary for local view immediately
+        await fetchPersistedPublications()
+        setShowFinalSummary(true)
+        
+        window.appToast('Research Publications saved successfully! Review your entries in the summary list below.')
+        return false; // Stay on page to show summary
       }
     } catch (error) {
       if (createdIds.length > 0) {
@@ -1710,6 +1739,151 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       )}
     </div>
   )
+
+  const handleDeletePublication = async (id) => {
+    const confirmed = await window.showConfirm({
+      title: 'Delete Publication',
+      message: 'Are you sure you want to delete this publication? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      danger: true
+    })
+
+    if (!confirmed) return
+
+    try {
+      await publicationsService.deletePublication(id)
+      await fetchPersistedPublications()
+      window.appToast('Publication deleted successfully.')
+    } catch (error) {
+      console.error('Failed to delete publication:', error)
+      window.appToast('Failed to delete publication. Please try again.')
+    }
+  }
+
+  const renderFinalSummary = () => {
+    const hasAnyData = summaryData.length > 0
+    if (!showFinalSummary && !hasAnyData) return null
+
+    return (
+      <div className="final-summary-section" style={{ 
+        marginTop: '3rem', 
+        padding: '2rem', 
+        background: '#fff', 
+        borderRadius: '12px', 
+        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+        border: '1px solid #e2e8f0'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '2px solid #3182ce', paddingBottom: '0.5rem' }}>
+          <h2 style={{ color: '#1e3a5f', margin: 0, fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <FileText size={24} color="#3182ce" /> Final Structured List (Confirmed Publications)
+          </h2>
+          <button 
+            onClick={fetchPersistedPublications}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem', 
+              padding: '0.5rem 1rem', 
+              background: '#f7fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: '6px', 
+              cursor: 'pointer', 
+              color: '#4a5568', 
+              fontSize: '0.9rem',
+              transition: 'all 0.2s'
+            }}
+            title="Refresh list"
+            onMouseOver={(e) => e.currentTarget.style.background = '#edf2f7'}
+            onMouseOut={(e) => e.currentTarget.style.background = '#f7fafc'}
+          >
+            <RotateCw size={16} /> Refresh
+          </button>
+        </div>
+        
+        {!hasAnyData && showFinalSummary && (
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#718096' }}>
+            <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No saved publications found in the database.</p>
+            <p style={{ fontSize: '0.9rem' }}>If you just added data, it might take a moment to reflect here. Try clicking "Refresh".</p>
+          </div>
+        )}
+
+        {hasAnyData && (
+          <div className="table-responsive" style={{ overflowX: 'auto' }}>
+            <table className="summary-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                  <th style={{ padding: '1rem', textAlign: 'left', color: '#4a5568', fontWeight: '600' }}>Type</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', color: '#4a5568', fontWeight: '600' }}>Details</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', color: '#4a5568', fontWeight: '600' }}>Category/Level</th>
+                  <th style={{ padding: '1rem', textAlign: 'center', color: '#4a5568', fontWeight: '600', width: '100px' }}>Evidence</th>
+                  <th style={{ padding: '1rem', textAlign: 'center', color: '#4a5568', fontWeight: '600', width: '80px' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summaryData.map((pub) => {
+                  const isJournal = pub.publication_type === 'Journal'
+                  const isConference = pub.publication_type === 'Conference'
+                  const isMonograph = pub.publication_type === 'Monographs'
+                  
+                  let typeIcon = <FileText size={18} color="#718096" />
+                  if (isJournal) typeIcon = <BookOpen size={18} color="#3182ce" />
+                  if (isConference) typeIcon = <Users size={18} color="#38a169" />
+                  if (isMonograph) typeIcon = <Award size={18} color="#d69e2e" />
+
+                  return (
+                    <tr key={pub.id} style={{ borderBottom: '1px solid #edf2f7', transition: 'background 0.2s' }}>
+                      <td style={{ padding: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '500', color: '#2d3748' }}>
+                          {typeIcon}
+                          {pub.publication_type} {pub.sub_type && pub.sub_type !== pub.publication_type ? `(${pub.sub_type})` : ''}
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem', color: '#4a5568', fontSize: '0.95rem', maxWidth: '400px' }}>
+                        <div style={{ maxHeight: '60px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {pub.details || pub.title}
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem', color: '#4a5568' }}>
+                        {pub.quartile || pub.type_of_conference || '—'}
+                      </td>
+                      <td style={{ padding: '1rem', textAlign: 'center' }}>
+                        {pub.evidence_file ? (
+                          <a 
+                            href={`http://${window.location.hostname}:5001/uploads/${pub.evidence_file}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            title="View Document"
+                            style={{ color: '#3182ce', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem', borderRadius: '4px', background: '#ebf8ff' }}
+                          >
+                            <Eye size={18} />
+                          </a>
+                        ) : '—'}
+                      </td>
+                      <td style={{ padding: '1rem', textAlign: 'center' }}>
+                        {!readOnly && (
+                          <button 
+                            onClick={() => handleDeletePublication(pub.id)} 
+                            style={{ color: '#e53e3e', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="Delete Entry"
+                            onMouseOver={(e) => e.currentTarget.style.background = '#fff5f5'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className={`form-page ${readOnly ? 'read-only-mode' : ''}`}>
       {!readOnly && (
@@ -1794,6 +1968,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           {!publicationType && !readOnly && (
             <FormActions onSave={() => Promise.resolve(true)} currentPath={window.location.pathname} />
           )}
+          
+          {renderFinalSummary()}
         </div>
       </div>
     </div>

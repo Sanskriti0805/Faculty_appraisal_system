@@ -148,6 +148,14 @@ const NewCourses = () => {
       return false
     }
 
+    // Validate: if CIF is uploaded, details must be filled
+    const rowsWithCIF = courses.filter(course => course.cifFile || course.cif_file)
+    const missingDetails = rowsWithCIF.find(course => !hasCourseInputData(course))
+    if (missingDetails) {
+      window.appToast('Please fill in the course details for the uploaded CIF file before proceeding.')
+      return false
+    }
+
     setLoading(true)
     try {
       const authUser = JSON.parse(localStorage.getItem('auth_user') || '{}')

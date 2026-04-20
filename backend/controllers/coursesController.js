@@ -286,7 +286,7 @@ exports.createCourse = async (req, res) => {
     res.status(201).json({
       success: true,
       message: `Course ${status === 'submitted' ? 'submitted' : 'saved as draft'} successfully`,
-      data: { id: result.insertId, status }
+      data: { id: result.insertId, status, fileName: evidence_file }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
