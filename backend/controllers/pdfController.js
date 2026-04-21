@@ -86,10 +86,7 @@ async function fetchDynamicData(facultyId) {
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   MAIN CONTROLLER
-   GET /api/submissions/:id/pdf
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* Main controller: GET /api/submissions/:id/pdf */
 exports.generateSubmissionPdf = async (req, res) => {
   const { id } = req.params;
 
@@ -160,7 +157,7 @@ exports.generateSubmissionPdf = async (req, res) => {
       conferenceSessions, keynotesTalks, consultancy,
       teachingInnovation, institutionalContributions, goals,
       courseware, continuingEducation, otherActivities, researchPlan, teachingPlan,
-      dynamicData   // â† custom sections from Form Builder
+      dynamicData   // custom sections from Form Builder
     });
 
     // -- 4. Launch Puppeteer -> PDF -----------------------------------------

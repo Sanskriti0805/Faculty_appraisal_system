@@ -11,11 +11,11 @@ async function seed() {
     // -- Find the submission for user 12
     const [subs] = await db.query('SELECT * FROM submissions WHERE faculty_id = 12 LIMIT 1');
     if (subs.length === 0) {
-      console.log('âŒ No submission found for faculty_id=12. Run the mock submission insert first.');
+      console.log('[ERROR] No submission found for faculty_id=12. Run the mock submission insert first.');
       process.exit(1);
     }
     const sub = subs[0];
-    console.log(`âœ… Found submission ID ${sub.id} for faculty 12, academic_year: ${sub.academic_year}`);
+    console.log(`[OK] Found submission ID ${sub.id} for faculty 12, academic_year: ${sub.academic_year}`);
 
     // 1. Courses Taught
     await db.query('DELETE FROM courses_taught WHERE faculty_id = 12');
@@ -24,7 +24,7 @@ async function seed() {
         (12, 'A', 'Odd 2024-25', 'CS101', 'Data Structures', 'B.Tech CSE', 4, 60),
         (12, 'B', 'Odd 2024-25', 'CS201', 'Algorithm Design', 'B.Tech CSE', 4, 55),
         (12, 'A', 'Even 2024-25', 'CS301', 'Machine Learning', 'M.Tech CSE', 3, 30)`);
-    console.log('âœ… Courses taught seeded');
+    console.log('[OK] Courses taught seeded');
 
     // 2. New Courses Developed
     await db.query('DELETE FROM new_courses WHERE faculty_id = 12');
@@ -32,7 +32,7 @@ async function seed() {
       VALUES 
         (12, 'PG', 'M.Tech CSE', 'Deep Learning Applications', 'CS502', 'PG'),
         (12, 'UG', 'B.Tech CSE', 'Blockchain Fundamentals', 'CS415', 'UG')`);
-    console.log('âœ… New courses seeded');
+    console.log('[OK] New courses seeded');
 
     // 3. Research Publications
     await db.query('DELETE FROM research_publications WHERE faculty_id = 12');
@@ -41,7 +41,7 @@ async function seed() {
         (12, 'Journal', 'Q1', 'Deep Reinforcement Learning for Edge Computing', 2024, 'IEEE Trans. on Neural Networks'),
         (12, 'Journal', 'Q2', 'Federated Learning in Healthcare Systems', 2023, 'Elsevier Applied Soft Computing'),
         (12, 'Conference', 'Tier 1', 'Privacy-Preserving ML on IoT Devices', 2024, NULL)`);
-    console.log('âœ… Publications seeded');
+    console.log('[OK] Publications seeded');
 
     // 4. Research Grants
     await db.query('DELETE FROM research_grants WHERE faculty_id = 12');
@@ -49,7 +49,7 @@ async function seed() {
       VALUES
         (12, 'Government', 'AI-based Smart Agriculture Monitoring', 'DST-SERB', 'INR', 2500000, 25.0, '3 Years', 'PI'),
         (12, 'Industry', 'ML-powered Fraud Detection System', 'TCS Innovation Labs', 'INR', 800000, 8.0, '1 Year', 'Co-PI')`);
-    console.log('âœ… Research grants seeded');
+    console.log('[OK] Research grants seeded');
 
     // 5. Patents
     await db.query('DELETE FROM patents WHERE faculty_id = 12');
@@ -57,7 +57,7 @@ async function seed() {
       VALUES
         (12, 'Granted', 'System and Method for Real-time Anomaly Detection Using ML', 'Indian Patent Office'),
         (12, 'Published', 'Privacy-aware Federated Learning Framework', 'Indian Patent Office')`);
-    console.log('âœ… Patents seeded');
+    console.log('[OK] Patents seeded');
 
     // 6. Awards
     await db.query('DELETE FROM awards_honours WHERE faculty_id = 12');
@@ -65,14 +65,14 @@ async function seed() {
       VALUES
         (12, 'Best Paper Award', 'IEEE International Conference on AI', 2024, 'Best paper in track: Edge AI Systems'),
         (12, 'Excellence in Research', 'LNMIIT', 2023, 'Institute level research excellence award')`);
-    console.log('âœ… Awards seeded');
+    console.log('[OK] Awards seeded');
 
     // 7. Submitted Proposals
     await db.query('DELETE FROM submitted_proposals WHERE faculty_id = 12');
     await db.query(`INSERT INTO submitted_proposals (faculty_id, title, funding_agency, currency, grant_amount, amount_in_lakhs, duration, submission_date, status, role)
       VALUES
         (12, 'Quantum-Enhanced Cryptography for IoT', 'NITI Aayog', 'INR', 5000000, 50.0, '4 Years', '2024-01-15', 'Under Review', 'PI')`);
-    console.log('âœ… Proposals seeded');
+    console.log('[OK] Proposals seeded');
 
     // 8. Keynotes & Talks
     await db.query('DELETE FROM keynotes_talks WHERE faculty_id = 12');
@@ -80,18 +80,18 @@ async function seed() {
       VALUES
         (12, 'Future of Federated AI', 'NIT Jaipur Tech Symposium', '2024-03-10', 'Jaipur, Rajasthan', 'Academic'),
         (12, 'Ethical AI in Healthcare', 'IIT Jodhpur AI Summit', '2023-11-20', 'Jodhpur, Rajasthan', 'Mixed')`);
-    console.log('âœ… Keynotes/Talks seeded');
+    console.log('[OK] Keynotes/Talks seeded');
 
     // 9. Update submission status to submitted (in case it's still draft)
     await db.query(`UPDATE submissions SET status = 'submitted', submitted_at = NOW() WHERE id = ?`, [sub.id]);
-    console.log(`âœ… Submission ${sub.id} status set to "submitted"`);
+    console.log(`[OK] Submission ${sub.id} status set to "submitted"`);
 
-    console.log('\nðŸŽ‰ All mock data seeded successfully!');
+    console.log('\nAll mock data seeded successfully.');
     console.log(`   Faculty: Sanki (ID:12) | Submission ID: ${sub.id} | Year: ${sub.academic_year}`);
     console.log('   -> Log in as Dofa/Dofa Office to test View, Download, Approve, Reminder.');
     process.exit(0);
   } catch (err) {
-    console.error('âŒ Seed error:', err.message);
+    console.error('[ERROR] Seed error:', err.message);
     process.exit(1);
   }
 }

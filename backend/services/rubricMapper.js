@@ -125,14 +125,14 @@ const bootstrapTeachingFeedbackRuleConfigs = async () => {
  * All unmatched rubrics -> 0 (inserted explicitly for complete record).
  *
  * Teaching Feedback rubric categories (Form A, Part A, Section 4.1):
- *   Rubric IDs 1-3  (â‰¥50 students category, scale 5-4-3):
- *     ID 1: enrollmentâ‰¥50 AND feedbackâ‰¥4   -> 5 pts
- *     ID 2: enrollmentâ‰¥50 AND 3.5â‰¤fb<4    -> 4 pts
- *     ID 3: enrollmentâ‰¥50 AND 3â‰¤fb<3.5    -> 3 pts
+ *   Rubric IDs 1-3  (>=50 students category, scale 5-4-3):
+ *     ID 1: enrollment>=50 AND feedback>=4   -> 5 pts
+ *     ID 2: enrollment>=50 AND 3.5<=fb<4     -> 4 pts
+ *     ID 3: enrollment>=50 AND 3<=fb<3.5     -> 3 pts
  *   Rubric IDs 4-6  (<50 students category, scale 4-3-2):
- *     ID 4: enrollment<50  AND feedbackâ‰¥4  -> 4 pts
- *     ID 5: enrollment<50  AND 3.5â‰¤fb<4   -> 3 pts
- *     ID 6: enrollment<50  AND 3â‰¤fb<3.5   -> 2 pts
+ *     ID 4: enrollment<50 AND feedback>=4    -> 4 pts
+ *     ID 5: enrollment<50 AND 3.5<=fb<4      -> 3 pts
+ *     ID 6: enrollment<50 AND 3<=fb<3.5      -> 2 pts
  *   Each qualifying course contributes independently to exactly one rubric,
  *   and scores are accumulated across all courses.
  */
@@ -555,7 +555,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
             if (!piMatch) return false;
 
-            if (sub.includes('>=20') || sub.includes('â‰¥20') || sub.includes('value>=20') || sub.includes('value>20')) {
+            if (sub.includes('>=20') || /\u2265\s*20/.test(sub) || sub.includes('value>=20') || sub.includes('value>20')) {
               return amt >= 20;
             } else if (sub.includes('10') && sub.includes('20')) {
               return amt >= 10 && amt < 20;
@@ -829,7 +829,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
     const nonZero = valuesToInsert.filter(v => v[2] > 0).length;
     const total   = valuesToInsert.reduce((s, v) => s + v[2], 0);
-    console.log(`  âœ“ Allocated ${nonZero}/${rubrics.length} rubric(s) with scores. Grand Total: ${total.toFixed(2)}`);
+    console.log(`  [OK] Allocated ${nonZero}/${rubrics.length} rubric(s) with scores. Grand Total: ${total.toFixed(2)}`);
 
     return true;
   } catch (error) {

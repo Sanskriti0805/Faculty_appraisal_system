@@ -316,7 +316,7 @@ async function bootstrapDatabaseTables() {
       }
     }
   } catch (error) {
-    console.error('âŒ Database bootstrap error:', error.message);
+    console.error('[ERROR] Database bootstrap error:', error.message);
     throw error;
   }
 }

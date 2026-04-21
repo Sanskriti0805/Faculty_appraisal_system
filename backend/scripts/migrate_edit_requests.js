@@ -30,11 +30,11 @@ async function migrate() {
         CONSTRAINT \`edit_requests_ibfk_3\` FOREIGN KEY (\`reviewed_by\`) REFERENCES \`users\` (\`id\`) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     `);
-    console.log('âœ… edit_requests table created (or already exists)');
+    console.log('[OK] edit_requests table created (or already exists)');
 
     process.exit(0);
   } catch (error) {
-    console.error('âŒ Migration failed:', error.message);
+    console.error('[ERROR] Migration failed:', error.message);
     process.exit(1);
   }
 }

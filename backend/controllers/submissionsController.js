@@ -68,11 +68,25 @@ exports.getMySubmission = async (req, res) => {
     const facultyId = req.user.id;
     const academicYear = await getTargetAcademicYear();
     const lockRecord = await getSessionFinalLockRecord(academicYear);
+    const preferredFormType = String(req.query?.form_type || '').trim().toUpperCase();
 
-    // Find existing submission for this faculty + year
+    // Find existing submission for this faculty + year.
+    // Faculty-facing screens should resolve to Form A by default,
+    // because edit-request and section editing are Form A workflows.
     const [rows] = await db.query(
-      'SELECT * FROM submissions WHERE faculty_id = ? AND academic_year = ? ORDER BY created_at DESC LIMIT 1',
-      [facultyId, academicYear]
+      `SELECT *
+       FROM submissions
+       WHERE faculty_id = ? AND academic_year = ?
+       ORDER BY
+         CASE
+           WHEN ? IN ('A', 'B') AND UPPER(COALESCE(form_type, 'A')) = ? THEN 0
+           WHEN UPPER(COALESCE(form_type, 'A')) = 'A' THEN 1
+           ELSE 2
+         END,
+         created_at DESC,
+         id DESC
+       LIMIT 1`,
+      [facultyId, academicYear, preferredFormType, preferredFormType]
     );
 
     if (rows.length > 0) {

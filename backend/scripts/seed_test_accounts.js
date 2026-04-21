@@ -96,7 +96,7 @@ async function seed() {
          acc.salutation, acc.employee_id, acc.employment_type,
          acc.email, acc.role]
       );
-      console.log(`  âœ” Updated  [${acc.role.padEnd(12)}]  ${acc.email}`);
+      console.log(`  [OK] Updated  [${acc.role.padEnd(12)}]  ${acc.email}`);
     } else {
       await conn.query(
         `INSERT INTO users
@@ -106,22 +106,22 @@ async function seed() {
          acc.department, acc.designation, acc.salutation,
          acc.employee_id, acc.employment_type]
       );
-      console.log(`  âœ” Created  [${acc.role.padEnd(12)}]  ${acc.email}`);
+      console.log(`  [OK] Created  [${acc.role.padEnd(12)}]  ${acc.email}`);
     }
   }
 
   await conn.end();
 
-  console.log('\nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•¦â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•¦â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—');
-  console.log('â•‘ Role         â•‘ Email                 â•‘ Password         â•‘');
-  console.log('â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•¬â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•¬â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£');
+  console.log('\n+----------------+-----------------------+------------------+');
+  console.log('| Role           | Email                 | Password         |');
+  console.log('+----------------+-----------------------+------------------+');
   for (const acc of ACCOUNTS) {
     const role = acc.role.padEnd(12);
     const email = acc.email.padEnd(21);
     const pass = acc.password.padEnd(16);
-    console.log(`â•‘ ${role} â•‘ ${email} â•‘ ${pass} â•‘`);
+    console.log(`| ${role} | ${email} | ${pass} |`);
   }
-  console.log('â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•©â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•©â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+  console.log('+----------------+-----------------------+------------------+');
   console.log('\nAll accounts ready! Login at http://localhost:5173\n');
 }
 

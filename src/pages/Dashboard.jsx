@@ -7,10 +7,22 @@ const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:
 
 const Dashboard = () => {
   const navigate = useNavigate()
+  const clickGuardUntilRef = useRef(Date.now() + 700)
   const [sessionInfo, setSessionInfo] = useState(null)
   const [loading, setLoading] = useState(true)
   const [lastSubmission, setLastSubmission] = useState(null)
   const [activeSessionYear, setActiveSessionYear] = useState(null)
+
+  const guardedNavigate = (path) => (event) => {
+    if (Date.now() < clickGuardUntilRef.current) {
+      if (event) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      return
+    }
+    navigate(path)
+  }
 
   useEffect(() => {
     fetchSessionStatus()
@@ -167,18 +179,17 @@ const Dashboard = () => {
             <div className="quick-links-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
               <button
                 className="quick-link-card"
-                onClick={() => navigate('/my-submission')}
-                style={{ borderColor: '#1d4ed8', background: '#eff6ff', color: '#1d4ed8' }}
+                onClick={guardedNavigate('/my-submission')}
               >
                 <FileText size={20} />
-                <span style={{ fontWeight: 600 }}>View Submitted Form</span>
+                <span>View Submitted Form</span>
                 <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 400 }}>Review what you submitted</span>
               </button>
 
               {!isEditGranted && daysLeft > 0 && (
                 <button
                   className="quick-link-card"
-                  onClick={() => navigate('/my-submission?openEditRequest=1')}
+                  onClick={guardedNavigate('/my-submission?openEditRequest=1')}
                 >
                   <Send size={20} />
                   <span>Request Section Edits</span>
@@ -192,16 +203,16 @@ const Dashboard = () => {
             <div className="dashboard-quick-links" style={{ marginTop: 0 }}>
               <h2>Navigate to Edit</h2>
               <div className="quick-links-grid">
-                <button className="quick-link-card" onClick={() => navigate('/faculty-information')}>
+                <button className="quick-link-card" onClick={guardedNavigate('/faculty-information')}>
                   <FileText size={18} /><span>Faculty Information</span>
                 </button>
-                <button className="quick-link-card" onClick={() => navigate('/courses-taught')}>
+                <button className="quick-link-card" onClick={guardedNavigate('/courses-taught')}>
                   <FileText size={18} /><span>Courses Taught</span>
                 </button>
-                <button className="quick-link-card" onClick={() => navigate('/research-publications')}>
+                <button className="quick-link-card" onClick={guardedNavigate('/research-publications')}>
                   <FileText size={18} /><span>Research Publications</span>
                 </button>
-                <button className="quick-link-card" onClick={() => navigate('/part-b')}>
+                <button className="quick-link-card" onClick={guardedNavigate('/part-b')}>
                   <FileText size={18} /><span>Part B - Re-submit</span>
                 </button>
               </div>
@@ -262,16 +273,16 @@ const Dashboard = () => {
         <div className="dashboard-quick-links">
           <h2>Quick Navigation</h2>
           <div className="quick-links-grid">
-            <button className="quick-link-card" onClick={() => navigate('/faculty-information')}>
+            <button className="quick-link-card" onClick={guardedNavigate('/faculty-information')}>
               <FileText size={18} /><span>Faculty Information</span>
             </button>
-            <button className="quick-link-card" onClick={() => navigate('/courses-taught')}>
+            <button className="quick-link-card" onClick={guardedNavigate('/courses-taught')}>
               <FileText size={18} /><span>Courses Taught</span>
             </button>
-            <button className="quick-link-card" onClick={() => navigate('/research-publications')}>
+            <button className="quick-link-card" onClick={guardedNavigate('/research-publications')}>
               <FileText size={18} /><span>Research Publications</span>
             </button>
-            <button className="quick-link-card" onClick={() => navigate('/part-b')}>
+            <button className="quick-link-card" onClick={guardedNavigate('/part-b')}>
               <FileText size={18} /><span>Part B</span>
             </button>
           </div>
@@ -308,7 +319,7 @@ const Dashboard = () => {
                 Submitted: <strong>{formatDate(lastSubmission.submitted_at)}</strong>
               </p>
               <button
-                onClick={() => navigate('/my-submission')}
+                onClick={guardedNavigate('/my-submission')}
                 style={{ marginTop: 10, padding: '7px 14px', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.83rem', fontWeight: 600 }}
               >
                 View Submitted Form

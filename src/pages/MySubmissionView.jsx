@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, FileText, Send, CheckCircle, Clock,
   AlertTriangle, ChevronDown, ChevronUp, BookOpen, Award,
@@ -9,7 +10,7 @@ import {
 import './MySubmissionView.css';
 import { useAuth } from '../context/AuthContext';
 
-const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5001/api`;
+const API = `http://${window.location.hostname}:5001/api`;
 
 const REQUESTABLE_SECTION_GROUPS = [
   { key: 'teaching_learning', label: 'Teaching and Learning' },
@@ -31,7 +32,6 @@ const SECTION_LABELS = [
   { key: 'patents', label: 'Patents' },
   { key: 'technology_transfer', label: 'Technology Transfer' },
   { key: 'paper_review', label: 'Paper Review' },
-  { key: 'talks_and_conferences', label: 'Talks and Conferences' },
   { key: 'conference_sessions', label: 'Conference Sessions' },
   { key: 'keynotes_talks', label: 'Keynotes & Invited Talks' },
   { key: 'awards_honours', label: 'Awards & Honours' },
@@ -48,35 +48,36 @@ const SECTION_LABELS = [
 }, {});
 
 const STATUS_LABELS = {
-  draft: 'Draft',
-  submitted: 'Submitted',
+  draft:        'Draft',
+  submitted:    'Submitted',
   submitted_hod: 'Submitted',
   under_review: 'Under Review',
   under_review_hod: 'Under Review',
-  approved: 'Approved',
+  approved:     'Approved',
   hod_approved: 'Approved',
-  sent_back: 'Sent Back',
+  sent_back:    'Sent Back',
 };
 
 const MySubmissionView = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [submissionData, setSubmissionData] = useState(null);
-  const [sessionInfo, setSessionInfo] = useState(null);
-  const [editRequests, setEditRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('faculty');
-  const [editPanelOpen, setEditPanelOpen] = useState(false);
-  const [commentView, setCommentView] = useState('pending');
+  const [sessionInfo,    setSessionInfo]    = useState(null);
+  const [editRequests,   setEditRequests]   = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [activeTab,      setActiveTab]      = useState('faculty');
+  const [editPanelOpen,  setEditPanelOpen]  = useState(false);
+  const [commentView,    setCommentView]    = useState('pending');
   // Dynamic sections filled by this faculty
   const [dynamicData, setDynamicData] = useState([]); // [{section, fields, responses}]
   const [dynamicSectionOptions, setDynamicSectionOptions] = useState([]);
   const [pdfDownloading, setPdfDownloading] = useState(false);
 
   const [selectedSections, setSelectedSections] = useState([]);
-  const [requestMessage, setRequestMessage] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [requestMessage,   setRequestMessage]   = useState('');
+  const [submitting,       setSubmitting]        = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -191,22 +192,31 @@ const MySubmissionView = () => {
     }
   };
 
-  const isPastDeadline = sessionInfo?.pastDeadline || false;
-  const pendingRequest = editRequests.find(r => r.status === 'pending');
-  const approvedRequest = editRequests.find(r => r.status === 'approved');
-  const isFormA = String(submissionData?.submission?.form_type || 'A').trim().toUpperCase() === 'A';
-  const submittedStatuses = new Set(['submitted', 'submitted_hod']);
-  const approvedStatuses = new Set(['approved', 'hod_approved']);
-  const underReviewStatuses = new Set(['under_review', 'under_review_hod']);
-  const sentBackStatuses = new Set(['sent_back']);
-  const isSubmittedStatus = submittedStatuses.has(submissionData?.submission?.status);
-  const isApprovedStatus = approvedStatuses.has(submissionData?.submission?.status);
-  const isUnderReviewStatus = underReviewStatuses.has(submissionData?.submission?.status);
-  const isSentBackStatus = sentBackStatuses.has(submissionData?.submission?.status);
-  const canRequestEdits =
-    isFormA &&
-    isSubmittedStatus &&
+  const isPastDeadline   = sessionInfo?.pastDeadline || false;
+  const pendingRequest   = editRequests.find(r => r.status === 'pending');
+  const approvedRequest  = editRequests.find(r => r.status === 'approved');
+  const submittedStatuses = new Set(['submitted', 'submitted_hod', 'under_review', 'under_review_hod']);
+  const isSubmittedLikeStatus = submittedStatuses.has(submissionData?.submission?.status);
+  const canRequestEdits  =
+    isSubmittedLikeStatus &&
     !isPastDeadline && !pendingRequest;
+
+  useEffect(() => {
+    if (!submissionData) return;
+    const params = new URLSearchParams(location.search);
+    if (params.get('openEditRequest') !== '1') return;
+
+    const canShowPanel = isSubmittedLikeStatus || !!pendingRequest || !!approvedRequest;
+    if (!canShowPanel) return;
+
+    setEditPanelOpen(true);
+    window.requestAnimationFrame(() => {
+      const panel = document.querySelector('.msv-edit-panel');
+      if (panel && typeof panel.scrollIntoView === 'function') {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }, [location.search, submissionData, pendingRequest, approvedRequest, isSubmittedLikeStatus]);
 
   /* -- PDF download -- */
   const handleDownloadPdf = async () => {
@@ -219,9 +229,9 @@ const MySubmissionView = () => {
       });
       if (!res.ok) throw new Error('PDF generation failed');
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
       a.download = `Appraisal_${submissionData?.submission?.academic_year || 'report'}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
@@ -236,7 +246,7 @@ const MySubmissionView = () => {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '-';
 
-  const uploadBase = `${API.replace(/\/api$/, '')}/uploads/`;
+  const uploadBase = `http://${window.location.hostname}:5000/uploads/`;
 
   const toLabel = (key) =>
     String(key || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -399,14 +409,14 @@ const MySubmissionView = () => {
   const statusLabel = STATUS_LABELS[submission?.status] || submission?.status;
 
   const tabs = [
-    { key: 'faculty', label: 'Faculty Info', icon: <User size={14} /> },
-    { key: 'teaching', label: 'Teaching', icon: <BookOpen size={14} /> },
-    { key: 'publications', label: 'Publications', icon: <FileText size={14} />, count: publications?.length },
-    { key: 'research', label: 'Research & Grants', icon: <Briefcase size={14} /> },
-    { key: 'events', label: 'Events & Awards', icon: <Award size={14} /> },
-    { key: 'consultancy', label: 'Consultancy', icon: <Briefcase size={14} />, count: consultancy?.length },
-    { key: 'innovation', label: 'Innovation', icon: <Lightbulb size={14} /> },
-    { key: 'partb', label: 'Part B', icon: <CheckCircle size={14} /> },
+    { key: 'faculty',      label: 'Faculty Info',      icon: <User size={14} /> },
+    { key: 'teaching',     label: 'Teaching',           icon: <BookOpen size={14} /> },
+    { key: 'publications', label: 'Publications',       icon: <FileText size={14} />, count: publications?.length },
+    { key: 'research',     label: 'Research & Grants',  icon: <Briefcase size={14} /> },
+    { key: 'events',       label: 'Events & Awards',    icon: <Award size={14} /> },
+    { key: 'consultancy',  label: 'Consultancy',        icon: <Briefcase size={14} />, count: consultancy?.length },
+    { key: 'innovation',   label: 'Innovation',         icon: <Lightbulb size={14} /> },
+    { key: 'partb',        label: 'Part B',             icon: <CheckCircle size={14} /> },
     // Show custom tab when dynamic sections exist for this form type
     ...(dynamicEditableSections.length > 0 ? [{
       key: 'dynamic',
@@ -448,19 +458,19 @@ const MySubmissionView = () => {
       {/* Status Bar */}
       <div className={`msv-status-bar status-${submission.status}`}>
         <div className="msv-status-icon">
-          {isSubmittedStatus || isApprovedStatus
+          {submission.status === 'submitted' || submission.status === 'approved'
             ? <CheckCircle size={22} />
-            : isSentBackStatus
+            : submission.status === 'sent_back'
               ? <RefreshCw size={22} />
               : <Clock size={22} />}
         </div>
         <div className="msv-status-info">
           <h3>
-            {isSubmittedStatus && 'Form Successfully Submitted'}
-            {isApprovedStatus && 'Form Approved by DoFA'}
-            {isSentBackStatus && 'Edit Access Granted'}
-            {submission.status === 'draft' && 'Draft - Not Yet Submitted'}
-            {isUnderReviewStatus && 'Under Review'}
+            {submission.status === 'submitted'    && 'Form Successfully Submitted'}
+            {submission.status === 'approved'     && 'Form Approved by Dofa'}
+            {submission.status === 'sent_back'    && 'Edit Access Granted'}
+            {submission.status === 'draft'        && 'Draft - Not Yet Submitted'}
+            {submission.status === 'under_review' && 'Under Review'}
           </h3>
           <p>
             Submitted on <strong>{formatDate(submission.submitted_at)}</strong>
@@ -472,14 +482,14 @@ const MySubmissionView = () => {
       </div>
 
       {/* Edit Request Panel */}
-      {((isFormA && isSubmittedStatus) || pendingRequest || approvedRequest) && (
+      {(isSubmittedLikeStatus || pendingRequest || approvedRequest) && (
         <div className="msv-edit-panel">
           <div className="msv-edit-panel-header" onClick={() => setEditPanelOpen(o => !o)}>
             <div className="msv-edit-panel-header-left">
               <div className="msv-panel-icon"><Send size={16} /></div>
               <div>
                 <h3>Request Section Edits</h3>
-                <p>Ask DoFA to unlock specific sections for editing</p>
+                <p>Ask Dofa to unlock specific sections for editing</p>
               </div>
             </div>
             {editPanelOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -669,8 +679,8 @@ const MySubmissionView = () => {
               {renderDataTable('Patents', patents, ['title', 'patent_number', 'status', 'year', 'country', 'evidence_file'])}
               {renderDataTable('Awards & Honours', awards, ['title', 'awarding_body', 'year', 'level', 'evidence_file'])}
               {renderDataTable('Paper Reviews', paperReviews, ['journal_name', 'review_count', 'year', 'details', 'evidence_file'])}
-              {renderDataTable('Talks & Conferences (Cat 1 & 3)', conferenceSessions, ['conference_name', 'session_title', 'role', 'date', 'location', 'evidence_file'])}
-              {renderDataTable('Invited Talks (Cat 2)', keynotesTalks, ['title', 'event_type', 'audience_type', 'event_name', 'date', 'location', 'evidence_file'])}
+              {renderDataTable('Conference Sessions', conferenceSessions, ['conference_name', 'role', 'date', 'location', 'evidence_file'])}
+              {renderDataTable('Keynotes & Talks', keynotesTalks, ['title', 'event_name', 'date', 'location', 'evidence_file'])}
             </>
           )}
 
@@ -701,7 +711,7 @@ const MySubmissionView = () => {
             <>
               <h3 className="msv-section-title"><Layers size={17} /> Custom Sections</h3>
               <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.5rem' }}>
-                These sections were added by the DoFA office specifically for your college's appraisal form.
+                These sections were added by the Dofa office specifically for your college's appraisal form.
               </p>
               {dynamicData.map(({ section, fields = [], respMap = {} }) => (
                 <div key={section.id} className="msv-data-section" style={{ marginBottom: '2rem' }}>
@@ -763,7 +773,7 @@ const MySubmissionView = () => {
         <div className="msv-content-card" style={{ marginTop: '1.25rem' }}>
           <div className="msv-section-card">
             <h3 className="msv-section-title">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               Comments from Dofa
             </h3>
             {comments.length > 0 && (

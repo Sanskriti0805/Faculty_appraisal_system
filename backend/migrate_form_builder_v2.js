@@ -29,27 +29,27 @@ async function constraintExists(table, constraintName) {
 async function addColumnIfMissing(table, column, definition) {
   const exists = await columnExists(table, column);
   if (exists) {
-    console.log(`  â­  ${table}.${column} already exists`);
+    console.log(`  [SKIP] ${table}.${column} already exists`);
     return;
   }
   await db.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
-  console.log(`  âœ… ${table}.${column} added`);
+  console.log(`  [OK] ${table}.${column} added`);
 }
 
 async function addFKIfMissing(table, constraintName, sql) {
   const exists = await constraintExists(table, constraintName);
   if (exists) {
-    console.log(`  â­  FK ${constraintName} already exists`);
+    console.log(`  [SKIP] FK ${constraintName} already exists`);
     return;
   }
   await db.query(`ALTER TABLE \`${table}\` ADD CONSTRAINT \`${constraintName}\` ${sql}`);
-  console.log(`  âœ… FK ${constraintName} added`);
+  console.log(`  [OK] FK ${constraintName} added`);
 }
 
 async function migrate() {
-  console.log('ðŸš€ Form Builder v2 Migration\n');
+  console.log('Form Builder v2 Migration\n');
 
-  console.log('ðŸ“Œ dynamic_sections:');
+  console.log('dynamic_sections:');
   await addColumnIfMissing('dynamic_sections', 'parent_id', 'INT DEFAULT NULL');
   await addColumnIfMissing('dynamic_sections', 'description', 'TEXT DEFAULT NULL');
   await addFKIfMissing(
@@ -58,7 +58,7 @@ async function migrate() {
     'FOREIGN KEY (parent_id) REFERENCES dynamic_sections(id) ON DELETE SET NULL'
   );
 
-  console.log('\nðŸ“Œ Dofa_rubrics:');
+  console.log('\nDofa_rubrics:');
   await addColumnIfMissing('Dofa_rubrics', 'dynamic_section_id', 'INT DEFAULT NULL');
   await addColumnIfMissing('Dofa_rubrics', 'scoring_type', "ENUM('manual','count_based','text_exists') DEFAULT 'manual'");
   await addColumnIfMissing('Dofa_rubrics', 'per_unit_marks', 'DECIMAL(5,2) DEFAULT NULL');
@@ -69,12 +69,12 @@ async function migrate() {
     'FOREIGN KEY (dynamic_section_id) REFERENCES dynamic_sections(id) ON DELETE SET NULL'
   );
 
-  console.log('\nâœ¨ Migration complete!');
+  console.log('\nMigration complete.');
   process.exit(0);
 }
 
 migrate().catch(err => {
-  console.error('\nâŒ Fatal migration error:', err.message);
+  console.error('\n[ERROR] Fatal migration error:', err.message);
   process.exit(1);
 });
 

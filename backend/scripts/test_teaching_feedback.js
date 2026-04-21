@@ -27,12 +27,12 @@ async function main() {
 
   const testCases = [
     {
-      label: 'Course with 80 students, feedback=4.5 (should use â‰¥50 category, get 5 pts)',
+      label: 'Course with 80 students, feedback=4.5 (should use >=50 category, get 5 pts)',
       courses: [{ enrollment: 80, feedback_score: 4.5 }],
       expectedWinnerIdx: 0, // rubric index 0 (feedback >= 4, enrollment >= 50)
     },
     {
-      label: 'Course with 80 students, feedback=3.7 (should use â‰¥50 category, get 4 pts)',
+      label: 'Course with 80 students, feedback=3.7 (should use >=50 category, get 4 pts)',
       courses: [{ enrollment: 80, feedback_score: 3.7 }],
       expectedWinnerIdx: 1, // rubric index 1 (3.5 <= fb < 4, enrollment >= 50)
     },
@@ -47,7 +47,7 @@ async function main() {
       expectedWinnerIdx: 4, // rubric index 4 (3.5 <= fb < 4, enrollment < 50)
     },
     {
-      label: 'Two courses: 80 students fb=3.7 AND 20 students fb=4.5 (â‰¥50 wins with 4 pts vs <50 with 4 pts -> tie -> ge50 wins)',
+      label: 'Two courses: 80 students fb=3.7 AND 20 students fb=4.5 (>=50 wins with 4 pts vs <50 with 4 pts -> tie -> ge50 wins)',
       courses: [
         { enrollment: 80, feedback_score: 3.7 }, // ge50 -> 4 pts
         { enrollment: 20, feedback_score: 4.5 }, // lt50 -> 4 pts (tie)
@@ -55,7 +55,7 @@ async function main() {
       expectedWinnerIdx: 1, // ge50 wins on tie
     },
     {
-      label: 'Course with 50 students, feedback=4.0 (exactly 50 -> â‰¥50 category, get 5 pts)',
+      label: 'Course with 50 students, feedback=4.0 (exactly 50 -> >=50 category, get 5 pts)',
       courses: [{ enrollment: 50, feedback_score: 4.0 }],
       expectedWinnerIdx: 0,
     },
@@ -112,7 +112,7 @@ async function main() {
     if (pass) passed++;
     else failed++;
 
-    const status = pass ? 'âœ…' : 'âŒ';
+    const status = pass ? '[PASS]' : '[FAIL]';
     const debugInfo = winnerIdx >= 0
       ? `Winner: rubric index ${winnerIdx} (ID ${tfRubrics[winnerIdx].id}), pts=${winnerPts}`
       : 'No winner (all 0)';
