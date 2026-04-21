@@ -1,8 +1,9 @@
-﻿import React from 'react'
+import React from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { Info, BookOpen, Layers, CheckCircle, Search, ChevronDown, ChevronRight } from 'lucide-react'
 import './HelpCenter.css'
-import './FormPages.css'
+import './Dashboard.css'
 
 const toSectionId = (title) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
@@ -358,15 +359,18 @@ const HelpCenter = () => {
   }
 
   return (
-    <div className="form-page">
-      <div className="page-header">
+    <div className="dashboard" style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <div className="help-center-header">
+        <div className="help-center-header-icon">
+          <Info size={28} strokeWidth={2} color="#1e3a8a" />
+        </div>
         <div>
-          <h1 className="page-title">Help Center</h1>
-          <p className="page-subtitle">Role-based usage guide, troubleshooting, and workflow notes</p>
+          <h1 className="help-center-header-title">Help Center</h1>
+          <p className="help-center-header-desc">Role-based usage guide, troubleshooting, and workflow notes</p>
         </div>
       </div>
 
-      <div className="form-card help-center-shell" style={{ display: 'grid', gap: '1.25rem' }}>
+      <div className="help-center-shell" style={{ display: 'grid', gap: '1.25rem' }}>
         <div className="help-center-hero">
           <div className="help-center-hero-copy">
             <div className="help-center-hero-badge">{roleOverview.badge}</div>
@@ -375,16 +379,25 @@ const HelpCenter = () => {
           </div>
           <div className="help-center-metrics">
             <div className="help-metric">
-              <span className="help-metric-label">Sections</span>
-              <strong>{sectionTotal}</strong>
+              <Layers size={18} color="#64748b" />
+              <div>
+                <span className="help-metric-label">Sections</span>
+                <strong>{sectionTotal}</strong>
+              </div>
             </div>
             <div className="help-metric">
-              <span className="help-metric-label">Checks</span>
-              <strong>{bulletTotal}</strong>
+              <CheckCircle size={18} color="#64748b" />
+              <div>
+                <span className="help-metric-label">Checks</span>
+                <strong>{bulletTotal}</strong>
+              </div>
             </div>
             <div className="help-metric">
-              <span className="help-metric-label">Role</span>
-              <strong>{roleLabel(selectedRole)}</strong>
+              <BookOpen size={18} color="#64748b" />
+              <div>
+                <span className="help-metric-label">Role</span>
+                <strong>{roleLabel(selectedRole)}</strong>
+              </div>
             </div>
           </div>
         </div>
@@ -447,17 +460,20 @@ const HelpCenter = () => {
         </div>
 
         <div className="help-center-panel">
-          <label htmlFor="help-search" className="help-center-panel-title">Search help</label>
-          <input
-            id="help-search"
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search keywords like upload, save and next, lock, evidence, date..."
-            className="help-search-input"
-          />
-          <div style={{ color: '#64748b', fontSize: '0.88rem' }}>
-            Showing <strong>{filteredSections.length}</strong> section(s) for role: <strong>{roleLabel(selectedRole)}</strong>
+          <label htmlFor="help-search" className="help-center-panel-title">Search Documents</label>
+          <div className="help-search-container">
+            <Search size={18} color="#94a3b8" className="help-search-icon" />
+            <input
+              id="help-search"
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by keywords..."
+              className="help-search-input"
+            />
+          </div>
+          <div style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+            Showing <strong>{filteredSections.length}</strong> result(s)
           </div>
         </div>
 
@@ -491,11 +507,17 @@ const HelpCenter = () => {
                 aria-expanded={expandedSectionId === toSectionId(section.title)}
                 onClick={() => setExpandedSectionId((current) => (current === toSectionId(section.title) ? null : toSectionId(section.title)))}
               >
-                <span>
-                  <span className="help-section-title">{section.title}</span>
-                  <span className="help-section-summary">Tap to expand or collapse this guidance.</span>
-                </span>
-                <span className="help-section-status">{expandedSectionId === toSectionId(section.title) ? 'Hide' : 'Show'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  {expandedSectionId === toSectionId(section.title) ? (
+                    <ChevronDown size={20} color="#1e3a8a" />
+                  ) : (
+                    <ChevronRight size={20} color="#64748b" />
+                  )}
+                  <div>
+                    <span className="help-section-title">{section.title}</span>
+                    <span className="help-section-summary">Click to view details</span>
+                  </div>
+                </div>
               </button>
               {expandedSectionId === toSectionId(section.title) && (
                 <ul className="help-section-bullets">

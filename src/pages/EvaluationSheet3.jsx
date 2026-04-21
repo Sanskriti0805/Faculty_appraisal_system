@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
 import './EvaluationSheet3.css';
@@ -173,6 +173,85 @@ const EvaluationSheet3 = () => {
     }
   };
 
+  const handleExportPDF = () => {
+    if (!activeSessionYear || data.length === 0) return showToast('No data to export', 'error');
+    
+    const rows = data.map((item, idx) => {
+      const incrementStr = item.increment_percentage ? `${item.increment_percentage}%` : '0%';
+      return `<tr>
+        <td>${idx + 1}</td>
+        <td>${item.faculty_name || '-'}</td>
+        <td>${item.department || '-'}</td>
+        <td>${item.total_score || 0}</td>
+        <td><strong>${item.final_grade || '-'}</strong></td>
+        <td>${incrementStr}</td>
+      </tr>`;
+    }).join('');
+
+    const logoUrl = window.location.origin + '/lnmiit-logo.png';
+    const displayTitle = `Evaluation Sheet 3 - ${activeSessionYear}`;
+    
+    const html = `<!DOCTYPE html>
+<html><head><title>Sheet3_${activeSessionYear}</title>
+<style>
+  @page { size: A4 landscape; margin: 14mm; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
+  .header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; border-bottom: 3px solid #1e3a8a; padding-bottom: 15px; }
+  .header-container img { max-height: 55px; margin-right: 20px; }
+  .header-text { display: flex; flex-direction: column; }
+  .header-inst { font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+  h1 { font-size: 22px; color: #1e3a8a; margin: 2px 0 0 0; }
+  .meta { color: #64748b; font-size: 12px; margin-bottom: 20px; text-align: center; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #1e3a8a; color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; }
+  td { border-bottom: 1px solid #e2e8f0; padding: 8px 10px; vertical-align: top; font-size: 11px; }
+  tr:nth-child(even) td { background: #f8fafc; }
+</style></head><body>
+  <div class="header-container">
+    <img src="${logoUrl}" alt="LNMIIT Logo" />
+    <div class="header-text">
+      <div class="header-inst">The LNM Institute of Information Technology, Jaipur</div>
+      <h1>${displayTitle}</h1>
+    </div>
+  </div>
+  <p class="meta">Exported from active session data. Generated: ${new Date().toLocaleString('en-IN')}</p>
+  <table>
+    <thead><tr><th>S.No</th><th>Faculty</th><th>Department</th><th>Total Score</th><th>Final Grade</th><th>Increment %</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body></html>`;
+
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    setTimeout(() => { win.print(); }, 500);
+  };
+
+  const handleExportCSV = () => {
+    if (!activeSessionYear || data.length === 0) return showToast('No data to export', 'error');
+    const headers = ['S.No.', 'Faculty Name', 'Department', 'Total Score', 'Final Grade', 'Increment %'];
+    const csvRows = [headers.join(',')];
+    data.forEach((item, idx) => {
+      const incrementStr = item.increment_percentage ? `${item.increment_percentage}%` : '0%';
+      const row = [
+        idx + 1, 
+        `"${item.faculty_name || ''}"`, 
+        `"${item.department || ''}"`,
+        item.total_score || 0,
+        `"${item.final_grade || ''}"`,
+        `"${incrementStr}"`
+      ];
+      csvRows.push(row.join(','));
+    });
+    
+    const blob = new Blob([csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Sheet3_${activeSessionYear}.csv`;
+    link.click();
+  };
+
   if (loading) return <div className="eval3-loading">Loading Sheet 3...</div>;
 
   return (
@@ -185,9 +264,17 @@ const EvaluationSheet3 = () => {
             <h1>Evaluation - Sheet 3</h1>
             <p>Grade-based Salary Increments Summary</p>
           </div>
-          <Link to={`${basePath}/sheet2`} className="back-btn">
-            &larr; Back to Sheet 2
-          </Link>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button onClick={handleExportCSV} style={{ padding: '6px 12px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#334155' }}>
+              Export CSV
+            </button>
+            <button onClick={handleExportPDF} style={{ padding: '6px 12px', background: '#1e3a8a', color: 'white', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
+              Download PDF
+            </button>
+            <Link to={`${basePath}/sheet2`} className="back-btn" style={{ marginLeft: '12px' }}>
+              &larr; Back to Sheet 2
+            </Link>
+          </div>
         </div>
       </div>
 

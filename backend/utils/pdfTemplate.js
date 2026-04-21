@@ -6,6 +6,17 @@
 
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
+let logoBase64 = '';
+try {
+  const logoPath = path.join(__dirname, '../../public/lnmiit-logo.png');
+  if (fs.existsSync(logoPath)) {
+    logoBase64 = `data:image/png;base64,${fs.readFileSync(logoPath, 'base64')}`;
+  }
+} catch(e) { console.warn('Logo could not be loaded for PDF', e); }
+
 /* ── helpers ──────────────────────────────────────────────────────────────── */
 const esc = (v) =>
   String(v ?? '—')
@@ -141,64 +152,75 @@ const generateHtml = (data) => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%);
-    color: white;
+    background: #ffffff;
+    color: #1e3a8a;
     text-align: center;
-    padding: 2rem;
+    padding: 3rem;
     page-break-after: always;
+    border: 8px solid #1e3a8a;
+    box-sizing: border-box;
   }
 
   .cover-logo {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    opacity: 0.85;
-    margin-bottom: 3rem;
+    color: #475569;
+    margin-bottom: 2.5rem;
   }
 
   .cover h1 {
-    font-size: 30px;
+    font-size: 32px;
     font-weight: 800;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
     line-height: 1.2;
+    color: #1e3a8a;
   }
 
   .cover h2 {
     font-size: 18px;
-    font-weight: 400;
-    opacity: 0.85;
-    margin-bottom: 2.5rem;
+    font-weight: 500;
+    color: #64748b;
+    margin-bottom: 3rem;
   }
 
   .cover-meta {
     display: flex;
-    gap: 2rem;
+    gap: 2.5rem;
     font-size: 13px;
-    opacity: 0.9;
     flex-wrap: wrap;
     justify-content: center;
+    color: #334155;
+    background: #f8fafc;
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    width: 80%;
+    margin: 0 auto;
   }
 
   .cover-meta-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.4rem;
   }
 
   .cover-meta-item strong {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
+    color: #0f172a;
   }
 
   .cover-status {
-    margin-top: 2.5rem;
-    padding: 0.5rem 1.5rem;
-    background: rgba(255,255,255,0.2);
+    margin-top: 3rem;
+    padding: 0.6rem 1.8rem;
+    background: #1e3a8a;
+    color: white;
     border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
@@ -370,6 +392,7 @@ const generateHtml = (data) => {
 
 <!-- ── Cover Page ── -->
 <div class="cover">
+  ${logoBase64 ? `<img src="${logoBase64}" alt="LNMIIT Logo" style="max-height: 120px; margin-bottom: 20px;" />` : ''}
   <div class="cover-logo">The LNM Institute of Information Technology, Jaipur</div>
   <h1>${esc(submission.faculty_name || 'Faculty Appraisal Report')}</h1>
   <h2>Annual Faculty Appraisal Form</h2>

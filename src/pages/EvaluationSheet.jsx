@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
 import './EvaluationSheet.css';
@@ -185,6 +185,79 @@ const EvaluationSheet = () => {
     }
   });
 
+  const handleExportPDF = () => {
+    if (!activeYear || submissions.length === 0) return showToast('No data to export', 'error');
+    
+    const rubricCols = rubrics.map(r => `<th>${r.sub_section || r.section_name}</th>`).join('');
+    const rows = submissions.map((sub, idx) => {
+      const scoreCells = rubrics.map((r) => `<td>${getScore(sub.submission_id, r.id)}</td>`).join('');
+      return `<tr>
+        <td>${idx + 1}</td>
+        <td>${sub.faculty_name || '-'}</td>
+        <td>${sub.department || '-'}</td>
+        ${scoreCells}
+        <td><strong>${getTotal(sub.submission_id)}</strong></td>
+      </tr>`;
+    }).join('');
+
+    const logoUrl = window.location.origin + '/lnmiit-logo.png';
+    const displayTitle = `Evaluation Sheet 1 - ${activeYear}`;
+    
+    const html = `<!DOCTYPE html>
+<html><head><title>Sheet1_${activeYear}</title>
+<style>
+  @page { size: A4 landscape; margin: 14mm; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
+  .header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; border-bottom: 3px solid #1e3a8a; padding-bottom: 15px; }
+  .header-container img { max-height: 55px; margin-right: 20px; }
+  .header-text { display: flex; flex-direction: column; }
+  .header-inst { font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+  h1 { font-size: 22px; color: #1e3a8a; margin: 2px 0 0 0; }
+  .meta { color: #64748b; font-size: 12px; margin-bottom: 20px; text-align: center; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #1e3a8a; color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; }
+  td { border-bottom: 1px solid #e2e8f0; padding: 8px 10px; vertical-align: top; font-size: 11px; }
+  tr:nth-child(even) td { background: #f8fafc; }
+</style></head><body>
+  <div class="header-container">
+    <img src="${logoUrl}" alt="LNMIIT Logo" />
+    <div class="header-text">
+      <div class="header-inst">The LNM Institute of Information Technology, Jaipur</div>
+      <h1>${displayTitle}</h1>
+    </div>
+  </div>
+  <p class="meta">Exported from active session data. Generated: ${new Date().toLocaleString('en-IN')}</p>
+  <table><thead><tr><th>S.No</th><th>Faculty</th><th>Department</th>${rubricCols}<th>Total</th></tr></thead><tbody>${rows}</tbody></table>
+</body></html>`;
+
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    setTimeout(() => { win.print(); }, 500);
+  };
+
+  const handleExportCSV = () => {
+    if (!activeYear || submissions.length === 0) return showToast('No data to export', 'error');
+    const headers = ['S.No.', 'Faculty Name', 'Department'];
+    rubrics.forEach(r => headers.push(`"${(r.sub_section || r.section_name).replace(/"/g, '""')}"`));
+    headers.push('Total Score', 'Remarks');
+    
+    const csvRows = [headers.join(',')];
+    submissions.forEach((sub, idx) => {
+      const row = [idx + 1, `"${sub.faculty_name || ''}"`, `"${sub.department || ''}"`];
+      rubrics.forEach(r => row.push(getScore(sub.submission_id, r.id)));
+      row.push(getTotal(sub.submission_id), `"${(remarks[sub.submission_id] || '').replace(/"/g, '""')}"`);
+      csvRows.push(row.join(','));
+    });
+    
+    const blob = new Blob([csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Sheet1_${activeYear}.csv`;
+    link.click();
+  };
+
   if (loading) return <div className="eval-loading">Loading Evaluation Data...</div>;
 
   return (
@@ -192,8 +265,20 @@ const EvaluationSheet = () => {
       {toast && <div className={`eval-toast eval-toast--${toast.type}`}>{toast.message}</div>}
       
       <div className="eval-header">
-        <h1>Evaluation Sheet - Sheet 1</h1>
-        <p>Faculty Appraisal Consolidated Scores {activeYear ? `(${activeYear})` : ''}</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1>Evaluation Sheet - Sheet 1</h1>
+            <p>Faculty Appraisal Consolidated Scores {activeYear ? `(${activeYear})` : ''}</p>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={handleExportCSV} style={{ padding: '6px 12px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#334155' }}>
+              Export CSV
+            </button>
+            <button onClick={handleExportPDF} style={{ padding: '6px 12px', background: '#1e3a8a', color: 'white', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
+              Download PDF
+            </button>
+          </div>
+        </div>
       </div>
 
       {!activeYear && (

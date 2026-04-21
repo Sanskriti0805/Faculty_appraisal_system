@@ -257,20 +257,31 @@ const SessionLogs = () => {
         });
       });
 
+      const logoUrl = window.location.origin + '/lnmiit-logo.png';
       const html = `<!DOCTYPE html>
 <html><head><title>Session Logs Summary - ${yearLabel}</title>
 <style>
   @page { size: A4 landscape; margin: 16mm; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
-  h1 { font-size: 18px; color: #1e3a5f; margin-bottom: 4px; }
-  .meta { font-size: 11px; color: #6b7280; margin-bottom: 20px; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1a2e; }
+  .header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; border-bottom: 3px solid #1e3a8a; padding-bottom: 15px; }
+  .header-container img { max-height: 70px; margin-right: 20px; }
+  .header-text { display: flex; flex-direction: column; }
+  .header-inst { font-size: 14px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+  h1 { font-size: 24px; color: #1e3a8a; margin: 4px 0 0 0; }
+  .meta { font-size: 12px; color: #475569; margin-bottom: 20px; text-align: center; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; }
   table { width: 100%; border-collapse: collapse; }
-  th { background: #1e3a5f; color: white; padding: 8px 10px; text-align: left; font-size: 10px; }
-  td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-  tr:nth-child(even) td { background: #f9fafb; }
-  .footer { margin-top: 20px; font-size: 10px; color: #9ca3af; }
+  th { background: #1e3a8a; color: white; padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase; }
+  td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; font-size: 11px; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .footer { margin-top: 20px; font-size: 10px; color: #9ca3af; text-align: center; }
 </style></head><body>
-<h1>Faculty Appraisal Historical Session Summary</h1>
+<div class="header-container">
+  <img src="${logoUrl}" alt="LNMIIT Logo" />
+  <div class="header-text">
+    <div class="header-inst">The LNM Institute of Information Technology, Jaipur</div>
+    <h1>Historical Session Summary</h1>
+  </div>
+</div>
 <p class="meta">Active Session Excluded: <strong>${activeSessionYear || 'N/A'}</strong> &nbsp;|&nbsp; View: <strong>${yearLabel}</strong> &nbsp;|&nbsp; Records: <strong>${subs.length}</strong> &nbsp;|&nbsp; Generated: ${new Date().toLocaleString('en-IN')}</p>
 <table>
   <thead><tr><th>Academic Year</th><th>Faculty Name</th><th>Department</th><th>Designation</th><th>Email</th><th>Form</th><th>Status</th><th>Submitted On</th></tr></thead>
@@ -357,29 +368,63 @@ const SessionLogs = () => {
         </div>
       `).join('');
 
+      const logoUrl = window.location.origin + '/lnmiit-logo.png';
       const html = `<!DOCTYPE html>
 <html><head><title>Session Logs Forms - ${yearLabel}</title>
 <style>
   @page { size: A4 portrait; margin: 16mm; }
   body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
-  h1 { font-size: 18px; color: #1e3a5f; margin-bottom: 4px; }
-  .cover-meta { font-size: 11px; color: #6b7280; margin-bottom: 10px; }
+  
+  /* Cover Page Styles */
+  .cover-page {
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    page-break-after: always;
+    border: 6px solid #1e3a8a;
+    padding: 40px;
+    box-sizing: border-box;
+  }
+  .cover-page img { max-height: 120px; margin-bottom: 30px; }
+  .cover-page .inst-name { font-size: 16px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 30px; }
+  .cover-page h1 { font-size: 32px; color: #1e3a8a; margin-bottom: 10px; }
+  .cover-page h2 { font-size: 20px; color: #64748b; font-weight: 400; margin-bottom: 40px; }
+  .cover-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; background: #f8fafc; padding: 25px; border-radius: 8px; border: 1px solid #e2e8f0; width: 80%; }
+  .meta-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .meta-item label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .meta-item span { font-size: 16px; font-weight: 700; color: #0f172a; }
+
+  /* Content Styles */
   .faculty-block { page-break-after: always; padding: 12px 0; }
   .faculty-block:last-child { page-break-after: auto; }
-  .faculty-header { background: #f0f4f8; border-left: 4px solid #1e3a5f; padding: 12px 16px; border-radius: 4px; margin-bottom: 14px; }
-  .faculty-header h2 { font-size: 16px; color: #1e3a5f; margin: 0 0 10px 0; }
-  .faculty-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 16px; }
-  .faculty-meta-grid div label { display: block; font-size: 9px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.3px; }
-  .faculty-meta-grid div span { font-weight: 600; font-size: 11px; }
-  h3 { font-size: 12px; color: #374151; margin: 14px 0 6px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 10px; }
-  th { background: #1e3a5f; color: white; padding: 6px 8px; text-align: left; }
-  td { padding: 5px 8px; border-bottom: 1px solid #f0f0f0; }
+  .faculty-header { background: #f8fafc; border: 1px solid #e2e8f0; border-top: 4px solid #1e3a8a; padding: 16px; border-radius: 6px; margin-bottom: 20px; }
+  .faculty-header h2 { font-size: 18px; color: #1e3a8a; margin: 0 0 14px 0; }
+  .faculty-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 16px; }
+  .faculty-meta-grid div label { display: block; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .faculty-meta-grid div span { font-weight: 600; font-size: 12px; color: #1e293b; }
+  h3 { font-size: 14px; color: #1e3a8a; margin: 20px 0 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px; }
+  th { background: #f1f5f9; color: #334155; padding: 8px 10px; text-align: left; border-bottom: 2px solid #cbd5e1; text-transform: uppercase; font-size: 10px; }
+  td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; }
   tr:nth-child(even) td { background: #fafafa; }
-  .none { color: #9ca3af; font-style: italic; font-size: 10px; margin: 4px 0 8px; }
+  .none { color: #94a3b8; font-style: italic; font-size: 11px; margin: 4px 0 12px; }
 </style></head><body>
-<h1>Faculty Appraisal - Historical Session Forms</h1>
-<p class="cover-meta">Active Session Excluded: <strong>${activeSessionYear || 'N/A'}</strong> &nbsp;|&nbsp; View: <strong>${yearLabel}</strong> &nbsp;|&nbsp; Faculty: <strong>${allData.length}</strong> &nbsp;|&nbsp; Generated: ${new Date().toLocaleString('en-IN')}</p>
+
+<div class="cover-page">
+  <img src="${logoUrl}" alt="LNMIIT Logo" />
+  <div class="inst-name">The LNM Institute of Information Technology, Jaipur</div>
+  <h1>Historical Session Forms</h1>
+  <h2>Faculty Appraisal Bulk Export</h2>
+  <div class="cover-meta">
+    <div class="meta-item"><label>View Academic Year</label><span>${yearLabel}</span></div>
+    <div class="meta-item"><label>Faculty Records</label><span>${allData.length}</span></div>
+    <div class="meta-item"><label>Generated</label><span>${new Date().toLocaleDateString('en-IN')}</span></div>
+  </div>
+</div>
+
 ${facultySections}
 </body></html>`;
 
@@ -414,18 +459,39 @@ ${facultySections}
   };
 
   const buildAndPrint = (title, htmlBody) => {
+    const logoUrl = window.location.origin + '/lnmiit-logo.png';
+    
+    // Extract title from htmlBody if present, else use param title
+    const h1Match = htmlBody.match(/<h1>(.*?)<\/h1>/);
+    const displayTitle = h1Match ? h1Match[1] : title;
+    
+    // Replace the h1 in htmlBody with our new header
+    const cleanBody = htmlBody.replace(/<h1>.*?<\/h1>/, `
+      <div class="header-container">
+        <img src="${logoUrl}" alt="LNMIIT Logo" />
+        <div class="header-text">
+          <div class="header-inst">The LNM Institute of Information Technology, Jaipur</div>
+          <h1>${displayTitle}</h1>
+        </div>
+      </div>
+    `);
+
     const html = `<!DOCTYPE html>
 <html><head><title>${title}</title>
 <style>
   @page { size: A4 landscape; margin: 14mm; }
   body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
-  h1 { font-size: 18px; color: #1e3a5f; margin-bottom: 4px; }
-  .meta { color: #64748b; font-size: 11px; margin-bottom: 14px; }
+  .header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; border-bottom: 3px solid #1e3a8a; padding-bottom: 15px; }
+  .header-container img { max-height: 55px; margin-right: 20px; }
+  .header-text { display: flex; flex-direction: column; }
+  .header-inst { font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+  h1 { font-size: 22px; color: #1e3a8a; margin: 2px 0 0 0; }
+  .meta { color: #64748b; font-size: 12px; margin-bottom: 20px; text-align: center; }
   table { width: 100%; border-collapse: collapse; }
-  th { background: #1e3a5f; color: #fff; padding: 6px 8px; text-align: left; font-size: 10px; }
-  td { border-bottom: 1px solid #e5e7eb; padding: 6px 8px; vertical-align: top; }
+  th { background: #1e3a8a; color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; }
+  td { border-bottom: 1px solid #e2e8f0; padding: 8px 10px; vertical-align: top; font-size: 11px; }
   tr:nth-child(even) td { background: #f8fafc; }
-</style></head><body>${htmlBody}</body></html>`;
+</style></head><body>${cleanBody}</body></html>`;
 
     const win = window.open('', '_blank');
     win.document.write(html);
