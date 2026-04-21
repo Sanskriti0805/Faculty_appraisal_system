@@ -41,7 +41,7 @@ const EvaluationSheet3 = () => {
   const fetchTargetYear = async () => {
     try {
       const res = await apiClient.get('/sessions/active');
-      const year = res?.session?.academic_year || '';
+      const year = res?.data?.academic_year || '';
       if (year) {
         setActiveSessionYear(year);
         return year;

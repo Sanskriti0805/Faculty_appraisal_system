@@ -1,4 +1,4 @@
-﻿const db = require('../config/database');
+const db = require('../config/database');
 
 let sessionFinalLockColumnsEnsured = false;
 
@@ -240,8 +240,8 @@ exports.saveSheet2Remarks = async (req, res) => {
 
     if (!upd || upd.affectedRows === 0) {
       await db.query(
-        `INSERT INTO Dofa_evaluation_sheet2 (submission_id, faculty_id, academic_year, ${field}) VALUES (?, ?, ?, ?)`,
-        [submission_id, faculty_id, academic_year, normalizedValue]
+        `INSERT INTO Dofa_evaluation_sheet2 (submission_id, ${field}) VALUES (?, ?)`,
+        [submission_id, normalizedValue]
       );
     }
 
@@ -354,8 +354,8 @@ exports.applyGrading = async (req, res) => {
 
       if (!upd || upd.affectedRows === 0) {
         await db.query(
-          'INSERT INTO Dofa_evaluation_sheet2 (submission_id, faculty_id, academic_year, final_grade) VALUES (?, ?, ?, ?)',
-          [s.submission_id, s.faculty_id, s.academic_year, assignedGrade]
+          'INSERT INTO Dofa_evaluation_sheet2 (submission_id, final_grade) VALUES (?, ?)',
+          [s.submission_id, assignedGrade]
         );
       }
     }
@@ -524,16 +524,16 @@ exports.applyIncrements = async (req, res) => {
       // Now insert or update with the correct increment for the current grade
       if (inc !== undefined) {
         await db.query(`
-          INSERT INTO Dofa_evaluation_sheet3 (submission_id, faculty_id, academic_year, final_grade, increment_percentage)
-          VALUES (?, ?, ?, ?, ?)
-        `, [sub.submission_id, sub.faculty_id, sub.academic_year, sub.final_grade, inc]);
+          INSERT INTO Dofa_evaluation_sheet3 (submission_id, increment_percentage)
+          VALUES (?, ?)
+        `, [sub.submission_id, inc]);
       } else {
         // If no increment is defined for this grade, still create a record but with NULL increment
         // while preserving one current row for visibility in sheet3.
         await db.query(`
-          INSERT INTO Dofa_evaluation_sheet3 (submission_id, faculty_id, academic_year, final_grade, increment_percentage)
-          VALUES (?, ?, ?, ?, NULL)
-        `, [sub.submission_id, sub.faculty_id, sub.academic_year, sub.final_grade]);
+          INSERT INTO Dofa_evaluation_sheet3 (submission_id, increment_percentage)
+          VALUES (?, NULL)
+        `, [sub.submission_id]);
       }
     }
 

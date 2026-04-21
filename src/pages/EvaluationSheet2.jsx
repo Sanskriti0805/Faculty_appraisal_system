@@ -133,10 +133,11 @@ const EvaluationSheet2 = () => {
       const res = await apiClient.post('/evaluation/apply-grading');
       if (res.success) {
         showToast('Grading applied successfully');
-        fetchData(activeYear);
+        await fetchData(activeYear);
       }
     } catch {
       showToast('Error applying grade', 'error');
+    } finally {
       setLoading(false);
     }
   };
