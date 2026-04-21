@@ -5,6 +5,12 @@ import { FORM_SEQUENCE, getNextPath, getPreviousPath } from '../constants/naviga
 import { useAuth } from '../context/AuthContext';
 import { showConfirm } from '../utils/appDialogs';
 
+const SECTION_GROUP_MEMBERS = {
+  teaching_learning: ['courses_taught', 'new_courses', 'courseware', 'teaching_innovation'],
+  research_development: ['research_publications', 'research_grants', 'patents', 'technology_transfer', 'paper_review', 'talks_and_conferences', 'awards_honours', 'consultancy', 'continuing_education'],
+  other_institutional_activities: ['institutional_contributions', 'other_activities', 'research_plan', 'teaching_plan']
+};
+
 /**
  * FormActions - Standardized action buttons for appraisal forms
  * @param {Object} props
@@ -79,6 +85,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
     '/patents': 'patents',
     '/technology-transfer': 'technology_transfer',
     '/paper-review': 'paper_review',
+    '/talks-and-conferences': 'talks_and_conferences',
     '/conference-sessions': 'conference_sessions',
     '/keynotes-talks': 'keynotes_talks',
     '/conferences-outside': 'conference_sessions',
@@ -92,6 +99,18 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
     '/teaching-plan': 'teaching_plan',
     '/part-b': 'part_b',
   }), []);
+
+  const effectiveApprovedSections = React.useMemo(() => {
+    const allowed = new Set();
+    approvedSections.forEach((key) => {
+      allowed.add(key);
+      const groupMembers = SECTION_GROUP_MEMBERS[key];
+      if (Array.isArray(groupMembers)) {
+        groupMembers.forEach((memberKey) => allowed.add(memberKey));
+      }
+    });
+    return allowed;
+  }, [approvedSections]);
 
   React.useEffect(() => {
     const isFaculty = user?.role === 'faculty';
@@ -139,7 +158,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
     if (user?.role !== 'faculty') return true;
     if (path === '/faculty-information') return true;
     if (!submissionStatus || submissionStatus === 'draft') return true;
-    if (['submitted', 'under_review', 'approved'].includes(submissionStatus)) return false;
+    if (['submitted', 'submitted_hod', 'under_review', 'under_review_hod', 'approved', 'hod_approved'].includes(submissionStatus)) return false;
 
     if (submissionStatus === 'sent_back') {
       if (!hasSectionRestrictions) return true;
@@ -147,14 +166,14 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
       if (path.startsWith('/faculty/dynamic/')) {
         const idMatch = path.match(/^\/faculty\/dynamic\/(\d+)$/);
         if (!idMatch) return false;
-        return approvedSections.includes(`dynamic_section_${idMatch[1]}`);
+        return effectiveApprovedSections.has(`dynamic_section_${idMatch[1]}`);
       }
       const sectionKey = pathToSectionKey[path];
-      return !!sectionKey && approvedSections.includes(sectionKey);
+      return !!sectionKey && effectiveApprovedSections.has(sectionKey);
     }
 
     return true;
-  }, [approvedSections, hasSectionRestrictions, pathToSectionKey, submissionStatus, user]);
+  }, [effectiveApprovedSections, hasSectionRestrictions, pathToSectionKey, submissionStatus, user]);
 
   const getNextEditablePath = React.useCallback((path) => {
     const currentIndex = FORM_SEQUENCE.findIndex(item => item.path === path);

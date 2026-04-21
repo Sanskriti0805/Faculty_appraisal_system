@@ -178,7 +178,7 @@ const Dashboard = () => {
               {!isEditGranted && daysLeft > 0 && (
                 <button
                   className="quick-link-card"
-                  onClick={() => navigate('/my-submission')}
+                  onClick={() => navigate('/my-submission?openEditRequest=1')}
                 >
                   <Send size={20} />
                   <span>Request Section Edits</span>

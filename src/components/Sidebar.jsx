@@ -4,6 +4,12 @@ import { ChevronRight, ChevronDown } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import './Sidebar.css'
 
+const SECTION_GROUP_MEMBERS = {
+  teaching_learning: ['courses_taught', 'new_courses', 'courseware', 'teaching_innovation'],
+  research_development: ['research_publications', 'research_grants', 'patents', 'technology_transfer', 'paper_review', 'talks_and_conferences', 'awards_honours', 'consultancy', 'continuing_education'],
+  other_institutional_activities: ['institutional_contributions', 'other_activities', 'research_plan', 'teaching_plan']
+}
+
 const Sidebar = () => {
   const location = useLocation()
   const { user, token } = useAuth()
@@ -152,16 +158,25 @@ const Sidebar = () => {
     if (submissionStatus === 'sent_back') {
       if (!hasSectionRestrictions) return true
 
+      const allowedSections = new Set()
+      approvedSections.forEach((key) => {
+        allowedSections.add(key)
+        const members = SECTION_GROUP_MEMBERS[key]
+        if (Array.isArray(members)) {
+          members.forEach((memberKey) => allowedSections.add(memberKey))
+        }
+      })
+
       // Part B contains the final submit action and must remain reachable for re-submission.
       if (path === '/part-b') return true
 
       if (path.startsWith('/faculty/dynamic/')) {
         const idMatch = path.match(/^\/faculty\/dynamic\/(\d+)$/)
         if (!idMatch) return false
-        return approvedSections.includes(`dynamic_section_${idMatch[1]}`)
+        return allowedSections.has(`dynamic_section_${idMatch[1]}`)
       }
       const sectionKey = pathToSectionKey[path]
-      return !!sectionKey && approvedSections.includes(sectionKey)
+      return !!sectionKey && allowedSections.has(sectionKey)
     }
 
     return true

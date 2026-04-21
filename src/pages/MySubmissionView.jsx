@@ -9,7 +9,7 @@ import {
 import './MySubmissionView.css';
 import { useAuth } from '../context/AuthContext';
 
-const API = `http://${window.location.hostname}:5000/api`;
+const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5001/api`;
 
 const REQUESTABLE_SECTION_GROUPS = [
   { key: 'teaching_learning', label: 'Teaching and Learning' },
@@ -18,44 +18,44 @@ const REQUESTABLE_SECTION_GROUPS = [
 ];
 
 const SECTION_LABELS = [
-  { key: 'teaching_learning',           label: 'Teaching and Learning' },
-  { key: 'research_development',        label: 'Research and Development' },
+  { key: 'teaching_learning', label: 'Teaching and Learning' },
+  { key: 'research_development', label: 'Research and Development' },
   { key: 'other_institutional_activities', label: 'Other Institutional Activities' },
-  { key: 'faculty_info',                label: 'Faculty Information' },
-  { key: 'courses_taught',              label: 'Courses Taught' },
-  { key: 'new_courses',                 label: 'New Courses Developed' },
-  { key: 'courseware',                  label: 'Courseware' },
-  { key: 'teaching_innovation',         label: 'Teaching Innovation' },
-  { key: 'research_publications',       label: 'Research Publications' },
-  { key: 'research_grants',             label: 'Research Grants' },
-  { key: 'patents',                     label: 'Patents' },
-  { key: 'technology_transfer',         label: 'Technology Transfer' },
-  { key: 'paper_review',                label: 'Paper Review' },
-  { key: 'talks_and_conferences',       label: 'Talks and Conferences' },
-  { key: 'conference_sessions',         label: 'Conference Sessions' },
-  { key: 'keynotes_talks',              label: 'Keynotes & Invited Talks' },
-  { key: 'awards_honours',              label: 'Awards & Honours' },
-  { key: 'consultancy',                 label: 'Consultancy' },
-  { key: 'continuing_education',        label: 'Continuing Education' },
+  { key: 'faculty_info', label: 'Faculty Information' },
+  { key: 'courses_taught', label: 'Courses Taught' },
+  { key: 'new_courses', label: 'New Courses Developed' },
+  { key: 'courseware', label: 'Courseware' },
+  { key: 'teaching_innovation', label: 'Teaching Innovation' },
+  { key: 'research_publications', label: 'Research Publications' },
+  { key: 'research_grants', label: 'Research Grants' },
+  { key: 'patents', label: 'Patents' },
+  { key: 'technology_transfer', label: 'Technology Transfer' },
+  { key: 'paper_review', label: 'Paper Review' },
+  { key: 'talks_and_conferences', label: 'Talks and Conferences' },
+  { key: 'conference_sessions', label: 'Conference Sessions' },
+  { key: 'keynotes_talks', label: 'Keynotes & Invited Talks' },
+  { key: 'awards_honours', label: 'Awards & Honours' },
+  { key: 'consultancy', label: 'Consultancy' },
+  { key: 'continuing_education', label: 'Continuing Education' },
   { key: 'institutional_contributions', label: 'Institutional Contributions' },
-  { key: 'other_activities',            label: 'Other Activities' },
-  { key: 'research_plan',               label: 'Research Plan' },
-  { key: 'teaching_plan',               label: 'Teaching Plan' },
-  { key: 'part_b',                      label: 'Part B (Goal Setting)' },
+  { key: 'other_activities', label: 'Other Activities' },
+  { key: 'research_plan', label: 'Research Plan' },
+  { key: 'teaching_plan', label: 'Teaching Plan' },
+  { key: 'part_b', label: 'Part B (Goal Setting)' },
 ].reduce((acc, item) => {
   acc[item.key] = item.label;
   return acc;
 }, {});
 
 const STATUS_LABELS = {
-  draft:        'Draft',
-  submitted:    'Submitted',
+  draft: 'Draft',
+  submitted: 'Submitted',
   submitted_hod: 'Submitted',
   under_review: 'Under Review',
   under_review_hod: 'Under Review',
-  approved:     'Approved',
+  approved: 'Approved',
   hod_approved: 'Approved',
-  sent_back:    'Sent Back',
+  sent_back: 'Sent Back',
 };
 
 const MySubmissionView = () => {
@@ -63,20 +63,20 @@ const MySubmissionView = () => {
   const navigate = useNavigate();
 
   const [submissionData, setSubmissionData] = useState(null);
-  const [sessionInfo,    setSessionInfo]    = useState(null);
-  const [editRequests,   setEditRequests]   = useState([]);
-  const [loading,        setLoading]        = useState(true);
-  const [activeTab,      setActiveTab]      = useState('faculty');
-  const [editPanelOpen,  setEditPanelOpen]  = useState(false);
-  const [commentView,    setCommentView]    = useState('pending');
+  const [sessionInfo, setSessionInfo] = useState(null);
+  const [editRequests, setEditRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('faculty');
+  const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [commentView, setCommentView] = useState('pending');
   // Dynamic sections filled by this faculty
   const [dynamicData, setDynamicData] = useState([]); // [{section, fields, responses}]
   const [dynamicSectionOptions, setDynamicSectionOptions] = useState([]);
   const [pdfDownloading, setPdfDownloading] = useState(false);
 
   const [selectedSections, setSelectedSections] = useState([]);
-  const [requestMessage,   setRequestMessage]   = useState('');
-  const [submitting,       setSubmitting]        = useState(false);
+  const [requestMessage, setRequestMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -191,9 +191,9 @@ const MySubmissionView = () => {
     }
   };
 
-  const isPastDeadline   = sessionInfo?.pastDeadline || false;
-  const pendingRequest   = editRequests.find(r => r.status === 'pending');
-  const approvedRequest  = editRequests.find(r => r.status === 'approved');
+  const isPastDeadline = sessionInfo?.pastDeadline || false;
+  const pendingRequest = editRequests.find(r => r.status === 'pending');
+  const approvedRequest = editRequests.find(r => r.status === 'approved');
   const isFormA = String(submissionData?.submission?.form_type || 'A').trim().toUpperCase() === 'A';
   const submittedStatuses = new Set(['submitted', 'submitted_hod']);
   const approvedStatuses = new Set(['approved', 'hod_approved']);
@@ -203,7 +203,7 @@ const MySubmissionView = () => {
   const isApprovedStatus = approvedStatuses.has(submissionData?.submission?.status);
   const isUnderReviewStatus = underReviewStatuses.has(submissionData?.submission?.status);
   const isSentBackStatus = sentBackStatuses.has(submissionData?.submission?.status);
-  const canRequestEdits  =
+  const canRequestEdits =
     isFormA &&
     isSubmittedStatus &&
     !isPastDeadline && !pendingRequest;
@@ -219,9 +219,9 @@ const MySubmissionView = () => {
       });
       if (!res.ok) throw new Error('PDF generation failed');
       const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
       a.download = `Appraisal_${submissionData?.submission?.academic_year || 'report'}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
@@ -236,7 +236,7 @@ const MySubmissionView = () => {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '-';
 
-  const uploadBase = `http://${window.location.hostname}:5000/uploads/`;
+  const uploadBase = `${API.replace(/\/api$/, '')}/uploads/`;
 
   const toLabel = (key) =>
     String(key || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -399,14 +399,14 @@ const MySubmissionView = () => {
   const statusLabel = STATUS_LABELS[submission?.status] || submission?.status;
 
   const tabs = [
-    { key: 'faculty',      label: 'Faculty Info',      icon: <User size={14} /> },
-    { key: 'teaching',     label: 'Teaching',           icon: <BookOpen size={14} /> },
-    { key: 'publications', label: 'Publications',       icon: <FileText size={14} />, count: publications?.length },
-    { key: 'research',     label: 'Research & Grants',  icon: <Briefcase size={14} /> },
-    { key: 'events',       label: 'Events & Awards',    icon: <Award size={14} /> },
-    { key: 'consultancy',  label: 'Consultancy',        icon: <Briefcase size={14} />, count: consultancy?.length },
-    { key: 'innovation',   label: 'Innovation',         icon: <Lightbulb size={14} /> },
-    { key: 'partb',        label: 'Part B',             icon: <CheckCircle size={14} /> },
+    { key: 'faculty', label: 'Faculty Info', icon: <User size={14} /> },
+    { key: 'teaching', label: 'Teaching', icon: <BookOpen size={14} /> },
+    { key: 'publications', label: 'Publications', icon: <FileText size={14} />, count: publications?.length },
+    { key: 'research', label: 'Research & Grants', icon: <Briefcase size={14} /> },
+    { key: 'events', label: 'Events & Awards', icon: <Award size={14} /> },
+    { key: 'consultancy', label: 'Consultancy', icon: <Briefcase size={14} />, count: consultancy?.length },
+    { key: 'innovation', label: 'Innovation', icon: <Lightbulb size={14} /> },
+    { key: 'partb', label: 'Part B', icon: <CheckCircle size={14} /> },
     // Show custom tab when dynamic sections exist for this form type
     ...(dynamicEditableSections.length > 0 ? [{
       key: 'dynamic',
@@ -456,11 +456,11 @@ const MySubmissionView = () => {
         </div>
         <div className="msv-status-info">
           <h3>
-            {isSubmittedStatus    && 'Form Successfully Submitted'}
-            {isApprovedStatus     && 'Form Approved by DoFA'}
-            {isSentBackStatus     && 'Edit Access Granted'}
-            {submission.status === 'draft'        && 'Draft - Not Yet Submitted'}
-            {isUnderReviewStatus  && 'Under Review'}
+            {isSubmittedStatus && 'Form Successfully Submitted'}
+            {isApprovedStatus && 'Form Approved by DoFA'}
+            {isSentBackStatus && 'Edit Access Granted'}
+            {submission.status === 'draft' && 'Draft - Not Yet Submitted'}
+            {isUnderReviewStatus && 'Under Review'}
           </h3>
           <p>
             Submitted on <strong>{formatDate(submission.submitted_at)}</strong>
@@ -763,7 +763,7 @@ const MySubmissionView = () => {
         <div className="msv-content-card" style={{ marginTop: '1.25rem' }}>
           <div className="msv-section-card">
             <h3 className="msv-section-title">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
               Comments from Dofa
             </h3>
             {comments.length > 0 && (

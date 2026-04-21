@@ -1,4 +1,4 @@
-﻿const db = require('../config/database');
+const db = require('../config/database');
 const { autoAllocateMarks } = require('../services/rubricMapper');
 const emailService = require('../services/emailService');
 const xlsx = require('xlsx');
@@ -625,7 +625,7 @@ exports.getSubmissionById = async (req, res) => {
     const { id } = req.params;
 
     // Get submission details
-        const [submission] = await db.query(`
+    const [submission] = await db.query(`
           SELECT s.*, u.name as faculty_name, u.department, u.department_id as faculty_department_id, u.email, u.designation, u.role as faculty_role,
              a.name as approved_by_name
       FROM submissions s
@@ -689,7 +689,7 @@ exports.getSubmissionById = async (req, res) => {
       email: sub.email
     });
     const fid = resolvedFacultyInfoId || Number(user_id) || null;
-    
+
     // Helper to get year from academic_year string (e.g. "2025-26" -> 2025)
     const yearNum = academicYear.split('-')[0];
     const sessionWindow = await getSessionWindowByAcademicYear(academicYear);
@@ -1519,7 +1519,7 @@ exports.sendReminder = async (req, res) => {
 exports.exportComprehensiveExcel = async (req, res) => {
   try {
     const { academic_year } = req.params;
-    
+
     let query = `
       SELECT s.*, u.name as faculty_name, u.department, u.designation, u.email, f.id as faculty_info_id
       FROM submissions s 
@@ -1532,7 +1532,7 @@ exports.exportComprehensiveExcel = async (req, res) => {
       query += ` WHERE s.academic_year = ?`;
       queryParams.push(academic_year);
     }
-    
+
     query += ` ORDER BY u.department, u.name`;
 
     const [submissions] = await db.query(query, queryParams);
@@ -1552,7 +1552,7 @@ exports.exportComprehensiveExcel = async (req, res) => {
     for (const sub of submissions) {
       const yearNum = sub.academic_year.split('-')[0];
       const fid = sub.faculty_info_id; // Mapping to faculty_information table ID
-      
+
       // Basic summary mapping
       summaryData.push({
         'Faculty Name': sub.faculty_name,
@@ -1623,7 +1623,7 @@ exports.exportComprehensiveExcel = async (req, res) => {
 
     // Create workbook and append sheets
     const workbook = xlsx.utils.book_new();
-    
+
     xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(summaryData), 'Summary');
     if (publicationsData.length > 0) xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(publicationsData), 'Publications');
     if (coursesData.length > 0) xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(coursesData), 'Courses');
