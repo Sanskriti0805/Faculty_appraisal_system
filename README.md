@@ -2,7 +2,7 @@
 ### A Full-Stack Web Application for End-to-End Annual Faculty Performance Appraisal Management
 
 ## ðŸ“Œ Table of Contents
-
+ 
 1. [Project Overview](#1-project-overview)
 2. [Technology Stack](#2-technology-stack)
 3. [System Architecture](#3-system-architecture)
