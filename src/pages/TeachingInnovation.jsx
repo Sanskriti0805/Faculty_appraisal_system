@@ -4,6 +4,7 @@ import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const TeachingInnovation = ({ initialData, readOnly }) => {
   const { user, token } = useAuth()
@@ -259,9 +260,13 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                     )}
                     <input
                       type="file"
-                      onChange={(e) => handleFileUpload('onCampusFile', e.target.files[0])}
+                      onChange={(e) => handleValidatedFileInput(
+                        e,
+                        (file) => handleFileUpload('onCampusFile', file),
+                        { allowedExtensions: FILE_TYPES.documentsNoImages, label: 'On-campus supporting document' }
+                      )}
                       style={{ display: 'none' }}
-                      accept=".pdf,.doc,.docx"
+                      accept={getAcceptAttribute(FILE_TYPES.documentsNoImages)}
                     />
                   </label>
                 )}
@@ -340,9 +345,13 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                     )}
                     <input
                       type="file"
-                      onChange={(e) => handleFileUpload('onlineFile', e.target.files[0])}
+                      onChange={(e) => handleValidatedFileInput(
+                        e,
+                        (file) => handleFileUpload('onlineFile', file),
+                        { allowedExtensions: FILE_TYPES.documentsNoImages, label: 'Online supporting document' }
+                      )}
                       style={{ display: 'none' }}
-                      accept=".pdf,.doc,.docx"
+                      accept={getAcceptAttribute(FILE_TYPES.documentsNoImages)}
                     />
                   </label>
                 )}
@@ -421,9 +430,13 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                     )}
                     <input
                       type="file"
-                      onChange={(e) => handleFileUpload('evaluationFile', e.target.files[0])}
+                      onChange={(e) => handleValidatedFileInput(
+                        e,
+                        (file) => handleFileUpload('evaluationFile', file),
+                        { allowedExtensions: FILE_TYPES.documentsNoImages, label: 'Evaluation supporting document' }
+                      )}
                       style={{ display: 'none' }}
-                      accept=".pdf,.doc,.docx"
+                      accept={getAcceptAttribute(FILE_TYPES.documentsNoImages)}
                     />
                   </label>
                 )}

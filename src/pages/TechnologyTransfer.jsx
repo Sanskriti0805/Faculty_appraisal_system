@@ -6,6 +6,7 @@ import FilePreviewButton from '../components/FilePreviewButton'
 import apiClient from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { showConfirm } from '../utils/appDialogs'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const TECHNOLOGY_TYPES = [
   'Technology developed and transferred',
@@ -421,30 +422,12 @@ const TechnologyTransfer = () => {
                         <input
                           type="file"
                           id={`evidence-upload-tech-${entry.localId}`}
-                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0] || null
-                            if (!file) {
-                              updateEntry(entry.localId, { file: null })
-                              return
-                            }
-
-                            const name = String(file.name || '').toLowerCase()
-                            const isAllowed = /\.(pdf|doc|docx|jpg|jpeg|png)$/.test(name)
-                            if (!isAllowed) {
-                              window.appToast('Invalid file format. Upload PDF, DOC, DOCX, JPG, JPEG, or PNG.')
-                              e.target.value = ''
-                              return
-                            }
-
-                            if (file.size > 10 * 1024 * 1024) {
-                              window.appToast('File size must be 10MB or less.')
-                              e.target.value = ''
-                              return
-                            }
-
-                            updateEntry(entry.localId, { file })
-                          }}
+                          accept={getAcceptAttribute(FILE_TYPES.documents)}
+                          onChange={(e) => handleValidatedFileInput(
+                            e,
+                            (file) => updateEntry(entry.localId, { file }),
+                            { allowedExtensions: FILE_TYPES.documents, label: 'Technology transfer evidence' }
+                          )}
                           style={{ display: 'none' }}
                         />
                         <label

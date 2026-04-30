@@ -5,6 +5,7 @@ import FormActions from '../components/FormActions';
 import FilePreviewButton from '../components/FilePreviewButton';
 import apiClient from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { FILE_TYPES, getAcceptAttribute, validateUploadFile } from '../utils/fileValidation';
 
 const formatDateForDisplay = (value) => {
   if (!value) return '';
@@ -71,6 +72,10 @@ const TalksAndConferences = () => {
   const [submittedItems, setSubmittedItems] = useState([]);
   const [formData, setFormData] = useState(initialState);
   const [loading, setLoading] = useState(false);
+
+  const isDraftActive = Boolean(formData.title || formData.organizer || formData.certificateFile || formData.fromDate || formData.toDate || formData.date);
+  const isDraftRequired = submittedItems.length === 0 || isDraftActive;
+
 
   const resetDraftForm = () => {
     setFormData({
@@ -191,7 +196,14 @@ const TalksAndConferences = () => {
   };
 
   const handleFileChange = (e) => {
-    setFormData(prev => ({ ...prev, certificateFile: e.target.files[0] }));
+    const file = e.target.files?.[0] || null;
+    const result = validateUploadFile(file, { allowedExtensions: FILE_TYPES.documents, label: 'Evidence' });
+    if (!result.valid) {
+      showToast(result.message);
+      e.target.value = '';
+      return;
+    }
+    setFormData(prev => ({ ...prev, certificateFile: file }));
   };
 
   const handleAddDate = (e) => {
@@ -382,7 +394,7 @@ const TalksAndConferences = () => {
           
           <div className="form-row" style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
             <div className="form-group" style={{ width: '100%' }}>
-              <label>Category<span className="required-star">*</span></label>
+              <label>Category<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
               <select name="mainCategory" value={formData.mainCategory} onChange={handleMainCategoryChange} style={{ fontSize: '1.05rem', fontWeight: 600, padding: '0.6rem 1rem' }}>
                 <option value="1">{MAIN_CATEGORIES[1]}</option>
                 <option value="2">{MAIN_CATEGORIES[2]}</option>
@@ -396,7 +408,7 @@ const TalksAndConferences = () => {
             <>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Type of Event<span className="required-star">*</span></label>
+                  <label>Type of Event<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
                   <select name="eventType" value={formData.eventType} onChange={handleInputChange}>
                     <option value="Workshop">Workshop</option>
                     <option value="Conference">Conference</option>
@@ -419,18 +431,18 @@ const TalksAndConferences = () => {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>Title<span className="required-star">*</span></label>
-                  <input type="text" name="title" value={formData.title} onChange={handleInputChange} required />
+                  <label>Title<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
+                  <input type="text" name="title" value={formData.title} onChange={handleInputChange} required={isDraftRequired} />
                 </div>
                 <div className="form-group">
-                  <label>Organizer<span className="required-star">*</span></label>
-                  <input type="text" name="organizer" value={formData.organizer} onChange={handleInputChange} required />
+                  <label>Organizer<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
+                  <input type="text" name="organizer" value={formData.organizer} onChange={handleInputChange} required={isDraftRequired} />
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>Role<span className="required-star">*</span></label>
+                  <label>Role<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
                   <select name="role" value={formData.role} onChange={handleInputChange}>
                     {(formData.mainCategory === '1' ? CATEGORY_1_ROLES : CATEGORY_3_ROLES).map(r => (
                       <option key={r} value={r}>{r}</option>
@@ -453,7 +465,7 @@ const TalksAndConferences = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Talk Context<span className="required-star">*</span></label>
+                  <label>Talk Context<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
                   <select name="cat2SubCategory" value={formData.cat2SubCategory} onChange={handleInputChange}>
                     <option value="FDP/Conference">At an FDP or Conference</option>
                     <option value="Other">Other Invited Talk</option>
@@ -463,12 +475,12 @@ const TalksAndConferences = () => {
               
               <div className="form-row">
                 <div className="form-group">
-                  <label>Title<span className="required-star">*</span></label>
-                  <input type="text" name="title" value={formData.title} onChange={handleInputChange} required />
+                  <label>Title<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
+                  <input type="text" name="title" value={formData.title} onChange={handleInputChange} required={isDraftRequired} />
                 </div>
                 <div className="form-group">
-                  <label>Organizer<span className="required-star">*</span></label>
-                  <input type="text" name="organizer" value={formData.organizer} onChange={handleInputChange} required />
+                  <label>Organizer<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
+                  <input type="text" name="organizer" value={formData.organizer} onChange={handleInputChange} required={isDraftRequired} />
                 </div>
               </div>
             </>
@@ -514,9 +526,9 @@ const TalksAndConferences = () => {
 
           <div className="form-row">
             <div className="form-group">
-              <label>Upload Evidence<span className="required-star">*</span></label>
+              <label>Upload Evidence<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <input key={fileInputKey} ref={fileInputRef} type="file" onChange={handleFileChange} />
+                <input key={fileInputKey} ref={fileInputRef} type="file" onChange={handleFileChange} accept={getAcceptAttribute(FILE_TYPES.documents)} />
                 <FilePreviewButton file={formData.certificateFile} />
                 {formData.certificateFile && (
                   <button type="button" onClick={clearDraftEvidence} title="Remove" style={{ width: '32px', height: '32px', border: '1px solid #d1d8e0', borderRadius: '6px', background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={14} /></button>

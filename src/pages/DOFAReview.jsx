@@ -120,10 +120,14 @@ const PubDetailCard = ({ pub }) => {
     <div className="pub-detail-grid">
       {field('Authors', authorsStr, true)}
       {field('Title', pub?.title, true)}
+      {field('Details', pub?.details, true)}
       {field('Publication Type', pub?.publication_type)}
       {field('Sub Type', pub?.sub_type)}
       {field('Year', pub?.year_of_publication)}
       {field('Journal / Conference / Book', pub?.journal_name || pub?.conference_name || pub?.book_title, true)}
+      {field('Conference Type', pub?.type_of_conference)}
+      {field('Date From', pub?.date_from)}
+      {field('Date To', pub?.date_to)}
       {field('Publisher / Agency', pub?.publisher || pub?.publication_agency)}
       {field('Volume', pub?.volume)}
       {field('Issue / Pages', pub?.issue ? `${pub.issue}${pub.pages ? `, pp. ${pub.pages}` : ''}` : pub?.pages)}

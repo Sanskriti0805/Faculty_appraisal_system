@@ -29,13 +29,17 @@ const promisePool = pool.promise();
 // Test connection
 pool.getConnection((err, connection) => {
   if (err) {
-    console.error(
-      `Error connecting to database (${dbHost}:${dbPort}/${dbName || 'unknown_db'}):`,
-      err
-    );
+    if (process.env.DB_LOG_CONNECTIONS !== '0') {
+      console.error(
+        `Error connecting to database (${dbHost}:${dbPort}/${dbName || 'unknown_db'}):`,
+        err
+      );
+    }
     return;
   }
-  console.log(`✅ Database connected successfully (${dbHost}:${dbPort}/${dbName})`);
+  if (process.env.DB_LOG_CONNECTIONS !== '0') {
+    console.log(`✅ Database connected successfully (${dbHost}:${dbPort}/${dbName})`);
+  }
   connection.release();
 });
 

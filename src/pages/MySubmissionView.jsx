@@ -274,6 +274,21 @@ const MySubmissionView = () => {
       );
     }
 
+    if ((key === 'authors' || key === 'editors') && Array.isArray(value)) {
+      if (value.length === 0) return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>;
+      return value
+        .map((person) => {
+          if (!person || typeof person !== 'object') return String(person || '');
+          return [
+            person.first || person.first_name,
+            person.middle || person.middle_name,
+            person.last || person.last_name
+          ].filter(Boolean).join(' ');
+        })
+        .filter(Boolean)
+        .join(', ');
+    }
+
     if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
       const parsed = new Date(value);
       if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleDateString('en-IN');
@@ -305,6 +320,9 @@ const MySubmissionView = () => {
     const preferred = preferredColumns.filter(k => rawCols.includes(k));
     const rest = rawCols.filter(k => !preferred.includes(k));
     const columns = [...preferred, ...rest];
+    const columnLabels = title === 'Consultancy Projects'
+      ? { amount: 'Amount (INR lacs)' }
+      : {};
 
     return (
       <div className="msv-data-section" key={title}>
@@ -319,7 +337,7 @@ const MySubmissionView = () => {
           <table className="msv-table">
             <thead>
               <tr>
-                {columns.map(col => <th key={col}>{toLabel(col)}</th>)}
+                {columns.map(col => <th key={col}>{columnLabels[col] || toLabel(col)}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -362,6 +380,16 @@ const MySubmissionView = () => {
     );
   };
 
+  const parseStoredContent = (value) => {
+    if (!value) return null;
+    if (typeof value !== 'string') return value;
+    try {
+      return JSON.parse(value);
+    } catch (_) {
+      return { details: value };
+    }
+  };
+
   const renderGoalsBySemester = () => {
     const safeGoals = Array.isArray(goals) ? goals : [];
     if (safeGoals.length === 0) return <p className="msv-no-data">No goals data available.</p>;
@@ -399,8 +427,19 @@ const MySubmissionView = () => {
     submission, facultyInfo, courses, newCourses, publications,
     grants, proposals, patents, awards, paperReviews, techTransfer,
     conferenceSessions, keynotesTalks, consultancy, teachingInnovation,
-    institutionalContributions, goals, comments,
+    institutionalContributions, goals, comments, courseware, continuingEducation,
+    otherActivities, researchPlan, teachingPlan,
   } = submissionData;
+
+  const allTeachingRows = Array.isArray(courses) ? courses : [];
+  const taughtCourses = allTeachingRows.filter((row) => {
+    const section = String(row?.section || '').trim().toLowerCase();
+    return section !== 'projects' && section !== 'project';
+  });
+  const guidedProjects = allTeachingRows.filter((row) => {
+    const section = String(row?.section || '').trim().toLowerCase();
+    return section === 'projects' || section === 'project';
+  });
 
   const dynamicEditableSections = dynamicSectionOptions;
 
@@ -416,6 +455,7 @@ const MySubmissionView = () => {
     { key: 'events',       label: 'Events & Awards',    icon: <Award size={14} /> },
     { key: 'consultancy',  label: 'Consultancy',        icon: <Briefcase size={14} />, count: consultancy?.length },
     { key: 'innovation',   label: 'Innovation',         icon: <Lightbulb size={14} /> },
+    { key: 'additional',   label: 'Additional',         icon: <FileText size={14} /> },
     { key: 'partb',        label: 'Part B',             icon: <CheckCircle size={14} /> },
     // Show custom tab when dynamic sections exist for this form type
     ...(dynamicEditableSections.length > 0 ? [{
@@ -652,7 +692,8 @@ const MySubmissionView = () => {
           {activeTab === 'teaching' && (
             <>
               <h3 className="msv-section-title"><BookOpen size={17} /> Teaching & Courses</h3>
-              {renderDataTable('Courses Taught', courses, ['course_code', 'course_title', 'semester', 'year', 'students', 'feedback_score', 'evidence_file'])}
+              {renderDataTable('Courses Taught', taughtCourses, ['course_code', 'course_name', 'course_title', 'semester', 'session_id', 'program', 'enrollment', 'students', 'percentage', 'feedback_score', 'remarks', 'evidence_file'])}
+              {renderDataTable('Projects Guided', guidedProjects, ['semester', 'session_id', 'project_title', 'project_type', 'project_role', 'student_name', 'project_duration', 'project_outcome', 'remarks', 'evidence_file'])}
               {renderDataTable('New Courses Developed', newCourses, ['title', 'course_name', 'semester', 'year', 'role', 'evidence_file'])}
             </>
           )}
@@ -660,7 +701,7 @@ const MySubmissionView = () => {
           {activeTab === 'publications' && (
             <>
               <h3 className="msv-section-title"><FileText size={17} /> Research Publications</h3>
-              {renderDataTable('Research Publications', publications, ['publication_type', 'sub_type', 'title', 'year_of_publication', 'journal_name', 'conference_name', 'publication_agency', 'evidence_file'])}
+              {renderDataTable('Research Publications', publications, ['publication_type', 'sub_type', 'title', 'details', 'authors', 'editors', 'year_of_publication', 'journal_name', 'conference_name', 'type_of_conference', 'date_from', 'date_to', 'publication_agency', 'title_of_book', 'evidence_file'])}
             </>
           )}
 
@@ -703,6 +744,17 @@ const MySubmissionView = () => {
             <>
               <h3 className="msv-section-title"><CheckCircle size={17} /> Part B - Goal Setting</h3>
               {renderGoalsBySemester()}
+            </>
+          )}
+
+          {activeTab === 'additional' && (
+            <>
+              <h3 className="msv-section-title"><FileText size={17} /> Additional Sections</h3>
+              {renderFieldGrid('Courseware & Course Material', parseStoredContent(courseware))}
+              {renderFieldGrid('Continuing Education', parseStoredContent(continuingEducation))}
+              {renderFieldGrid('Other Activities', parseStoredContent(otherActivities))}
+              {renderFieldGrid('Research Plan', parseStoredContent(researchPlan))}
+              {renderFieldGrid('Teaching Plan', parseStoredContent(teachingPlan))}
             </>
           )}
 

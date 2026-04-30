@@ -6,6 +6,7 @@ import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
 import { showConfirm } from '../utils/appDialogs'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const ENTRY_CONFIG = {
   A: {
@@ -471,8 +472,12 @@ const Patents = ({ initialData, readOnly }) => {
                           <input
                             type="file"
                             id={`certificate-${entry.localId}`}
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                            onChange={(e) => updateEntry(entry.localId, { file: e.target.files[0] || null })}
+                            accept={getAcceptAttribute(FILE_TYPES.documents)}
+                            onChange={(e) => handleValidatedFileInput(
+                              e,
+                              (file) => updateEntry(entry.localId, { file }),
+                              { allowedExtensions: FILE_TYPES.documents, label: cfg.uploadLabel }
+                            )}
                             style={{ display: 'none' }}
                           />
                           <label

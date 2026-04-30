@@ -5,6 +5,8 @@ import './CoursesTaught.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
+import { showConfirm } from '../utils/appDialogs'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const isNotFoundError = (error) => error?.response?.status === 404
 
@@ -679,7 +681,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
    }
 
    const handleDeleteSummaryEntry = async (id) => {
-      const confirmed = await window.showConfirm({
+      const confirmed = await showConfirm({
          title: 'Delete Entry',
          message: 'Are you sure you want to delete this entry? This action cannot be undone.',
          confirmText: 'Delete',
@@ -918,8 +920,12 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                                  <input
                                     type="file"
                                     id={`file-upload-${semester}-${index}`}
-                                    accept=".pdf"
-                                    onChange={(e) => handleInputChange(semester, index, 'feedbackFile', e.target.files[0])}
+                                    accept={getAcceptAttribute(FILE_TYPES.pdfOnly)}
+                                    onChange={(e) => handleValidatedFileInput(
+                                       e,
+                                       (file) => handleInputChange(semester, index, 'feedbackFile', file),
+                                       { allowedExtensions: FILE_TYPES.pdfOnly, label: 'Course feedback evidence' }
+                                    )}
                                     className="file-input-hidden"
                                  />
                                  <label
@@ -1014,6 +1020,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                               <option value="M.Tech">M.Tech</option>
                               <option value="MS">MS</option>
                               <option value="LUSIP">LUSIP</option>
+                              <option value="BTP">BTP</option>
                               <option value="Mini Project">Mini Project</option>
                               <option value="M.Sc.">M.Sc.</option>
                               <option value="SLI">SLI</option>
@@ -1046,8 +1053,12 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                               <input
                                  type="file"
                                  id={`cert-upload-${semester}-${index}`}
-                                 accept=".pdf"
-                                 onChange={(e) => handleInputChange(semester, index, 'certificateFile', e.target.files[0])}
+                                 accept={getAcceptAttribute(FILE_TYPES.pdfOnly)}
+                                 onChange={(e) => handleValidatedFileInput(
+                                    e,
+                                    (file) => handleInputChange(semester, index, 'certificateFile', file),
+                                    { allowedExtensions: FILE_TYPES.pdfOnly, label: 'Project evidence' }
+                                 )}
                                  className="file-input-hidden"
                               />
                               <label

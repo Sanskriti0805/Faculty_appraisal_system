@@ -258,13 +258,31 @@ exports.saveResponses = async (req, res) => {
     try {
         const { faculty_id, submission_id, responses } = req.body;
         const sessionId = await getCurrentSessionWindow(db);
-        for (const resp of responses) {
+        const responseList = Array.isArray(responses) ? responses : [];
+
+        if (submission_id) {
             await db.query(
-                `INSERT INTO dynamic_responses (faculty_id, session_id, field_id, submission_id, value) 
-                 VALUES (?, ?, ?, ?, ?) 
-                 ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = CURRENT_TIMESTAMP`,
-                [faculty_id, sessionId, resp.field_id, submission_id || null, JSON.stringify(resp.value)]
+                `DELETE FROM dynamic_responses
+                 WHERE faculty_id = ? AND session_id = ? AND submission_id = ?`,
+                [faculty_id, sessionId, submission_id]
             );
+
+            for (const resp of responseList) {
+                await db.query(
+                    `INSERT INTO dynamic_responses (faculty_id, session_id, field_id, submission_id, value)
+                     VALUES (?, ?, ?, ?, ?)`,
+                    [faculty_id, sessionId, resp.field_id, submission_id, JSON.stringify(resp.value)]
+                );
+            }
+        } else {
+            for (const resp of responseList) {
+                await db.query(
+                    `INSERT INTO dynamic_responses (faculty_id, session_id, field_id, submission_id, value) 
+                     VALUES (?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = CURRENT_TIMESTAMP`,
+                    [faculty_id, sessionId, resp.field_id, null, JSON.stringify(resp.value)]
+                );
+            }
         }
         res.status(200).json({ success: true, message: 'Responses saved' });
     } catch (error) {

@@ -5,6 +5,7 @@ import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import apiClient from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const deleteIgnoringNotFound = async (deleteUrlBuilder, ids, token) => {
   const validIds = (ids || []).filter(id => Number.isFinite(Number(id)))
@@ -42,9 +43,11 @@ const Consultancy = ({ initialData, readOnly }) => {
   ])
 
   useEffect(() => {
-    if (initialData && initialData.length > 0) {
-      setPersistedConsultancyIds(initialData.map(c => c.id).filter(Boolean))
-      setConsultancies(initialData.map((c, index) => ({
+    const rows = Array.isArray(initialData) ? initialData : (initialData ? [initialData] : [])
+
+    if (rows.length > 0) {
+      setPersistedConsultancyIds(rows.map(c => c.id).filter(Boolean))
+      setConsultancies(rows.map((c, index) => ({
         id: c.id || index + 1,
         organisation: c.organization || '',
         project: c.project_title || '',
@@ -274,7 +277,12 @@ const Consultancy = ({ initialData, readOnly }) => {
           type="file"
           id={`file-${consultancy.id}`}
           style={{ display: 'none' }}
-          onChange={(e) => handleFileChange(consultancy.id, e.target.files[0])}
+          accept={getAcceptAttribute(FILE_TYPES.documents)}
+          onChange={(e) => handleValidatedFileInput(
+            e,
+            (file) => handleFileChange(consultancy.id, file),
+            { allowedExtensions: FILE_TYPES.documents, label: 'Evidence' }
+          )}
         />
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
           <label htmlFor={`file-${consultancy.id}`} style={{ cursor: 'pointer', color: consultancy.evidenceFile ? '#5cb85c' : '#5b8fc7' }}>

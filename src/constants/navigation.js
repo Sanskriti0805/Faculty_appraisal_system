@@ -11,7 +11,7 @@ export const FORM_SEQUENCE = [
   { name: 'Patents', path: '/patents' },
   { name: 'Technology Transfer', path: '/technology-transfer' },
   { name: 'Paper Review', path: '/paper-review' },
-  { name: 'Conference Sessions', path: '/conference-sessions' },
+  { name: 'Talks and Conferences', path: '/talks-and-conferences' },
   { name: 'Keynotes Talks', path: '/keynotes-talks' },
   { name: 'Conferences Outside', path: '/conferences-outside' },
   { name: 'Other Activities', path: '/other-activities' },

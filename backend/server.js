@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { multer } = require('./middleware/upload');
 require('dotenv').config();
 
 const app = express();
@@ -68,9 +69,15 @@ app.get('/api/health', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({
+  const isUploadError = err instanceof multer.MulterError || err.code === 'INVALID_FILE_TYPE';
+  const statusCode = err.statusCode || (isUploadError ? 400 : 500);
+  const message = err.code === 'LIMIT_FILE_SIZE'
+    ? 'File is too large. Upload a file up to 10MB.'
+    : (err.message || 'Internal Server Error');
+
+  res.status(statusCode).json({
     success: false,
-    message: err.message || 'Internal Server Error'
+    message
   });
 });
 

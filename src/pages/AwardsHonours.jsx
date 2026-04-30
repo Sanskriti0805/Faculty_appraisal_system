@@ -6,6 +6,7 @@ import FilePreviewButton from '../components/FilePreviewButton'
 import { awardsService } from '../services/awardsService'
 import { useAuth } from '../context/AuthContext'
 import { showConfirm } from '../utils/appDialogs'
+import { FILE_TYPES, getAcceptAttribute, validateUploadFile } from '../utils/fileValidation'
 
 const AwardsHonours = ({ initialData, readOnly }) => {
   const { user } = useAuth()
@@ -49,7 +50,14 @@ const AwardsHonours = ({ initialData, readOnly }) => {
   }
 
   const handleFileChange = (e) => {
-    setFormData({ ...formData, evidenceFile: e.target.files[0] })
+    const file = e.target.files?.[0] || null
+    const result = validateUploadFile(file, { allowedExtensions: FILE_TYPES.documents, label: 'Evidence' })
+    if (!result.valid) {
+      showToast(result.message)
+      e.target.value = ''
+      return
+    }
+    setFormData({ ...formData, evidenceFile: file })
   }
 
   const persistCurrentAward = async ({ showSuccessAlert = true, requireAwardName = true } = {}) => {
@@ -249,7 +257,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
                 <input
                   type="file"
                   id="award-evidence"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  accept={getAcceptAttribute(FILE_TYPES.documents)}
                   onChange={handleFileChange}
                   style={{ display: 'none' }}
                 />

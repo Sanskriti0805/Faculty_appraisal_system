@@ -137,9 +137,25 @@ exports.deleteTeachingInnovation = async (req, res) => {
 
 exports.deleteInstitutionalContribution = async (req, res) => {
     try {
-        const sessionId = await getCurrentSessionWindow(db);
-        await db.query('DELETE FROM institutional_contributions WHERE id = ? AND session_id = ?', [req.params.id, sessionId]);
-        res.json({ success: true, message: 'Deleted successfully' });
+        const facultyInfoId = await resolveFacultyInfoId({
+            facultyId: req.user?.id,
+            email: req.user?.email
+        });
+
+        if (!facultyInfoId) {
+            return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+        }
+
+        const [result] = await db.query(
+            'DELETE FROM institutional_contributions WHERE id = ? AND faculty_id = ?',
+            [req.params.id, facultyInfoId]
+        );
+
+        const message = result.affectedRows === 0
+            ? 'Institutional contribution was already deleted'
+            : 'Deleted successfully';
+
+        res.json({ success: true, message });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

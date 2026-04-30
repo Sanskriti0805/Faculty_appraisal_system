@@ -21,16 +21,24 @@ const storage = multer.diskStorage({
 });
 
 // File filter
-const fileFilter = (req, file, cb) => {
-  // Allowed file types
-  const allowedTypes = /pdf|doc|docx|jpg|jpeg|png/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+const ALLOWED_FILE_MESSAGE = 'Invalid file type. Upload PDF, DOC, DOCX, JPG, JPEG, or PNG files only.';
 
-  if (extname && mimetype) {
+const fileFilter = (req, file, cb) => {
+  // Allowed file extensions
+  const allowedExts = /pdf|doc|docx|jpg|jpeg|png/i;
+  const extname = allowedExts.test(path.extname(file.originalname).toLowerCase());
+  
+  // Basic mimetype check (allowing generic octet-stream and msword)
+  const allowedMimeTypes = /pdf|msword|wordprocessingml|jpg|jpeg|png|image|octet-stream/i;
+  const mimetype = allowedMimeTypes.test(file.mimetype);
+
+  if (extname) {
     return cb(null, true);
   } else {
-    cb(new Error('Only PDF, DOC, DOCX, JPG, JPEG, and PNG files are allowed!'));
+    const error = new Error(ALLOWED_FILE_MESSAGE);
+    error.code = 'INVALID_FILE_TYPE';
+    error.statusCode = 400;
+    cb(error);
   }
 };
 
@@ -54,6 +62,8 @@ const uploadMultiple = multer({
 });
 
 module.exports = {
+  multer,
+  ALLOWED_FILE_MESSAGE,
   upload,
   uploadMultiple,
   uploadSingle: upload.single.bind(upload),

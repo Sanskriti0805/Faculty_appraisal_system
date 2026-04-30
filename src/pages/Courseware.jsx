@@ -6,6 +6,7 @@ import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
 import { legacySectionsService } from '../services/legacySectionsService'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const Courseware = () => {
   const location = useLocation()
@@ -190,8 +191,12 @@ const Courseware = () => {
                   <input
                     type="file"
                     id={`lab-manual-upload-${index}`}
-                    accept=".pdf"
-                    onChange={(e) => handleInputChange(index, 'labManualFile', e.target.files[0])}
+                    accept={getAcceptAttribute(FILE_TYPES.pdfOnly)}
+                    onChange={(e) => handleValidatedFileInput(
+                      e,
+                      (file) => handleInputChange(index, 'labManualFile', file),
+                      { allowedExtensions: FILE_TYPES.pdfOnly, label: 'Lab Manual' }
+                    )}
                     className="file-input-hidden"
                     style={{ display: 'none' }}
                   />

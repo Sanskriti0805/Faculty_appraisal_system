@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, X, Upload, ExternalLink, Trash2, Eye, RotateCw, CheckCircle, BookOpen, Award, FileText } from 'lucide-react'
+import { Plus, X, Upload, ExternalLink, Trash2, Eye, RotateCw, CheckCircle, BookOpen, Award, FileText, Users } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FormPages.css'
 import { publicationsService } from '../services/publicationsService'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
+import { showConfirm } from '../utils/appDialogs'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const isNotFoundError = (error) => error?.response?.status === 404
 
@@ -40,6 +42,8 @@ const getEmptyJournalEntry = () => ({
 const getEmptyConferenceEntry = () => ({
   details: '',
   typeOfConference: '',
+  dateFrom: '',
+  dateTo: '',
   evidenceFile: null,
   evidence_file: null
 })
@@ -83,6 +87,17 @@ const normalizePeople = (value) => {
   return normalized.length > 0 ? normalized : [{ first: '', middle: '', last: '' }]
 }
 
+const normalizeDateInput = (value) => {
+  if (!value) return ''
+
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return String(value).slice(0, 10)
+  }
+
+  return date.toISOString().slice(0, 10)
+}
+
 const ResearchPublications = ({ initialData, readOnly }) => {
   const { user } = useAuth()
   const [publicationId, setPublicationId] = useState(null) // Track if editing existing publication
@@ -96,6 +111,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
   // Summary State for Save-to-Review workflow
   const [showFinalSummary, setShowFinalSummary] = useState(false)
   const [summaryData, setSummaryData] = useState([])
+
+  const markDraftChanged = () => {
+    setShowFinalSummary(false)
+  }
 
   const fetchPersistedPublications = async () => {
     try {
@@ -131,6 +150,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       setConferenceEntries([{
         details: data.details || data.title || '',
         typeOfConference: data.type_of_conference || '',
+        dateFrom: normalizeDateInput(data.date_from),
+        dateTo: normalizeDateInput(data.date_to),
         evidence_file: data.evidence_file
       }])
     } else if (data.publication_type === 'Monographs') {
@@ -226,6 +247,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           conferences.map((entry) => ({
             details: entry.details || entry.title || '',
             typeOfConference: entry.type_of_conference || '',
+            dateFrom: normalizeDateInput(entry.date_from),
+            dateTo: normalizeDateInput(entry.date_to),
             evidenceFile: null,
             evidence_file: entry.evidence_file || null
           }))
@@ -409,80 +432,95 @@ const ResearchPublications = ({ initialData, readOnly }) => {
   }
 
   const addBookChapterEntry = () => {
+    markDraftChanged()
     setBookChapterEntries([...bookChapterEntries, getEmptyBookChapterEntry()])
   }
 
   const removeBookChapterEntry = (index) => {
     if (bookChapterEntries.length > 1) {
+      markDraftChanged()
       setBookChapterEntries(bookChapterEntries.filter((_, i) => i !== index))
     }
   }
 
   const updateBookEntryField = (index, field, value) => {
+    markDraftChanged()
     const updatedEntries = [...bookChapterEntries]
     updatedEntries[index][field] = value
     setBookChapterEntries(updatedEntries)
   }
 
   const addTextbookEntry = () => {
+    markDraftChanged()
     setTextbookEntries([...textbookEntries, getEmptyTextbookEntry()])
   }
 
   const removeTextbookEntry = (index) => {
     if (textbookEntries.length > 1) {
+      markDraftChanged()
       setTextbookEntries(textbookEntries.filter((_, i) => i !== index))
     }
   }
 
   const updateTextbookEntryField = (index, field, value) => {
+    markDraftChanged()
     const updatedEntries = [...textbookEntries]
     updatedEntries[index][field] = value
     setTextbookEntries(updatedEntries)
   }
 
   const addBookEditedEntry = () => {
+    markDraftChanged()
     setBookEditedEntries([...bookEditedEntries, getEmptyBookEditedEntry()])
   }
 
   const removeBookEditedEntry = (index) => {
     if (bookEditedEntries.length > 1) {
+      markDraftChanged()
       setBookEditedEntries(bookEditedEntries.filter((_, i) => i !== index))
     }
   }
 
   const addJournalEntry = () => {
+    markDraftChanged()
     setJournalEntries([...journalEntries, getEmptyJournalEntry()])
   }
 
   const removeJournalEntry = (index) => {
     if (journalEntries.length > 1) {
+      markDraftChanged()
       setJournalEntries(journalEntries.filter((_, i) => i !== index))
     }
   }
 
   const updateJournalEntryField = (index, field, value) => {
+    markDraftChanged()
     const updatedEntries = [...journalEntries]
     updatedEntries[index][field] = value
     setJournalEntries(updatedEntries)
   }
 
   const addConferenceEntry = () => {
+    markDraftChanged()
     setConferenceEntries([...conferenceEntries, getEmptyConferenceEntry()])
   }
 
   const removeConferenceEntry = (index) => {
     if (conferenceEntries.length > 1) {
+      markDraftChanged()
       setConferenceEntries(conferenceEntries.filter((_, i) => i !== index))
     }
   }
 
   const updateConferenceEntryField = (index, field, value) => {
+    markDraftChanged()
     const updatedEntries = [...conferenceEntries]
     updatedEntries[index][field] = value
     setConferenceEntries(updatedEntries)
   }
 
   const updateBookEditedEntryField = (index, field, value) => {
+    markDraftChanged()
     const updatedEntries = [...bookEditedEntries]
     updatedEntries[index][field] = value
     setBookEditedEntries(updatedEntries)
@@ -581,7 +619,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
 
           const entryData = {
             ...publicationData,
-            sub_type: 'Journal',
+            sub_type: entry.quartile,
             title: entry.details.substring(0, 255),
             details: entry.details,
             quartile: entry.quartile,
@@ -600,12 +638,19 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         for (const entry of conferenceEntries) {
           const hasDetails = entry.details && entry.details.trim()
           const hasType = Boolean(entry.typeOfConference)
+          const hasDateFrom = Boolean(entry.dateFrom)
+          const hasDateTo = Boolean(entry.dateTo)
           const hasAnything = hasDetails || hasType
 
           if (!hasAnything) continue
 
           if (hasDetails && !hasType) {
             window.appToast('Please select the type of conference for the conference entry.')
+            return false
+          }
+
+          if (hasDetails && (!hasDateFrom || !hasDateTo)) {
+            window.appToast('Please provide both Date From and Date To for the conference entry.')
             return false
           }
 
@@ -623,6 +668,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             title: entry.details.substring(0, 255),
             details: entry.details,
             type_of_conference: entry.typeOfConference,
+            date_from: normalizeDateInput(entry.dateFrom),
+            date_to: normalizeDateInput(entry.dateTo),
             evidence_file: evidencePayload.evidence_file,
             existing_evidence_file: evidencePayload.existing_evidence_file
           }
@@ -985,8 +1032,12 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 <input
                   type="file"
                   id={`evidence-upload-journal-${index}`}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={(e) => updateJournalEntryField(index, 'evidenceFile', e.target.files[0])}
+                  accept={getAcceptAttribute(FILE_TYPES.documents)}
+                  onChange={(e) => handleValidatedFileInput(
+                    e,
+                    (file) => updateJournalEntryField(index, 'evidenceFile', file),
+                    { allowedExtensions: FILE_TYPES.documents, label: 'Journal evidence' }
+                  )}
                   style={{ display: 'none' }}
                 />
                 <label
@@ -1117,6 +1168,29 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             </select>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="form-field-vertical">
+              <label>Date From <span style={{ color: 'red' }}>*</span></label>
+              <input
+                type="date"
+                value={entry.dateFrom}
+                onChange={(e) => updateConferenceEntryField(index, 'dateFrom', e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+                disabled={readOnly}
+              />
+            </div>
+            <div className="form-field-vertical">
+              <label>Date To <span style={{ color: 'red' }}>*</span></label>
+              <input
+                type="date"
+                value={entry.dateTo}
+                onChange={(e) => updateConferenceEntryField(index, 'dateTo', e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
+                disabled={readOnly}
+              />
+            </div>
+          </div>
+
           {readOnly ? (
             entry.evidence_file && (
               <div className="form-field-vertical" style={{ marginTop: '1.5rem' }}>
@@ -1145,8 +1219,12 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 <input
                   type="file"
                   id={`evidence-upload-conference-${index}`}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={(e) => updateConferenceEntryField(index, 'evidenceFile', e.target.files[0])}
+                  accept={getAcceptAttribute(FILE_TYPES.documents)}
+                  onChange={(e) => handleValidatedFileInput(
+                    e,
+                    (file) => updateConferenceEntryField(index, 'evidenceFile', file),
+                    { allowedExtensions: FILE_TYPES.documents, label: 'Conference evidence' }
+                  )}
                   style={{ display: 'none' }}
                 />
                 <label
@@ -1291,8 +1369,12 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 <input
                   type="file"
                   id={`evidence-upload-book-chapter-${index}`}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={(e) => updateBookEntryField(index, 'evidenceFile', e.target.files[0])}
+                  accept={getAcceptAttribute(FILE_TYPES.documents)}
+                  onChange={(e) => handleValidatedFileInput(
+                    e,
+                    (file) => updateBookEntryField(index, 'evidenceFile', file),
+                    { allowedExtensions: FILE_TYPES.documents, label: 'Book chapter evidence' }
+                  )}
                   style={{ display: 'none' }}
                 />
                 <label
@@ -1428,8 +1510,12 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 <input
                   type="file"
                   id={`evidence-upload-book-edited-${index}`}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={(e) => updateBookEditedEntryField(index, 'evidenceFile', e.target.files[0])}
+                  accept={getAcceptAttribute(FILE_TYPES.documents)}
+                  onChange={(e) => handleValidatedFileInput(
+                    e,
+                    (file) => updateBookEditedEntryField(index, 'evidenceFile', file),
+                    { allowedExtensions: FILE_TYPES.documents, label: 'Book edited evidence' }
+                  )}
                   style={{ display: 'none' }}
                 />
                 <label
@@ -1565,8 +1651,12 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 <input
                   type="file"
                   id={`evidence-upload-textbook-${index}`}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={(e) => updateTextbookEntryField(index, 'evidenceFile', e.target.files[0])}
+                  accept={getAcceptAttribute(FILE_TYPES.documents)}
+                  onChange={(e) => handleValidatedFileInput(
+                    e,
+                    (file) => updateTextbookEntryField(index, 'evidenceFile', file),
+                    { allowedExtensions: FILE_TYPES.documents, label: 'Book evidence' }
+                  )}
                   style={{ display: 'none' }}
                 />
                 <label
@@ -1644,7 +1734,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       <textarea
         rows="8"
         value={otherDetails}
-        onChange={(e) => setOtherDetails(e.target.value)}
+        onChange={(e) => {
+          markDraftChanged()
+          setOtherDetails(e.target.value)
+        }}
         placeholder="Provide details here"
         style={{
           width: '100%',
@@ -1686,8 +1779,15 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             <input
               type="file"
               id="evidence-upload-other"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              onChange={(e) => setEvidenceFile(e.target.files[0])}
+              accept={getAcceptAttribute(FILE_TYPES.documents)}
+              onChange={(e) => handleValidatedFileInput(
+                e,
+                (file) => {
+                  markDraftChanged()
+                  setEvidenceFile(file)
+                },
+                { allowedExtensions: FILE_TYPES.documents, label: 'Publication evidence' }
+              )}
               style={{ display: 'none' }}
             />
             <label
@@ -1714,6 +1814,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
+                    markDraftChanged()
                     setEvidenceFile(null)
                     setPersistedEvidenceFile('')
                   }}
@@ -1741,7 +1842,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
   )
 
   const handleDeletePublication = async (id) => {
-    const confirmed = await window.showConfirm({
+    const confirmed = await showConfirm({
       title: 'Delete Publication',
       message: 'Are you sure you want to delete this publication? This action cannot be undone.',
       confirmText: 'Delete',
@@ -1903,7 +2004,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             </label>
             <select
               value={publicationType}
-              onChange={(e) => setPublicationType(e.target.value)}
+              onChange={(e) => {
+                markDraftChanged()
+                setPublicationType(e.target.value)
+              }}
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -1932,7 +2036,10 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               </label>
               <select
                 value={bookSubType}
-                onChange={(e) => setBookSubType(e.target.value)}
+                onChange={(e) => {
+                  markDraftChanged()
+                  setBookSubType(e.target.value)
+                }}
                 style={{
                   width: '100%',
                   padding: '0.75rem',

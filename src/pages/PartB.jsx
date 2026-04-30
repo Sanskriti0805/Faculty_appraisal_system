@@ -6,6 +6,7 @@ import FormActions from '../components/FormActions'
 import { useAuth } from '../context/AuthContext'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { showConfirm } from '../utils/appDialogs'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const API_BASE = `http://${window.location.hostname}:5001/api`
 
@@ -562,8 +563,12 @@ const PartB = ({ initialData, readOnly }) => {
                         <input
                           type="file"
                           id={`evidence-upload-${goal.id}`}
-                          accept=".pdf,image/*"
-                          onChange={(e) => handleInputChange(goal.id, 'evidenceFile', e.target.files[0])}
+                          accept={getAcceptAttribute(FILE_TYPES.pdfAndImages)}
+                          onChange={(e) => handleValidatedFileInput(
+                            e,
+                            (file) => handleInputChange(goal.id, 'evidenceFile', file),
+                            { allowedExtensions: FILE_TYPES.pdfAndImages, label: 'Goal evidence' }
+                          )}
                           className="file-input-hidden"
                         />
                         <label

@@ -5,6 +5,7 @@ import { grantsService } from '../services/grantsService'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const isNotFoundError = (error) => error?.response?.status === 404
 
@@ -705,9 +706,13 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                             )}
                             <input
                               type="file"
-                              onChange={(e) => handleFileUpload(index, e.target.files[0])}
+                              onChange={(e) => handleValidatedFileInput(
+                                e,
+                                (file) => handleFileUpload(index, file),
+                                { allowedExtensions: FILE_TYPES.documents, label: 'External grant evidence' }
+                              )}
                               style={{ display: 'none' }}
-                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                              accept={getAcceptAttribute(FILE_TYPES.documents)}
                             />
                           </label>
                         )}
@@ -942,13 +947,17 @@ const ResearchGrants = ({ initialData, readOnly }) => {
                             )}
                             <input
                               type="file"
-                              onChange={(e) => {
-                                const updated = [...proposals]
-                                updated[index].evidenceFile = e.target.files[0]
-                                setProposals(updated)
-                              }}
+                              onChange={(e) => handleValidatedFileInput(
+                                e,
+                                (file) => {
+                                  const updated = [...proposals]
+                                  updated[index].evidenceFile = file
+                                  setProposals(updated)
+                                },
+                                { allowedExtensions: FILE_TYPES.documents, label: 'Research proposal evidence' }
+                              )}
                               style={{ display: 'none' }}
-                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                              accept={getAcceptAttribute(FILE_TYPES.documents)}
                             />
                           </label>
                         )}

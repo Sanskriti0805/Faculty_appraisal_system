@@ -6,6 +6,7 @@ import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
 import { legacySectionsService } from '../services/legacySectionsService'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const getEmptyVisitEntry = () => ({
   details: '',
@@ -264,8 +265,12 @@ const OtherActivities = () => {
                       <input
                         type="file"
                         style={{ display: 'none' }}
-                        onChange={(e) => handleVisitFileChange(index, e.target.files?.[0] || null)}
-                        accept=".pdf"
+                        onChange={(e) => handleValidatedFileInput(
+                          e,
+                          (file) => handleVisitFileChange(index, file),
+                          { allowedExtensions: FILE_TYPES.pdfOnly, label: 'Visit evidence' }
+                        )}
+                        accept={getAcceptAttribute(FILE_TYPES.pdfOnly)}
                       />
                     </label>
                   </div>

@@ -203,9 +203,18 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
   const effectiveNextPath = getNextEditablePath(currentPath);
   const effectivePrevPath = getPreviousEditablePath(currentPath);
+  const currentPathEditable = isPathEditable(currentPath);
+  const currentPathLocked = user?.role === 'faculty' && !currentPathEditable;
+  const lockedMessage = submissionStatus === 'sent_back'
+    ? 'This section is locked for the current edit cycle.'
+    : 'This section is locked after submission. Request edits or wait for Dofa to send it back.';
 
   const handleSaveOnly = async () => {
     try {
+      if (currentPathLocked) {
+        setToast(lockedMessage);
+        return;
+      }
       if (!validateMandatoryFields()) return;
       await onSave();
     } catch (error) {
@@ -215,6 +224,14 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
   const handleSaveAndNext = async () => {
     try {
+      if (currentPathLocked) {
+        setToast(lockedMessage);
+        if (effectiveNextPath) {
+          navigate(effectiveNextPath);
+          window.scrollTo(0, 0);
+        }
+        return;
+      }
       if (!validateMandatoryFields()) return;
 
       // Custom confirmation for specific sections before moving ahead.
@@ -338,17 +355,18 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
         <button
           type="button"
           onClick={handleSaveOnly}
-          disabled={loading}
+          disabled={loading || currentPathLocked}
+          title={currentPathLocked ? lockedMessage : undefined}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
             padding: '0.75rem 1.5rem',
-            backgroundColor: '#6c757d',
+            backgroundColor: currentPathLocked ? '#adb5bd' : '#6c757d',
             color: 'white',
             border: 'none',
             borderRadius: '6px',
-            cursor: loading ? 'not-allowed' : 'pointer',
+            cursor: (loading || currentPathLocked) ? 'not-allowed' : 'pointer',
             fontWeight: '500',
             transition: 'all 0.2s'
           }}
@@ -361,18 +379,19 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
           <button
             type="button"
             onClick={handleSaveAndNext}
-            disabled={loading}
+            disabled={loading || (currentPathLocked && !effectiveNextPath)}
+            title={currentPathLocked ? lockedMessage : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.5rem',
               padding: '0.75rem 2rem',
-              backgroundColor: nextLabel === 'Submit for Review' ? '#28a745' : '#5cb85c',
+              backgroundColor: currentPathLocked ? '#adb5bd' : (nextLabel === 'Submit for Review' ? '#28a745' : '#5cb85c'),
               color: 'white',
               border: 'none',
               borderRadius: '6px',
-              cursor: loading ? 'not-allowed' : 'pointer',
+              cursor: (loading || (currentPathLocked && !effectiveNextPath)) ? 'not-allowed' : 'pointer',
               fontWeight: '600',
               boxShadow: nextLabel === 'Submit for Review' ? '0 4px 6px rgba(40, 167, 69, 0.2)' : '0 4px 6px rgba(92, 184, 92, 0.2)',
               transition: 'all 0.2s',

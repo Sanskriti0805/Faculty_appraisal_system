@@ -1,4 +1,4 @@
-﻿const db = require('../config/database');
+const db = require('../config/database');
 
 let editRequestsTableEnsured = false;
 let sessionFinalLockColumnsEnsured = false;
@@ -163,11 +163,11 @@ function requireSectionEditAccess(sectionKey) {
 
       const { academicYear, fromSession } = await getTargetAcademicYear();
 
-      // Prefer current academic year; fallback to latest submission if none in current year.
+      // Prefer current academic year; fallback to latest Form A submission if none in current year.
       let [rows] = await db.query(
         `SELECT id, status, academic_year, COALESCE(locked, 0) as locked
          FROM submissions
-         WHERE faculty_id = ? AND academic_year = ?
+         WHERE faculty_id = ? AND academic_year = ? AND UPPER(COALESCE(form_type, 'A')) = 'A'
          ORDER BY id DESC
          LIMIT 1`,
         [facultyId, academicYear]
@@ -177,7 +177,7 @@ function requireSectionEditAccess(sectionKey) {
         [rows] = await db.query(
           `SELECT id, status, academic_year, COALESCE(locked, 0) as locked
            FROM submissions
-           WHERE faculty_id = ?
+           WHERE faculty_id = ? AND UPPER(COALESCE(form_type, 'A')) = 'A'
            ORDER BY id DESC
            LIMIT 1`,
           [facultyId]
@@ -226,6 +226,12 @@ function requireSectionEditAccess(sectionKey) {
           code: 'SUBMISSION_LOCKED',
           message: 'Submission is locked after submit. Request edits or wait for Dofa to send back.'
         });
+      }
+
+      // Part B remains the faculty's editable goal-setting/resubmission page even when
+      // other sections are locked down by an approved edit request.
+      if (sectionKey === 'part_b') {
+        return next();
       }
 
       // sent_back: check section-level restriction if there is an approved edit request.

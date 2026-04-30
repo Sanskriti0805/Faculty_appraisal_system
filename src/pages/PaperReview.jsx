@@ -5,6 +5,7 @@ import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import apiClient from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const getEmptyReviewEntry = () => ({
   paperType: '',
@@ -434,8 +435,12 @@ const PaperReview = () => {
                     key={fileInputKey}
                     type="file"
                     style={{ display: 'none' }}
-                    onChange={(e) => setEvidenceFile(e.target.files[0])}
-                    accept=".pdf"
+                    onChange={(e) => handleValidatedFileInput(
+                      e,
+                      setEvidenceFile,
+                      { allowedExtensions: FILE_TYPES.pdfOnly, label: 'Paper review evidence' }
+                    )}
+                    accept={getAcceptAttribute(FILE_TYPES.pdfOnly)}
                   />
                 </label>
               </div>

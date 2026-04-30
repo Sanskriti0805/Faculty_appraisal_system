@@ -21,6 +21,9 @@ async function getTargetAcademicYear() {
 }
 
 let sessionFinalLockColumnsEnsured = false;
+let submissionStatusEnumEnsured = false;
+
+const SUBMISSION_STATUS_ENUM_SQL = "ENUM('draft','submitted','submitted_hod','under_review','under_review_hod','hod_approved','approved','sent_back')";
 
 async function ensureColumnExists(tableName, columnName, definitionSql) {
   const [rows] = await db.query(
@@ -44,6 +47,29 @@ async function ensureSessionFinalLockColumns() {
   await ensureColumnExists('appraisal_sessions', 'final_locked_at', 'TIMESTAMP NULL DEFAULT NULL');
   await ensureColumnExists('appraisal_sessions', 'final_locked_by', 'INT NULL DEFAULT NULL');
   sessionFinalLockColumnsEnsured = true;
+}
+
+async function ensureSubmissionStatusEnum() {
+  if (submissionStatusEnumEnsured) return;
+
+  const [rows] = await db.query(
+    `SELECT COLUMN_TYPE
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'submissions'
+       AND COLUMN_NAME = 'status'
+     LIMIT 1`
+  );
+
+  const columnType = String(rows[0]?.COLUMN_TYPE || '').toLowerCase();
+  const requiredStatuses = ['submitted_hod', 'under_review_hod', 'hod_approved'];
+  const needsMigration = rows.length === 0 || requiredStatuses.some((value) => !columnType.includes(`'${value}'`));
+
+  if (needsMigration) {
+    await db.query(`ALTER TABLE submissions MODIFY COLUMN status ${SUBMISSION_STATUS_ENUM_SQL} DEFAULT 'draft'`);
+  }
+
+  submissionStatusEnumEnsured = true;
 }
 
 async function getSessionFinalLockRecord(academicYear) {
@@ -146,6 +172,49 @@ const queryFacultySectionRows = async ({ tableName, facultyInfoId, sessionWindow
   }
 
   return db.query(sql, params);
+};
+
+const attachPublicationPeople = async (publications = []) => {
+  if (!Array.isArray(publications) || publications.length === 0) return publications || [];
+
+  const publicationIds = publications
+    .map((publication) => Number(publication?.id))
+    .filter((id) => Number.isFinite(id));
+
+  if (publicationIds.length === 0) return publications;
+
+  const placeholders = publicationIds.map(() => '?').join(',');
+  const [authors] = await db.query(
+    `SELECT * FROM authors WHERE publication_id IN (${placeholders})`,
+    publicationIds
+  );
+  const [editors] = await db.query(
+    `SELECT * FROM editors WHERE publication_id IN (${placeholders})`,
+    publicationIds
+  );
+
+  const normalizePerson = (person = {}) => ({
+    ...person,
+    first: person.first || person.firstName || person.first_name || '',
+    middle: person.middle || person.middleName || person.middle_name || '',
+    last: person.last || person.lastName || person.last_name || ''
+  });
+
+  const groupByPublicationId = (rows = []) => rows.reduce((acc, row) => {
+    const publicationId = Number(row.publication_id);
+    if (!acc[publicationId]) acc[publicationId] = [];
+    acc[publicationId].push(normalizePerson(row));
+    return acc;
+  }, {});
+
+  const authorsByPublication = groupByPublicationId(authors);
+  const editorsByPublication = groupByPublicationId(editors);
+
+  return publications.map((publication) => ({
+    ...publication,
+    authors: authorsByPublication[Number(publication.id)] || [],
+    editors: editorsByPublication[Number(publication.id)] || []
+  }));
 };
 
 const normalizeFormType = (value) => String(value || 'A').trim().toUpperCase();
@@ -402,13 +471,7 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
   ] = await Promise.all([
     db.query('SELECT * FROM faculty_information WHERE id = ?', [fid]),
     queryFacultySectionRows({ tableName: 'courses_taught', facultyInfoId: fid, sessionWindow }),
-    queryFacultySectionRows({
-      tableName: 'research_publications',
-      facultyInfoId: fid,
-      sessionWindow,
-      extraWhere: 'year_of_publication >= ?',
-      extraParams: [yearNum]
-    }),
+    queryFacultySectionRows({ tableName: 'research_publications', facultyInfoId: fid, sessionWindow }),
     queryFacultySectionRows({ tableName: 'research_grants', facultyInfoId: fid, sessionWindow }),
     queryFacultySectionRows({ tableName: 'patents', facultyInfoId: fid, sessionWindow }),
     queryFacultySectionRows({ tableName: 'awards_honours', facultyInfoId: fid, sessionWindow }),
@@ -449,11 +512,13 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
     })
   ]);
 
+  const publicationsWithPeople = await attachPublicationPeople(publications[0] || []);
+
   return {
     submission: sub,
     facultyInfo: facultyInfo[0][0] || {},
     courses: courses[0] || [],
-    publications: publications[0] || [],
+    publications: publicationsWithPeople,
     grants: grants[0] || [],
     patents: patents[0] || [],
     awards: awards[0] || [],
@@ -764,14 +829,10 @@ exports.getSubmissionById = async (req, res) => {
     // Get courses taught
     const [courses] = await queryFacultySectionRows({ tableName: 'courses_taught', facultyInfoId: fid, sessionWindow });
 
-    // Get publications - Filter by year if possible, but keep all as requested for now if no specific year matching logic exists
-    const [publications] = await queryFacultySectionRows({
-      tableName: 'research_publications',
-      facultyInfoId: fid,
-      sessionWindow,
-      extraWhere: 'year_of_publication >= ?',
-      extraParams: [yearNum]
-    });
+    // Get publications saved for this appraisal session. Some publication flows do
+    // not collect year_of_publication, so session scope is the source of truth here.
+    const [publications] = await queryFacultySectionRows({ tableName: 'research_publications', facultyInfoId: fid, sessionWindow });
+    const publicationsWithPeople = await attachPublicationPeople(publications || []);
 
     // Get grants
     const [grants] = await queryFacultySectionRows({ tableName: 'research_grants', facultyInfoId: fid, sessionWindow });
@@ -849,7 +910,7 @@ exports.getSubmissionById = async (req, res) => {
         submission: sub,
         facultyInfo: facultyInfo[0] || {},
         courses: courses || [],
-        publications: publications || [],
+        publications: publicationsWithPeople,
         grants: grants || [],
         patents: patents || [],
         awards: awards || [],
@@ -901,6 +962,7 @@ exports.createSubmission = async (req, res) => {
 exports.updateSubmissionStatus = async (req, res) => {
   try {
     await ensureSessionFinalLockColumns();
+    await ensureSubmissionStatusEnum();
     const { id } = req.params;
     const { status, approved_by } = req.body;
     const requesterRole = req.user?.role;

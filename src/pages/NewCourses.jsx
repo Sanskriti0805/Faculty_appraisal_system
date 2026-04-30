@@ -6,6 +6,7 @@ import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import apiClient from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const isNotFoundError = (error) => error?.response?.status === 404
 
@@ -329,9 +330,13 @@ const NewCourses = () => {
                         </span>
                         <input
                           type="file"
-                          onChange={(e) => handleFileUpload(course.id, e.target.files[0])}
+                          onChange={(e) => handleValidatedFileInput(
+                            e,
+                            (file) => handleFileUpload(course.id, file),
+                            { allowedExtensions: FILE_TYPES.documentsNoImages, label: 'CIF file' }
+                          )}
                           style={{ display: 'none' }}
-                          accept=".pdf,.doc,.docx"
+                          accept={getAcceptAttribute(FILE_TYPES.documentsNoImages)}
                         />
                       </label>
                       <div style={{ display: 'flex', marginTop: '4px' }}>

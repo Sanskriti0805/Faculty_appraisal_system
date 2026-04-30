@@ -30,7 +30,7 @@ async function bootstrapDatabaseTables() {
         faculty_id INT NOT NULL,
         academic_year VARCHAR(20) NOT NULL,
         form_type VARCHAR(20) DEFAULT 'A',
-        status ENUM('draft', 'submitted', 'under_review', 'approved', 'sent_back') DEFAULT 'draft',
+        status ENUM('draft', 'submitted', 'submitted_hod', 'under_review', 'under_review_hod', 'hod_approved', 'approved', 'sent_back') DEFAULT 'draft',
         submitted_at TIMESTAMP NULL,
         approved_by INT,
         approved_at TIMESTAMP NULL,
@@ -292,6 +292,30 @@ async function bootstrapDatabaseTables() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_legacy_section_session (faculty_id, session_id, section_key),
         FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+    `);
+
+    // 13. Publication child tables used by the research publications and patents modules
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS authors (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        publication_id INT DEFAULT NULL,
+        patent_id INT DEFAULT NULL,
+        first_name VARCHAR(100),
+        middle_name VARCHAR(100),
+        last_name VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+    `);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS editors (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        publication_id INT DEFAULT NULL,
+        first_name VARCHAR(100),
+        middle_name VARCHAR(100),
+        last_name VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     `);
 

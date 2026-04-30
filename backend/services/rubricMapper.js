@@ -253,6 +253,12 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
     // -- Helper: safely parse float -----------------------------------------
     const f = (v) => parseFloat(v) || 0;
     const norm = (v) => String(v || '').toLowerCase();
+    const getTextCap = (textValue) => {
+      const text = norm(textValue);
+      const match = text.match(/(?:maximum|max)\s+of\s+([0-9]+(?:\.[0-9]+)?)/)
+        || text.match(/(?:maximum|max)\s+([0-9]+(?:\.[0-9]+)?)\s+points/);
+      return match ? Number(match[1]) : null;
+    };
     const resolveTechnologyType = (row = {}) => {
       const explicit = norm(row.technology_type);
       if (explicit.includes('software developed and deployed') || explicit.includes('software')) return 'software_developed_and_deployed';
@@ -287,6 +293,56 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         return Object.values(value).some(v => hasMeaningfulValue(v));
       }
       return false;
+    };
+
+    const projectGuidanceRows = courses.filter((course) =>
+      hasMeaningfulValue(course.project_title) ||
+      hasMeaningfulValue(course.project_type) ||
+      hasMeaningfulValue(course.project_role) ||
+      hasMeaningfulValue(course.student_name) ||
+      hasMeaningfulValue(course.project_duration) ||
+      hasMeaningfulValue(course.project_outcome)
+    );
+
+    const getProjectGuidanceUnits = (rubricText) => {
+      const text = norm(rubricText);
+
+      const fromGuidanceTable = guidance.reduce((sum, g) => {
+        const gType = norm(g.guidance_type || g.type || g.category || g.program_type || g.level);
+        const qty = parseInt(g.count || g.quantity || g.students_count || g.number_of_students || g.number_of_projects || 1, 10) || 1;
+
+        if (text.includes('btp') && gType.includes('btp')) return sum + qty;
+        if ((text.includes('phd') && !text.includes('co-guide')) && gType.includes('phd') && !gType.includes('co')) return sum + qty;
+        if (text.includes('co-guide') && gType.includes('co')) return sum + qty;
+        if ((text.includes('m.tech') || text.includes('m.sc')) && (gType.includes('m.tech') || gType.includes('mtech') || gType.includes('m.sc') || gType.includes('msc'))) return sum + qty;
+        return sum;
+      }, 0);
+
+      const fromProjectRows = projectGuidanceRows.reduce((sum, project) => {
+        const projectType = norm(project.project_type);
+        const projectTitle = norm(project.project_title);
+        const projectRole = norm(project.project_role);
+        const studentCount = parseInt(project.student_count || project.number_of_students || project.students_count || 1, 10) || 1;
+        const projectCount = parseInt(project.number_of_projects || project.project_count || 1, 10) || 1;
+
+        if (text.includes('btp')) {
+          const isBtp = projectType === 'btp' || projectType.includes('btp') || (projectType.includes('b.tech') && projectTitle.includes('btp'));
+          return isBtp ? sum + projectCount : sum;
+        }
+
+        if (text.includes('co-guide')) {
+          return projectRole.includes('co') ? sum + projectCount : sum;
+        }
+
+        if (text.includes('m.tech') || text.includes('m.sc')) {
+          const isMTechOrMSc = projectType.includes('m.tech') || projectType.includes('mtech') || projectType.includes('m.sc') || projectType.includes('msc');
+          return isMTechOrMSc ? sum + studentCount : sum;
+        }
+
+        return sum;
+      }, 0);
+
+      return fromGuidanceTable + fromProjectRows;
     };
 
     // -- Build score map: rubricId -> score ----------------------------------
@@ -428,22 +484,8 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
       // -- 2. Research Guidance (IDs 7-10) -------------------------------
       else if (sec.includes('research guidance')) {
-        if (guidance.length === 0) {
-          score = 0;
-        } else {
-          const units = guidance.reduce((sum, g) => {
-            const gType = norm(g.guidance_type || g.type || g.category || g.program_type || g.level);
-            const qty = parseInt(g.count || g.quantity || g.students_count || g.number_of_students || g.number_of_projects || 1) || 1;
-
-            if (sub.includes('btp') && gType.includes('btp')) return sum + qty;
-            if ((sub.includes('phd') && !sub.includes('co-guide')) && gType.includes('phd') && !gType.includes('co')) return sum + qty;
-            if (sub.includes('co-guide') && gType.includes('co')) return sum + qty;
-            if ((sub.includes('m.tech') || sub.includes('m.sc')) && (gType.includes('m.tech') || gType.includes('mtech') || gType.includes('m.sc') || gType.includes('msc'))) return sum + qty;
-            return sum;
-          }, 0);
-
-          score = units > 0 ? Math.min(units * max, max) : 0;
-        }
+        const units = getProjectGuidanceUnits(sub);
+        score = units > 0 ? units * max : 0;
       }
 
       // -- 3. New Courses designed (ID 11) -------------------------------
@@ -453,24 +495,30 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
       // -- 4. Research Publications ---------------------------------------
       else if (sec.includes('research publications')) {
+        const perMatch = (fallbackMax) => {
+          const configured = f(rubric.per_unit_marks);
+          if (configured > 0) return configured;
+          return fallbackMax;
+        };
+
         if (sub.includes('q1')) {
           const count = publications.filter(p =>
             (p.publication_type || '').toLowerCase() === 'journal' &&
             (p.sub_type || '').toUpperCase().includes('Q1')
           ).length;
-          score = Math.min(count * max, max);
+          score = Math.min(count * perMatch(max), max);
         } else if (sub.includes('q2')) {
           const count = publications.filter(p =>
             (p.publication_type || '').toLowerCase() === 'journal' &&
             (p.sub_type || '').toUpperCase().includes('Q2')
           ).length;
-          score = Math.min(count * max, max);
+          score = Math.min(count * perMatch(max), max);
         } else if (sub.includes('q3')) {
           const count = publications.filter(p =>
             (p.publication_type || '').toLowerCase() === 'journal' &&
             (p.sub_type || '').toUpperCase().includes('Q3')
           ).length;
-          score = Math.min(count * max, max);
+          score = Math.min(count * perMatch(max), max);
         } else if (sub.includes('q4') || sub.includes('scopus') || sub.includes('peer')) {
           const count = publications.filter(p =>
             (p.publication_type || '').toLowerCase() === 'journal' &&
@@ -478,7 +526,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
              (p.sub_type || '').toLowerCase().includes('scopus') ||
              (p.sub_type || '').toLowerCase().includes('peer'))
           ).length;
-          score = Math.min(count * max, max);
+          score = Math.min(count * perMatch(max), max);
         } else {
           score = publications.length > 0 ? max : 0;
         }
@@ -501,10 +549,11 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
           ).length;
           score = Math.min(count * max, max);
         } else if (sub.includes('tier 3')) {
-          const count = confPubs.filter(p =>
-            (p.sub_type || '').toLowerCase().includes('tier 3') ||
-            (p.type_of_conference || '').toLowerCase().includes('national')
-          ).length;
+          const count = confPubs.filter(p => {
+            const sType = (p.sub_type || '').toLowerCase();
+            const cType = (p.type_of_conference || '').toLowerCase();
+            return sType.includes('tier 3') || (cType.includes('national') && !cType.includes('international'));
+          }).length;
           score = Math.min(count * max, max);
         } else {
           score = confPubs.length > 0 ? max : 0;
@@ -520,18 +569,24 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
           ).length > 0 ? max : 0;
         } else if (sub.includes('book chapter')) {
           score = publications.filter(p =>
-            (p.publication_type || '').toLowerCase().includes('book chapter')
+            (p.publication_type || '').toLowerCase().includes('book chapter') ||
+            (p.sub_type || '').toLowerCase().includes('book chapter')
           ).length > 0 ? max : 0;
         } else if (sub.includes('book edited')) {
           score = publications.filter(p =>
-            (p.publication_type || '').toLowerCase().includes('book edited')
+            (p.publication_type || '').toLowerCase().includes('book edited') ||
+            (p.sub_type || '').toLowerCase().includes('book edited')
           ).length > 0 ? max : 0;
-        } else if (sub.includes('textbook')) {
+        } else if (sub.includes('textbook') || sub.includes('book')) {
           score = publications.filter(p =>
-            (p.publication_type || '').toLowerCase().includes('textbook')
+            (p.publication_type || '').toLowerCase().includes('textbook') ||
+            (p.sub_type || '').toLowerCase().includes('textbook') ||
+            (p.sub_type || '').toLowerCase() === 'book' ||
+            (p.publication_type || '').toLowerCase().includes('monograph')
           ).length > 0 ? max : 0;
         }
       }
+
 
       // -- 7. Sponsored Projects (Grants) --------------------------------
       else if (sec.includes('sponsored project')) {
@@ -705,7 +760,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
           // Match by project amount
           const isPI = sub.includes('(pi)');
           const matching = consultancy.filter(c => {
-            const amt = f(c.amount) / 100000; // convert to lakhs
+            const amt = f(c.amount); // Consultancy form stores amount directly in INR lakhs.
             const role = (c.role || '').toLowerCase() || 'pi';
             const piMatch = isPI
               ? !role.includes('co')
@@ -740,22 +795,22 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
             if (expected === 'chairperson') return selected === 'chairperson';
             if (expected === 'convenor') return selected === 'convenor' || selected === 'convener';
             if (expected === 'committee member') return selected === 'committee member';
-            if (expected === 'faculty mentor') return selected === 'faculty mentor';
-            if (expected === 'major responsibilities') return selected === 'major responsibilities';
-            if (expected === 'certificate programme') return selected === 'certificate programme' || selected === 'certificate program';
-            if (expected === 'scholarly') return selected === 'scholarly contribution' || selected === 'scholarly';
+            if (expected === 'faculty mentor') return selected === 'faculty mentor' || selected.includes('faculty mentor');
+            if (expected === 'major responsibilities') return selected === 'major responsibilities' || selected.includes('major responsibilities');
+            if (expected === 'certificate programme') return selected === 'certificate programme' || selected === 'certificate program' || selected.includes('certificate programme') || selected.includes('certificate program');
+            if (expected === 'scholarly') return selected === 'scholarly contribution' || selected === 'scholarly' || selected.includes('scholarly articles') || selected.includes('newspaper') || selected.includes('magazine');
             return false;
           }
 
           // Backward compatibility for existing rows that do not have selected position in title.
           if (expected === 'associate dean') return legacy.includes('associate dean');
           if (expected === 'assistant dean') return legacy.includes('assistant dean');
-          if (expected === 'dean') return legacy.includes(' dean') && !legacy.includes('associate dean') && !legacy.includes('assistant dean');
+          if (expected === 'dean') return /\bdean\b/.test(legacy) && !legacy.includes('associate dean') && !legacy.includes('assistant dean');
           if (expected === 'hod') return legacy.includes('hod') || legacy.includes('head of department');
           if (expected === 'chief warden') return legacy.includes('chief warden');
           if (expected === 'associate chief warden') return legacy.includes('associate chief warden');
           if (expected === 'assistant warden') return legacy.includes('assistant warden');
-          if (expected === 'warden') return legacy.includes(' warden') && !legacy.includes('chief warden') && !legacy.includes('associate chief warden') && !legacy.includes('assistant warden');
+          if (expected === 'warden') return /\bwarden\b/.test(legacy) && !legacy.includes('chief warden') && !legacy.includes('associate chief warden') && !legacy.includes('assistant warden');
           if (expected === 'centre co-lead') return legacy.includes('centre co-lead') || legacy.includes('center co-lead');
           if (expected === 'centre lead') return legacy.includes('centre lead') || legacy.includes('center lead');
           if (expected === 'chairperson') return legacy.includes('chairperson');
@@ -773,8 +828,8 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
           if (sub.includes('assistant dean')) return hasPosition(c, 'assistant dean');
           if (sub.includes('dean')) return hasPosition(c, 'dean');
           if (sub.includes('hod')) return hasPosition(c, 'hod');
-          if (sub.includes('chief warden')) return hasPosition(c, 'chief warden');
           if (sub.includes('associate chief warden')) return hasPosition(c, 'associate chief warden');
+          if (sub.includes('chief warden')) return hasPosition(c, 'chief warden');
           if (sub.includes('assistant warden')) return hasPosition(c, 'assistant warden');
           if (sub.includes('warden')) return hasPosition(c, 'warden');
           if (sub.includes('centre co-lead')) return hasPosition(c, 'centre co-lead');
@@ -790,7 +845,9 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         }).length;
 
         if (matchedCount > 0) {
-          if (sub.includes('committee member') || sub.includes('scholarly') || sub.includes('faculty mentor')) {
+          if (sub.includes('scholarly')) {
+            score = Math.min(matchedCount * max, 9);
+          } else if (sub.includes('committee member') || sub.includes('faculty mentor')) {
             score = Math.min(matchedCount * max, 5);
           } else {
             score = max;
@@ -802,13 +859,22 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
       // -- 14. Other Activities ------------------------------------------
       else if (sec.includes('other activities')) {
-        const hasOtherActivity = otherActivities.length > 0 || teachingInnovation.length > 0;
-        score = hasOtherActivity ? max : 0;
+        const activityCount = otherActivities.length + teachingInnovation.length;
+        score = Math.min(activityCount * max, 10);
       }
 
       if (sec.includes('teaching feedback')) {
-        // Teaching Feedback is cumulative per-course; do not clamp to single-rubric max.
+        // Teaching Feedback can be cumulative per-course when rule config allows it.
         scoreMap[rubric.id] = score;
+      } else if (sec.includes('research guidance')) {
+        // Guidance rubrics are per project/student, so multiple matching rows accumulate.
+        scoreMap[rubric.id] = score;
+      } else if (sec.includes('review of research papers')) {
+        // Review rubrics use max_marks as per-paper points and cap each row at 10.
+        scoreMap[rubric.id] = score;
+      } else if (getTextCap(sub) !== null) {
+        // Some rubric rows store per-entry points in max_marks and name the row cap in text.
+        scoreMap[rubric.id] = Math.min(score, getTextCap(sub));
       } else {
         scoreMap[rubric.id] = Math.min(score, max); // never exceed max
       }

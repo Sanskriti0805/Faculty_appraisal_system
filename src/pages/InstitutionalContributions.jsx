@@ -4,6 +4,7 @@ import './FormPages.css'
 import FormActions from '../components/FormActions'
 import FilePreviewButton from '../components/FilePreviewButton'
 import { useAuth } from '../context/AuthContext'
+import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
 const API_BASE = `http://${window.location.hostname}:5001/api`
 
@@ -83,6 +84,7 @@ const buildSectionState = (rows = []) => {
     facultyInCharge: [],
     otherResponsibility: []
   }
+  const seen = new Set()
 
   normalizedRows.forEach(row => {
     const rawType = getValue(row, ['contribution_type', 'activity', 'category'])
@@ -90,13 +92,24 @@ const buildSectionState = (rows = []) => {
 
     for (const [field, aliases] of Object.entries(FIELD_TYPE_ALIASES)) {
       if (aliases.map(normalizeText).includes(normalized)) {
-        newState[field].push({
+        const entry = {
           localId: row.id,
           dbId: row.id,
           details: getValue(row, ['description', 'details']) || '',
           position: getValue(row, ['title', 'role']) || '',
           file: getValue(row, ['evidence_file']) || null
-        })
+        }
+        const signature = [
+          field,
+          normalizeText(entry.position),
+          normalizeText(entry.details),
+          String(entry.file || '')
+        ].join('|')
+
+        if (!seen.has(signature)) {
+          seen.add(signature)
+          newState[field].push(entry)
+        }
         break
       }
     }
@@ -112,6 +125,38 @@ const buildSectionState = (rows = []) => {
   return newState
 }
 
+const getDuplicateContributionIds = (rows = []) => {
+  const normalizedRows = Array.isArray(rows) ? rows : []
+  const seen = new Set()
+  const duplicates = []
+
+  normalizedRows.forEach(row => {
+    const rawType = getValue(row, ['contribution_type', 'activity', 'category'])
+    const normalized = normalizeText(rawType)
+    const fieldMatch = Object.entries(FIELD_TYPE_ALIASES).find(([, aliases]) =>
+      aliases.map(normalizeText).includes(normalized)
+    )
+
+    if (!fieldMatch) return
+
+    const [field] = fieldMatch
+    const signature = [
+      field,
+      normalizeText(getValue(row, ['title', 'role']) || ''),
+      normalizeText(getValue(row, ['description', 'details']) || ''),
+      String(getValue(row, ['evidence_file']) || '')
+    ].join('|')
+
+    if (seen.has(signature)) {
+      if (row.id) duplicates.push(row.id)
+    } else {
+      seen.add(signature)
+    }
+  })
+
+  return duplicates
+}
+
 const getFriendlySaveErrorMessage = (sectionLabel, entryIndex, backendMessage = '') => {
   const lower = String(backendMessage || '').toLowerCase()
   const entryText = `entry #${entryIndex + 1} in ${sectionLabel}`
@@ -124,11 +169,42 @@ const getFriendlySaveErrorMessage = (sectionLabel, entryIndex, backendMessage = 
     return `Could not save ${entryText}. The evidence file is too large. Please upload a smaller file and try again.`
   }
 
+  if (lower.includes('invalid file type') || lower.includes('only pdf')) {
+    return `Could not save ${entryText}. Upload evidence as PDF, DOC, DOCX, JPG, JPEG, or PNG.`
+  }
+
   if (lower.includes('faculty profile not found')) {
     return 'Your profile is incomplete. Please complete onboarding first, then try again.'
   }
 
+  if (lower.includes('locked') || lower.includes('request edits') || lower.includes('sent back')) {
+    return backendMessage || 'This section is locked after submission. Request edits or wait for Dofa to send it back.'
+  }
+
   return `Could not save ${entryText}. Please check Position, Details, and Evidence, then try again.`
+}
+
+const deleteInstitutionalContributionIfPresent = async (id, token) => {
+  const deleteRes = await fetch(`${API_BASE}/innovation/institutional/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  })
+
+  if (deleteRes.ok || deleteRes.status === 404) {
+    return
+  }
+
+  let backendMessage = ''
+  try {
+    const body = await deleteRes.json()
+    backendMessage = body?.message || ''
+  } catch (_) {
+    backendMessage = ''
+  }
+
+  const err = new Error(backendMessage || 'Could not delete existing institutional contribution.')
+  err.backendMessage = backendMessage
+  throw err
 }
 
 const InstitutionalContributions = ({ initialData, readOnly }) => {
@@ -159,8 +235,14 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
     if (initialData && Array.isArray(initialData)) {
       const state = buildSectionState(initialData)
       setSections(state)
+      if (!readOnly) {
+        const duplicateIds = getDuplicateContributionIds(initialData)
+        if (duplicateIds.length > 0) {
+          setRemovedIds(prev => Array.from(new Set([...prev, ...duplicateIds])))
+        }
+      }
     }
-  }, [initialData])
+  }, [initialData, readOnly])
 
   useEffect(() => {
     if (readOnly || (initialData && Array.isArray(initialData) && initialData.length > 0) || !user?.id) return
@@ -173,6 +255,10 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
 
         const state = buildSectionState(data.data)
         setSections(state)
+        const duplicateIds = getDuplicateContributionIds(data.data)
+        if (duplicateIds.length > 0) {
+          setRemovedIds(prev => Array.from(new Set([...prev, ...duplicateIds])))
+        }
       } catch (error) {
         console.error('Failed to prefill institutional contributions:', error)
       }
@@ -200,6 +286,14 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
       ...prev,
       [field]: prev[field].map(item => item.localId === id ? { ...item, file: file } : item)
     }))
+  }
+
+  const handleEvidenceInputChange = (event, field, id) => {
+    handleValidatedFileInput(
+      event,
+      (file) => handleFileChange(field, id, file),
+      { allowedExtensions: FILE_TYPES.documents, label: 'Evidence' }
+    )
   }
 
   const handleAddEntry = (field) => {
@@ -251,7 +345,12 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
           <X size={13} />
         </button>
       )}
-      <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange(field, item.localId, e.target.files[0])} />
+      <input
+        type="file"
+        style={{ display: 'none' }}
+        accept={getAcceptAttribute(FILE_TYPES.documents)}
+        onChange={(e) => handleEvidenceInputChange(e, field, item.localId)}
+      />
     </label>
   )
 
@@ -298,10 +397,13 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
 
       // 1. Handle Deletions
       for (const id of removedIds) {
-        await fetch(`${API_BASE}/innovation/institutional/${id}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        try {
+          await deleteInstitutionalContributionIfPresent(id, token)
+        } catch (err) {
+          const backendMessage = err.backendMessage || err.message || ''
+          err.userMessage = getFriendlySaveErrorMessage('Institutional Contribution', 0, backendMessage)
+          throw err
+        }
       }
 
       // 2. Handle Saves (Upserts via DELETE+POST pattern used in this app)
@@ -325,10 +427,13 @@ const InstitutionalContributions = ({ initialData, readOnly }) => {
 
           const saveAction = async () => {
             if (item.dbId) {
-              await fetch(`${API_BASE}/innovation/institutional/${item.dbId}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` }
-              })
+              try {
+                await deleteInstitutionalContributionIfPresent(item.dbId, token)
+              } catch (err) {
+                const backendMessage = err.backendMessage || err.message || ''
+                err.userMessage = getFriendlySaveErrorMessage(cat.shortLabel, index, backendMessage)
+                throw err
+              }
             }
             const res = await fetch(`${API_BASE}/innovation/institutional`, {
               method: 'POST',

@@ -561,7 +561,7 @@ CREATE TABLE `submissions` (
   `id` int NOT NULL AUTO_INCREMENT,
   `faculty_id` int NOT NULL COMMENT 'Foreign key to faculty table',
   `form_type` enum('A','B') NOT NULL COMMENT 'Form A or Form B',
-  `status` enum('draft','submitted','under_review','approved','rejected') DEFAULT 'draft' COMMENT 'Submission status',
+  `status` enum('draft','submitted','submitted_hod','under_review','under_review_hod','hod_approved','approved','sent_back','rejected') DEFAULT 'draft' COMMENT 'Submission status',
   `submitted_at` timestamp NULL DEFAULT NULL COMMENT 'When the submission was submitted',
   `locked` tinyint(1) DEFAULT '0' COMMENT 'Prevents editing when true (Dofa control)',
   `total_score` decimal(10,2) DEFAULT '0.00' COMMENT 'Calculated total score',
