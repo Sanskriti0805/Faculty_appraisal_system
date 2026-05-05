@@ -207,7 +207,8 @@ const Sidebar = ({ collapsed = false, onToggleCollapse }) => {
   }
 
   const renderNavLink = (path, label, className = 'nav-item') => {
-    const editable = path === '/' ? true : isPathEditable(path)
+    // Always allow root and Help Center to be clickable (read-only access is fine)
+    const editable = path === '/' || path === '/help' ? true : isPathEditable(path)
     const active = location.pathname === path
     if (!editable) {
       return (
@@ -499,11 +500,7 @@ const Sidebar = ({ collapsed = false, onToggleCollapse }) => {
           )}
         </div>
 
-        <div className="nav-section">
-          <div className="nav-section-items">
-            {renderNavLink('/help', 'Help Center', 'nav-item')}
-          </div>
-        </div>
+        
           </>
         ) : (
           <div className="nav-section">
@@ -517,6 +514,11 @@ const Sidebar = ({ collapsed = false, onToggleCollapse }) => {
             </div>
           </div>
         )}
+      <div className="nav-section">
+        <div className="nav-section-items">
+          {renderNavLink('/help', 'Help Center', 'nav-item')}
+        </div>
+      </div>
       </nav>
     </aside>
   )
