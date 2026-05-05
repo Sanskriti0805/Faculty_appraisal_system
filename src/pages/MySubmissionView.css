@@ -774,6 +774,184 @@
   border-color: #1d4ed8;
 }
 
+/* Publications */
+.msv-publication-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.msv-publication-summary-chip {
+  padding: 0.875rem 1rem;
+  border-radius: 12px;
+  background: #fff;
+  border: 1.5px solid #e8ecf4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.msv-publication-summary-chip span {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.msv-publication-summary-chip strong {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #0f2a5c;
+  line-height: 1;
+}
+
+.msv-publication-group { margin-bottom: 1.25rem; }
+.msv-publication-group:last-child { margin-bottom: 0; }
+
+.msv-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.msv-publication-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.msv-publication-card-shell {
+  border: 1px solid #e8ecf4;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: box-shadow 0.2s;
+}
+
+.msv-publication-card-shell:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+
+.msv-publication-card-header {
+  width: 100%;
+  border: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  background: #f8fafc;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.msv-publication-card-kicker {
+  margin: 0 0 0.2rem 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #034da2;
+}
+
+.msv-publication-card-title {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #0f2a5c;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.msv-publication-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.msv-publication-card-year {
+  padding: 0.25rem 0.6rem;
+  border-radius: 99px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.msv-publication-chevron {
+  color: #94a3b8;
+  transition: transform 0.2s ease;
+}
+
+.msv-publication-chevron.open { transform: rotate(180deg); }
+
+.msv-pub-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #fff;
+  border-top: 1px solid #e8ecf4;
+}
+
+.msv-pub-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.65rem 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e8ecf4;
+  border-radius: 8px;
+}
+
+.msv-pub-detail-field.full-width { grid-column: 1 / -1; }
+
+.msv-pub-detail-field label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.msv-pub-detail-field span {
+  font-size: 0.85rem;
+  color: #0f172a;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.msv-pub-detail-field span.empty {
+  color: #cbd5e1;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.msv-pub-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.msv-pub-badge.q1 { background: #dcfce7; color: #15803d; }
+.msv-pub-badge.q2 { background: #dbeafe; color: #1d4ed8; }
+.msv-pub-badge.q3 { background: #fef9c3; color: #a16207; }
+.msv-pub-badge.q4 { background: #fee2e2; color: #b91c1c; }
+.msv-pub-badge.indexing { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
 /* ─── Empty / No-data states ─────────────────────────────────────── */
 
 .msv-no-data-inline {
@@ -825,6 +1003,7 @@
 
 @media (max-width: 1024px) {
   .msv-info-grid { grid-template-columns: repeat(2, 1fr); }
+  .msv-pub-detail-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
@@ -835,6 +1014,7 @@
   .msv-info-grid { grid-template-columns: 1fr; }
   .msv-status-bar { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
   .msv-section-card { padding: 1.25rem; }
+  .msv-publication-summary-bar { grid-template-columns: repeat(2, 1fr); }
   .msv-table th,
   .msv-table td { padding: 0.5rem 0.65rem; font-size: 0.76rem; }
 }
@@ -843,6 +1023,9 @@
   .msv-header { flex-direction: column; align-items: flex-start; }
   .msv-tabs { gap: 0.25rem; padding: 0.3rem; }
   .msv-tab-btn { padding: 0.45rem 0.75rem; font-size: 0.75rem; }
+  .msv-pub-detail-grid { grid-template-columns: 1fr; }
+  .msv-publication-card-header { flex-direction: column; }
+  .msv-publication-card-meta { width: 100%; justify-content: space-between; }
 }
 
 /* ─── PDF Download Button ─────────────────────────────────────────── */

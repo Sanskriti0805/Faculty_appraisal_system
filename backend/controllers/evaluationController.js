@@ -94,6 +94,7 @@ exports.getEvaluationData = async (req, res) => {
       LEFT JOIN faculty_information f ON f.id = u.id
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
         AND s.academic_year = ?
+        AND UPPER(COALESCE(s.form_type, 'A')) = 'A'
       ORDER BY u.name ASC
     `, [academicYear]);
 
@@ -144,6 +145,7 @@ exports.getSheet2Data = async (req, res) => {
       LEFT JOIN faculty_information f ON f.id = u.id
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
         AND s.academic_year = ?
+        AND UPPER(COALESCE(s.form_type, 'A')) = 'A'
       ORDER BY u.name ASC
     `, [academicYear]);
 
@@ -337,6 +339,7 @@ exports.applyGrading = async (req, res) => {
       LEFT JOIN Dofa_rubrics r ON r.id = es_latest.rubric_id
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
         AND s.academic_year = ?
+        AND UPPER(COALESCE(s.form_type, 'A')) = 'A'
       GROUP BY s.id, s.faculty_id, s.academic_year
     `, [academicYear]);
 
@@ -465,6 +468,7 @@ exports.getSheet3Data = async (req, res) => {
       )
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
         AND s.academic_year = ?
+        AND UPPER(COALESCE(s.form_type, 'A')) = 'A'
       ORDER BY u.name ASC
     `, [academicYear]);
 
@@ -479,6 +483,7 @@ exports.getSheet3Data = async (req, res) => {
       )
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
         AND s.academic_year = ?
+        AND UPPER(COALESCE(s.form_type, 'A')) = 'A'
         AND e2.final_grade IS NOT NULL
         AND TRIM(e2.final_grade) != ''
       ORDER BY final_grade ASC
@@ -557,6 +562,7 @@ exports.applyIncrements = async (req, res) => {
       )
       WHERE s.status IN ('submitted','under_review','approved','sent_back')
         AND s.academic_year = ?
+        AND UPPER(COALESCE(s.form_type, 'A')) = 'A'
         AND e2.final_grade IS NOT NULL
         AND TRIM(e2.final_grade) != ''
     `, [academicYear]);

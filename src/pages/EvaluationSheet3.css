@@ -83,11 +83,13 @@
 }
 
 .session-lock-btn {
-  background: #991b1b;
+  background: #dc2626;
+  color: #fff;
 }
 
 .session-unlock-btn {
   background: #0f172a;
+  color: #fff;
 }
 
 .session-lock-btn:hover,

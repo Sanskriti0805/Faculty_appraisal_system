@@ -68,6 +68,7 @@ const MySubmissionView = () => {
   const [editRequests,   setEditRequests]   = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [activeTab,      setActiveTab]      = useState('faculty');
+  const [expandedPubs,   setExpandedPubs]   = useState({});
   const [editPanelOpen,  setEditPanelOpen]  = useState(false);
   const [commentView,    setCommentView]    = useState('pending');
   // Dynamic sections filled by this faculty
@@ -246,7 +247,7 @@ const MySubmissionView = () => {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '-';
 
-  const uploadBase = `http://${window.location.hostname}:5000/uploads/`;
+  const uploadBase = `${API.replace('/api', '')}/uploads/`;
 
   const toLabel = (key) =>
     String(key || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -266,10 +267,19 @@ const MySubmissionView = () => {
     if (value === null || value === undefined || value === '')
       return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>;
 
-    if (key && key.includes('evidence_file') && typeof value === 'string') {
+    if (key && /evidence_file|labManualFile|manual|attachment|file/i.test(key) && typeof value === 'string') {
       return (
         <a href={`${uploadBase}${value}`} target="_blank" rel="noopener noreferrer" className="msv-link-cell">
           <ExternalLink size={11} /> View File
+        </a>
+      );
+    }
+
+    if (key === 'link' && typeof value === 'string') {
+      const href = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="msv-link-cell">
+          <ExternalLink size={11} /> Open
         </a>
       );
     }
@@ -390,6 +400,207 @@ const MySubmissionView = () => {
     }
   };
 
+  const getCoursewareRows = (value) => {
+    const parsed = parseStoredContent(value);
+    if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    if (!parsed || typeof parsed !== 'object') return [];
+    const values = Object.values(parsed);
+    if (values.length > 0 && values.every(item => item && typeof item === 'object')) {
+      return values.filter(Boolean);
+    }
+    return [parsed];
+  };
+
+  const getInstitutionalVisits = (value) => {
+    const parsed = parseStoredContent(value);
+    if (!parsed || typeof parsed !== 'object') return [];
+    const visits = parsed.institutionalVisits || parsed.InstitutionalVisits || parsed.institutional_visits || [];
+    return Array.isArray(visits) ? visits.filter(Boolean) : [];
+  };
+
+  const renderOtherActivities = (value) => {
+    const parsed = parseStoredContent(value);
+    if (!parsed || typeof parsed !== 'object') {
+      return renderFieldGrid('Other Activities', parsed);
+    }
+
+    const visits = getInstitutionalVisits(parsed).map((visit) => {
+      if (!visit || typeof visit !== 'object') return { details: String(visit || ''), evidence_file: '' };
+      return {
+        details: visit.details || visit.text || visit.visit || '',
+        evidence_file: visit.evidence_file || ''
+      };
+    });
+    const softwareDeveloped = String(parsed.softwareDeveloped || '').trim();
+
+    if (!softwareDeveloped && visits.length === 0) {
+      return renderFieldGrid('Other Activities', {});
+    }
+
+    return (
+      <>
+        {softwareDeveloped && renderFieldGrid('Other Activities', { softwareDeveloped })}
+        {visits.length > 0 && renderDataTable('Institutional Visits', visits, ['details', 'evidence_file'])}
+      </>
+    );
+  };
+
+  const getPublicationGroupKey = (pub = {}) => {
+    const type = String(pub.publication_type || '').trim().toLowerCase();
+    const subType = String(pub.sub_type || '').trim().toLowerCase();
+    if (type.includes('journal')) return 'journals';
+    if (type.includes('conference')) return 'conferences';
+    if (type.includes('monograph') || type.includes('book') || subType.includes('book')) return 'monographs';
+    return 'other';
+  };
+
+  const renderPublicationDetail = (pub = {}) => {
+    const isBlank = (value) => value === null || value === undefined || value === '';
+    const field = (label, value, fullWidth = false, badge = '') => {
+      const empty = isBlank(value);
+      return (
+        <div className={`msv-pub-detail-field${fullWidth ? ' full-width' : ''}`}>
+          <label>{label}</label>
+          <span className={empty ? 'empty' : ''}>
+            {badge && !empty ? <span className={`msv-pub-badge ${badge}`}>{String(value)}</span> : (empty ? '-' : value)}
+          </span>
+        </div>
+      );
+    };
+    const optionalField = (label, value, fullWidth = false, badge = '') =>
+      isBlank(value) ? null : field(label, value, fullWidth, badge);
+
+    const peopleToText = (value) => {
+      if (!Array.isArray(value)) return value || null;
+      return value
+        .map((person) => {
+          if (!person || typeof person !== 'object') return String(person || '');
+          return [person.first || person.first_name, person.middle || person.middle_name, person.last || person.last_name]
+            .filter(Boolean)
+            .join(' ');
+        })
+        .filter(Boolean)
+        .join(', ');
+    };
+
+    const publicationType = String(pub.publication_type || '').toLowerCase();
+    const subType = String(pub.sub_type || '').toLowerCase();
+    const isJournal = publicationType.includes('journal');
+    const isConference = publicationType.includes('conference');
+    const isMonograph = publicationType.includes('monograph') || publicationType.includes('book');
+    const isBookChapter = isMonograph && subType.includes('book chapter');
+    const isBookEdited = isMonograph && subType.includes('book edited');
+    const isBook = isMonograph && !isBookChapter && !isBookEdited;
+    const isOther = getPublicationGroupKey(pub) === 'other';
+    const authors = peopleToText(pub.authors);
+    const editors = peopleToText(pub.editors);
+    const pages = pub.pages || (
+      pub.pages_from || pub.pages_to
+        ? [pub.pages_from, pub.pages_to].filter(Boolean).join(' - ')
+        : null
+    );
+    const issuePages = pub.issue || pub.number
+      ? `${pub.issue || pub.number}${pages ? `, pp. ${pages}` : ''}`
+      : pages;
+    const venue = [pub.city, pub.state, pub.country].filter(Boolean).join(', ');
+    const quartileValue = pub.quartile || (isJournal ? pub.sub_type : null);
+    const quartileBadge = String(quartileValue || '').toLowerCase().includes('q1')
+      ? 'q1'
+      : String(quartileValue || '').toLowerCase().includes('q2')
+        ? 'q2'
+        : String(quartileValue || '').toLowerCase().includes('q3')
+          ? 'q3'
+          : String(quartileValue || '').toLowerCase().includes('q4')
+            ? 'q4'
+            : '';
+
+    return (
+      <div className="msv-pub-detail-grid">
+        {(isJournal || isConference || isBookChapter || isBook) ? field('Authors', authors, true) : optionalField('Authors', authors, true)}
+        {(isJournal || isConference || isMonograph)
+          ? field(isBookChapter ? 'Chapter Title' : 'Title', pub.title || pub.title_of_book, true)
+          : optionalField('Title', pub.title || pub.title_of_book, true)}
+        {optionalField('Editors', editors, true)}
+        {isOther ? field('Details', pub.details, true) : optionalField('Details', pub.details, true)}
+        {field('Publication Type', pub.publication_type || '-')}
+        {optionalField('Sub Type', pub.sub_type)}
+        {optionalField('Year', pub.year_of_publication)}
+        {isJournal && field('Journal', pub.journal_name, true)}
+        {isConference && field('Conference', pub.conference_name, true)}
+        {isConference && optionalField('Abbreviation', pub.abbreviation)}
+        {isConference && optionalField('Conference Type', pub.type_of_conference)}
+        {isConference && optionalField('Date From', pub.date_from)}
+        {isConference && optionalField('Date To', pub.date_to)}
+        {isConference && optionalField('Venue', venue, true)}
+        {isConference && optionalField('Publication Agency', pub.publication_agency)}
+        {isBookChapter && optionalField('Book', pub.title_of_book || pub.book_title, true)}
+        {isMonograph && optionalField('Publisher / Agency', pub.publisher || pub.publication_agency, true)}
+        {isJournal && optionalField('Volume', pub.volume)}
+        {(isJournal || isConference || isBookChapter) && optionalField('Issue / Pages', issuePages)}
+        {(isJournal || isConference || isMonograph) && optionalField('ISSN / ISBN', pub.issn || pub.isbn)}
+        {(isJournal || isConference) && optionalField('DOI', pub.doi)}
+        {isJournal && field('Quartile', quartileValue, false, quartileBadge)}
+        {optionalField('Indexing', pub.indexing, false, pub.indexing ? 'indexing' : '')}
+        {isJournal && optionalField('Impact Factor', pub.impact_factor)}
+        {pub.doi_link && (
+          <div className="msv-pub-detail-field">
+            <label>DOI Link</label>
+            <span>{formatCellValue(pub.doi_link, 'link')}</span>
+          </div>
+        )}
+        {pub.evidence_file && (
+          <div className="msv-pub-detail-field">
+            <label>Evidence</label>
+            <span>{formatCellValue(pub.evidence_file, 'evidence_file')}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderPublicationGroup = (group) => {
+    if (!group.rows.length) return null;
+
+    return (
+      <div key={group.key} className="msv-publication-group">
+        <h4 className="msv-subsection-title">
+          {group.label}
+          <span className="msv-count-pill">{group.rows.length}</span>
+        </h4>
+        <div className="msv-publication-stack">
+          {group.rows.map((pub, index) => {
+            const cardKey = `${group.key}-${pub?.id || index}`;
+            const isOpen = Boolean(expandedPubs[cardKey]);
+            return (
+              <div key={cardKey} className="msv-publication-card-shell">
+                <button
+                  type="button"
+                  className="msv-publication-card-header"
+                  onClick={() => setExpandedPubs(prev => ({ ...prev, [cardKey]: !prev[cardKey] }))}
+                >
+                  <div>
+                    <p className="msv-publication-card-kicker">
+                      {pub?.publication_type || 'Publication'}
+                      {pub?.sub_type ? ` | ${pub.sub_type}` : ''}
+                    </p>
+                    <h5 className="msv-publication-card-title">
+                      {pub?.title || pub?.title_of_book || pub?.details || 'Untitled publication'}
+                    </h5>
+                  </div>
+                  <div className="msv-publication-card-meta">
+                    <span className="msv-publication-card-year">{pub?.year_of_publication || '-'}</span>
+                    <ChevronDown size={15} className={`msv-publication-chevron ${isOpen ? 'open' : ''}`} />
+                  </div>
+                </button>
+                {isOpen && renderPublicationDetail(pub)}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const renderGoalsBySemester = () => {
     const safeGoals = Array.isArray(goals) ? goals : [];
     if (safeGoals.length === 0) return <p className="msv-no-data">No goals data available.</p>;
@@ -465,6 +676,16 @@ const MySubmissionView = () => {
       count: dynamicEditableSections.length
     }] : []),
   ];
+
+  const publicationGroups = [
+    { key: 'journals', label: 'Journals' },
+    { key: 'conferences', label: 'Conferences' },
+    { key: 'monographs', label: 'Monographs / Books' },
+    { key: 'other', label: 'Other Publications' }
+  ].map((group) => ({
+    ...group,
+    rows: (Array.isArray(publications) ? publications : []).filter((pub) => getPublicationGroupKey(pub) === group.key)
+  }));
 
   return (
     <div className="my-submission-view">
@@ -701,7 +922,21 @@ const MySubmissionView = () => {
           {activeTab === 'publications' && (
             <>
               <h3 className="msv-section-title"><FileText size={17} /> Research Publications</h3>
-              {renderDataTable('Research Publications', publications, ['publication_type', 'sub_type', 'title', 'authors', 'editors', 'year_of_publication', 'journal_name', 'conference_name', 'abbreviation', 'type_of_conference', 'date_from', 'date_to', 'city', 'state', 'country', 'publication_agency', 'title_of_book', 'volume', 'number', 'pages_from', 'pages_to', 'details', 'evidence_file'])}
+              {Array.isArray(publications) && publications.length > 0 ? (
+                <>
+                  <div className="msv-publication-summary-bar">
+                    {publicationGroups.map((group) => (
+                      <div key={group.key} className="msv-publication-summary-chip">
+                        <span>{group.label}</span>
+                        <strong>{group.rows.length}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  {publicationGroups.map(renderPublicationGroup)}
+                </>
+              ) : (
+                <p className="msv-no-data-inline">No submitted entries.</p>
+              )}
             </>
           )}
 
@@ -750,9 +985,9 @@ const MySubmissionView = () => {
           {activeTab === 'additional' && (
             <>
               <h3 className="msv-section-title"><FileText size={17} /> Additional Sections</h3>
-              {renderFieldGrid('Courseware & Course Material', parseStoredContent(courseware))}
+              {renderDataTable('Courseware & Course Material', getCoursewareRows(courseware), ['type', 'courseware', 'link', 'labManualFile'])}
               {renderFieldGrid('Continuing Education', parseStoredContent(continuingEducation))}
-              {renderFieldGrid('Other Activities', parseStoredContent(otherActivities))}
+              {renderOtherActivities(otherActivities)}
               {renderFieldGrid('Research Plan', parseStoredContent(researchPlan))}
               {renderFieldGrid('Teaching Plan', parseStoredContent(teachingPlan))}
             </>

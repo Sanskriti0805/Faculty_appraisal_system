@@ -410,21 +410,31 @@
 }
 
 .btn-lock {
-  background: #fecaca;
-  color: #991b1b;
+  background: #dc2626;
+  color: #fff;
 }
 
 .btn-lock:hover {
-  background: #fca5a5;
+  background: #b91c1c;
+}
+
+.btn-locked {
+  background: #0f172a;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+.btn-locked:hover {
+  background: #0f172a;
 }
 
 .btn-unlock {
-  background: #bbf7d0;
-  color: #166534;
+  background: #0f172a;
+  color: #fff;
 }
 
 .btn-unlock:hover {
-  background: #86efac;
+  background: #0a0f1a;
 }
 
 .btn-reminder {

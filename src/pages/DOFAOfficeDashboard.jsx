@@ -858,11 +858,10 @@ ${facultySections}
           </Link>
 
           <button
-            className={`export-btn ${sessionLockLoading ? 'export-btn-loading' : ''}`}
+            className={`export-btn ${selectedYearLockState?.locked ? 'btn-locked' : 'btn-lock'} ${sessionLockLoading ? 'export-btn-loading' : ''}`}
             disabled={!yearFilter || !!sessionLockLoading || !!selectedYearLockState?.locked}
             onClick={handleFinalSessionLock}
             title={!yearFilter ? 'No active session year found' : selectedYearLockState?.locked ? 'Session already locked. Unlock is allowed from DoFA dashboard only.' : 'Final-lock this academic session'}
-            style={{ background: selectedYearLockState?.locked ? '#dcfce7' : '#0f172a', borderColor: selectedYearLockState?.locked ? '#86efac' : '#0f172a', color: selectedYearLockState?.locked ? '#166534' : '#fff' }}
           >
             {sessionLockLoading ? (
               <><span className="export-spinner" />Locking...</>

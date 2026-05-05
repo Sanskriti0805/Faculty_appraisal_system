@@ -495,6 +495,129 @@ const DofaReview = () => {
 
   const isEmptyValue = (v) => v === null || v === undefined || v === '';
 
+  const parseStoredContent = (value) => {
+    if (!value) return null;
+    if (typeof value !== 'string') return value;
+    try {
+      return JSON.parse(value);
+    } catch (_) {
+      return { details: value };
+    }
+  };
+
+  const normalizeExternalLink = (url) => {
+    const text = String(url || '').trim();
+    if (!text) return '';
+    return /^https?:\/\//i.test(text) ? text : `https://${text}`;
+  };
+
+  const getCoursewareRows = (value) => {
+    const parsed = parseStoredContent(value);
+    if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    if (!parsed || typeof parsed !== 'object') return [];
+    const values = Object.values(parsed);
+    if (values.length > 0 && values.every(item => item && typeof item === 'object')) {
+      return values.filter(Boolean);
+    }
+    return [parsed];
+  };
+
+  const renderCoursewareSection = (value) => {
+    const rows = getCoursewareRows(value);
+    if (rows.length === 0) return <p className="no-data">No submitted information available.</p>;
+
+    return (
+      <div className="table-responsive">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Details</th>
+              <th>Link</th>
+              <th style={{ textAlign: 'center' }}>Manual / File</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const link = row?.link || '';
+              const manual = row?.labManualFile || row?.evidence_file || '';
+              return (
+                <tr key={index}>
+                  <td>{row?.type || '-'}</td>
+                  <td className="cell-title">{row?.courseware || row?.details || '-'}</td>
+                  <td>
+                    {link ? (
+                      <a href={normalizeExternalLink(link)} target="_blank" rel="noopener noreferrer" className="evidence-link">
+                        <ExternalLink size={12} /><span>Open</span>
+                      </a>
+                    ) : '-'}
+                  </td>
+                  <td className="cell-center">{renderFileLink(manual) || '-'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const getInstitutionalVisits = (value) => {
+    const parsed = parseStoredContent(value);
+    if (!parsed || typeof parsed !== 'object') return [];
+    const visits = parsed.institutionalVisits || parsed.InstitutionalVisits || parsed.institutional_visits || [];
+    return Array.isArray(visits) ? visits.filter(Boolean) : [];
+  };
+
+  const renderInstitutionalVisits = (value) => {
+    const visits = getInstitutionalVisits(value);
+    if (visits.length === 0) return <p className="no-data">No visits submitted.</p>;
+
+    return (
+      <div className="table-responsive">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Details</th>
+              <th style={{ textAlign: 'center' }}>Evidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visits.map((visit, index) => {
+              const details = typeof visit === 'object'
+                ? (visit.details || visit.text || visit.visit || '')
+                : String(visit || '');
+              const evidenceFile = typeof visit === 'object' ? (visit.evidence_file || '') : '';
+              return (
+                <tr key={index}>
+                  <td className="cell-title">{details || '-'}</td>
+                  <td className="cell-center">{renderFileLink(evidenceFile) || '-'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderOtherActivitiesSection = (value) => {
+    const parsed = parseStoredContent(value);
+    if (!parsed || typeof parsed !== 'object' || Object.keys(parsed).length === 0) {
+      return <p className="no-data">No submitted information available.</p>;
+    }
+
+    return (
+      <>
+        {renderTextSection('Software Developed', parsed.softwareDeveloped)}
+        <div style={{ marginTop: '0.75rem' }}>
+          <h4 className="sub-section-title">Visits to Other Institutions</h4>
+          {renderInstitutionalVisits(parsed)}
+        </div>
+      </>
+    );
+  };
+
   const renderValue = (value, key) => {
     if (isEmptyValue(value)) return <span className="legacy-empty-inline">-</span>;
     if (Array.isArray(value)) {
@@ -568,6 +691,63 @@ const DofaReview = () => {
       <div className="legacy-text-section">
         {title && <h4 className="sub-section-title">{title}</h4>}
         <div className="legacy-text-card">{renderValue(value, title)}</div>
+      </div>
+    );
+  };
+
+  /* -- Publication grouping helpers -- */
+  const getPublicationGroupKey = (pub = {}) => {
+    const type = String(pub?.publication_type || 'other').toLowerCase().trim();
+    const subType = String(pub?.sub_type || '').trim().toLowerCase();
+    if (type.includes('journal')) return 'journals';
+    if (type.includes('conference')) return 'conferences';
+    if (type.includes('monograph') || type.includes('book') || subType.includes('book')) return 'monographs';
+    return 'other';
+  };
+
+  const renderPublicationGroup = (group) => {
+    if (!group.rows.length) return null;
+
+    return (
+      <div key={group.key} className="publication-group">
+        <h4 className="subsection-title">
+          {group.label}
+          <span className="count-pill">{group.rows.length}</span>
+        </h4>
+        <div className="publication-stack">
+          {group.rows.map((pub, index) => {
+            const cardKey = `${group.key}-${pub?.id || index}`;
+            const isOpen = Boolean(expandedPubs[cardKey]);
+            return (
+              <div key={cardKey} className="publication-card-shell">
+                <button
+                  type="button"
+                  className="publication-card-header"
+                  onClick={() => setExpandedPubs(prev => ({ ...prev, [cardKey]: !prev[cardKey] }))}
+                >
+                  <div>
+                    <p className="publication-card-kicker">
+                      {pub?.publication_type || 'Publication'}
+                      {pub?.sub_type ? ` | ${pub.sub_type}` : ''}
+                    </p>
+                    <h5 className="publication-card-title">
+                      {pub?.title || pub?.title_of_book || pub?.details || 'Untitled publication'}
+                    </h5>
+                  </div>
+                  <div className="publication-card-meta">
+                    <span className="publication-card-year">{pub?.year_of_publication || '-'}</span>
+                    <ChevronDown size={15} className={`publication-chevron ${isOpen ? 'open' : ''}`} />
+                  </div>
+                </button>
+                {isOpen && (
+                  <div className="collapsible-body open">
+                    <PubDetailCard pub={pub} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -728,7 +908,7 @@ const DofaReview = () => {
 
               <CollapsibleSection title="Courseware &amp; Course Material" defaultOpen={false}>
                 <div style={{ padding: '0.75rem 1rem' }}>
-                  {renderInfoGrid(courseware, ['type', 'courseware', 'link', 'labManualFile'])}
+                  {renderCoursewareSection(courseware)}
                 </div>
               </CollapsibleSection>
 
@@ -746,53 +926,31 @@ const DofaReview = () => {
           {activeTab === 'publications' && (
             <div className="section-card">
               <h3 className="section-title">Research Publications</h3>
-              <div className="publication-summary-bar">
-                {[
-                  { label: 'Journals', count: publicationSummary.journals },
-                  { label: 'Conferences', count: publicationSummary.conferences },
-                  { label: 'Books', count: publicationSummary.books },
-                  { label: 'Other', count: publicationSummary.other },
-                ].map(item => (
-                  <div key={item.label} className="publication-summary-chip">
-                    <span>{item.label}</span>
-                    <strong>{item.count}</strong>
-                  </div>
-                ))}
-              </div>
-
-              {publications && publications.length > 0 ? (
-                <div className="publication-stack">
-                  {publications.map((pub, index) => {
-                    const isOpen = expandedPubs[index];
-                    return (
-                      <div key={pub?.id || index} className="publication-card-shell">
-                        <div
-                          className="publication-card-header"
-                          onClick={() => setExpandedPubs(prev => ({ ...prev, [index]: !prev[index] }))}
-                        >
-                          <div>
-                            <p className="publication-card-kicker">
-                              {pub?.publication_type || 'Publication'}
-                              {pub?.sub_type ? `  |  ${pub.sub_type}` : ''}
-                            </p>
-                            <h4 className="publication-card-title">
-                              {pub?.title || pub?.title_of_book || pub?.details || 'Untitled publication'}
-                            </h4>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span className="publication-card-year">{pub?.year_of_publication || '-'}</span>
-                            <ChevronDown size={15} className={`collapsible-chevron ${isOpen ? 'open' : ''}`} style={{ color: '#94a3b8' }} />
-                          </div>
-                        </div>
-                        {isOpen && (
-                          <div className="collapsible-body open">
-                            <PubDetailCard pub={pub} />
-                          </div>
-                        )}
+              {Array.isArray(publications) && publications.length > 0 ? (
+                <>
+                  <div className="publication-summary-bar">
+                    {[
+                      { key: 'journals', label: 'Journals' },
+                      { key: 'conferences', label: 'Conferences' },
+                      { key: 'monographs', label: 'Monographs / Books' },
+                      { key: 'other', label: 'Other Publications' }
+                    ].map(item => (
+                      <div key={item.key} className="publication-summary-chip">
+                        <span>{item.label}</span>
+                        <strong>{publicationSummary[item.key] || 0}</strong>
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                  {[
+                    { key: 'journals', label: 'Journals' },
+                    { key: 'conferences', label: 'Conferences' },
+                    { key: 'monographs', label: 'Monographs / Books' },
+                    { key: 'other', label: 'Other Publications' }
+                  ].map((group) => renderPublicationGroup({
+                    ...group,
+                    rows: (Array.isArray(publications) ? publications : []).filter((pub) => getPublicationGroupKey(pub) === group.key)
+                  }))}
+                </>
               ) : (
                 <p className="no-data">No publications data available</p>
               )}
@@ -1008,7 +1166,7 @@ const DofaReview = () => {
 
                 <CollapsibleSection title="Courseware &amp; Course Material" defaultOpen>
                   <div style={{ padding: '0.75rem 1rem' }}>
-                    {renderInfoGrid(courseware, ['type', 'courseware', 'link', 'labManualFile'])}
+                    {renderCoursewareSection(courseware)}
                   </div>
                 </CollapsibleSection>
 
@@ -1023,17 +1181,7 @@ const DofaReview = () => {
 
                 <CollapsibleSection title="Other Activities" defaultOpen={false}>
                   <div style={{ padding: '0.75rem 1rem' }}>
-                    {otherActivities && Object.keys(otherActivities).length > 0 ? (
-                      <>
-                        {renderTextSection('Software Developed', otherActivities.softwareDeveloped)}
-                        <div style={{ marginTop: '0.75rem' }}>
-                          <h4 className="sub-section-title">Visits to Other Institutions</h4>
-                          {renderValue(otherActivities.institutionalVisits, 'institutionalVisits')}
-                        </div>
-                      </>
-                    ) : (
-                      <p className="no-data">No submitted information available.</p>
-                    )}
+                    {renderOtherActivitiesSection(otherActivities)}
                   </div>
                 </CollapsibleSection>
 

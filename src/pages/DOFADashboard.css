@@ -308,6 +308,38 @@
   background: #fee2e2;
 }
 
+.btn-lock {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+
+.btn-lock:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn-lock:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-unlock {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+}
+
+.btn-unlock:hover {
+  background: #0a0f1a;
+  border-color: #0a0f1a;
+}
+
+.btn-unlock:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Loading and Empty States */
 .loading-state,
 .empty-state {
