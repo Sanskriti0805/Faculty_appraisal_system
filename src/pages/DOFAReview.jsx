@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import './DofaReview.css';
 import { showConfirm } from '../utils/appDialogs';
+import { buildReviewPath } from '../utils/reviewRoute';
 
 // Import Mirror Mode components
 import ResearchPublications from './ResearchPublications';
@@ -87,6 +88,7 @@ const CollapsibleSection = ({ title, count, children, defaultOpen = false, icon 
 
 /* -- Publication Detail Card ------------------------------- */
 const PubDetailCard = ({ pub }) => {
+  const isBlank = (value) => value === null || value === undefined || value === '';
   const field = (label, value, fullWidth = false, badge = null) => {
     const isEmpty = value === null || value === undefined || value === '';
     return (
@@ -100,6 +102,9 @@ const PubDetailCard = ({ pub }) => {
       </div>
     );
   };
+  const optionalField = (label, value, fullWidth = false, badge = null) => (
+    isBlank(value) ? null : field(label, value, fullWidth, badge)
+  );
 
   const getQuartileBadge = (q) => {
     if (!q) return null;
@@ -113,29 +118,71 @@ const PubDetailCard = ({ pub }) => {
 
   // Flatten authors array to readable string
   const authorsStr = Array.isArray(pub?.authors)
-    ? pub.authors.map(a => [a.first, a.middle, a.last].filter(Boolean).join(' ')).join(', ')
+    ? pub.authors.map(a => [
+        a.first || a.first_name,
+        a.middle || a.middle_name,
+        a.last || a.last_name
+      ].filter(Boolean).join(' ')).filter(Boolean).join(', ')
     : pub?.authors || null;
+  const editorsStr = Array.isArray(pub?.editors)
+    ? pub.editors.map(e => [
+        e.first || e.first_name,
+        e.middle || e.middle_name,
+        e.last || e.last_name
+      ].filter(Boolean).join(' ')).filter(Boolean).join(', ')
+    : pub?.editors || null;
+  const pages = pub?.pages || (
+    pub?.pages_from || pub?.pages_to
+      ? [pub.pages_from, pub.pages_to].filter(Boolean).join(' - ')
+      : null
+  );
+  const issuePages = pub?.issue || pub?.number
+    ? `${pub.issue || pub.number}${pages ? `, pp. ${pages}` : ''}`
+    : pages;
+  const publicationType = String(pub?.publication_type || '').toLowerCase();
+  const subType = String(pub?.sub_type || '').toLowerCase();
+  const isJournal = publicationType === 'journal';
+  const isConference = publicationType === 'conference';
+  const isMonograph = publicationType === 'monographs';
+  const isBookChapter = isMonograph && subType === 'book chapter';
+  const isBookEdited = isMonograph && subType === 'book edited';
+  const isBook = isMonograph && subType === 'book';
+  const isOther = publicationType === 'any other';
+  const quartileValue = pub?.quartile || (isJournal ? pub?.sub_type : null);
+  const venue = [pub?.city, pub?.state, pub?.country].filter(Boolean).join(', ');
+  const showRequiredAuthors = isJournal || isConference || isBook || isBookChapter;
+  const showRequiredTitle = isJournal || isConference || isBook || isBookChapter || isBookEdited;
+  const showYear = isJournal || isConference || isMonograph || isOther || !isBlank(pub?.year_of_publication);
 
   return (
     <div className="pub-detail-grid">
-      {field('Authors', authorsStr, true)}
-      {field('Title', pub?.title, true)}
-      {field('Details', pub?.details, true)}
+      {showRequiredAuthors ? field('Authors', authorsStr, true) : optionalField('Authors', authorsStr, true)}
+      {showRequiredTitle
+        ? field(isBookChapter ? 'Chapter Title' : 'Title', pub?.title, true)
+        : optionalField('Title', pub?.title, true)}
+      {optionalField('Editors', editorsStr, true)}
+      {isOther ? field('Details', pub?.details, true) : optionalField('Details', pub?.details, true)}
       {field('Publication Type', pub?.publication_type)}
-      {field('Sub Type', pub?.sub_type)}
-      {field('Year', pub?.year_of_publication)}
-      {field('Journal / Conference / Book', pub?.journal_name || pub?.conference_name || pub?.book_title, true)}
-      {field('Conference Type', pub?.type_of_conference)}
-      {field('Date From', pub?.date_from)}
-      {field('Date To', pub?.date_to)}
-      {field('Publisher / Agency', pub?.publisher || pub?.publication_agency)}
-      {field('Volume', pub?.volume)}
-      {field('Issue / Pages', pub?.issue ? `${pub.issue}${pub.pages ? `, pp. ${pub.pages}` : ''}` : pub?.pages)}
-      {field('ISSN / ISBN', pub?.issn || pub?.isbn)}
-      {field('DOI', pub?.doi)}
-      {pub?.quartile && field('Quartile', pub.quartile, false, getQuartileBadge(pub.quartile))}
-      {pub?.indexing && field('Indexing', pub.indexing, false, 'scopus')}
-      {field('Impact Factor', pub?.impact_factor)}
+      {(isMonograph || isOther) && field('Sub Type', pub?.sub_type)}
+      {showYear && field('Year', pub?.year_of_publication)}
+      {isJournal && field('Journal', pub?.journal_name, true)}
+      {isConference && field('Conference', pub?.conference_name, true)}
+      {isBookChapter && optionalField('Book', pub?.title_of_book || pub?.book_title, true)}
+      {(isBook || isBookEdited) && optionalField('Publisher / Agency', pub?.publisher || pub?.publication_agency)}
+      {isBookChapter && optionalField('Publisher / Agency', pub?.publisher || pub?.publication_agency)}
+      {isConference && optionalField('Abbreviation', pub?.abbreviation)}
+      {isConference && field('Conference Type', pub?.type_of_conference)}
+      {isConference && field('Date From', pub?.date_from)}
+      {isConference && field('Date To', pub?.date_to)}
+      {isConference && optionalField('Venue', venue)}
+      {isConference && optionalField('Publication Agency', pub?.publication_agency)}
+      {isJournal && optionalField('Volume', pub?.volume)}
+      {(isJournal || isConference || isBookChapter) && optionalField('Issue / Pages', issuePages)}
+      {(isJournal || isBook || isBookEdited || isBookChapter) && optionalField('ISSN / ISBN', pub?.issn || pub?.isbn)}
+      {(isJournal || isConference) && optionalField('DOI', pub?.doi)}
+      {isJournal && field('Quartile', quartileValue, false, getQuartileBadge(quartileValue))}
+      {pub?.indexing && optionalField('Indexing', pub.indexing, false, 'scopus')}
+      {isJournal && optionalField('Impact Factor', pub?.impact_factor)}
       {pub?.doi_link && (
         <div className="pub-detail-field">
           <label>DOI Link</label>
@@ -162,7 +209,7 @@ const PubDetailCard = ({ pub }) => {
 
 /* -- Main Component ---------------------------------------- */
 const DofaReview = () => {
-  const { id } = useParams();
+  const { id, employeeId, academicYear, formType } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem('auth_token') || '';
@@ -171,9 +218,11 @@ const DofaReview = () => {
   const isHodRoute = location.pathname.startsWith('/hod');
   const reviewerRole = isHodRoute ? 'hod' : 'Dofa';
   const backPath = isHodRoute ? '/hod/dashboard' : (isOfficeRoute ? '/Dofa-office/dashboard' : '/Dofa/dashboard');
+  const reviewBasePath = isHodRoute ? '/hod' : (isOfficeRoute ? '/Dofa-office' : '/Dofa');
 
   const [submissionData, setSubmissionData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [comment, setComment] = useState('');
   const [activeTab, setActiveTab] = useState(isHodRoute ? 'partb' : 'faculty');
   const [expandedPubs, setExpandedPubs] = useState({});
@@ -214,6 +263,7 @@ const DofaReview = () => {
   const fetchSubmissionDetails = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await fetch(`${API}/submissions/${id}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
       });
@@ -221,6 +271,15 @@ const DofaReview = () => {
       if (data.success) {
         setSubmissionData(data.data);
         setComments(Array.isArray(data.data?.comments) ? data.data.comments : []);
+        if (!employeeId || !academicYear || !formType) {
+          const canonicalPath = buildReviewPath(reviewBasePath, data.data?.submission);
+          if (canonicalPath && canonicalPath !== location.pathname) {
+            navigate(canonicalPath, { replace: true });
+          }
+        }
+      } else {
+        setError(data.message || 'Failed to load submission');
+        console.error('Error response:', data);
       }
 
       const versionsRes = await fetch(`${API}/submissions/${id}/versions`, {
@@ -231,6 +290,7 @@ const DofaReview = () => {
         setSubmissionVersions(Array.isArray(versionsData.data) ? versionsData.data : []);
       }
     } catch (error) {
+      setError(error.message || 'Error loading submission');
       console.error('Error fetching submission:', error);
     } finally {
       setLoading(false);
@@ -388,7 +448,13 @@ const DofaReview = () => {
   };
 
   if (loading) return <div className="Dofa-review"><div className="loading-state">Loading submission...</div></div>;
-  if (!submissionData) return <div className="Dofa-review"><div className="empty-state">Submission not found</div></div>;
+  if (!submissionData) return (
+    <div className="Dofa-review">
+      <div className="empty-state">
+        {error ? `Error: ${error}` : 'Submission not found'}
+      </div>
+    </div>
+  );
 
   const displayData = selectedVersionSnapshot || submissionData;
 
@@ -433,6 +499,32 @@ const DofaReview = () => {
     if (isEmptyValue(value)) return <span className="legacy-empty-inline">-</span>;
     if (Array.isArray(value)) {
       if (value.length === 0) return <span className="legacy-empty-inline">-</span>;
+      
+      // Special handling for institutional visits
+      if (key === 'institutionalVisits') {
+        return (
+          <ul className="legacy-list">
+            {value.map((entry, i) => {
+              if (typeof entry === 'object' && entry !== null) {
+                const details = entry.details || entry.text || entry.visit || '';
+                const evidenceFile = entry.evidence_file || '';
+                return (
+                  <li key={i}>
+                    <div>{String(details)}</div>
+                    {evidenceFile && (
+                      <div style={{ marginTop: '0.4rem' }}>
+                        {renderFileLink(evidenceFile)}
+                      </div>
+                    )}
+                  </li>
+                );
+              }
+              return <li key={i}>{String(entry)}</li>;
+            })}
+          </ul>
+        );
+      }
+      
       return (
         <ul className="legacy-list">
           {value.map((entry, i) => (
@@ -684,11 +776,11 @@ const DofaReview = () => {
                               {pub?.sub_type ? `  |  ${pub.sub_type}` : ''}
                             </p>
                             <h4 className="publication-card-title">
-                              {pub?.title || 'Untitled publication'}
+                              {pub?.title || pub?.title_of_book || pub?.details || 'Untitled publication'}
                             </h4>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span className="publication-card-year">{pub?.year_of_publication || 'N/A'}</span>
+                            <span className="publication-card-year">{pub?.year_of_publication || '-'}</span>
                             <ChevronDown size={15} className={`collapsible-chevron ${isOpen ? 'open' : ''}`} style={{ color: '#94a3b8' }} />
                           </div>
                         </div>

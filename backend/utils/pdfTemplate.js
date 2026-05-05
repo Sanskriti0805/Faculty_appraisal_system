@@ -1,12 +1,6 @@
-/**
- * pdfTemplate.js
- * Generates the full LNMIIT-branded HTML string for Puppeteer to render as PDF.
- * Called by pdfController.js with all submission data + dynamic sections.
- */
-
 'use strict';
 
-const fs = require('fs');
+const fs   = require('fs');
 const path = require('path');
 
 let logoBase64 = '';
@@ -15,104 +9,308 @@ try {
   if (fs.existsSync(logoPath)) {
     logoBase64 = `data:image/png;base64,${fs.readFileSync(logoPath, 'base64')}`;
   }
-} catch(e) { console.warn('Logo could not be loaded for PDF', e); }
+} catch (e) { console.warn('Logo not loaded:', e.message); }
 
-/* ── helpers ──────────────────────────────────────────────────────────────── */
+/* ─── helpers ──────────────────────────────────────────────────────────── */
 const esc = (v) =>
-  String(v ?? '—')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  String(v ?? '—').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 const fmtDate = (d) => {
   if (!d) return '—';
   const dt = new Date(d);
-  return isNaN(dt.getTime()) ? String(d) : dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  if (isNaN(dt.getTime())) return String(d);
+  return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const fmtFile = (v) => {
+  if (!v) return '—';
+  // Strip leading UUID/timestamp prefix from stored filenames
+  return String(v).replace(/^\d{10,}-/, '').replace(/^[0-9a-f]{8,}-/i, '');
+};
+
+const isDateCol = (k) =>
+  /^(date|month|month_of|date_of|joining|start|end|submission_date|implementation_date)/.test(k) ||
+  /(^|_)(date|month)$/.test(k);
+
+const isFileCol  = (k) => /(file|attachment|evidence|document|upload|certificate)/.test(k);
+const isSkipCol  = (k) => /^(id|faculty_id|submission_id|session_id|created_at|updated_at)$/.test(k);
+const isPlainObject = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+
+const fmtCell = (key, val) => {
+  if (val === null || val === undefined || val === '') return '—';
+  if (isFileCol(key))  return fmtFile(val);
+  if (isDateCol(key))  return fmtDate(val);
+  return String(val);
 };
 
 const toLabel = (k) =>
-  String(k || '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  String(k || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-/* Render a simple key-value info grid */
-const infoGrid = (obj = {}) => {
-  const skip = new Set(['id', 'faculty_id', 'submission_id', 'created_at', 'updated_at']);
-  const entries = Object.entries(obj).filter(([k, v]) => !skip.has(k) && v !== null && v !== undefined && v !== '');
-  if (entries.length === 0) return '<p class="no-data">No information recorded.</p>';
-  return `<div class="info-grid">${entries.map(([k, v]) => `
-    <div class="info-cell">
-      <span class="info-label">${esc(toLabel(k))}</span>
-      <span class="info-value">${esc(typeof v === 'object' ? JSON.stringify(v) : v)}</span>
-    </div>`).join('')}</div>`;
+const renderLegacyValue = (key, value) => {
+  if (value === null || value === undefined || value === '') return '—';
+
+  if (Array.isArray(value)) {
+    const items = value.filter(item => item !== null && item !== undefined && item !== '');
+    if (items.length === 0) return '—';
+
+    if (items.every(isPlainObject)) {
+      const allKeys = [...new Set(items.flatMap(item => Object.keys(item || {})))]
+        .filter(fieldKey => !isSkipCol(fieldKey));
+
+      if (allKeys.length === 0) return '—';
+
+      const thead = allKeys.map(fieldKey => `<th>${esc(toLabel(fieldKey))}</th>`).join('');
+      const tbody = items.map(item => {
+        const cells = allKeys.map(fieldKey => `<td>${renderLegacyValue(fieldKey, item[fieldKey])}</td>`).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+      return `<div class="table-wrap"><table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table></div>`;
+    }
+
+    return `<ul class="legacy-list">${items.map(item => `<li>${renderLegacyValue(key, item)}</li>`).join('')}</ul>`;
+  }
+
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value)
+      .filter(([fieldKey, fieldValue]) => !isSkipCol(fieldKey) && fieldValue !== null && fieldValue !== undefined && fieldValue !== '');
+
+    if (entries.length === 0) return '—';
+
+    return `<div class="info-grid">${entries.map(([fieldKey, fieldValue]) => `
+      <div class="info-cell">
+        <span class="info-label">${esc(toLabel(fieldKey))}</span>
+        <span class="info-value">${renderLegacyValue(fieldKey, fieldValue)}</span>
+      </div>
+    `).join('')}</div>`;
+  }
+
+  return esc(fmtCell(key, value));
 };
 
-/* Render an array as a table */
-const dataTable = (rows = [], preferCols = []) => {
+/* ─── Per-section column whitelists (key must match actual DB column name) ─ */
+const COL = {
+  courses: [
+    { key: 'course_code',    label: 'Code'        },
+    { key: 'course_name',    label: 'Course Name' },
+    { key: 'section',        label: 'Section'     },
+    { key: 'semester',       label: 'Semester'    },
+    { key: 'program',        label: 'Program'     },
+    { key: 'credits',        label: 'Credits'     },
+    { key: 'enrollment',     label: 'Enrollment'  },
+    { key: 'feedback_score', label: 'Feedback'    },
+    { key: 'percentage',     label: '%ile'        },
+    { key: 'remarks',        label: 'Remarks'     },
+    { key: 'status',         label: 'Status'      },
+  ],
+  newCourses: [
+    { key: 'course_name',  label: 'Course Name' },
+    { key: 'course_code',  label: 'Code'        },
+    { key: 'level_type',   label: 'Level Type'  },
+    { key: 'level',        label: 'Level'       },
+    { key: 'program',      label: 'Program'     },
+    { key: 'remarks',      label: 'Remarks'     },
+    { key: 'cif_file',     label: 'CIF File'    },
+  ],
+  publications: [
+    { key: 'publication_type',    label: 'Type'           },
+    { key: 'sub_type',            label: 'Sub-type'       },
+    { key: 'title',               label: 'Title'          },
+    { key: 'year_of_publication', label: 'Year'           },
+    { key: 'journal_name',        label: 'Journal'        },
+    { key: 'conference_name',     label: 'Conference'     },
+    { key: 'abbreviation',        label: 'Abbreviation'   },
+    { key: 'volume',              label: 'Vol.'           },
+    { key: 'number',              label: 'No.'            },
+    { key: 'pages_from',          label: 'Pages From'     },
+    { key: 'pages_to',            label: 'Pages To'       },
+    { key: 'date_from',           label: 'Date From'      },
+    { key: 'date_to',             label: 'Date To'        },
+    { key: 'type_of_conference',  label: 'Conf. Type'     },
+    { key: 'city',                label: 'City'           },
+    { key: 'state',               label: 'State'          },
+    { key: 'country',             label: 'Country'        },
+    { key: 'publication_agency',  label: 'Publisher'      },
+    { key: 'title_of_book',       label: 'Book Title'     },
+    { key: 'details',             label: 'Details'        },
+    { key: 'status',              label: 'Status'         },
+  ],
+  grants: [
+    { key: 'grant_type',       label: 'Type'           },
+    { key: 'project_name',     label: 'Project'        },
+    { key: 'funding_agency',   label: 'Funding Agency' },
+    { key: 'grant_amount',     label: 'Amount (₹)'    },
+    { key: 'amount_in_lakhs',  label: 'Lakhs'          },
+    { key: 'currency',         label: 'Currency'       },
+    { key: 'duration',         label: 'Duration'       },
+    { key: 'role',             label: 'Role'           },
+    { key: 'researchers',      label: 'Co-researchers' },
+  ],
+  proposals: [
+    { key: 'title',            label: 'Title'          },
+    { key: 'funding_agency',   label: 'Funding Agency' },
+    { key: 'grant_amount',     label: 'Amount (₹)'    },
+    { key: 'amount_in_lakhs',  label: 'Lakhs'          },
+    { key: 'currency',         label: 'Currency'       },
+    { key: 'duration',         label: 'Duration'       },
+    { key: 'submission_date',  label: 'Submitted On'   },
+    { key: 'role',             label: 'Role'           },
+    { key: 'status',           label: 'Status'         },
+  ],
+  patents: [
+    { key: 'patent_type',      label: 'Type'         },
+    { key: 'title',            label: 'Title'        },
+    { key: 'agency',           label: 'Agency'       },
+    { key: 'month',            label: 'Date'         },
+    { key: 'publication_id',   label: 'Publication ID'},
+  ],
+  paperReviews: [
+    { key: 'journal_name',      label: 'Journal / Conference' },
+    { key: 'abbreviation',      label: 'Abbreviation'         },
+    { key: 'review_type',       label: 'Review Type'          },
+    { key: 'tier',              label: 'Tier'                 },
+    { key: 'number_of_papers',  label: 'No. of Papers'        },
+    { key: 'month_of_review',   label: 'Month of Review'      },
+  ],
+  techTransfer: [
+    { key: 'title',       label: 'Title'        },
+    { key: 'description', label: 'Description'  },
+    { key: 'agency',      label: 'Agency'       },
+    { key: 'date',        label: 'Date'         },
+  ],
+  conferences: [
+    { key: 'conference_name', label: 'Conference'     },
+    { key: 'session_title',   label: 'Session Title'  },
+    { key: 'role',            label: 'Role'          },
+    { key: 'date',            label: 'Date'           },
+    { key: 'location',        label: 'Location'       },
+    { key: 'evidence_file',   label: 'Evidence'       },
+  ],
+  keynotes: [
+    { key: 'title',         label: 'Title'         },
+    { key: 'event_name',    label: 'Event'         },
+    { key: 'date',          label: 'Date'          },
+    { key: 'location',      label: 'Location'      },
+    { key: 'audience_type', label: 'Audience Type' },
+  ],
+  awards: [
+    { key: 'award_name',       label: 'Award'       },
+    { key: 'honor_type',       label: 'Type'        },
+    { key: 'awarding_agency',  label: 'Awarded By'  },
+    { key: 'year',             label: 'Year'        },
+    { key: 'description',      label: 'Description' },
+    { key: 'evidence_file',    label: 'Evidence'    },
+  ],
+  consultancy: [
+    { key: 'organization',  label: 'Organisation' },
+    { key: 'project_title', label: 'Project'      },
+    { key: 'amount',        label: 'Amount (in INR lacs)' },
+    { key: 'duration',      label: 'Duration'     },
+    { key: 'year',          label: 'Year'         },
+    { key: 'evidence_file', label: 'Evidence'     },
+  ],
+  teachingInnovation: [
+    { key: 'title',               label: 'Title'               },
+    { key: 'description',         label: 'Description'         },
+    { key: 'implementation_date', label: 'Implementation Date' },
+    { key: 'impact',              label: 'Impact'              },
+  ],
+  contributions: [
+    { key: 'contribution_type', label: 'Type'        },
+    { key: 'category',          label: 'Category'    },
+    { key: 'activity',          label: 'Activity'    },
+    { key: 'title',             label: 'Title'       },
+    { key: 'description',       label: 'Description' },
+    { key: 'details',           label: 'Details'     },
+    { key: 'role',              label: 'Role'        },
+    { key: 'year',              label: 'Year'        },
+  ],
+  goals: [
+    { key: 'semester',     label: 'Semester'     },
+    { key: 'teaching',     label: 'Teaching'     },
+    { key: 'research',     label: 'Research'     },
+    { key: 'contribution', label: 'Contribution' },
+    { key: 'outreach',     label: 'Outreach'     },
+    { key: 'description',  label: 'Description'  },
+  ],
+};
+
+/* ─── Render helpers ────────────────────────────────────────────────────── */
+
+const curatedTable = (rows = [], colDefs = []) => {
   const safeRows = rows.filter(Boolean);
   if (safeRows.length === 0) return '<p class="no-data">No entries recorded.</p>';
-  const skip = new Set(['id', 'faculty_id']);
-  const rawCols = Object.keys(safeRows[0]).filter(k => !skip.has(k));
-  const cols = [...preferCols.filter(k => rawCols.includes(k)), ...rawCols.filter(k => !preferCols.includes(k))];
-  return `
-    <div class="table-wrap">
-      <table>
-        <thead><tr>${cols.map(c => `<th>${esc(toLabel(c))}</th>`).join('')}</tr></thead>
-        <tbody>${safeRows.map(row =>
-    `<tr>${cols.map(c => `<td>${(c.toLowerCase().includes('date') || c.toLowerCase().includes('year') || c.toLowerCase().includes('at')) ? esc(fmtDate(row[c])) : esc(String(row[c] ?? '—'))}</td>`).join('')}</tr>`
-  ).join('')}</tbody>
-      </table>
-    </div>`;
+
+  // Only show columns that have at least one non-empty value
+  const activeCols = colDefs.filter(({ key }) =>
+    safeRows.some(r => r[key] !== null && r[key] !== undefined && r[key] !== '')
+  );
+  if (activeCols.length === 0) return '<p class="no-data">No entries recorded.</p>';
+
+  const thead = activeCols.map(({ label }) => `<th>${esc(label)}</th>`).join('');
+  const tbody = safeRows.map(row => {
+    const cells = activeCols.map(({ key }) =>
+      `<td>${esc(fmtCell(key, row[key]))}</td>`
+    ).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  return `<div class="table-wrap"><table>
+    <thead><tr>${thead}</tr></thead>
+    <tbody>${tbody}</tbody>
+  </table></div>`;
 };
 
-/* Render a single section block */
+const infoGrid = (obj = {}) => {
+  const entries = Object.entries(obj).filter(
+    ([k, v]) => !isSkipCol(k) && v !== null && v !== undefined && v !== ''
+  );
+  if (entries.length === 0) return '<p class="no-data">No information recorded.</p>';
+
+  return `<div class="info-grid">${entries.map(([k, v]) => {
+    return `<div class="info-cell">
+      <span class="info-label">${esc(toLabel(k))}</span>
+      <div class="info-value">${renderLegacyValue(k, v)}</div>
+    </div>`;
+  }).join('')}</div>`;
+};
+
 const section = (title, content) => `
-  <div class="section">
-    <div class="section-header"><h2>${esc(title)}</h2></div>
-    <div class="section-body">${content}</div>
-  </div>`;
+<div class="section">
+  <div class="section-header"><h2>${esc(title)}</h2></div>
+  <div class="section-body">${content}</div>
+</div>`;
 
-/* ── Dynamic sections ─────────────────────────────────────────────────────── */
 const dynamicSectionsHtml = (dynamicData = []) => {
-  if (dynamicData.length === 0) return '';
-
+  if (!dynamicData.length) return '';
   const blocks = dynamicData.map(({ section: sec, fields, respMap }) => {
     const fieldsHtml = fields.map(field => {
       const value = respMap[field.id];
       if (field.field_type === 'table' && Array.isArray(value) && value.length > 0) {
         const cols = field.config?.columns || [];
-        return `
-          <div class="dyn-field">
-            <p class="dyn-field-label">${esc(field.label)}</p>
-            <div class="table-wrap">
-              <table>
-                <thead><tr>${cols.map(c => `<th>${esc(c.header)}</th>`).join('')}</tr></thead>
-                <tbody>${value.map(row =>
-          `<tr>${cols.map(c => `<td>${esc(row[c.key] ?? '—')}</td>`).join('')}</tr>`
-        ).join('')}</tbody>
-              </table>
-            </div>
-          </div>`;
+        return `<div class="dyn-field">
+          <p class="dyn-field-label">${esc(field.label)}</p>
+          <div class="table-wrap"><table>
+            <thead><tr>${cols.map(c => `<th>${esc(c.header)}</th>`).join('')}</tr></thead>
+            <tbody>${value.map(row =>
+              `<tr>${cols.map(c => `<td>${renderLegacyValue(c.key, row[c.key])}</td>`).join('')}</tr>`
+            ).join('')}</tbody>
+          </table></div></div>`;
       }
-      const display = Array.isArray(value) ? value.join(', ') : String(value ?? '—');
-      return `
-        <div class="dyn-field">
-          <span class="info-label">${esc(field.label)}</span>
-          <span class="info-value">${esc(display)}</span>
-        </div>`;
-    }).join('');
-
-    return `
-      <div class="dyn-subsection">
-        <h3 class="dyn-section-title">${esc(sec.title)} <span class="form-badge">Form ${esc(sec.form_type)}</span></h3>
-        ${fieldsHtml}
+      return `<div class="dyn-field">
+        <span class="info-label">${esc(field.label)}</span>
+        <div class="info-value">${renderLegacyValue(field.label, value)}</div>
       </div>`;
+    }).join('');
+    return `<div class="dyn-subsection">
+      <h3 class="dyn-section-title">${esc(sec.title)} <span class="form-badge">Form ${esc(sec.form_type)}</span></h3>
+      ${fieldsHtml}
+    </div>`;
   }).join('');
-
   return section('Custom Sections (Form Builder)', blocks);
 };
 
-/* ── Main template ────────────────────────────────────────────────────────── */
+/* ─── Main HTML ─────────────────────────────────────────────────────────── */
 const generateHtml = (data) => {
   const {
     submission = {}, facultyInfo = {},
@@ -121,395 +319,194 @@ const generateHtml = (data) => {
     conferenceSessions = [], keynotesTalks = [], consultancy = [],
     teachingInnovation = [], institutionalContributions = [], goals = [],
     courseware, researchPlan, teachingPlan, continuingEducation, otherActivities,
-    dynamicData = []   // ← injected by pdfController
+    dynamicData = []
   } = data;
 
-  const title = `Faculty Appraisal — ${esc(submission.faculty_name || 'Faculty')} — ${esc(submission.academic_year || '')}`;
+  const title = `Faculty Appraisal — ${submission.faculty_name || 'Faculty'} — ${submission.academic_year || ''}`;
+
+  /* Parse a legacy JSON string and render as human-readable HTML */
+  const legacyJsonBlock = (raw) => {
+    if (!raw) return '<p class="no-data">No data recorded.</p>';
+    let parsed;
+    try { parsed = typeof raw === 'string' ? JSON.parse(raw) : raw; }
+    catch (_) { return `<pre class="pre-block">${esc(String(raw))}</pre>`; }
+
+    // Array of objects → table
+    if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
+      const allKeys = [...new Set(parsed.flatMap(r => Object.keys(r || {})))]
+        .filter(k => !isSkipCol(k));
+      const thead = allKeys.map(k => `<th>${esc(toLabel(k))}</th>`).join('');
+      const tbody = parsed.map(row => {
+        const cells = allKeys.map(k => `<td>${renderLegacyValue(k, row[k])}</td>`).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+      return `<div class="table-wrap"><table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table></div>`;
+    }
+
+    // Plain object → key-value grid
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const entries = Object.entries(parsed)
+        .filter(([k, v]) => !isSkipCol(k) && v !== null && v !== undefined && v !== '');
+      if (entries.length === 0) return '<p class="no-data">No data recorded.</p>';
+      return `<div class="info-grid">${entries.map(([k, v]) => {
+        return `<div class="info-cell">
+          <span class="info-label">${esc(toLabel(k))}</span>
+          <span class="info-value">${renderLegacyValue(k, v)}</span>
+        </div>`;
+      }).join('')}</div>`;
+    }
+
+    // Fallback: plain text
+    return `<pre class="pre-block">${esc(String(parsed))}</pre>`;
+  };
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>${title}</title>
+<title>${esc(title)}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
+  /* Puppeteer handles the footer; no position:fixed needed here */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'Inter', Arial, sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 11px;
     color: #1e293b;
     background: #fff;
     line-height: 1.55;
   }
 
-  /* ── Cover page ── */
+  /* ── Cover ── */
   .cover {
+    width: 100vw;
     height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #ffffff;
-    color: #1e3a8a;
     text-align: center;
-    padding: 3rem;
+    padding: 40px;
     page-break-after: always;
     border: 8px solid #1e3a8a;
-    box-sizing: border-box;
   }
-
-  .cover-logo {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #475569;
-    margin-bottom: 2.5rem;
-  }
-
-  .cover h1 {
-    font-size: 32px;
-    font-weight: 800;
-    margin-bottom: 1rem;
-    line-height: 1.2;
-    color: #1e3a8a;
-  }
-
-  .cover h2 {
-    font-size: 18px;
-    font-weight: 500;
-    color: #64748b;
-    margin-bottom: 3rem;
-  }
-
-  .cover-meta {
-    display: flex;
-    gap: 2.5rem;
-    font-size: 13px;
-    flex-wrap: wrap;
-    justify-content: center;
-    color: #334155;
-    background: #f8fafc;
-    padding: 2rem;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    width: 80%;
-    margin: 0 auto;
-  }
-
-  .cover-meta-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .cover-meta-item strong {
-    font-size: 16px;
-    font-weight: 700;
-    color: #0f172a;
-  }
-
-  .cover-status {
-    margin-top: 3rem;
-    padding: 0.6rem 1.8rem;
-    background: #1e3a8a;
-    color: white;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
+  .cover img       { max-height: 110px; margin-bottom: 24px; }
+  .cover-inst      { font-size: 13px; font-weight: 700; text-transform: uppercase;
+                     letter-spacing: .08em; color: #475569; margin-bottom: 28px; }
+  .cover h1        { font-size: 34px; font-weight: 800; color: #1e3a8a;
+                     margin-bottom: 10px; line-height: 1.2; }
+  .cover h2        { font-size: 18px; font-weight: 400; color: #64748b; margin-bottom: 36px; }
+  .cover-meta      { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center;
+                     background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+                     padding: 28px 36px; width: 80%; }
+  .cover-meta-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .cover-meta-item span   { font-size: 11px; color: #64748b; }
+  .cover-meta-item strong { font-size: 16px; font-weight: 700; color: #0f172a; }
+  .cover-status    { margin-top: 28px; padding: 8px 24px; background: #1e3a8a; color: #fff;
+                     border-radius: 20px; font-size: 12px; font-weight: 700;
+                     letter-spacing: .07em; text-transform: uppercase; }
 
   /* ── Sections ── */
-  .section {
-    margin: 0;
-    page-break-inside: avoid;
-  }
+  .section          { margin-bottom: 16px; }
+  .section-header   { background: #1e3a8a; color: #fff; padding: 8px 16px; }
+  .section-header h2{ font-size: 12px; font-weight: 700; text-transform: uppercase;
+                      letter-spacing: .07em; }
+  .section-body     { padding: 12px 16px; border: 3px solid #1e3a8a; border-top: none; }
+  .no-data          { color: #94a3b8; font-style: italic; font-size: 10px; }
 
-  .section-header {
-    background: #1e3a8a;
-    color: white;
-    padding: 8px 16px;
-    margin: 0;
-  }
+  /* ── Info grid (4 columns on landscape) ── */
+  .info-grid  { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 20px; }
+  .info-cell  { display: flex; flex-direction: column; gap: 3px; }
+  .info-label { font-size: 8.5px; font-weight: 700; text-transform: uppercase;
+                letter-spacing: .05em; color: #64748b; }
+  .info-value { font-size: 11px; font-weight: 500; color: #1e293b; word-break: break-word; }
 
-  .section-header h2 {
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
+  /* ── Tables ── */
+  .table-wrap { border: 1px solid #d1d9e6; border-radius: 4px; margin-top: 4px; width: 100%; }
+  table       { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead       { background: #1e3a8a; }
+  th          { padding: 8px 12px; text-align: left; font-weight: 700; font-size: 10px;
+                text-transform: uppercase; letter-spacing: .04em; color: #fff;
+                border-right: 1px solid rgba(255,255,255,.12); white-space: nowrap; }
+  th:last-child { border-right: none; }
+  td          { padding: 8px 12px; border-bottom: 1px solid #eef0f4; color: #334155;
+                vertical-align: top; word-break: break-word; overflow-wrap: break-word; }
+  tr:last-child td  { border-bottom: none; }
+  tr:nth-child(even){ background: #f8fafc; }
 
-  .section-body {
-    padding: 12px 16px;
-    border-left: 3px solid #1e3a8a;
-    border-right: 3px solid #1e3a8a;
-    border-bottom: 3px solid #1e3a8a;
-    margin-bottom: 16px;
-  }
+  /* ── Pre blocks ── */
+  .pre-block { white-space: pre-wrap; font-family: inherit; font-size: 10.5px;
+               background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;
+               padding: 10px 14px; line-height: 1.7; }
 
-  .no-data {
-    color: #94a3b8;
-    font-style: italic;
-    font-size: 10.5px;
-  }
-
-  /* Info grid */
-  .info-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px 16px;
-  }
-
-  .info-cell {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .info-label {
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #64748b;
-  }
-
-  .info-value {
-    font-size: 11px;
-    color: #1e293b;
-    font-weight: 500;
-  }
-
-  /* Table */
-  .table-wrap {
-    overflow: hidden;
-    border-radius: 4px;
-    border: 1px solid #e2e8f0;
-    margin-top: 6px;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 10px;
-  }
-
-  thead { background: #f1f5f9; }
-
-  th {
-    padding: 5px 8px;
-    text-align: left;
-    font-weight: 700;
-    color: #475569;
-    border-bottom: 1px solid #e2e8f0;
-    font-size: 9.5px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  td {
-    padding: 5px 8px;
-    border-bottom: 1px solid #f1f5f9;
-    color: #334155;
-    vertical-align: top;
-  }
-
-  tr:last-child td { border-bottom: none; }
-  tr:nth-child(even) { background: #fafafa; }
-
-  /* Dynamic sections */
-  .dyn-subsection {
-    margin-bottom: 14px;
-    padding: 10px;
-    background: #f8fafc;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
-  }
-
-  .dyn-section-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #1e3a8a;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .form-badge {
-    background: #dbeafe;
-    color: #1d4ed8;
-    border-radius: 10px;
-    padding: 1px 6px;
-    font-size: 8.5px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-  }
-
-  .dyn-field {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 6px;
-    gap: 2px;
-  }
-
-  .dyn-field-label {
-    font-size: 10px;
-    font-weight: 600;
-    color: #334155;
-    margin-bottom: 4px;
-  }
-
-  /* Footer */
-  .page-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    font-size: 9px;
-    color: #94a3b8;
-    border-top: 1px solid #e2e8f0;
-    background: white;
-  }
+  /* ── Dynamic ── */
+  .dyn-subsection   { margin-bottom: 14px; padding: 12px; background: #f8fafc;
+                      border-radius: 6px; border: 1px solid #e2e8f0; }
+  .dyn-section-title{ font-size: 12px; font-weight: 700; color: #1e3a8a;
+                      margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .form-badge       { background: #dbeafe; color: #1d4ed8; border-radius: 10px;
+                      padding: 2px 8px; font-size: 9px; font-weight: 700; }
+  .dyn-field        { display: flex; flex-direction: column; margin-bottom: 8px; gap: 2px; }
+  .dyn-field-label  { font-size: 10px; font-weight: 600; color: #334155; margin-bottom: 4px; }
+  .legacy-list      { margin: 0; padding-left: 16px; }
+  .legacy-list li   { margin-bottom: 4px; }
 
   @media print {
-    .section { page-break-inside: auto; }
+    .section    { page-break-inside: auto; }
+    table       { page-break-inside: auto; }
+    thead       { display: table-header-group; }
+    tr          { page-break-inside: avoid; }
   }
 </style>
 </head>
 <body>
 
-<!-- ── Cover Page ── -->
+<!-- Cover Page -->
 <div class="cover">
-  ${logoBase64 ? `<img src="${logoBase64}" alt="LNMIIT Logo" style="max-height: 120px; margin-bottom: 20px;" />` : ''}
-  <div class="cover-logo">The LNM Institute of Information Technology, Jaipur</div>
+  ${logoBase64 ? `<img src="${logoBase64}" alt="LNMIIT Logo" />` : ''}
+  <div class="cover-inst">The LNM Institute of Information Technology, Jaipur</div>
   <h1>${esc(submission.faculty_name || 'Faculty Appraisal Report')}</h1>
   <h2>Annual Faculty Appraisal Form</h2>
   <div class="cover-meta">
-    <div class="cover-meta-item">
-      <span>Academic Year</span>
-      <strong>${esc(submission.academic_year || '—')}</strong>
-    </div>
-    <div class="cover-meta-item">
-      <span>Department</span>
-      <strong>${esc(submission.department || facultyInfo.department || '—')}</strong>
-    </div>
-    <div class="cover-meta-item">
-      <span>Designation</span>
-      <strong>${esc(submission.designation || facultyInfo.designation || '—')}</strong>
-    </div>
-    <div class="cover-meta-item">
-      <span>Submitted On</span>
-      <strong>${fmtDate(submission.submitted_at)}</strong>
-    </div>
+    <div class="cover-meta-item"><span>Academic Year</span><strong>${esc(submission.academic_year || '—')}</strong></div>
+    <div class="cover-meta-item"><span>Department</span><strong>${esc(submission.department || facultyInfo.department || '—')}</strong></div>
+    <div class="cover-meta-item"><span>Designation</span><strong>${esc(submission.designation || facultyInfo.designation || '—')}</strong></div>
+    <div class="cover-meta-item"><span>Submitted On</span><strong>${fmtDate(submission.submitted_at)}</strong></div>
   </div>
   <div class="cover-status">${esc(submission.status || 'Draft')}</div>
 </div>
 
-<!-- ── Footer (appears on every page after cover) ── -->
-<div class="page-footer">
-  <span>LNMIIT Faculty Appraisal System &mdash; Confidential</span>
-  <span>Generated: ${new Date().toLocaleDateString('en-IN')}</span>
-</div>
+<!-- Faculty Information -->
+${section('Faculty Information', infoGrid(facultyInfo))}
 
-<!-- ═══════════════════════════════════════════════════════════
-     PART A — ACADEMIC CONTRIBUTIONS
-     ═══════════════════════════════════════════════════════════ -->
+<!-- Part A -->
+${section('Part A — Courses Taught',              curatedTable(courses,                  COL.courses))}
+${section('Part A — New Courses Developed',       curatedTable(newCourses,               COL.newCourses))}
+${section('Part A — Research Publications',       curatedTable(publications,             COL.publications))}
+${section('Part A — Research Grants',             curatedTable(grants,                   COL.grants))}
+${section('Part A — Submitted Proposals',         curatedTable(proposals,                COL.proposals))}
+${section('Part A — Patents',                     curatedTable(patents,                  COL.patents))}
+${section('Part A — Paper Reviews',               curatedTable(paperReviews,             COL.paperReviews))}
+${section('Part A — Technology Transfer',         curatedTable(techTransfer,             COL.techTransfer))}
+${section('Part A — Conference Sessions',         curatedTable(conferenceSessions,       COL.conferences))}
+${section('Part A — Keynotes & Invited Talks',    curatedTable(keynotesTalks,            COL.keynotes))}
+${section('Part A — Awards & Honours',            curatedTable(awards,                   COL.awards))}
+${section('Part A — Consultancy',                 curatedTable(consultancy,              COL.consultancy))}
+${section('Part A — Teaching Innovation',         curatedTable(teachingInnovation,       COL.teachingInnovation))}
+${section('Part A — Institutional Contributions', curatedTable(institutionalContributions, COL.contributions))}
 
-${section('Part A — Faculty Information', infoGrid(facultyInfo))}
+${courseware          ? section('Part A — Courseware',           legacyJsonBlock(courseware))          : ''}
+${continuingEducation ? section('Part A — Continuing Education', legacyJsonBlock(continuingEducation)) : ''}
+${otherActivities     ? section('Part A — Other Activities',     legacyJsonBlock(otherActivities))     : ''}
 
-${section('Part A — Courses Taught',
-  dataTable(courses, ['course_code', 'course_title', 'semester', 'year', 'students', 'feedback_score'])
-)}
-
-${section('Part A — New Courses Developed',
-  dataTable(newCourses, ['title', 'course_name', 'semester', 'year', 'role'])
-)}
-
-${section('Part A — Research Publications',
-  dataTable(publications, ['publication_type', 'sub_type', 'title', 'year_of_publication', 'journal_name', 'conference_name'])
-)}
-
-${section('Part A — Research Grants',
-  dataTable(grants, ['grant_type', 'project_name', 'funding_agency', 'grant_amount', 'duration', 'role'])
-)}
-
-${section('Part A — Submitted Proposals',
-  dataTable(proposals, ['title', 'funding_agency', 'grant_amount', 'submission_date', 'status'])
-)}
-
-${section('Part A — Patents',
-  dataTable(patents, ['title', 'patent_number', 'status', 'year', 'country'])
-)}
-
-${section('Part A — Technology Transfer',
-  dataTable(techTransfer, ['title', 'details', 'year', 'organization', 'role'])
-)}
-
-${section('Part A — Paper Reviews',
-  dataTable(paperReviews, ['journal_name', 'review_count', 'year', 'details'])
-)}
-
-${section('Part A — Conference Sessions',
-  dataTable(conferenceSessions, ['conference_name', 'role', 'date', 'location'])
-)}
-
-${section('Part A — Keynotes & Invited Talks',
-  dataTable(keynotesTalks, ['title', 'event_name', 'date', 'location'])
-)}
-
-${section('Part A — Awards & Honours',
-  dataTable(awards, ['title', 'awarding_body', 'year', 'level'])
-)}
-
-${section('Part A — Consultancy',
-  dataTable(consultancy, ['organization', 'project_title', 'role', 'duration', 'amount', 'year'])
-)}
-
-${section('Part A — Teaching Innovation',
-  dataTable(teachingInnovation, ['title', 'description', 'impact', 'year'])
-)}
-
-${section('Part A — Institutional Contributions',
-  dataTable(institutionalContributions, ['category', 'activity', 'role', 'year', 'details'])
-)}
-
-${courseware ? section('Part A — Courseware', `<pre style="white-space:pre-wrap;font-family:inherit;font-size:10.5px">${esc(typeof courseware === 'string' ? courseware : JSON.stringify(courseware, null, 2))}</pre>`) : ''}
-
-${continuingEducation ? section('Part A — Continuing Education', `<pre style="white-space:pre-wrap;font-family:inherit;font-size:10.5px">${esc(typeof continuingEducation === 'string' ? continuingEducation : JSON.stringify(continuingEducation, null, 2))}</pre>`) : ''}
-
-${otherActivities ? section('Part A — Other Activities', `<pre style="white-space:pre-wrap;font-family:inherit;font-size:10.5px">${esc(typeof otherActivities === 'string' ? otherActivities : JSON.stringify(otherActivities, null, 2))}</pre>`) : ''}
-
-<!-- ═══════════════════════════════════════════════════════════
-     PART B — GOAL SETTING & SELF-ASSESSMENT
-     ═══════════════════════════════════════════════════════════ -->
-
+<!-- Part B -->
 ${section('Part B — Research Plan',
-  researchPlan ? `<pre style="white-space:pre-wrap;font-family:inherit;font-size:10.5px">${esc(typeof researchPlan === 'string' ? researchPlan : JSON.stringify(researchPlan, null, 2))}</pre>` : '<p class="no-data">No research plan recorded.</p>'
-)}
-
+  researchPlan  ? legacyJsonBlock(researchPlan)  : '<p class="no-data">No research plan recorded.</p>')}
 ${section('Part B — Teaching Plan',
-  teachingPlan ? `<pre style="white-space:pre-wrap;font-family:inherit;font-size:10.5px">${esc(typeof teachingPlan === 'string' ? teachingPlan : JSON.stringify(teachingPlan, null, 2))}</pre>` : '<p class="no-data">No teaching plan recorded.</p>'
-)}
+  teachingPlan  ? legacyJsonBlock(teachingPlan)  : '<p class="no-data">No teaching plan recorded.</p>')}
+${section('Part B — Goals & Targets', curatedTable(goals, COL.goals))}
 
-${section('Part B — Goals & Targets',
-  dataTable(goals, ['semester', 'teaching', 'research', 'contribution', 'outreach', 'description'])
-)}
-
-<!-- ═══════════════════════════════════════════════════════════
-     CUSTOM SECTIONS (DYNAMIC — FORM BUILDER)
-     ═══════════════════════════════════════════════════════════ -->
+<!-- Dynamic / Form Builder sections -->
 ${dynamicSectionsHtml(dynamicData)}
 
 </body>

@@ -256,9 +256,14 @@ exports.updateFieldOrder = async (req, res) => {
  */
 exports.saveResponses = async (req, res) => {
     try {
-        const { faculty_id, submission_id, responses } = req.body;
+        const { submission_id, responses } = req.body;
+        const faculty_id = req.user?.role === 'faculty' ? req.user.id : req.body.faculty_id;
         const sessionId = await getCurrentSessionWindow(db);
         const responseList = Array.isArray(responses) ? responses : [];
+
+        if (!faculty_id) {
+            return res.status(400).json({ success: false, message: 'faculty_id is required' });
+        }
 
         if (submission_id) {
             await db.query(
@@ -296,8 +301,12 @@ exports.saveResponses = async (req, res) => {
  */
 exports.getResponses = async (req, res) => {
     try {
-        const { faculty_id, submission_id } = req.query;
+        const { submission_id } = req.query;
+        const faculty_id = req.user?.role === 'faculty' ? req.user.id : req.query.faculty_id;
         const sessionId = await getCurrentSessionWindow(db);
+        if (!faculty_id) {
+            return res.status(400).json({ success: false, message: 'faculty_id is required' });
+        }
         let query = 'SELECT * FROM dynamic_responses WHERE faculty_id = ? AND session_id = ?';
         let params = [faculty_id, sessionId];
         if (submission_id) {

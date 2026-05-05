@@ -24,7 +24,7 @@ const DynamicFormSection = () => {
 
   useEffect(() => {
     fetchData();
-  }, [sectionId, user, submissionData?.id]);
+  }, [sectionId, user, submissionData?.id, submissionData?.submission?.id]);
 
   // ── Debounced autosave ──────────────────────────────────────────────────────
   // Fires 2 seconds after the user stops making changes.
@@ -56,7 +56,7 @@ const DynamicFormSection = () => {
   const fetchData = async () => {
     try {
       if (!user?.id) return;
-      const submissionId = submissionData?.id || null;
+      const submissionId = submissionData?.submission?.id || submissionData?.id || null;
       setLoading(true);
       const [schemaRes, respRes] = await Promise.all([
         apiClient.get('/form-builder/schema'),
@@ -117,7 +117,7 @@ const DynamicFormSection = () => {
         if (!silent) showToast('Unable to identify logged-in faculty. Please login again.', 'error');
         return false;
       }
-      const submissionId = submissionData?.id || null;
+      const submissionId = submissionData?.submission?.id || submissionData?.id || null;
       setSaving(true);
       const responsePayload = Object.entries(responses).map(([fieldId, value]) => ({
         field_id: parseInt(fieldId),
@@ -126,6 +126,7 @@ const DynamicFormSection = () => {
 
       const res = await apiClient.post('/form-builder/responses', {
         faculty_id: user?.id,
+        section_id: Number(sectionId),
         submission_id: submissionId,
         responses: responsePayload
       });

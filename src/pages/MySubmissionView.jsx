@@ -701,7 +701,7 @@ const MySubmissionView = () => {
           {activeTab === 'publications' && (
             <>
               <h3 className="msv-section-title"><FileText size={17} /> Research Publications</h3>
-              {renderDataTable('Research Publications', publications, ['publication_type', 'sub_type', 'title', 'details', 'authors', 'editors', 'year_of_publication', 'journal_name', 'conference_name', 'type_of_conference', 'date_from', 'date_to', 'publication_agency', 'title_of_book', 'evidence_file'])}
+              {renderDataTable('Research Publications', publications, ['publication_type', 'sub_type', 'title', 'authors', 'editors', 'year_of_publication', 'journal_name', 'conference_name', 'abbreviation', 'type_of_conference', 'date_from', 'date_to', 'city', 'state', 'country', 'publication_agency', 'title_of_book', 'volume', 'number', 'pages_from', 'pages_to', 'details', 'evidence_file'])}
             </>
           )}
 

@@ -7,6 +7,16 @@
   font-family: 'Inter', sans-serif;
 }
 
+.admin-page--embedded {
+  min-height: auto;
+  background: transparent;
+}
+
+.admin-page--embedded .admin-main {
+  max-width: none;
+  padding: 0;
+}
+
 /* Top Nav */
 .admin-topnav {
   background: #ffffff;

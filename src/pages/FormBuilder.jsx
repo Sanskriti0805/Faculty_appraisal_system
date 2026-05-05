@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Plus, Trash2, GripVertical, Save, Layout,
   Table as TableIcon, Type, AlignLeft, CheckCircle2,
@@ -525,6 +525,8 @@ const RubricReminder = ({ sectionName, onClose, onGoToRubrics }) => (
 // --- Main Form Builder --------------------------------------------------------
 const FormBuilder = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith('/Dofa-office') ? '/Dofa-office' : '/Dofa';
   const [allSections, setAllSections] = useState([]); // flat list from /schema/flat
   const [sections, setSections] = useState([]);        // nested schema (active form tab)
   const [activeFormTab, setActiveFormTab] = useState('A');
@@ -682,7 +684,7 @@ const FormBuilder = () => {
         <RubricReminder
           sectionName={rubricReminder}
           onClose={() => setRubricReminder(null)}
-          onGoToRubrics={() => { setRubricReminder(null); navigate('/Dofa-office/rubrics'); }}
+          onGoToRubrics={() => { setRubricReminder(null); navigate(`${basePath}/rubrics`); }}
         />
       )}
 

@@ -9,6 +9,13 @@ import './Layout.css'
 const Layout = () => {
   const navigate = useNavigate()
   const { logout } = useAuth()
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => {
+    return localStorage.getItem('sidebar_collapsed') === '1'
+  })
+
+  React.useEffect(() => {
+    localStorage.setItem('sidebar_collapsed', sidebarCollapsed ? '1' : '0')
+  }, [sidebarCollapsed])
 
   const handleLogout = async () => {
     const shouldLogout = await confirmLogout()
@@ -19,10 +26,13 @@ const Layout = () => {
   }
 
   return (
-    <div className="layout">
+    <div className={`layout ${sidebarCollapsed ? 'layout--sidebar-collapsed' : ''}`}>
       <Header onLogout={handleLogout} />
       <div className="layout-body">
-        <Sidebar />
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
+        />
         <main className="main-content">
           <Outlet />
         </main>

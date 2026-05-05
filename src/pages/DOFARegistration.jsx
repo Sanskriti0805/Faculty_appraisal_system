@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { showConfirm } from '../utils/appDialogs';
+import { buildReviewPath } from '../utils/reviewRoute';
 import './DofaRegistration.css';
 
 const API_BASE = `http://${window.location.hostname}:5001/api`;
@@ -26,6 +27,7 @@ const DofaRegistration = () => {
   const [archiveData, setArchiveData] = useState({ faculty: [], departments: [] });
   const [historyModal, setHistoryModal] = useState({ open: false, faculty: null, submissions: [], loading: false });
   const [downloadingSubmissionId, setDownloadingSubmissionId] = useState(null);
+  const [archiveExportLoading, setArchiveExportLoading] = useState(null);
 
   // Toast notification
   const [toast, setToast] = useState(null);
@@ -254,6 +256,8 @@ const DofaRegistration = () => {
   };
 
   const handleArchiveExport = async (type, format) => {
+    const loadingKey = `${type}-${format}`;
+    setArchiveExportLoading(loadingKey);
     try {
       const response = await fetch(`${API_BASE}/register/archive/export?type=${type}&format=${format}`, { headers });
       if (!response.ok) throw new Error('Export failed');
@@ -269,6 +273,8 @@ const DofaRegistration = () => {
       window.URL.revokeObjectURL(url);
     } catch {
       showToast('Failed to export archive data', 'error');
+    } finally {
+      setArchiveExportLoading(null);
     }
   };
 
@@ -283,15 +289,19 @@ const DofaRegistration = () => {
     }
   };
 
-  const getReviewRoute = (submissionId) => {
+  const getReviewRoute = (submission) => {
     const basePath = location.pathname.startsWith('/Dofa-office') ? '/Dofa-office' : '/Dofa';
-    return `${basePath}/review/${submissionId}`;
+    return buildReviewPath(basePath, {
+      ...submission,
+      employee_id: submission?.employee_id || historyModal.faculty?.employee_id,
+      faculty_id: submission?.faculty_id || historyModal.faculty?.id
+    });
   };
 
-  const openSubmissionReview = (submissionId) => {
-    if (!submissionId) return;
+  const openSubmissionReview = (submission) => {
+    if (!submission?.id) return;
     setHistoryModal({ open: false, faculty: null, submissions: [], loading: false });
-    navigate(getReviewRoute(submissionId));
+    navigate(getReviewRoute(submission));
   };
 
   const fetchSubmissionData = async (submissionId) => {
@@ -300,104 +310,51 @@ const DofaRegistration = () => {
     return data.success ? data.data : null;
   };
 
+  const getFilenameFromDisposition = (disposition, fallbackName) => {
+    if (!disposition) return fallbackName;
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try { return decodeURIComponent(utf8Match[1]); } catch { return fallbackName; }
+    }
+    const asciiMatch = disposition.match(/filename\=?"?([^";]+)"?/i);
+    return asciiMatch?.[1] || fallbackName;
+  };
+
   const handleDownloadSubmissionPDF = async (submissionRow) => {
     if (!submissionRow?.id) return;
 
     setDownloadingSubmissionId(submissionRow.id);
     try {
-      const data = await fetchSubmissionData(submissionRow.id);
-      if (!data) {
-        showToast('Could not fetch submission data for PDF', 'error');
+      // First fetch metadata to enforce access rules (Form B requires HoD approval)
+      const meta = await fetchSubmissionData(submissionRow.id);
+      if (!meta) {
+        showToast('Form B can be reviewed by DoFA only after HoD approval.', 'error');
+        return;
+      }
+      const sub = meta.submission || meta.sub;
+      if (sub?.form_type === 'B' && sub?.status !== 'hod_approved') {
+        showToast('Form B can be reviewed by DoFA only after HoD approval.', 'error');
         return;
       }
 
-      const { submission: sub, facultyInfo, publications, courses, grants, patents, awards, proposals, newCourses } = data;
-
-      const html = `<!DOCTYPE html><html><head><title>${sub.faculty_name} - Appraisal ${sub.academic_year}</title>
-      <style>
-        body{font-family:Arial,sans-serif;margin:30px;color:#222}
-        h1{color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:8px}
-        h2{color:#2d4373;margin-top:24px;font-size:1.1rem;border-bottom:1px solid #ddd;padding-bottom:4px}
-        table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
-        th{background:#f5f7fa;padding:8px;text-align:left;border:1px solid #ddd}
-        td{padding:8px;border:1px solid #ddd}
-        .meta{display:flex;gap:2rem;background:#f9fafb;padding:12px;border-radius:6px;margin-bottom:12px;flex-wrap:wrap}
-        .meta-item label{font-size:11px;color:#777;display:block}
-        .meta-item span{font-weight:600}
-      </style></head><body>
-      <h1>Annual Performance Appraisal - Form ${sub.form_type || 'A'}</h1>
-      <div class="meta">
-        <div class="meta-item"><label>Name</label><span>${sub.faculty_name || ''}</span></div>
-        <div class="meta-item"><label>Department</label><span>${sub.department || 'N/A'}</span></div>
-        <div class="meta-item"><label>Academic Year</label><span>${sub.academic_year || ''}</span></div>
-        <div class="meta-item"><label>Status</label><span>${sub.status || ''}</span></div>
-        <div class="meta-item"><label>Designation</label><span>${facultyInfo?.designation || 'N/A'}</span></div>
-      </div>
-
-      <h2>Part A - Courses Taught (${courses?.length || 0})</h2>
-      <table><tr><th>Course Name</th><th>Code</th><th>Semester</th><th>Program</th><th>Enrollment</th></tr>
-      ${(courses || []).map(c => `<tr><td>${c.course_name||''}</td><td>${c.course_code||''}</td><td>${c.semester||''}</td><td>${c.program||''}</td><td>${c.enrollment||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Research Publications (${publications?.length || 0})</h2>
-      <table><tr><th>Type</th><th>Sub Type</th><th>Title</th><th>Year</th><th>Journal/Conference</th></tr>
-      ${(publications || []).map(p => `<tr><td>${p.publication_type||''}</td><td>${p.sub_type||''}</td><td>${p.title||''}</td><td>${p.year_of_publication||''}</td><td>${p.journal_name||p.conference_name||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Research Grants (${grants?.length || 0})</h2>
-      <table><tr><th>Project Name</th><th>Agency</th><th>Amount (Lakhs)</th><th>Role</th></tr>
-      ${(grants || []).map(g => `<tr><td>${g.project_name||''}</td><td>${g.funding_agency||''}</td><td>${g.amount_in_lakhs||0}</td><td>${g.role||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Patents (${patents?.length || 0})</h2>
-      <table><tr><th>Type</th><th>Title</th><th>Agency</th></tr>
-      ${(patents || []).map(p => `<tr><td>${p.patent_type||''}</td><td>${p.title||''}</td><td>${p.agency||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Awards & Honours (${awards?.length || 0})</h2>
-      <table><tr><th>Award</th><th>Agency</th><th>Year</th></tr>
-      ${(awards || []).map(a => `<tr><td>${a.award_name||''}</td><td>${a.awarding_agency||''}</td><td>${a.year||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>New Courses Developed (${newCourses?.length || 0})</h2>
-      <table><tr><th>Course Name</th><th>Code</th><th>Level</th><th>Program</th></tr>
-      ${(newCourses || []).map(c => `<tr><td>${c.course_name||''}</td><td>${c.course_code||''}</td><td>${c.level||''}</td><td>${c.program||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Submitted Proposals (${proposals?.length || 0})</h2>
-      <table><tr><th>Title</th><th>Agency</th><th>Amount</th><th>Status</th></tr>
-      ${(proposals || []).map(p => `<tr><td>${p.title||''}</td><td>${p.funding_agency||''}</td><td>${p.grant_amount||0}</td><td>${p.status||''}</td></tr>`).join('')}
-      </table>
-
-      ${((data?.dynamicData || []).length > 0 ? `
-      <h2>Custom Sections</h2>
-      ${(data.dynamicData || []).map(entry => {
-        const section = entry?.section || {};
-        const fields = entry?.fields || [];
-        const fieldsHtml = fields.map(f => {
-          const value = f.value;
-          if (!value) return '';
-          const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
-          return `<div style="margin:10px 0;"><strong>${f.label || f.field_type}:</strong> <span>${displayValue}</span></div>`;
-        }).join('');
-        return `<h3 style="color:#2d4373;margin-top:16px;font-size:1rem;border-bottom:1px solid #ddd;padding-bottom:4px;">${section.title || 'Custom Section'}</h3>${fieldsHtml}`;
-      }).join('')}
-      ` : '')}
-
-      <p style="margin-top:40px;font-size:11px;color:#888">Generated on ${new Date().toLocaleString()}</p>
-      </body></html>`;
-
-      const win = window.open('', '_blank');
-      if (!win) {
-        showToast('Popup blocked. Please allow popups and try again.', 'error');
-        return;
+      // Use server-side canonical PDF generator so format matches other pages
+      const res = await fetch(`${API_BASE}/submissions/${submissionRow.id}/pdf`, { headers });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || 'Failed to download PDF');
       }
-      win.document.write(html);
-      win.document.close();
-      win.print();
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = getFilenameFromDisposition(res.headers.get('content-disposition'), `Appraisal_submission_${submissionRow.id}.pdf`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('PDF download failed:', error);
-      showToast('Failed to generate PDF', 'error');
+      showToast(error.message || 'Failed to download PDF', 'error');
     } finally {
       setDownloadingSubmissionId(null);
     }
@@ -611,19 +568,19 @@ const DofaRegistration = () => {
           <h2 className="admin-section-title"><Archive size={20} /> Archive</h2>
           <div className="admin-table-card archive-card" style={{ marginBottom: '18px' }}>
             <div className="archive-actions-row">
-              <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('faculty', 'csv')} style={{ padding: '8px 12px', fontSize: '12px' }}>
-                <Download size={14} /> Faculty CSV
+              <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('faculty', 'csv')} disabled={!!archiveExportLoading} style={{ padding: '8px 12px', fontSize: '12px', opacity: archiveExportLoading ? 0.75 : 1 }}>
+                {archiveExportLoading === 'faculty-csv' ? 'Exporting Faculty CSV...' : <><Download size={14} /> Faculty CSV</>}
               </button>
-              <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('faculty', 'xlsx')} style={{ padding: '8px 12px', fontSize: '12px' }}>
-                <Download size={14} /> Faculty Excel
+              <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('faculty', 'xlsx')} disabled={!!archiveExportLoading} style={{ padding: '8px 12px', fontSize: '12px', opacity: archiveExportLoading ? 0.75 : 1 }}>
+                {archiveExportLoading === 'faculty-xlsx' ? 'Exporting Faculty Excel...' : <><Download size={14} /> Faculty Excel</>}
               </button>
               {(user?.role === 'Dofa' || user?.role === 'Dofa_office' || user?.role === 'admin') && (
                 <>
-                  <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('department', 'csv')} style={{ padding: '8px 12px', fontSize: '12px' }}>
-                    <Download size={14} /> Department CSV
+                  <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('department', 'csv')} disabled={!!archiveExportLoading} style={{ padding: '8px 12px', fontSize: '12px', opacity: archiveExportLoading ? 0.75 : 1 }}>
+                    {archiveExportLoading === 'department-csv' ? 'Exporting Department CSV...' : <><Download size={14} /> Department CSV</>}
                   </button>
-                  <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('department', 'xlsx')} style={{ padding: '8px 12px', fontSize: '12px' }}>
-                    <Download size={14} /> Department Excel
+                  <button className="admin-btn-submit" type="button" onClick={() => handleArchiveExport('department', 'xlsx')} disabled={!!archiveExportLoading} style={{ padding: '8px 12px', fontSize: '12px', opacity: archiveExportLoading ? 0.75 : 1 }}>
+                    {archiveExportLoading === 'department-xlsx' ? 'Exporting Department Excel...' : <><Download size={14} /> Department Excel</>}
                   </button>
                 </>
               )}
@@ -1001,13 +958,13 @@ const DofaRegistration = () => {
                               {String(s.status || 'draft').replace(/_/g, ' ')}
                             </span>
                           </td>
-                          <td>{formatDate(s.submitted_at || s.updated_at || s.created_at)}</td>
+                          <td>{formatDate(s.submitted_at)}</td>
                           <td>
                             <div className="admin-history-action-group">
                               <button
                                 type="button"
                                 className="admin-btn-submit admin-history-view-btn"
-                                onClick={() => openSubmissionReview(s.id)}
+                                onClick={() => openSubmissionReview(s)}
                               >
                                 <Eye size={12} /> Preview
                               </button>

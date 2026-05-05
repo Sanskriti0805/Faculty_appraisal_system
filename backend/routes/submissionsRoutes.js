@@ -23,6 +23,8 @@ router.put('/session-lock', authenticate, submissionsController.setSessionFinalL
 
 // ── PDF download — MUST be before /:id ──────────────────────────────────────
 router.get('/:id/pdf', authenticate, pdfController.generateSubmissionPdf);
+// Render arbitrary HTML posted from frontend to PDF (used by export flows)
+router.post('/export/html-to-pdf', authenticate, pdfController.generateHtmlPdf);
 
 // Submission version history
 router.get('/:id/versions', authenticate, submissionsController.getSubmissionVersions);

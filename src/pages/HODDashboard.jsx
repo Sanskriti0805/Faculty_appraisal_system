@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Archive, RotateCcw, Eye, Download, FileText, X, Settings, Lock, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { confirmLogout, showConfirm } from '../utils/appDialogs';
+import { buildReviewPath } from '../utils/reviewRoute';
 import './HODDashboard.css';
 
 const API_BASE = `http://${window.location.hostname}:5001/api`;
 
-const HODDashboard = () => {
+const HODDashboard = ({ embedded = false }) => {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -18,6 +19,8 @@ const HODDashboard = () => {
   const [archiveFaculty, setArchiveFaculty] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [submissionLoading, setSubmissionLoading] = useState(false);
+  const [downloadingSubmissionId, setDownloadingSubmissionId] = useState(null);
+  const [archiveExportLoading, setArchiveExportLoading] = useState(null);
   const [submissionFilter, setSubmissionFilter] = useState('all');
 
   const [showSettings, setShowSettings] = useState(false);
@@ -155,6 +158,7 @@ const HODDashboard = () => {
   };
 
   const handleArchiveExport = async (format) => {
+    setArchiveExportLoading(format);
     try {
       const res = await fetch(`${API_BASE}/register/archive/export?type=faculty&format=${format}`, { headers });
       if (!res.ok) throw new Error('Export failed');
@@ -169,6 +173,8 @@ const HODDashboard = () => {
       window.URL.revokeObjectURL(url);
     } catch {
       window.appToast('Failed to export archive data');
+    } finally {
+      setArchiveExportLoading(null);
     }
   };
 
@@ -199,7 +205,24 @@ const HODDashboard = () => {
     }
   };
 
+  const getFilenameFromDisposition = (disposition, fallbackName) => {
+    if (!disposition) return fallbackName;
+
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1]);
+      } catch {
+        return fallbackName;
+      }
+    }
+
+    const asciiMatch = disposition.match(/filename="?([^";]+)"?/i);
+    return asciiMatch?.[1] || fallbackName;
+  };
+
   const handleSubmissionDownload = async (submissionId) => {
+    setDownloadingSubmissionId(submissionId);
     try {
       const res = await fetch(`${API_BASE}/submissions/${submissionId}/pdf`, { headers });
       if (!res.ok) {
@@ -210,13 +233,18 @@ const HODDashboard = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `submission_${submissionId}.pdf`;
+      link.download = getFilenameFromDisposition(
+        res.headers.get('content-disposition'),
+        `Appraisal_submission_${submissionId}.pdf`
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
       window.appToast(error.message || 'Failed to download PDF');
+    } finally {
+      setDownloadingSubmissionId(null);
     }
   };
 
@@ -288,28 +316,29 @@ const HODDashboard = () => {
   };
 
   return (
-    <div className="admin-page">
-      {/* Top Nav */}
-      <nav className="admin-topnav">
-        <div className="admin-topnav-brand">
-          <img src="/lnmiit-logo.png" alt="LNMIIT" className="admin-topnav-logo" onError={e => e.target.style.display = 'none'} />
-        </div>
-        <div className="admin-topnav-center">
-          <div className="admin-topnav-title">Faculty Appraisal System</div>
-          <div className="admin-topnav-subtitle">Head of Department Dashboard</div>
-        </div>
-        <div className="admin-topnav-right">
-          <div className="admin-topnav-user">
-            <span className="admin-topnav-badge">HoD</span>
+    <div className={`admin-page ${embedded ? 'admin-page--embedded' : ''}`}>
+      {!embedded && (
+        <nav className="admin-topnav">
+          <div className="admin-topnav-brand">
+            <img src="/lnmiit-logo.png" alt="LNMIIT" className="admin-topnav-logo" onError={e => e.target.style.display = 'none'} />
           </div>
-          <button className="admin-settings-btn" onClick={() => setShowSettings(true)}>
-            <Settings size={14} /> Account Settings
-          </button>
-          <button className="admin-logout-btn" onClick={handleLogout}>
-            <LogOut size={14} /> Logout
-          </button>
-        </div>
-      </nav>
+          <div className="admin-topnav-center">
+            <div className="admin-topnav-title">Faculty Appraisal System</div>
+            <div className="admin-topnav-subtitle">Head of Department Dashboard</div>
+          </div>
+          <div className="admin-topnav-right">
+            <div className="admin-topnav-user">
+              <span className="admin-topnav-badge">HoD</span>
+            </div>
+            <button className="admin-settings-btn" onClick={() => setShowSettings(true)}>
+              <Settings size={14} /> Account Settings
+            </button>
+            <button className="admin-logout-btn" onClick={handleLogout}>
+              <LogOut size={14} /> Logout
+            </button>
+          </div>
+        </nav>
+      )}
 
       <main className="admin-main">
         {/* Welcome + Dept Info */}
@@ -408,7 +437,7 @@ const HODDashboard = () => {
 
         <h2 className="admin-section-title"><FileText size={20} /> Form B Submissions</h2>
         <div className="admin-table-card">
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' , padding: '15px'}}>
             {[
               { key: 'all', label: 'All' },
               { key: 'submitted', label: 'Submitted' },
@@ -466,16 +495,21 @@ const HODDashboard = () => {
                           <button
                             className="admin-btn-cancel"
                             style={{ padding: '6px 10px', fontSize: '12px' }}
-                            onClick={() => navigate(`/hod/review/${submission.id}`)}
+                            onClick={() => navigate(buildReviewPath('/hod', submission))}
                           >
                             <Eye size={12} /> View
                           </button>
                           <button
                             className="admin-btn-cancel"
                             style={{ padding: '6px 10px', fontSize: '12px' }}
+                            disabled={downloadingSubmissionId === submission.id}
                             onClick={() => handleSubmissionDownload(submission.id)}
                           >
-                            <Download size={12} /> Download
+                            {downloadingSubmissionId === submission.id ? (
+                              <>Preparing...</>
+                            ) : (
+                              <><Download size={12} /> Download</>
+                            )}
                           </button>
                           {canMoveUnderReview && (
                             <button
@@ -517,11 +551,11 @@ const HODDashboard = () => {
         <h2 className="admin-section-title admin-archive-title"><Archive size={20} /> Archived Faculty</h2>
         <div className="admin-table-card">
           <div className="admin-archive-actions">
-            <button className="admin-btn-submit" onClick={() => handleArchiveExport('csv')} style={{ padding: '8px 12px', fontSize: '12px' }}>
-              <Download size={14} /> Export CSV
+            <button className="admin-btn-submit" onClick={() => handleArchiveExport('csv')} disabled={!!archiveExportLoading} style={{ padding: '8px 12px', fontSize: '12px', opacity: archiveExportLoading ? 0.75 : 1 }}>
+              {archiveExportLoading === 'csv' ? 'Exporting CSV...' : <><Download size={14} /> Export CSV</>}
             </button>
-            <button className="admin-btn-submit" onClick={() => handleArchiveExport('xlsx')} style={{ padding: '8px 12px', fontSize: '12px' }}>
-              <Download size={14} /> Export Excel
+            <button className="admin-btn-submit" onClick={() => handleArchiveExport('xlsx')} disabled={!!archiveExportLoading} style={{ padding: '8px 12px', fontSize: '12px', opacity: archiveExportLoading ? 0.75 : 1 }}>
+              {archiveExportLoading === 'xlsx' ? 'Exporting Excel...' : <><Download size={14} /> Export Excel</>}
             </button>
           </div>
           {archiveFaculty.length === 0 ? (

@@ -3,6 +3,11 @@ const { autoAllocateMarks } = require('../services/rubricMapper');
 const emailService = require('../services/emailService');
 const xlsx = require('xlsx');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
+const {
+  getLatestOpenSession,
+  getSessionState,
+  getSessionWriteAccess
+} = require('../utils/sessionAccess');
 
 async function getTargetAcademicYear() {
   const [sessionRows] = await db.query(
@@ -91,14 +96,17 @@ async function getSessionFinalLockRecord(academicYear) {
 // GET /api/submissions/my - get or create draft submission for logged-in faculty
 exports.getMySubmission = async (req, res) => {
   try {
+    await ensureSessionFinalLockColumns();
     const facultyId = req.user.id;
-    const academicYear = await getTargetAcademicYear();
-    const lockRecord = await getSessionFinalLockRecord(academicYear);
+    const openSession = await getLatestOpenSession(db);
+    const academicYear = String(req.query?.academic_year || openSession?.academic_year || getCurrentAcademicYear()).trim();
     const preferredFormType = String(req.query?.form_type || '').trim().toUpperCase();
 
     // Find existing submission for this faculty + year.
     // Faculty-facing screens should resolve to Form A by default,
     // because edit-request and section editing are Form A workflows.
+    // If an accidental draft was created after a real submission, prefer
+    // the real submission so empty drafts cannot shadow submitted data.
     const [rows] = await db.query(
       `SELECT *
        FROM submissions
@@ -109,6 +117,8 @@ exports.getMySubmission = async (req, res) => {
            WHEN UPPER(COALESCE(form_type, 'A')) = 'A' THEN 1
            ELSE 2
          END,
+         CASE WHEN status = 'draft' THEN 1 ELSE 0 END,
+         COALESCE(submitted_at, updated_at, created_at) DESC,
          created_at DESC,
          id DESC
        LIMIT 1`,
@@ -119,10 +129,15 @@ exports.getMySubmission = async (req, res) => {
       return res.json({ success: true, data: rows[0] });
     }
 
-    if (Number(lockRecord?.final_locked || 0) === 1) {
-      return res.status(423).json({
+    const writeAccess = openSession && String(openSession.academic_year || '').trim() === academicYear
+      ? { session: openSession, ...getSessionState(openSession) }
+      : await getSessionWriteAccess(db, academicYear);
+
+    if (!writeAccess.canWrite) {
+      return res.status(writeAccess.httpStatus || 403).json({
         success: false,
-        message: `This session (${academicYear}) is final-locked by DoFA. New submissions are disabled.`
+        code: writeAccess.code,
+        message: writeAccess.message
       });
     }
 
@@ -608,11 +623,11 @@ exports.getAllSubmissions = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Authentication required.' });
     }
 
-    const { status, academic_year, faculty_id, form_type } = req.query;
+    const { status, academic_year, faculty_id, form_type, limit } = req.query;
     const role = req.user.role;
 
     let query = `
-      SELECT s.*, u.name as faculty_name, u.department, u.email,
+      SELECT s.*, u.name as faculty_name, u.department, u.email, u.employee_id,
              u.department_id as faculty_department_id,
              a.name as approved_by_name,
              COALESCE(sess.final_locked, 0) as session_locked,
@@ -689,7 +704,19 @@ exports.getAllSubmissions = async (req, res) => {
       params.push(faculty_id);
     }
 
-    query += ' ORDER BY s.created_at DESC';
+    query += `
+      ORDER BY
+        CASE WHEN s.status = 'draft' THEN 1 ELSE 0 END,
+        COALESCE(s.submitted_at, s.updated_at, s.created_at) DESC,
+        s.created_at DESC,
+        s.id DESC
+    `;
+
+    const parsedLimit = Number(limit);
+    if (Number.isInteger(parsedLimit) && parsedLimit > 0 && parsedLimit <= 500) {
+      query += ' LIMIT ?';
+      params.push(parsedLimit);
+    }
 
     const [rows] = await db.query(query, params);
     res.json({ success: true, data: rows });
@@ -705,7 +732,7 @@ exports.getSubmissionById = async (req, res) => {
 
     // Get submission details
     const [submission] = await db.query(`
-          SELECT s.*, u.name as faculty_name, u.department, u.department_id as faculty_department_id, u.email, u.designation, u.role as faculty_role,
+          SELECT s.*, u.name as faculty_name, u.department, u.department_id as faculty_department_id, u.email, u.employee_id, u.designation, u.role as faculty_role,
              a.name as approved_by_name
       FROM submissions s
       JOIN users u ON s.faculty_id = u.id
@@ -941,11 +968,58 @@ exports.getSubmissionById = async (req, res) => {
 // Create new submission
 exports.createSubmission = async (req, res) => {
   try {
+    await ensureSessionFinalLockColumns();
     const { faculty_id, academic_year, form_type } = req.body;
+    const role = req.user?.role;
+    const targetFacultyId = role === 'faculty' ? req.user.id : faculty_id;
+    const targetFormType = normalizeFormType(form_type || 'A');
+
+    if (!targetFacultyId) {
+      return res.status(400).json({ success: false, message: 'faculty_id is required.' });
+    }
+
+    if (role === 'faculty' && Number(faculty_id || req.user.id) !== Number(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'You can only create your own submission.' });
+    }
+
+    if (!['faculty', 'Dofa', 'Dofa_office', 'admin'].includes(role)) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions to create a submission.' });
+    }
+
+    const writeAccess = await getSessionWriteAccess(db, academic_year || null);
+    if (!writeAccess.canWrite) {
+      return res.status(writeAccess.httpStatus || 403).json({
+        success: false,
+        code: writeAccess.code,
+        message: writeAccess.message
+      });
+    }
+
+    const targetAcademicYear = String(academic_year || writeAccess.session?.academic_year || '').trim();
+    if (!targetAcademicYear) {
+      return res.status(400).json({ success: false, message: 'academic_year is required.' });
+    }
+
+    const [existingRows] = await db.query(
+      `SELECT id
+       FROM submissions
+       WHERE faculty_id = ? AND academic_year = ? AND UPPER(COALESCE(form_type, 'A')) = ?
+       ORDER BY CASE WHEN status = 'draft' THEN 1 ELSE 0 END, id DESC
+       LIMIT 1`,
+      [targetFacultyId, targetAcademicYear, targetFormType]
+    );
+
+    if (existingRows.length > 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'Submission already exists',
+        data: { id: existingRows[0].id }
+      });
+    }
 
     const [result] = await db.query(
       'INSERT INTO submissions (faculty_id, academic_year, form_type, status) VALUES (?, ?, ?, ?)',
-      [faculty_id, academic_year, form_type || 'A', 'draft']
+      [targetFacultyId, targetAcademicYear, targetFormType, 'draft']
     );
 
     res.status(201).json({
@@ -1006,6 +1080,15 @@ exports.updateSubmissionStatus = async (req, res) => {
 
       if (nextStatus !== 'submitted') {
         return res.status(403).json({ success: false, message: 'Faculty can only submit or re-submit.' });
+      }
+
+      const writeAccess = await getSessionWriteAccess(db, submission.academic_year);
+      if (!writeAccess.canWrite) {
+        return res.status(writeAccess.httpStatus || 403).json({
+          success: false,
+          code: writeAccess.code,
+          message: writeAccess.message
+        });
       }
 
       if (!['draft', 'sent_back'].includes(submission.status)) {

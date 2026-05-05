@@ -1111,12 +1111,17 @@ exports.getFacultySubmissionHistory = async (req, res) => {
       : '0';
 
     const [rows] = await db.query(`
-      SELECT s.id, s.academic_year, s.status, s.form_type, s.created_at, s.updated_at,
+      SELECT s.id, s.faculty_id, u.employee_id, s.academic_year, s.status, s.form_type, s.submitted_at, s.created_at, s.updated_at,
              YEAR(s.created_at) AS calendar_year,
              ${commentsColumn} AS comments_count
       FROM submissions s
+      JOIN users u ON u.id = s.faculty_id
       WHERE s.faculty_id = ?
-      ORDER BY s.academic_year DESC, s.created_at DESC
+        AND s.status <> 'draft'
+      ORDER BY
+        s.academic_year DESC,
+        COALESCE(s.submitted_at, s.updated_at, s.created_at) DESC,
+        s.id DESC
     `, [facultyId]);
 
     res.json({ success: true, data: rows });

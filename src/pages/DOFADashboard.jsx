@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, CheckCircle, XCircle, MessageSquare, FileText, Users, Clock, CheckSquare, Bell, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import './DofaDashboard.css';
 import { showConfirm, showPrompt } from '../utils/appDialogs';
+import { buildReviewPath } from '../utils/reviewRoute';
 
 const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5001/api`;
 
@@ -170,8 +171,8 @@ const DofaDashboard = () => {
     }
   };
 
-  const handleViewSubmission = (id) => {
-    navigate(`/Dofa/review/${id}`);
+  const handleViewSubmission = (submission) => {
+    navigate(buildReviewPath('/Dofa', submission));
   };
 
   const handleQuickApprove = async (id) => {
@@ -719,13 +720,16 @@ const DofaDashboard = () => {
                   <th>Faculty Name</th>
                   <th>Department</th>
                   <th>Academic Year</th>
+                  <th>Form</th>
                   <th>Status</th>
                   <th>Submitted On</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {submissions.map((submission) => (
+                {submissions.map((submission) => {
+                  const isDraft = String(submission.status || '').toLowerCase() === 'draft';
+                  return (
                   <tr key={submission.id}>
                     <td>
                       <div className="faculty-info">
@@ -735,6 +739,7 @@ const DofaDashboard = () => {
                     </td>
                     <td>{submission.department || '-'}</td>
                     <td>{submission.academic_year}</td>
+                    <td><span className="form-badge" style={{ fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#f0f0f0', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>Form {submission.form_type || 'A'}</span></td>
                     <td>{getStatusBadge(submission.status)}</td>
                     <td>{formatDate(submission.submitted_at)}</td>
                     <td>
@@ -745,8 +750,9 @@ const DofaDashboard = () => {
                             <>
                         <button
                           className="action-btn btn-view"
-                          onClick={() => handleViewSubmission(submission.id)}
-                          title="View Details"
+                          onClick={() => handleViewSubmission(submission)}
+                          title={isDraft ? 'Available after faculty submission' : 'View Details'}
+                          disabled={isDraft}
                         >
                           <Eye size={13} />
                         </button>
@@ -774,7 +780,7 @@ const DofaDashboard = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>

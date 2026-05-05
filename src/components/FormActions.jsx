@@ -25,6 +25,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
   const [submissionStatus, setSubmissionStatus] = React.useState(null);
   const [approvedSections, setApprovedSections] = React.useState([]);
   const [hasSectionRestrictions, setHasSectionRestrictions] = React.useState(false);
+  const [sessionAccessMessage, setSessionAccessMessage] = React.useState('');
   const [toast, setToast] = React.useState(null);
 
   const validateMandatoryFields = React.useCallback(() => {
@@ -119,6 +120,14 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
     const loadAccess = async () => {
       try {
+        const sessionRes = await fetch(`http://${window.location.hostname}:5001/api/sessions/active`);
+        const sessionData = await sessionRes.json();
+        if (!sessionData.success || !sessionData.data || sessionData.pastDeadline || !sessionData.released) {
+          setSessionAccessMessage(sessionData.message || 'Forms are not currently open for changes.');
+        } else {
+          setSessionAccessMessage('');
+        }
+
         const subRes = await fetch(`http://${window.location.hostname}:5001/api/submissions/my`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -156,6 +165,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
   const isPathEditable = React.useCallback((path) => {
     if (user?.role !== 'faculty') return true;
+    if (sessionAccessMessage) return false;
     if (path === '/faculty-information') return true;
     if (!submissionStatus || submissionStatus === 'draft') return true;
     if (['submitted', 'submitted_hod', 'under_review', 'under_review_hod', 'approved', 'hod_approved'].includes(submissionStatus)) return false;
@@ -173,7 +183,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
     }
 
     return true;
-  }, [effectiveApprovedSections, hasSectionRestrictions, pathToSectionKey, submissionStatus, user]);
+  }, [effectiveApprovedSections, hasSectionRestrictions, pathToSectionKey, sessionAccessMessage, submissionStatus, user]);
 
   const getNextEditablePath = React.useCallback((path) => {
     const currentIndex = FORM_SEQUENCE.findIndex(item => item.path === path);
@@ -205,9 +215,9 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
   const effectivePrevPath = getPreviousEditablePath(currentPath);
   const currentPathEditable = isPathEditable(currentPath);
   const currentPathLocked = user?.role === 'faculty' && !currentPathEditable;
-  const lockedMessage = submissionStatus === 'sent_back'
+  const lockedMessage = sessionAccessMessage || (submissionStatus === 'sent_back'
     ? 'This section is locked for the current edit cycle.'
-    : 'This section is locked after submission. Request edits or wait for Dofa to send it back.';
+    : 'This section is locked after submission. Request edits or wait for Dofa to send it back.');
 
   const handleSaveOnly = async () => {
     try {

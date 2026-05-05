@@ -309,7 +309,7 @@
   to { transform: translateX(0); opacity: 1; }
 }
 
-.back-btn {
+.eval3-back-btn {
   text-decoration: none;
   background: #f8fafc;
   color: #475569;
@@ -323,7 +323,7 @@
   align-items: center;
 }
 
-.back-btn:hover {
+.eval3-back-btn:hover {
   background: #f1f5f9;
   color: #1e293b;
 }

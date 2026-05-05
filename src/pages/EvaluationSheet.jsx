@@ -12,6 +12,7 @@ const EvaluationSheet = () => {
   const [remarks, setRemarks] = useState({});
   const [activeYear, setActiveYear] = useState('');
   const [loading, setLoading] = useState(true);
+  const [exportLoading, setExportLoading] = useState(null);
   const [toast, setToast] = useState(null);
   const [rerunning, setRerunning] = useState(null); // submissionId being re-run
   const saveTimers = useRef({});
@@ -185,7 +186,7 @@ const EvaluationSheet = () => {
     }
   });
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!activeYear || submissions.length === 0) return showToast('No data to export', 'error');
 
     const logoUrl = window.location.origin + '/lnmiit-logo.png';
@@ -363,10 +364,20 @@ const EvaluationSheet = () => {
 </div>
 </body></html>`;
 
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
-    setTimeout(() => { win.print(); }, 600);
+    try {
+      const blob = await apiClient.post('/submissions/export/html-to-pdf', { html, filename: `Sheet1_${activeYear}.pdf` }, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Sheet1_${activeYear}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export PDF failed:', err);
+      showToast('Failed to generate PDF', 'error');
+    }
   };
 
   const handleExportCSV = () => {
@@ -391,6 +402,28 @@ const EvaluationSheet = () => {
     link.click();
   };
 
+  const handleExportPDFClick = async () => {
+    if (!activeYear || submissions.length === 0) return showToast('No data to export', 'error');
+    setExportLoading('pdf');
+    await new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+    try {
+      await handleExportPDF();
+    } finally {
+      setTimeout(() => setExportLoading(null), 300);
+    }
+  };
+
+  const handleExportCSVClick = async () => {
+    if (!activeYear || submissions.length === 0) return showToast('No data to export', 'error');
+    setExportLoading('csv');
+    await new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+    try {
+      handleExportCSV();
+    } finally {
+      setTimeout(() => setExportLoading(null), 300);
+    }
+  };
+
   if (loading) return <div className="eval-loading">Loading Evaluation Data...</div>;
 
   return (
@@ -404,11 +437,11 @@ const EvaluationSheet = () => {
             <p>Faculty Appraisal Consolidated Scores {activeYear ? `(${activeYear})` : ''}</p>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={handleExportCSV} style={{ padding: '6px 12px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#334155' }}>
-              Export CSV
+            <button onClick={handleExportCSVClick} disabled={!!exportLoading} style={{ padding: '6px 12px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#334155', opacity: exportLoading ? 0.7 : 1 }}>
+              {exportLoading === 'csv' ? 'Exporting CSV...' : 'Export CSV'}
             </button>
-            <button onClick={handleExportPDF} style={{ padding: '6px 12px', background: '#1e3a8a', color: 'white', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
-              Download PDF
+            <button onClick={handleExportPDFClick} disabled={!!exportLoading} style={{ padding: '6px 12px', background: '#1e3a8a', color: 'white', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', opacity: exportLoading ? 0.75 : 1 }}>
+              {exportLoading === 'pdf' ? 'Generating PDF...' : 'Download PDF'}
             </button>
           </div>
         </div>

@@ -10,6 +10,7 @@ const EvaluationSheet3 = () => {
   const [gradeIncrements, setGradeIncrements] = useState({});
   const [availableGrades, setAvailableGrades] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exportLoading, setExportLoading] = useState(null);
   const [toast, setToast] = useState(null);
   const [activeSessionYear, setActiveSessionYear] = useState('');
   const [sessionLockState, setSessionLockState] = useState({ locked: false });
@@ -180,7 +181,7 @@ const EvaluationSheet3 = () => {
     }
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!activeSessionYear || data.length === 0) return showToast('No data to export', 'error');
     
     const rows = data.map((item, idx) => {
@@ -233,10 +234,20 @@ const EvaluationSheet3 = () => {
   </table>
 </body></html>`;
 
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
-    setTimeout(() => { win.print(); }, 500);
+    try {
+      const blob = await apiClient.post('/submissions/export/html-to-pdf', { html, filename: `Sheet3_${activeSessionYear}.pdf` }, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Sheet3_${activeSessionYear}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export PDF failed:', err);
+      showToast('Failed to generate PDF', 'error');
+    }
   };
 
   const handleExportCSV = () => {
@@ -267,6 +278,39 @@ const EvaluationSheet3 = () => {
     link.href = url;
     link.download = `Sheet3_${activeSessionYear}.csv`;
     link.click();
+  };
+
+  const handleExportPDFClick = async () => {
+    if (!activeSessionYear || data.length === 0) return showToast('No data to export', 'error');
+    setExportLoading('pdf');
+    await new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+    try {
+      await handleExportPDF();
+    } finally {
+      setTimeout(() => setExportLoading(null), 300);
+    }
+  };
+
+  const handleExportCSVClick = async () => {
+    if (!activeSessionYear || data.length === 0) return showToast('No data to export', 'error');
+    setExportLoading('csv');
+    await new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+    try {
+      handleExportCSV();
+    } finally {
+      setTimeout(() => setExportLoading(null), 300);
+    }
+  };
+
+  const handleExportAllPDFClick = async () => {
+    if (!activeSessionYear) return showToast('No active session to export', 'error');
+    setExportLoading('all');
+    await new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+    try {
+      await handleExportAllPDF();
+    } finally {
+      setTimeout(() => setExportLoading(null), 300);
+    }
   };
 
   const handleExportAllPDF = async () => {
@@ -534,10 +578,20 @@ ${headerBlock('Consolidated Export &nbsp;|&nbsp; Generated: ' + genDate + ' &nbs
 
 </body></html>`;
 
-      const win = window.open('', '_blank');
-      win.document.write(html);
-      win.document.close();
-      setTimeout(() => { win.print(); }, 700);
+      try {
+        const blob = await apiClient.post('/submissions/export/html-to-pdf', { html, filename: `Evaluation_Sheets_1_2_3_${activeSessionYear}.pdf` }, { responseType: 'blob' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Evaluation_Sheets_1_2_3_${activeSessionYear}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Export PDF failed:', err);
+        showToast('Failed to generate PDF', 'error');
+      }
     } catch {
       showToast('Error exporting consolidated sheets', 'error');
     }
@@ -557,16 +611,16 @@ ${headerBlock('Consolidated Export &nbsp;|&nbsp; Generated: ' + genDate + ' &nbs
             <p>Grade-based Salary Increments Summary</p>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button onClick={handleExportCSV} style={{ padding: '6px 12px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#334155' }}>
-              Export CSV
+            <button onClick={handleExportCSVClick} disabled={!!exportLoading} style={{ padding: '6px 12px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#334155', opacity: exportLoading ? 0.7 : 1 }}>
+              {exportLoading === 'csv' ? 'Exporting CSV...' : 'Export CSV'}
             </button>
-            <button onClick={handleExportPDF} style={{ padding: '6px 12px', background: '#1e3a8a', color: 'white', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
-              Download PDF
+            <button onClick={handleExportPDFClick} disabled={!!exportLoading} style={{ padding: '6px 12px', background: '#1e3a8a', color: 'white', border: '1px solid #1e3a8a', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', opacity: exportLoading ? 0.75 : 1 }}>
+              {exportLoading === 'pdf' ? 'Generating PDF...' : 'Download PDF'}
             </button>
-            <button onClick={handleExportAllPDF} style={{ padding: '6px 12px', background: '#0f172a', color: 'white', border: '1px solid #0f172a', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
-              Download All Sheets PDF
+            <button onClick={handleExportAllPDFClick} disabled={!!exportLoading} style={{ padding: '6px 12px', background: '#0f172a', color: 'white', border: '1px solid #0f172a', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', opacity: exportLoading ? 0.75 : 1 }}>
+              {exportLoading === 'all' ? 'Generating All Sheets PDF...' : 'Download All Sheets PDF'}
             </button>
-            <Link to={`${basePath}/sheet2`} className="back-btn" style={{ marginLeft: '12px' }}>
+            <Link to={`${basePath}/sheet2`} className="eval3-back-btn" style={{ marginLeft: '12px' }}>
               &larr; Back to Sheet 2
             </Link>
           </div>

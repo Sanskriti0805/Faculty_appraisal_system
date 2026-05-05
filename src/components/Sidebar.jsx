@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { ChevronRight, ChevronDown } from 'lucide-react'
+import { ChevronRight, ChevronDown, ChevronLeft } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import './Sidebar.css'
 
@@ -10,7 +10,31 @@ const SECTION_GROUP_MEMBERS = {
   other_institutional_activities: ['institutional_contributions', 'other_activities', 'research_plan', 'teaching_plan']
 }
 
-const Sidebar = () => {
+const getShortLabel = (label) => {
+  const trimmed = String(label || '').trim()
+  if (!trimmed) return ''
+
+  const words = trimmed
+    .replace(/&/g, ' ')
+    .replace(/[^a-zA-Z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (words.length >= 2) {
+    return words.slice(0, 2).map(word => word[0]).join('').toUpperCase()
+  }
+
+  return trimmed.slice(0, 2).toUpperCase()
+}
+
+const NavLabel = ({ label }) => (
+  <>
+    <span className="nav-item-short" aria-hidden="true">{getShortLabel(label)}</span>
+    <span className="nav-item-label">{label}</span>
+  </>
+)
+
+const Sidebar = ({ collapsed = false, onToggleCollapse }) => {
   const location = useLocation()
   const { user, token } = useAuth()
   const [partAOpen, setPartAOpen] = useState(true)
@@ -192,7 +216,7 @@ const Sidebar = () => {
           className={`${className} nav-item-locked ${active ? 'active' : ''}`}
           title="Locked until edit access is granted"
         >
-          {label}
+          <NavLabel label={label} />
         </span>
       )
     }
@@ -202,14 +226,16 @@ const Sidebar = () => {
         key={path}
         to={path}
         className={`${className} ${active ? 'active' : ''}`}
+        title={label}
       >
-        {label}
+        <NavLabel label={label} />
       </Link>
     )
   }
 
   const isDofaOfficeRoute = location.pathname.startsWith('/Dofa-office')
   const isDofaRoute = location.pathname.startsWith('/Dofa') && !isDofaOfficeRoute
+  const isHodRoute = location.pathname.startsWith('/hod')
 
   const toggleSection = (sectionName) => {
     setExpandedSections(prev => {
@@ -260,24 +286,64 @@ const Sidebar = () => {
       .map(s => ({ name: s.title, path: `/faculty/dynamic/${s.id}` }))
   ]
 
+  // HoD-specific sidebar
+  if (isHodRoute) {
+    const hodNavItems = [
+      { name: 'Dashboard', path: '/hod/dashboard' },
+      { name: 'Help Center', path: '/hod/help' },
+    ]
+
+    return (
+      <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
+        <button
+          type="button"
+          className="sidebar-collapse-btn"
+          onClick={onToggleCollapse}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
+        <nav className="sidebar-nav">
+          <div className="nav-section">
+            <div className="nav-section-header" style={{ cursor: 'default' }}>
+              <span>HoD</span>
+            </div>
+            <div className="nav-section-items">
+              {hodNavItems.map(item => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+                  title={item.name}
+                >
+                  <NavLabel label={item.name} />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </nav>
+      </aside>
+    )
+  }
+
   // Dofa-specific sidebar
   if (isDofaRoute || isDofaOfficeRoute) {
     const DofaNavItems = [
       { name: 'Dashboard', path: '/Dofa/dashboard' },
-      { name: 'Logs', path: '/Dofa/logs' },
       { name: 'Form Release', path: '/Dofa/form-release' },
       { name: 'Rubrics Management', path: '/Dofa/rubrics' },
       { name: 'Sheet 1 - Evaluation', path: '/Dofa/sheet1' },
       { name: 'Sheet 2', path: '/Dofa/sheet2' },
       { name: 'Sheet 3', path: '/Dofa/sheet3' },
-      { name: 'Form Builder', path: '/Dofa-office/form-builder' },
+      { name: 'Form Builder', path: '/Dofa/form-builder' },
       { name: 'Manage Users', path: '/Dofa/manage-users' },
+      { name: 'Logs', path: '/Dofa/logs' },
       { name: 'Help Center', path: '/Dofa/help' },
     ]
 
     const DofaOfficeNavItems = [
       { name: 'Dashboard', path: '/Dofa-office/dashboard' },
-      { name: 'Logs', path: '/Dofa-office/logs' },
       { name: 'Form Release', path: '/Dofa-office/form-release' },
       { name: 'Rubrics Management', path: '/Dofa-office/rubrics' },
       { name: 'Sheet 1 - Evaluation', path: '/Dofa-office/sheet1' },
@@ -285,13 +351,23 @@ const Sidebar = () => {
       { name: 'Sheet 3', path: '/Dofa-office/sheet3' },
       { name: 'Form Builder', path: '/Dofa-office/form-builder' },
       { name: 'Manage Users', path: '/Dofa-office/manage-users' },
+      { name: 'Logs', path: '/Dofa-office/logs' },
       { name: 'Help Center', path: '/Dofa-office/help' },
     ]
 
     const navItems = isDofaOfficeRoute ? DofaOfficeNavItems : DofaNavItems
 
     return (
-      <aside className="sidebar">
+      <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
+        <button
+          type="button"
+          className="sidebar-collapse-btn"
+          onClick={onToggleCollapse}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
         {/* <div className="logo-container">
           <img
             src="/lnmiit-logo.svg"
@@ -310,8 +386,9 @@ const Sidebar = () => {
                   key={item.path}
                   to={item.path}
                   className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+                  title={item.name}
                 >
-                  {item.name}
+                  <NavLabel label={item.name} />
                 </Link>
               ))}
             </div>
@@ -323,7 +400,16 @@ const Sidebar = () => {
 
   // Faculty sidebar (default)
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
+      <button
+        type="button"
+        className="sidebar-collapse-btn"
+        onClick={onToggleCollapse}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+      </button>
       {/* <div className="logo-container">
         <img
           src="/lnmiit-logo.svg"
@@ -371,8 +457,9 @@ const Sidebar = () => {
                     <button
                       className="nav-item nav-parent-item"
                       onClick={() => toggleSection(item.name)}
+                      title={item.name}
                     >
-                      <span>{item.name}</span>
+                      <NavLabel label={item.name} />
                       {expandedSections[item.name] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </button>
                     {expandedSections[item.name] && (

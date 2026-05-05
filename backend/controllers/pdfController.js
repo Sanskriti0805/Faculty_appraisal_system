@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 /**
  * pdfController.js
@@ -12,6 +12,41 @@ const db         = require('../config/database');
 const puppeteer  = require('puppeteer');
 const { generateHtml } = require('../utils/pdfTemplate');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
+
+/* POST /api/submissions/export/html-to-pdf
+ * Accepts JSON { html: '<html>...</html>', filename: 'optional.pdf' }
+ * Renders the HTML with Puppeteer and streams back a PDF buffer.
+ */
+exports.generateHtmlPdf = async (req, res) => {
+  const { html: rawHtml, filename: rawFilename } = req.body || {};
+  if (!rawHtml || typeof rawHtml !== 'string') {
+    return res.status(400).json({ success: false, message: 'Missing html in request body' });
+  }
+
+  let browser;
+  try {
+    browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] });
+    const page = await browser.newPage();
+    await page.setContent(rawHtml, { waitUntil: 'load', timeout: 30000 });
+    const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '14mm', bottom: '16mm', left: '12mm', right: '12mm' } });
+    await browser.close();
+    browser = null;
+
+    // Sanitize filename
+    const filenameBase = rawFilename && String(rawFilename).trim() ? String(rawFilename).trim() : 'export.pdf';
+    const asciiSafe = filenameBase.replace(/[\r\n"<>\\\/\x00-\x1F\x7F]/g, '_').replace(/[^\x20-\x7E]/g, '_');
+    const utf8Encoded = encodeURIComponent(filenameBase);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${asciiSafe}"; filename*=UTF-8''${utf8Encoded}`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    return res.end(pdfBuffer);
+  } catch (err) {
+    console.error('HTML->PDF generation error:', err);
+    if (browser) await browser.close().catch(() => {});
+    return res.status(500).json({ success: false, message: 'Failed to generate PDF: ' + err.message });
+  }
+};
 
 /* -- helpers copied from submissionsController -- */
 async function fetchLegacySectionContent(facultyId, sessionId, sectionKey) {
@@ -183,14 +218,15 @@ exports.generateSubmissionPdf = async (req, res) => {
       console.log(`[PDF] Generating PDF for submission ${id}...`);
       const pdfBuffer = await page.pdf({
         format:           'A4',
+        landscape:        true,
         printBackground:  true,
-        margin:           { top: '15mm', bottom: '22mm', left: '12mm', right: '12mm' },
+        margin:           { top: '14mm', bottom: '16mm', left: '12mm', right: '12mm' },
         displayHeaderFooter: true,
-        headerTemplate: '<div></div>',
+        headerTemplate:  '<div></div>',
         footerTemplate: `
-          <div style="font-size:8px;color:#94a3b8;width:100%;text-align:center;padding:0 20mm;">
-            LNMIIT Faculty Appraisal &mdash; Confidential &mdash;
-            Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+          <div style="font-family:Arial,sans-serif;font-size:8px;color:#94a3b8;width:100%;display:flex;justify-content:space-between;padding:0 12mm;box-sizing:border-box;">
+            <span>LNMIIT Faculty Appraisal System &mdash; Confidential</span>
+            <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
           </div>`
       });
 
@@ -199,14 +235,17 @@ exports.generateSubmissionPdf = async (req, res) => {
       console.log(`[PDF] PDF generated successfully for submission ${id}. Size: ${pdfBuffer.length} bytes`);
 
       // -- 5. Stream the PDF back ----------------------------------------
-      const safeName = (sub.faculty_name || 'faculty').replace(/[^a-zA-Z0-9]/g, '_');
-      const filename  = `Appraisal_${safeName}_${sub.academic_year || 'report'}.pdf`;
+      // Sanitize filename to avoid invalid header characters (CR/LF, quotes, control chars)
+      const rawName = `${sub.faculty_name || 'faculty'}`;
+      const rawYear = `${sub.academic_year || 'report'}`;
+      // Produce an ASCII-safe fallback and a UTF-8 encoded filename* per RFC5987
+      const asciiSafe = (`Appraisal_${rawName}_${rawYear}.pdf`).replace(/[\r\n"<>\\\/\x00-\x1F\x7F]/g, '_').replace(/[^\x20-\x7E]/g, '_');
+      const utf8Encoded = encodeURIComponent(`Appraisal_${rawName}_${rawYear}.pdf`);
 
-      res.set({
-        'Content-Type':        'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length':      pdfBuffer.length
-      });
+      res.setHeader('Content-Type', 'application/pdf');
+      // Provide both a basic filename and a UTF-8 filename* as a fallback for clients
+      res.setHeader('Content-Disposition', `attachment; filename="${asciiSafe}"; filename*=UTF-8''${utf8Encoded}`);
+      res.setHeader('Content-Length', pdfBuffer.length);
       return res.end(pdfBuffer);
 
     } finally {

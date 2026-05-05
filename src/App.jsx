@@ -96,16 +96,17 @@ function App() {
 
 
             {/* -- HoD Routes -- */}
-            <Route path="/hod/dashboard" element={
+            <Route path="/hod" element={
               <ProtectedRoute allowedRoles={['hod']}>
-                <HODDashboard />
+                <Layout />
               </ProtectedRoute>
-            } />
-            <Route path="/hod/review/:id" element={
-              <ProtectedRoute allowedRoles={['hod']}>
-                <DofaReview />
-              </ProtectedRoute>
-            } />
+            }>
+              <Route index element={<Navigate to="/hod/dashboard" replace />} />
+              <Route path="dashboard" element={<HODDashboard embedded />} />
+              <Route path="review/:id" element={<DofaReview />} />
+              <Route path="review/:id/:employeeId/:academicYear/:formType" element={<DofaReview />} />
+              <Route path="help" element={<HelpCenter />} />
+            </Route>
 
             {/* -- Faculty Routes (with Layout) -- */}
             <Route path="/" element={
@@ -151,6 +152,7 @@ function App() {
               <Route path="dashboard" element={<DofaDashboard />} />
               <Route path="rubrics" element={<RubricsManagement />} />
               <Route path="review/:id" element={<DofaReview />} />
+              <Route path="review/:id/:employeeId/:academicYear/:formType" element={<DofaReview />} />
               <Route path="sheet1" element={<EvaluationSheet />} />
               <Route path="evaluation" element={<EvaluationSheet />} />
               <Route path="sheet2" element={<EvaluationSheet2 />} />
@@ -158,6 +160,7 @@ function App() {
               <Route path="logs" element={<SessionLogs />} />
               <Route path="registration" element={<DofaRegistration />} />
               <Route path="manage-users" element={<DofaRegistration />} />
+              <Route path="form-builder" element={<FormBuilder />} />
               <Route path="form-release" element={<FormRelease />} />
               <Route path="help" element={<HelpCenter />} />
             </Route>
@@ -181,6 +184,7 @@ function App() {
               <Route path="manage-users" element={<DofaRegistration />} />
               <Route path="form-release" element={<FormRelease />} />
               <Route path="review/:id" element={<DofaReview />} />
+              <Route path="review/:id/:employeeId/:academicYear/:formType" element={<DofaReview />} />
               <Route path="help" element={<HelpCenter />} />
             </Route>
 

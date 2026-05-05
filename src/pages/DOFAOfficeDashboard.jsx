@@ -1,8 +1,10 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { Lock, Unlock, Mail, Download, Users, FileText, Clock, CheckSquare, Eye, CheckCircle, XCircle, Calendar, FileCode, Table, X, ChevronDown, ChevronUp, LayoutList, Bell } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import apiClient from '../services/api';
 import './DofaOfficeDashboard.css';
 import { showConfirm } from '../utils/appDialogs';
+import { buildReviewPath } from '../utils/reviewRoute';
 
 const API = `http://${window.location.hostname}:5001/api`;
 
@@ -434,18 +436,28 @@ const DofaOfficeDashboard = () => {
       <p style="margin-top:40px;font-size:11px;color:#888">Generated on ${new Date().toLocaleString()}</p>
       </body></html>`;
 
-      const win = window.open('', '_blank');
-      win.document.write(html);
-      win.document.close();
-      win.print();
-      setDownloadModal({ open: false, submission: null });
+      try {
+        const blob = await apiClient.post('/submissions/export/html-to-pdf', { html, filename: `${sub.faculty_name || 'appraisal'}_${sub.academic_year || ''}.pdf` }, { responseType: 'blob' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${sub.faculty_name || 'appraisal'}_${sub.academic_year || ''}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        setDownloadModal({ open: false, submission: null });
+      } catch (err) {
+        console.error('PDF export failed:', err);
+        window.appToast('Failed to generate PDF');
+      }
     } finally {
       setDownloadingFormat(null);
     }
   };
 
   // -- Bulk Export: Summary PDF (dashboard table view for all faculties) ----
-  const handleExportSummaryPDF = () => {
+  const handleExportSummaryPDF = async () => {
     setExportLoading('summary');
     setExportDropdownOpen(false);
     try {
@@ -520,10 +532,20 @@ const DofaOfficeDashboard = () => {
 <p class="footer">Dean of Faculty Affairs (DoFA) Office &mdash; Confidential Record</p>
 </body></html>`;
 
-      const win = window.open('', '_blank');
-      win.document.write(html);
-      win.document.close();
-      setTimeout(() => { win.print(); }, 400);
+      try {
+        const blob = await apiClient.post('/submissions/export/html-to-pdf', { html, filename: `DoFA_Summary_${yearLabel}.pdf` }, { responseType: 'blob' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `DoFA_Summary_${yearLabel}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Summary PDF export failed:', err);
+        window.appToast('Failed to generate summary PDF');
+      }
     } finally {
       setExportLoading(null);
     }
@@ -645,10 +667,20 @@ const DofaOfficeDashboard = () => {
 ${facultySections}
 </body></html>`;
 
-      const win = window.open('', '_blank');
-      win.document.write(html);
-      win.document.close();
-      setTimeout(() => { win.print(); }, 600);
+      try {
+        const blob = await apiClient.post('/submissions/export/html-to-pdf', { html, filename: `DoFA_All_Forms_${yearLabel}.pdf` }, { responseType: 'blob' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `DoFA_All_Forms_${yearLabel}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Forms PDF export failed:', err);
+        window.appToast('Failed to generate combined forms PDF');
+      }
     } finally {
       setExportLoading(null);
     }
@@ -683,6 +715,29 @@ ${facultySections}
   const formatDate = (d) => {
     if (!d) return '-';
     return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  const submissionPriority = (submission) => {
+    const status = String(submission?.status || '').toLowerCase();
+    if (status === 'approved') return 5;
+    if (['under_review', 'under_review_hod'].includes(status)) return 4;
+    if (['submitted', 'submitted_hod', 'hod_approved'].includes(status)) return 3;
+    if (status === 'sent_back') return 2;
+    if (status === 'draft') return 0;
+    return 1;
+  };
+
+  const submissionTime = (submission) => {
+    const value = submission?.submitted_at || submission?.updated_at || submission?.created_at;
+    const time = value ? new Date(value).getTime() : 0;
+    return Number.isFinite(time) ? time : 0;
+  };
+
+  const pickBetterSubmission = (candidate, current) => {
+    if (!current) return candidate;
+    const priorityDiff = submissionPriority(candidate) - submissionPriority(current);
+    if (priorityDiff !== 0) return priorityDiff > 0 ? candidate : current;
+    return submissionTime(candidate) >= submissionTime(current) ? candidate : current;
   };
 
   const pendingEditRequests = editRequests.filter((r) => r.status === 'pending');
@@ -735,13 +790,14 @@ ${facultySections}
         academic_year: submission.academic_year,
         faculty_name: submission.faculty_name,
         faculty_id: submission.faculty_id,
+        employee_id: submission.employee_id,
         email: submission.email,
         department: submission.department,
         forms: { A: null, B: null }
       });
     }
 
-    combinedEntriesMap.get(key).forms[formType] = submission;
+    combinedEntriesMap.get(key).forms[formType] = pickBetterSubmission(submission, combinedEntriesMap.get(key).forms[formType]);
   });
 
   const combinedEntries = Array.from(combinedEntriesMap.values());
@@ -752,6 +808,7 @@ ${facultySections}
       const selectedSubmission = entry.forms[selectedFormType] || {
         id: null,
         faculty_id: entry.faculty_id,
+        employee_id: entry.employee_id,
         faculty_name: entry.faculty_name,
         email: entry.email,
         department: entry.department,
@@ -1068,7 +1125,7 @@ ${facultySections}
                           <div className="action-buttons" style={{ justifyContent: 'center' }}>
                             <button
                               className="action-btn btn-view"
-                              onClick={() => navigate(`/Dofa-office/review/${submission.id}`)}
+                              onClick={() => navigate(buildReviewPath('/Dofa-office', submission))}
                               title={canOpenSubmission ? 'View Full Form' : (isDraft ? 'Available after faculty submission' : 'Available after HoD approval')}
                               disabled={!canOpenSubmission}
                             >
@@ -1078,8 +1135,8 @@ ${facultySections}
                             <button
                               className="action-btn btn-download"
                               onClick={() => setDownloadModal({ open: true, submission })}
-                              title={canDofaReview ? 'Download Form' : 'Available after HoD approval'}
-                              disabled={!canDofaReview || !hasRealSubmission}
+                              title={canOpenSubmission ? 'Download Form' : (isDraft ? 'Available after faculty submission' : 'Available after HoD approval')}
+                              disabled={!canOpenSubmission}
                             >
                               <Download size={16} />
                             </button>
