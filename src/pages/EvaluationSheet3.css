@@ -197,21 +197,28 @@
   padding: 1.5rem 2rem;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
+  overflow-x: auto;
 }
 
 .eval3-table {
   width: 100%;
+  min-width: 1500px;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.8125rem;
 }
 
-.eval3-table colgroup col:nth-child(1) { width: 6%; }
-.eval3-table colgroup col:nth-child(2) { width: 30%; }
-.eval3-table colgroup col:nth-child(3) { width: 30%; }
-.eval3-table colgroup col:nth-child(4) { width: 14%; }
-.eval3-table colgroup col:nth-child(5) { width: 10%; }
-.eval3-table colgroup col:nth-child(6) { width: 10%; }
+.eval3-table colgroup col:nth-child(1) { width: 70px; }
+.eval3-table colgroup col:nth-child(2) { width: 190px; }
+.eval3-table colgroup col:nth-child(3) { width: 150px; }
+.eval3-table colgroup col:nth-child(4) { width: 190px; }
+.eval3-table colgroup col:nth-child(5) { width: 120px; }
+.eval3-table colgroup col:nth-child(6) { width: 190px; }
+.eval3-table colgroup col:nth-child(7) { width: 170px; }
+.eval3-table colgroup col:nth-child(8) { width: 190px; }
+.eval3-table colgroup col:nth-child(9) { width: 120px; }
+.eval3-table colgroup col:nth-child(10) { width: 95px; }
+.eval3-table colgroup col:nth-child(11) { width: 105px; }
 
 .eval3-table th {
   padding: 0.75rem 0.75rem;
@@ -223,9 +230,9 @@
   color: #64748b;
   border-bottom: 1px solid #e2e8f0;
   background: #f8fafc;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 
 .eval3-table td {
@@ -254,6 +261,11 @@
   font-weight: 700;
   color: #0f172a;
   font-size: 0.875rem;
+}
+
+.eval3-feedback {
+  white-space: normal;
+  line-height: 1.45;
 }
 
 /* Loading */

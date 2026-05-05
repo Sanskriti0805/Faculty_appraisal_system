@@ -150,10 +150,12 @@ const EvaluationSheet2 = () => {
         <td>${idx + 1}</td>
         <td>${item.faculty_name || '-'}</td>
         <td>${item.department || '-'}</td>
-        <td>${item.total_score || 0}</td>
         <td>${item.research_remarks || '-'}</td>
+        <td>${item.research_marks || 0}</td>
         <td>${item.teaching_feedback || '-'}</td>
+        <td></td>
         <td>${item.overall_feedback || '-'}</td>
+        <td>${item.total_score || 0}</td>
         <td><strong>${item.final_grade || '-'}</strong></td>
       </tr>`;
     }).join('');
@@ -164,8 +166,8 @@ const EvaluationSheet2 = () => {
     const html = `<!DOCTYPE html>
 <html><head><title>Sheet2_${activeYear}</title>
 <style>
-  @page { size: A4 landscape; margin: 14mm; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
+  @page { size: A4 landscape; margin: 0; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; padding: 14mm; }
   .header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; border-bottom: 3px solid #1e3a8a; padding-bottom: 15px; }
   .header-container img { max-height: 55px; margin-right: 20px; }
   .header-text { display: flex; flex-direction: column; }
@@ -186,7 +188,7 @@ const EvaluationSheet2 = () => {
   </div>
   <p class="meta">Exported from active session data. Generated: ${new Date().toLocaleString('en-IN')}</p>
   <table>
-    <thead><tr><th>S.No</th><th>Faculty</th><th>Department</th><th>Total Score</th><th>Research Remarks</th><th>Teaching Feedback</th><th>Overall Feedback</th><th>Grade</th></tr></thead>
+    <thead><tr><th>S.No</th><th>Faculty</th><th>Department</th><th>Research Feedback</th><th>Research Marks</th><th>Teaching Feedback</th><th>Teacher Section Total Marks</th><th>Overall Feedback</th><th>Total Score</th><th>Grade</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
 </body></html>`;
@@ -199,17 +201,19 @@ const EvaluationSheet2 = () => {
 
   const handleExportCSV = () => {
     if (!activeYear || data.length === 0) return showToast('No data to export', 'error');
-    const headers = ['S.No.', 'Faculty Name', 'Department', 'Sheet 1 Total', 'Research Remarks', 'Teaching Feedback', 'Overall Feedback', 'Grade'];
+    const headers = ['S.No.', 'Faculty Name', 'Department', 'Research Feedback', 'Research Marks', 'Teaching Feedback', 'Teacher Section Total Marks', 'Overall Feedback', 'Total Score', 'Grade'];
     const csvRows = [headers.join(',')];
     data.forEach((item, idx) => {
       const row = [
         idx + 1, 
         `"${item.faculty_name || ''}"`, 
         `"${item.department || ''}"`,
-        item.total_score || 0,
         `"${(item.research_remarks || '').replace(/"/g, '""')}"`,
+        item.research_marks || 0,
         `"${(item.teaching_feedback || '').replace(/"/g, '""')}"`,
+        item.teaching_marks || 0,
         `"${(item.overall_feedback || '').replace(/"/g, '""')}"`,
+        item.total_score || 0,
         `"${item.final_grade || ''}"`
       ];
       csvRows.push(row.join(','));
@@ -319,10 +323,12 @@ const EvaluationSheet2 = () => {
               <th>S.No</th>
               <th>Faculty Name</th>
               <th>Department</th>
-              <th>Sheet 1 Total</th>
-              <th>Research Remarks</th>
+              <th>Research Feedback</th>
+              <th>Research Marks</th>
               <th>Teaching Feedback</th>
+              <th>Teacher Section Total Marks</th>
               <th>Overall Feedback</th>
+              <th>Total Score</th>
               <th>Grade</th>
             </tr>
           </thead>
@@ -332,7 +338,6 @@ const EvaluationSheet2 = () => {
                 <td style={{ color: '#94a3b8', fontWeight: 500 }}>{idx + 1}</td>
                 <td style={{ fontWeight: 600, color: '#1e293b' }}>{item.faculty_name}</td>
                 <td style={{ color: '#64748b' }}>{item.department}</td>
-                <td className="eval2-total-score">{item.total_score}</td>
                 <td>
                   <textarea
                     className="eval2-textarea"
@@ -341,6 +346,7 @@ const EvaluationSheet2 = () => {
                     placeholder="Research remarks..."
                   />
                 </td>
+                <td className="eval2-total-score">{item.research_marks || 0}</td>
                 <td>
                   <textarea
                     className="eval2-textarea"
@@ -349,6 +355,7 @@ const EvaluationSheet2 = () => {
                     placeholder="Teaching feedback..."
                   />
                 </td>
+                <td className="eval2-total-score">{item.teaching_marks || 0}</td>
                 <td>
                   <textarea
                     className="eval2-textarea"
@@ -357,6 +364,7 @@ const EvaluationSheet2 = () => {
                     placeholder="Overall feedback..."
                   />
                 </td>
+                <td className="eval2-total-score">{item.total_score}</td>
                 <td className="eval2-grade-cell">{item.final_grade || '-'}</td>
               </tr>
             ))}

@@ -1,6 +1,7 @@
 const db = require('../config/database');
 
 let sessionFinalLockColumnsEnsured = false;
+let evaluationSheet2FeedbackColumnsEnsured = false;
 
 async function ensureColumnExists(tableName, columnName, definitionSql) {
   const [rows] = await db.query(
@@ -24,6 +25,14 @@ async function ensureSessionFinalLockColumns() {
   await ensureColumnExists('appraisal_sessions', 'final_locked_at', 'TIMESTAMP NULL DEFAULT NULL');
   await ensureColumnExists('appraisal_sessions', 'final_locked_by', 'INT NULL DEFAULT NULL');
   sessionFinalLockColumnsEnsured = true;
+}
+
+async function ensureEvaluationSheet2FeedbackColumns() {
+  if (evaluationSheet2FeedbackColumnsEnsured) return;
+  await ensureColumnExists('Dofa_evaluation_sheet2', 'research_remarks', 'TEXT NULL');
+  await ensureColumnExists('Dofa_evaluation_sheet2', 'teaching_feedback', 'TEXT NULL');
+  await ensureColumnExists('Dofa_evaluation_sheet2', 'overall_feedback', 'TEXT NULL');
+  evaluationSheet2FeedbackColumnsEnsured = true;
 }
 
 async function getTargetAcademicYear() {
@@ -124,6 +133,7 @@ exports.getEvaluationData = async (req, res) => {
 // GET /api/evaluation/sheet2
 exports.getSheet2Data = async (req, res) => {
   try {
+    await ensureEvaluationSheet2FeedbackColumns();
     const academicYear = getRequestedAcademicYear(req) || await getTargetAcademicYear();
 
     // 1. Get submissions with basic info
@@ -145,7 +155,10 @@ exports.getSheet2Data = async (req, res) => {
 
     // 2. Get Sheet 1 total scores (calculated by summing scores)
     const [scores] = await db.query(`
-      SELECT latest.submission_id, SUM(latest.score) as total_score
+      SELECT latest.submission_id,
+             SUM(latest.score) as total_score,
+             SUM(CASE WHEN LOWER(r.section_name) LIKE '%teaching feedback%' THEN latest.score ELSE 0 END) as teaching_marks,
+             SUM(CASE WHEN LOWER(r.section_name) NOT LIKE '%teaching feedback%' THEN latest.score ELSE 0 END) as research_marks
       FROM (
         SELECT es.submission_id, es.rubric_id, es.score
         FROM Dofa_evaluation_scores es
@@ -161,7 +174,13 @@ exports.getSheet2Data = async (req, res) => {
     `, [submissionIds]);
 
     const scoreMap = {};
-    scores.forEach(s => scoreMap[s.submission_id] = parseFloat(s.total_score) || 0);
+    scores.forEach(s => {
+      scoreMap[s.submission_id] = {
+        total_score: parseFloat(s.total_score) || 0,
+        research_marks: parseFloat(s.research_marks) || 0,
+        teaching_marks: parseFloat(s.teaching_marks) || 0
+      };
+    });
 
     // 3. Get Sheet 2 remarks and grades
     const [sheet2Data] = await db.query(`
@@ -183,7 +202,10 @@ exports.getSheet2Data = async (req, res) => {
 
     const result = submissions.map(sub => ({
       ...sub,
-      total_score: scoreMap[sub.submission_id] || 0,
+      total_score: scoreMap[sub.submission_id]?.total_score || 0,
+      research_marks: scoreMap[sub.submission_id]?.research_marks || 0,
+      teaching_marks: scoreMap[sub.submission_id]?.teaching_marks || 0,
+      teacher_section_total_marks: '',
       ...(sheet2Map[sub.submission_id] || {
         research_remarks: '',
         overall_feedback: '',
@@ -202,6 +224,7 @@ exports.getSheet2Data = async (req, res) => {
 // POST /api/evaluation/sheet2/remarks
 exports.saveSheet2Remarks = async (req, res) => {
   try {
+    await ensureEvaluationSheet2FeedbackColumns();
     const { submission_id, field, value } = req.body;
     const allowedFields = ['research_remarks', 'overall_feedback', 'teaching_feedback', 'final_grade'];
     
@@ -240,8 +263,8 @@ exports.saveSheet2Remarks = async (req, res) => {
 
     if (!upd || upd.affectedRows === 0) {
       await db.query(
-        `INSERT INTO Dofa_evaluation_sheet2 (submission_id, ${field}) VALUES (?, ?)`,
-        [submission_id, normalizedValue]
+        `INSERT INTO Dofa_evaluation_sheet2 (submission_id, faculty_id, academic_year, ${field}) VALUES (?, ?, ?, ?)`,
+        [submission_id, faculty_id, academic_year, normalizedValue]
       );
     }
 
@@ -354,8 +377,8 @@ exports.applyGrading = async (req, res) => {
 
       if (!upd || upd.affectedRows === 0) {
         await db.query(
-          'INSERT INTO Dofa_evaluation_sheet2 (submission_id, final_grade) VALUES (?, ?)',
-          [s.submission_id, assignedGrade]
+          'INSERT INTO Dofa_evaluation_sheet2 (submission_id, faculty_id, academic_year, final_grade) VALUES (?, ?, ?, ?)',
+          [s.submission_id, s.faculty_id, s.academic_year, assignedGrade]
         );
       }
     }
@@ -370,6 +393,7 @@ exports.applyGrading = async (req, res) => {
 // GET /api/evaluation/sheet3
 exports.getSheet3Data = async (req, res) => {
   try {
+    await ensureEvaluationSheet2FeedbackColumns();
     const academicYear = getRequestedAcademicYear(req) || await getTargetAcademicYear();
 
     // 1. Get submissions with Name, Dept, Score (Sheet 1), Grade (Sheet 2) and Increment (Sheet 3)
@@ -393,6 +417,38 @@ exports.getSheet3Data = async (req, res) => {
                ) esd
                INNER JOIN Dofa_rubrics r ON r.id = esd.rubric_id
              ) as total_score,
+             (
+               SELECT COALESCE(SUM(CASE WHEN LOWER(r.section_name) NOT LIKE '%teaching feedback%' THEN esd.score ELSE 0 END), 0)
+               FROM (
+                 SELECT es1.rubric_id, es1.score
+                 FROM Dofa_evaluation_scores es1
+                 INNER JOIN (
+                   SELECT rubric_id, MAX(id) AS latest_id
+                   FROM Dofa_evaluation_scores
+                   WHERE submission_id = s.id
+                   GROUP BY rubric_id
+                 ) m ON m.latest_id = es1.id
+               ) esd
+               INNER JOIN Dofa_rubrics r ON r.id = esd.rubric_id
+             ) as research_marks,
+             (
+               SELECT COALESCE(SUM(CASE WHEN LOWER(r.section_name) LIKE '%teaching feedback%' THEN esd.score ELSE 0 END), 0)
+               FROM (
+                 SELECT es1.rubric_id, es1.score
+                 FROM Dofa_evaluation_scores es1
+                 INNER JOIN (
+                   SELECT rubric_id, MAX(id) AS latest_id
+                   FROM Dofa_evaluation_scores
+                   WHERE submission_id = s.id
+                   GROUP BY rubric_id
+                 ) m ON m.latest_id = es1.id
+               ) esd
+               INNER JOIN Dofa_rubrics r ON r.id = esd.rubric_id
+             ) as teaching_marks,
+             COALESCE(e2.research_remarks, '') as research_remarks,
+             COALESCE(e2.teaching_feedback, '') as teaching_feedback,
+             COALESCE(e2.overall_feedback, '') as overall_feedback,
+             '' as teacher_section_total_marks,
              COALESCE(e2.final_grade, '') as final_grade,
              COALESCE(e3.increment_percentage, 0) as increment_percentage
       FROM submissions s
@@ -524,16 +580,16 @@ exports.applyIncrements = async (req, res) => {
       // Now insert or update with the correct increment for the current grade
       if (inc !== undefined) {
         await db.query(`
-          INSERT INTO Dofa_evaluation_sheet3 (submission_id, increment_percentage)
-          VALUES (?, ?)
-        `, [sub.submission_id, inc]);
+          INSERT INTO Dofa_evaluation_sheet3 (submission_id, faculty_id, academic_year, increment_percentage)
+          VALUES (?, ?, ?, ?)
+        `, [sub.submission_id, sub.faculty_id, sub.academic_year, inc]);
       } else {
         // If no increment is defined for this grade, still create a record but with NULL increment
         // while preserving one current row for visibility in sheet3.
         await db.query(`
-          INSERT INTO Dofa_evaluation_sheet3 (submission_id, increment_percentage)
-          VALUES (?, NULL)
-        `, [sub.submission_id]);
+          INSERT INTO Dofa_evaluation_sheet3 (submission_id, faculty_id, academic_year, increment_percentage)
+          VALUES (?, ?, ?, NULL)
+        `, [sub.submission_id, sub.faculty_id, sub.academic_year]);
       }
     }
 

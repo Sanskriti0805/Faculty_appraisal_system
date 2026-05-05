@@ -182,7 +182,6 @@ function App() {
               <Route path="form-release" element={<FormRelease />} />
               <Route path="review/:id" element={<DofaReview />} />
               <Route path="help" element={<HelpCenter />} />
-              <Route path="help" element={<HelpCenter />} />
             </Route>
 
             {/* -- Catch-all -> login -- */}

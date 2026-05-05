@@ -187,53 +187,186 @@ const EvaluationSheet = () => {
 
   const handleExportPDF = () => {
     if (!activeYear || submissions.length === 0) return showToast('No data to export', 'error');
-    
-    const rubricCols = rubrics.map(r => `<th>${r.sub_section || r.section_name}</th>`).join('');
-    const rows = submissions.map((sub, idx) => {
-      const scoreCells = rubrics.map((r) => `<td>${getScore(sub.submission_id, r.id)}</td>`).join('');
+
+    const logoUrl = window.location.origin + '/lnmiit-logo.png';
+
+    // helpers
+    const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Build section map: section_name -> array of rubrics
+    const sectionMap = {};
+    const sectionOrder = [];
+    rubrics.forEach(r => {
+      if (!sectionMap[r.section_name]) {
+        sectionMap[r.section_name] = [];
+        sectionOrder.push(r.section_name);
+      }
+      sectionMap[r.section_name].push(r);
+    });
+
+    const getSectionTotal = (subId, rubArr) =>
+      rubArr.reduce((sum, r) => {
+        const v = parseFloat(scores[subId + '||' + r.id]);
+        return sum + (isFinite(v) ? v : 0);
+      }, 0);
+
+    const getSectionMax = (rubArr) =>
+      rubArr.reduce((sum, r) => sum + (parseFloat(r.max_marks) || 0), 0);
+
+    // PART 1: Summary table header
+    const summaryHeaderCols = sectionOrder.map(sec => {
+      const mx = getSectionMax(sectionMap[sec]);
+      return `<th>${esc(sec)}<br/><span class="max-lbl">/ ${mx}</span></th>`;
+    }).join('');
+
+    const summaryRows = submissions.map((sub, idx) => {
+      const secCells = sectionOrder.map(sec => {
+        const st = getSectionTotal(sub.submission_id, sectionMap[sec]);
+        const mx = getSectionMax(sectionMap[sec]);
+        const pct = mx > 0 ? (st / mx) * 100 : 0;
+        const cls = pct >= 75 ? 'score-hi' : pct >= 50 ? 'score-mid' : 'score-lo';
+        const disp = st % 1 === 0 ? st : st.toFixed(2);
+        return `<td class="${cls}">${disp}</td>`;
+      }).join('');
+      const total = getTotal(sub.submission_id);
       return `<tr>
-        <td>${idx + 1}</td>
-        <td>${sub.faculty_name || '-'}</td>
-        <td>${sub.department || '-'}</td>
-        ${scoreCells}
-        <td><strong>${getTotal(sub.submission_id)}</strong></td>
+        <td class="sno">${idx + 1}</td>
+        <td class="name">${esc(sub.faculty_name || '-')}</td>
+        <td class="dept">${esc(sub.department || '-')}</td>
+        ${secCells}
+        <td class="grand-total">${total}</td>
       </tr>`;
     }).join('');
 
-    const logoUrl = window.location.origin + '/lnmiit-logo.png';
-    const displayTitle = `Evaluation Sheet 1 - ${activeYear}`;
-    
-    const html = `<!DOCTYPE html>
-<html><head><title>Sheet1_${activeYear}</title>
-<style>
-  @page { size: A4 landscape; margin: 14mm; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
-  .header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; border-bottom: 3px solid #1e3a8a; padding-bottom: 15px; }
-  .header-container img { max-height: 55px; margin-right: 20px; }
-  .header-text { display: flex; flex-direction: column; }
-  .header-inst { font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
-  h1 { font-size: 22px; color: #1e3a8a; margin: 2px 0 0 0; }
-  .meta { color: #64748b; font-size: 12px; margin-bottom: 20px; text-align: center; }
-  table { width: 100%; border-collapse: collapse; }
-  th { background: #1e3a8a; color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; }
-  td { border-bottom: 1px solid #e2e8f0; padding: 8px 10px; vertical-align: top; font-size: 11px; }
-  tr:nth-child(even) td { background: #f8fafc; }
-</style></head><body>
-  <div class="header-container">
-    <img src="${logoUrl}" alt="LNMIIT Logo" />
-    <div class="header-text">
-      <div class="header-inst">The LNM Institute of Information Technology, Jaipur</div>
-      <h1>${displayTitle}</h1>
+    // PART 2: Per-faculty detail cards
+    const detailCards = submissions.map((sub, idx) => {
+      const sectionBlocks = sectionOrder.map(sec => {
+        const secRubrics = sectionMap[sec];
+        const secTotal = getSectionTotal(sub.submission_id, secRubrics);
+        const secMax = getSectionMax(secRubrics);
+        const secTotalDisp = secTotal % 1 === 0 ? secTotal : secTotal.toFixed(2);
+
+        const rubricRows = secRubrics.map((r, ri) => {
+          const score = scores[sub.submission_id + '||' + r.id];
+          const val = (score === undefined || score === null || score === '') ? '-' : score;
+          const pct = parseFloat(r.max_marks) > 0 ? ((parseFloat(score) || 0) / parseFloat(r.max_marks)) * 100 : 0;
+          const barW = Math.min(pct, 100).toFixed(1);
+          let label = r.sub_section || r.section_name;
+          if (label.includes(':')) label = label.split(':').slice(1).join(':').trim();
+          return `<tr>
+            <td class="rno">${ri + 1}</td>
+            <td class="rlabel">${esc(label)}</td>
+            <td class="rmax">/ ${r.max_marks}</td>
+            <td class="rscore">${val}</td>
+            <td class="rbar"><div class="bar-wrap"><div class="bar-fill" style="width:${barW}%"></div></div></td>
+          </tr>`;
+        }).join('');
+
+        return `<div class="sec-block">
+          <div class="sec-header">
+            <span class="sec-name">${esc(sec)}</span>
+            <span class="sec-total">${secTotalDisp} / ${secMax}</span>
+          </div>
+          <table class="rubric-tbl">
+            <thead><tr><th>#</th><th>Item</th><th>Max</th><th>Score</th><th>Progress</th></tr></thead>
+            <tbody>${rubricRows}</tbody>
+          </table>
+        </div>`;
+      }).join('');
+
+      const pb = idx < submissions.length - 1 ? 'page-break' : '';
+      return `<div class="faculty-card ${pb}">
+        <div class="card-header">
+          <div class="card-name">${idx + 1}. ${esc(sub.faculty_name || '-')}</div>
+          <div class="card-meta">
+            <span>${esc(sub.department || '-')}</span>
+            <span>${esc(sub.designation || '-')}</span>
+            <span class="grand-pill">Grand Total: <strong>${getTotal(sub.submission_id)}</strong></span>
+          </div>
+        </div>
+        <div class="sections-grid">${sectionBlocks}</div>
+      </div>`;
+    }).join('');
+
+    const css = `
+  @page { size: A4 landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; background: #fff; padding: 12mm 10mm; }
+  .doc-header { display: flex; align-items: center; gap: 16px; padding-bottom: 10px; border-bottom: 3px solid #1e3a8a; margin-bottom: 14px; }
+  .doc-header img { height: 48px; }
+  .doc-header-text .inst { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+  .doc-header-text h1 { font-size: 19px; color: #1e3a8a; font-weight: 800; margin-top: 2px; }
+  .doc-meta { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+  .part-label { font-size: 13px; font-weight: 700; color: #1e3a8a; margin: 0 0 8px; padding: 4px 10px; background: #eff6ff; border-left: 4px solid #1e3a8a; border-radius: 3px; }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-bottom: 6px; }
+  .summary-table th { background: #1e3a8a; color: #fff; padding: 5px 6px; text-align: center; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.2px; vertical-align: bottom; border: 1px solid #1e3a8a; }
+  .summary-table th .max-lbl { display: block; font-size: 8px; font-weight: 400; color: #93c5fd; margin-top: 2px; }
+  .summary-table td { border: 1px solid #e2e8f0; padding: 4px 6px; text-align: center; vertical-align: middle; }
+  .summary-table tr:nth-child(even) td { background: #f8fafc; }
+  .summary-table td.sno { color: #94a3b8; width: 22px; }
+  .summary-table td.name { text-align: left; font-weight: 600; color: #0f172a; min-width: 90px; }
+  .summary-table td.dept { text-align: left; color: #475569; min-width: 80px; }
+  .summary-table td.grand-total { font-weight: 800; font-size: 11px; color: #1e3a8a; background: #eff6ff !important; }
+  .score-hi { color: #166534; font-weight: 600; }
+  .score-mid { color: #92400e; font-weight: 600; }
+  .score-lo { color: #991b1b; }
+  .page-break-before { page-break-before: always; }
+  .page-break { page-break-after: always; }
+  .faculty-card { padding: 10px 0 6px; }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; background: #1e3a8a; color: #fff; padding: 8px 12px; border-radius: 5px 5px 0 0; margin-bottom: 8px; }
+  .card-name { font-size: 13px; font-weight: 700; }
+  .card-meta { display: flex; gap: 14px; align-items: center; font-size: 10px; color: #bfdbfe; }
+  .grand-pill { background: #fff; color: #1e3a8a; padding: 2px 10px; border-radius: 20px; font-weight: 700; font-size: 11px; }
+  .sections-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .sec-block { border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; }
+  .sec-header { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
+  .sec-name { font-weight: 700; font-size: 9px; color: #334155; text-transform: uppercase; letter-spacing: 0.3px; }
+  .sec-total { font-weight: 800; font-size: 11px; color: #1e3a8a; }
+  .rubric-tbl { width: 100%; border-collapse: collapse; font-size: 8.5px; }
+  .rubric-tbl th { background: #e2e8f0; color: #475569; padding: 3px 5px; text-align: left; font-size: 7.5px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; }
+  .rubric-tbl td { padding: 3px 5px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  .rubric-tbl tr:last-child td { border-bottom: none; }
+  .rno { color: #94a3b8; width: 16px; text-align: center; }
+  .rlabel { color: #334155; }
+  .rmax { color: #94a3b8; width: 28px; text-align: right; font-size: 7.5px; }
+  .rscore { font-weight: 700; color: #0f172a; width: 28px; text-align: center; }
+  .rbar { width: 60px; }
+  .bar-wrap { background: #e2e8f0; border-radius: 3px; height: 6px; width: 100%; overflow: hidden; }
+  .bar-fill { background: #3b82f6; height: 100%; border-radius: 3px; }
+`;
+
+    const genDate = new Date().toLocaleString('en-IN');
+    const html = `<!DOCTYPE html><html><head><title>Sheet1_${activeYear}</title><style>${css}</style></head><body>
+<div class="doc-header">
+  <img src="${logoUrl}" alt="LNMIIT Logo" onerror="this.style.display=\'none\'" />
+  <div class="doc-header-text">
+    <div class="inst">The LNM Institute of Information Technology, Jaipur</div>
+    <h1>Evaluation Sheet 1 &#8212; ${activeYear}</h1>
+    <div class="doc-meta">Generated: ${genDate} &nbsp;|&nbsp; ${submissions.length} Faculty &nbsp;|&nbsp; ${rubrics.length} Rubric Items</div>
+  </div>
+</div>
+<div class="part-label">Part A &#8212; Summary: Section-wise Scores</div>
+<table class="summary-table">
+  <thead><tr><th>#</th><th>Faculty Name</th><th>Department</th>${summaryHeaderCols}<th>Grand Total</th></tr></thead>
+  <tbody>${summaryRows}</tbody>
+</table>
+<div class="page-break-before">
+  <div class="doc-header">
+    <img src="${logoUrl}" alt="LNMIIT Logo" onerror="this.style.display=\'none\'" />
+    <div class="doc-header-text">
+      <div class="inst">The LNM Institute of Information Technology, Jaipur</div>
+      <h1>Evaluation Sheet 1 &#8212; ${activeYear}</h1>
     </div>
   </div>
-  <p class="meta">Exported from active session data. Generated: ${new Date().toLocaleString('en-IN')}</p>
-  <table><thead><tr><th>S.No</th><th>Faculty</th><th>Department</th>${rubricCols}<th>Total</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="part-label">Part B &#8212; Detail: Per-Faculty Rubric Breakdown</div>
+  ${detailCards}
+</div>
 </body></html>`;
 
     const win = window.open('', '_blank');
     win.document.write(html);
     win.document.close();
-    setTimeout(() => { win.print(); }, 500);
+    setTimeout(() => { win.print(); }, 600);
   };
 
   const handleExportCSV = () => {
