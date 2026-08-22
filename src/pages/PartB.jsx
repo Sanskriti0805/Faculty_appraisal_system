@@ -471,7 +471,7 @@ const PartB = ({ initialData, readOnly }) => {
             <tr>
               <th rowSpan="2" style={{ width: '5%', verticalAlign: 'middle', textAlign: 'center' }}>S.No.</th>
               <th colSpan="4" style={{ textAlign: 'center', padding: '1rem', borderBottom: '1px solid #dee2e6' }}>
-                % Of planned time and efforts as chosen by you
+                % of planned time and efforts as chosen by you
               </th>
               <th rowSpan="2" style={{ width: '35%', verticalAlign: 'middle' }}>
                 Please provide brief<br />

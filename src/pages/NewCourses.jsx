@@ -108,7 +108,7 @@ const NewCourses = () => {
         // reset program and level when levelType changes
         if (field === 'levelType') {
            result.program = ''
-           result.level = ''
+           result.level = value === 'Doctoral' ? '7' : ''
         } else if (field === 'program') {
            result.level = ''
         }
@@ -204,17 +204,18 @@ const NewCourses = () => {
 
   const getProgramOptions = (levelType) => {
     if (levelType === 'UG') return ['B.Tech', 'B.Tech-M.Tech', 'B.Sc-M.Sc']
-    if (levelType === 'PG') return ['M.Tech', 'MS', 'B.Tech-M.Tech']
+    if (levelType === 'PG') return ['M.Tech', 'MS', 'B.Tech-M.Tech', 'B.Sc-M.Sc']
     return []
   }
 
   const getLevelOptions = (levelType, program) => {
+    if (levelType === 'Doctoral') return ['7', '8']
+    if (program === 'B.Sc-M.Sc') return ['5', '6']
     if (levelType === 'UG') return ['1', '2', '3', '4']
     if (levelType === 'PG') {
       if (program === 'B.Tech-M.Tech') return ['5']
       return ['5', '6']
     }
-    if (levelType === 'Doctoral') return ['7', '8']
     return ['1', '2', '3', '4', '5', '6', '7', '8']
   }
 
@@ -293,7 +294,7 @@ const NewCourses = () => {
                         value={course.level}
                         onChange={(e) => updateCourse(course.id, 'level', e.target.value)}
                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-                        disabled={!course.levelType || !course.program}
+                        disabled={!course.levelType || (!course.program && getProgramOptions(course.levelType).length > 0)}
                       >
                         <option value="">Select</option>
                         {getLevelOptions(course.levelType, course.program).map(opt => (
