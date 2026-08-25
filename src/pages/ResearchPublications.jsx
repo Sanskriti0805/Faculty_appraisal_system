@@ -57,17 +57,8 @@ const getEmptyJournalEntry = () => ({
 
 const getEmptyConferenceEntry = () => ({
   authors: [getEmptyAuthor()],
-  title: '',
-  conferenceName: '',
-  abbreviation: '',
-  yearOfPublication: '',
-  pagesFrom: '',
-  pagesTo: '',
-  city: '',
-  state: '',
-  country: '',
-  publicationAgency: '',
   details: '',
+  category: '',
   typeOfConference: '',
   dateFrom: '',
   dateTo: '',
@@ -727,17 +718,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       )
       const hasConferenceValue = (entry) => (
         hasTextValue(entry?.details) ||
-        hasTextValue(entry?.title) ||
-        hasTextValue(entry?.conferenceName) ||
-        hasTextValue(entry?.abbreviation) ||
-        hasTextValue(entry?.yearOfPublication) ||
-        hasTextValue(entry?.pagesFrom) ||
-        hasTextValue(entry?.pagesTo) ||
-        hasTextValue(entry?.city) ||
-        hasTextValue(entry?.state) ||
-        hasTextValue(entry?.country) ||
-        hasTextValue(entry?.publicationAgency) ||
         hasAuthorValue(entry?.authors) ||
+        Boolean(entry?.category) ||
         Boolean(entry?.typeOfConference) ||
         Boolean(entry?.dateFrom) ||
         Boolean(entry?.dateTo)
@@ -759,20 +741,11 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       })
       const buildConferencePayload = (entry, evidencePayload) => ({
         ...publicationData,
-        sub_type: 'Conference',
-        title: entry.title,
-        conference_name: entry.conferenceName,
-        abbreviation: entry.abbreviation,
-        year_of_publication: entry.yearOfPublication || null,
-        pages_from: entry.pagesFrom || null,
-        pages_to: entry.pagesTo || null,
+        sub_type: entry.category,
+        title: entry.details ? (entry.details.length > 200 ? entry.details.substring(0, 200) + '...' : entry.details) : '',
         type_of_conference: entry.typeOfConference,
         date_from: normalizeDateInput(entry.dateFrom),
         date_to: normalizeDateInput(entry.dateTo),
-        city: entry.city,
-        state: entry.state,
-        country: entry.country,
-        publication_agency: entry.publicationAgency,
         details: entry.details,
         authors: cleanPeople(entry.authors),
         evidence_file: evidencePayload.evidence_file,
@@ -872,20 +845,24 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       } else if (publicationType === 'Conference') {
         for (const entry of conferenceEntries) {
           const hasType = Boolean(entry.typeOfConference)
-          const hasDateFrom = Boolean(entry.dateFrom)
-          const hasDateTo = Boolean(entry.dateTo)
+          const hasCategory = Boolean(entry.category)
+          const hasDetails = Boolean(entry.details && entry.details.trim())
 
           const evidencePayload = resolveEvidencePayload(entry.evidenceFile, entry.evidence_file)
           const hasEvidence = !!(evidencePayload.evidence_file || evidencePayload.existing_evidence_file)
 
-          if (!hasConferenceValue(entry) && !hasEvidence) continue
+          if (!hasDetails && !hasEvidence && !hasType && !hasCategory && !hasDateFrom && !hasDateTo) continue
 
           if (!hasAuthorValue(entry.authors)) {
             window.appToast('Please provide at least one author for the conference entry.')
             return false
           }
-          if (!hasTextValue(entry.title) || !hasTextValue(entry.conferenceName) || !hasTextValue(entry.yearOfPublication)) {
-            window.appToast('Please provide paper title, conference name, and year of publication for the conference entry.')
+          if (!hasDetails) {
+            window.appToast('Please provide conference details for the conference entry.')
+            return false
+          }
+          if (!hasCategory) {
+            window.appToast('Please select a category for the conference entry.')
             return false
           }
           if (!hasType) {
@@ -1571,125 +1548,13 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             onRemove: (personIndex) => updateConferenceEntryField(index, 'authors', removePersonFromList(entry, 'authors', personIndex))
           })}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="form-field-vertical">
-              <label>Paper Title <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="text"
-                value={entry.title || ''}
-                onChange={(e) => updateConferenceEntryField(index, 'title', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Conference Name <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="text"
-                value={entry.conferenceName || ''}
-                onChange={(e) => updateConferenceEntryField(index, 'conferenceName', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Abbreviation</label>
-              <input
-                type="text"
-                value={entry.abbreviation || ''}
-                onChange={(e) => updateConferenceEntryField(index, 'abbreviation', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="form-field-vertical">
-              <label>Year of Publication <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="number"
-                min="1900"
-                max="2100"
-                value={entry.yearOfPublication || ''}
-                onChange={(e) => updateConferenceEntryField(index, 'yearOfPublication', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Pages From - To</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
-                  type="text"
-                  value={entry.pagesFrom || ''}
-                  onChange={(e) => updateConferenceEntryField(index, 'pagesFrom', e.target.value)}
-                  placeholder="From"
-                  style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-                <input
-                  type="text"
-                  value={entry.pagesTo || ''}
-                  onChange={(e) => updateConferenceEntryField(index, 'pagesTo', e.target.value)}
-                  placeholder="To"
-                  style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-              </div>
-            </div>
-            <div className="form-field-vertical">
-              <label>Publication Agency</label>
-              <input
-                type="text"
-                value={entry.publicationAgency || ''}
-                onChange={(e) => updateConferenceEntryField(index, 'publicationAgency', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="form-field-vertical">
-              <label>City</label>
-              <input
-                type="text"
-                value={entry.city || ''}
-                onChange={(e) => updateConferenceEntryField(index, 'city', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>State</label>
-              <input
-                type="text"
-                value={entry.state || ''}
-                onChange={(e) => updateConferenceEntryField(index, 'state', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Country</label>
-              <input
-                type="text"
-                value={entry.country || ''}
-                onChange={(e) => updateConferenceEntryField(index, 'country', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-          </div>
-
           <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Additional Conference Details</label>
+            <label>Conference Details <span style={{ color: 'red' }}>*</span></label>
             <textarea
               rows="6"
-              value={entry.details}
+              value={entry.details || ''}
               onChange={(e) => updateConferenceEntryField(index, 'details', e.target.value)}
-              placeholder="Author's Name, Title of Paper, Name of Conference, Abbreviation of Conference, Date (From -To), Pages (From - To), Venue(City, State, Country), Publication Agency"
+              placeholder="Paper Title, Conference Name, Abbreviation of Conference, Publication Agency, City, State, Country etc."
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -1703,18 +1568,35 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             />
           </div>
 
-          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Type of Conference <span style={{ color: 'red' }}>*</span></label>
-            <select
-              value={entry.typeOfConference}
-              onChange={(e) => updateConferenceEntryField(index, 'typeOfConference', e.target.value)}
-              style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
-              disabled={readOnly}
-            >
-              <option value="">-- Select Type --</option>
-              <option value="International">International</option>
-              <option value="National">National</option>
-            </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="form-field-vertical">
+              <label>Category <span style={{ color: 'red' }}>*</span></label>
+              <select
+                value={entry.category || ''}
+                onChange={(e) => updateConferenceEntryField(index, 'category', e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
+                disabled={readOnly}
+              >
+                <option value="">-- Select Category --</option>
+                <option value="Tier 1">Tier 1</option>
+                <option value="Tier 2">Tier 2 / Scopus</option>
+                <option value="Tier 3">Tier 3</option>
+              </select>
+            </div>
+
+            <div className="form-field-vertical">
+              <label>Type of Conference <span style={{ color: 'red' }}>*</span></label>
+              <select
+                value={entry.typeOfConference || ''}
+                onChange={(e) => updateConferenceEntryField(index, 'typeOfConference', e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white', appearance: readOnly ? 'none' : 'auto' }}
+                disabled={readOnly}
+              >
+                <option value="">-- Select Type --</option>
+                <option value="International">International</option>
+                <option value="National">National</option>
+              </select>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -1722,7 +1604,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               <label>Date From <span style={{ color: 'red' }}>*</span></label>
               <input
                 type="date"
-                value={entry.dateFrom}
+                value={entry.dateFrom || ''}
                 onChange={(e) => updateConferenceEntryField(index, 'dateFrom', e.target.value)}
                 style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
                 disabled={readOnly}
@@ -1732,7 +1614,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               <label>Date To <span style={{ color: 'red' }}>*</span></label>
               <input
                 type="date"
-                value={entry.dateTo}
+                value={entry.dateTo || ''}
                 onChange={(e) => updateConferenceEntryField(index, 'dateTo', e.target.value)}
                 style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
                 disabled={readOnly}
@@ -1756,7 +1638,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               </div>
             )
           ) : (
-            <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+            <div className="form-field-vertical" style={{ marginTop: '1.5rem' }}>
               <label>Upload Evidence <span style={{ color: 'red' }}>*</span></label>
               <div style={{
                 border: '2px dashed #ddd',
@@ -1779,676 +1661,31 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 <label
                   htmlFor={`evidence-upload-conference-${index}`}
                   style={{
-                    cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '0.5rem'
+                    gap: '0.5rem',
+                    cursor: 'pointer',
+                    color: '#555'
                   }}
                 >
-                  <Upload size={32} color="#5b8fc7" />
-                  <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
-                    {entry.evidenceFile?.name || entry.evidence_file || 'Click to upload or drag and drop'}
+                  <Upload size={24} color="#777" />
+                  <span style={{ fontWeight: '500' }}>
+                    {entry.evidenceFile ? entry.evidenceFile.name : (entry.evidence_file ? 'Change uploaded document' : 'Click to upload evidence document')}
                   </span>
-                  <span style={{ fontSize: '0.85rem', color: '#666' }}>
-                    PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)
-                  </span>
-                  <FilePreviewButton file={entry.evidenceFile || entry.evidence_file} style={{ width: '32px', height: '32px' }} />
-                  {(entry.evidenceFile || entry.evidence_file) && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        updateConferenceEntryField(index, 'evidenceFile', null)
-                        updateConferenceEntryField(index, 'evidence_file', null)
-                      }}
-                      title="Remove uploaded document"
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        border: '1px solid #d1d8e0',
-                        borderRadius: '6px',
-                        background: '#fff',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
+                  <span style={{ fontSize: '0.8rem', color: '#999' }}>PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)</span>
                 </label>
               </div>
+              {entry.evidence_file && (
+                <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <span style={{ fontSize: '0.9rem', color: '#2b6cb0' }}>Currently uploaded: {entry.evidence_file}</span>
+                  <FilePreviewButton file={entry.evidenceFile || entry.evidence_file} style={{ width: '32px', height: '32px' }} />
+                </div>
+              )}
             </div>
           )}
         </div>
       ))}
-
-      {!readOnly && (
-        <button
-          onClick={addConferenceEntry}
-          disabled={!(conferenceEntries.length > 0 && canAppendConference(conferenceEntries[conferenceEntries.length - 1]))}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            backgroundColor: '#5cb85c',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: (conferenceEntries.length > 0 && canAppendConference(conferenceEntries[conferenceEntries.length - 1])) ? 'pointer' : 'not-allowed',
-            opacity: (conferenceEntries.length > 0 && canAppendConference(conferenceEntries[conferenceEntries.length - 1])) ? 1 : 0.6,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            marginTop: '1rem',
-            marginBottom: '2rem'
-          }}
-        >
-          <Plus size={18} />
-          Add Another Conference
-        </button>
-      )}
-    </>
-  )
-
-  const renderBookChapterForm = () => (
-    <>
-      {bookChapterEntries.map((entry, index) => (
-        <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0, color: '#2c3e50' }}>Book Chapter Entry #{index + 1}</h3>
-            {!readOnly && bookChapterEntries.length > 1 && (
-              <button
-                onClick={() => removeBookChapterEntry(index)}
-                style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}
-              >
-                <X size={16} /> Remove Chapter
-              </button>
-            )}
-          </div>
-
-          {renderEntryPeople("Author's Name", entry.authors, {
-            onChange: (personIndex, field, value) => updateBookEntryField(index, 'authors', updatePersonInList(entry, 'authors', personIndex, field, value)),
-            onAdd: () => updateBookEntryField(index, 'authors', [...(entry.authors || [getEmptyAuthor()]), getEmptyAuthor()]),
-            onRemove: (personIndex) => updateBookEntryField(index, 'authors', removePersonFromList(entry, 'authors', personIndex))
-          })}
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="form-field-vertical">
-              <label>Chapter Title <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="text"
-                value={entry.title || ''}
-                onChange={(e) => updateBookEntryField(index, 'title', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Title of Book <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="text"
-                value={entry.titleOfBook || ''}
-                onChange={(e) => updateBookEntryField(index, 'titleOfBook', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-          </div>
-
-          {renderEntryPeople("Editor's Name", entry.editors, {
-            onChange: (personIndex, field, value) => updateBookEntryField(index, 'editors', updatePersonInList(entry, 'editors', personIndex, field, value)),
-            onAdd: () => updateBookEntryField(index, 'editors', [...(entry.editors || [getEmptyAuthor()]), getEmptyAuthor()]),
-            onRemove: (personIndex) => updateBookEntryField(index, 'editors', removePersonFromList(entry, 'editors', personIndex))
-          }, false)}
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="form-field-vertical">
-              <label>Publication Agency / Publisher</label>
-              <input
-                type="text"
-                value={entry.publicationAgency || ''}
-                onChange={(e) => updateBookEntryField(index, 'publicationAgency', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Year of Publication <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="number"
-                min="1900"
-                max="2100"
-                value={entry.yearOfPublication || ''}
-                onChange={(e) => updateBookEntryField(index, 'yearOfPublication', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Pages From - To</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
-                  type="text"
-                  value={entry.pagesFrom || ''}
-                  onChange={(e) => updateBookEntryField(index, 'pagesFrom', e.target.value)}
-                  placeholder="From"
-                  style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-                <input
-                  type="text"
-                  value={entry.pagesTo || ''}
-                  onChange={(e) => updateBookEntryField(index, 'pagesTo', e.target.value)}
-                  placeholder="To"
-                  style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Additional Book Chapter Details</label>
-            <textarea
-              rows="4"
-              value={entry.details}
-              onChange={(e) => updateBookEntryField(index, 'details', e.target.value)}
-              placeholder="Author Name, Title of Book, Editors Name, Publication Agency , Year of Publication, Pages (From - To)"
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: readOnly ? 'none' : '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '1rem',
-                background: readOnly ? 'transparent' : 'white',
-                fontFamily: 'inherit'
-              }}
-              disabled={readOnly}
-            />
-          </div>
-
-          {readOnly ? (
-            entry.evidence_file && (
-              <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-                <label>Evidence</label>
-                <a
-                  href={`http://${window.location.hostname}:5001/uploads/${entry.evidence_file}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="evidence-link"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
-                >
-                  <ExternalLink size={18} /> View Book Chapter Evidence
-                </a>
-              </div>
-            )
-          ) : (
-            <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-              <label>Upload Evidence <span style={{ color: 'red' }}>*</span></label>
-              <div style={{
-                border: '2px dashed #ddd',
-                borderRadius: '8px',
-                padding: '1rem',
-                textAlign: 'center',
-                backgroundColor: '#f9f9f9'
-              }}>
-                <input
-                  type="file"
-                  id={`evidence-upload-book-chapter-${index}`}
-                  accept={getAcceptAttribute(FILE_TYPES.documents)}
-                  onChange={(e) => handleValidatedFileInput(
-                    e,
-                    (file) => updateBookEntryField(index, 'evidenceFile', file),
-                    { allowedExtensions: FILE_TYPES.documents, label: 'Book chapter evidence' }
-                  )}
-                  style={{ display: 'none' }}
-                />
-                <label
-                  htmlFor={`evidence-upload-book-chapter-${index}`}
-                  style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}
-                >
-                  <Upload size={24} color="#5b8fc7" />
-                  <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
-                    {entry.evidenceFile?.name || entry.evidence_file || 'Click to upload'}
-                  </span>
-                  <FilePreviewButton file={entry.evidenceFile || entry.evidence_file} style={{ width: '32px', height: '32px' }} />
-                  {(entry.evidenceFile || entry.evidence_file) && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        updateBookEntryField(index, 'evidenceFile', null)
-                        updateBookEntryField(index, 'evidence_file', null)
-                      }}
-                      title="Remove uploaded document"
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        border: '1px solid #d1d8e0',
-                        borderRadius: '6px',
-                        background: '#fff',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
-
-      {!readOnly && (
-        <button
-          onClick={addBookChapterEntry}
-          disabled={!(bookChapterEntries.length > 0 && canAppendBookChapter(bookChapterEntries[bookChapterEntries.length - 1]))}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            backgroundColor: '#5cb85c',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: (bookChapterEntries.length > 0 && canAppendBookChapter(bookChapterEntries[bookChapterEntries.length - 1])) ? 'pointer' : 'not-allowed',
-            opacity: (bookChapterEntries.length > 0 && canAppendBookChapter(bookChapterEntries[bookChapterEntries.length - 1])) ? 1 : 0.6,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            marginTop: '1rem',
-            marginBottom: '2rem'
-          }}
-        >
-          <Plus size={18} />
-          Add Another Book Chapter
-        </button>
-      )}
-    </>
-  )
-
-  const renderBookEditedForm = () => (
-    <>
-      {bookEditedEntries.map((entry, index) => (
-        <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0, color: '#2c3e50' }}>Book Edited Entry #{index + 1}</h3>
-            {!readOnly && bookEditedEntries.length > 1 && (
-              <button
-                onClick={() => removeBookEditedEntry(index)}
-                style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}
-              >
-                <X size={16} /> Remove Entry
-              </button>
-            )}
-          </div>
-
-          {renderEntryPeople("Author's Name", entry.authors, {
-            onChange: (personIndex, field, value) => updateBookEditedEntryField(index, 'authors', updatePersonInList(entry, 'authors', personIndex, field, value)),
-            onAdd: () => updateBookEditedEntryField(index, 'authors', [...(entry.authors || [getEmptyAuthor()]), getEmptyAuthor()]),
-            onRemove: (personIndex) => updateBookEditedEntryField(index, 'authors', removePersonFromList(entry, 'authors', personIndex))
-          }, false)}
-
-          {renderEntryPeople("Editor's Name", entry.editors, {
-            onChange: (personIndex, field, value) => updateBookEditedEntryField(index, 'editors', updatePersonInList(entry, 'editors', personIndex, field, value)),
-            onAdd: () => updateBookEditedEntryField(index, 'editors', [...(entry.editors || [getEmptyAuthor()]), getEmptyAuthor()]),
-            onRemove: (personIndex) => updateBookEditedEntryField(index, 'editors', removePersonFromList(entry, 'editors', personIndex))
-          })}
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="form-field-vertical">
-              <label>Book Title <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="text"
-                value={entry.title || ''}
-                onChange={(e) => updateBookEditedEntryField(index, 'title', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Publication Agency / Publisher</label>
-              <input
-                type="text"
-                value={entry.publicationAgency || ''}
-                onChange={(e) => updateBookEditedEntryField(index, 'publicationAgency', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Year of Publication <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="number"
-                min="1900"
-                max="2100"
-                value={entry.yearOfPublication || ''}
-                onChange={(e) => updateBookEditedEntryField(index, 'yearOfPublication', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-          </div>
-
-          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Additional Book Details</label>
-            <textarea
-              rows="4"
-              value={entry.details}
-              onChange={(e) => updateBookEditedEntryField(index, 'details', e.target.value)}
-              placeholder="Author Name, Title of Textbook, Editors Name, Publication Agency , Year of Publication, Publisher Address ( City , State , Country)"
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: readOnly ? 'none' : '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '1rem',
-                background: readOnly ? 'transparent' : 'white',
-                fontFamily: 'inherit'
-              }}
-              disabled={readOnly}
-            />
-          </div>
-
-          {readOnly ? (
-            entry.evidence_file && (
-              <div className="form-field-vertical">
-                <label>Evidence</label>
-                <a
-                  href={`http://${window.location.hostname}:5001/uploads/${entry.evidence_file}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="evidence-link"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
-                >
-                  <ExternalLink size={18} /> View Evidence
-                </a>
-              </div>
-            )
-          ) : (
-            <div className="form-field-vertical">
-              <label>Upload Evidence <span style={{ color: 'red' }}>*</span></label>
-              <div style={{
-                border: '2px dashed #ddd',
-                borderRadius: '8px',
-                padding: '1rem',
-                textAlign: 'center',
-                backgroundColor: '#f9f9f9'
-              }}>
-                <input
-                  type="file"
-                  id={`evidence-upload-book-edited-${index}`}
-                  accept={getAcceptAttribute(FILE_TYPES.documents)}
-                  onChange={(e) => handleValidatedFileInput(
-                    e,
-                    (file) => updateBookEditedEntryField(index, 'evidenceFile', file),
-                    { allowedExtensions: FILE_TYPES.documents, label: 'Book edited evidence' }
-                  )}
-                  style={{ display: 'none' }}
-                />
-                <label
-                  htmlFor={`evidence-upload-book-edited-${index}`}
-                  style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}
-                >
-                  <Upload size={24} color="#5b8fc7" />
-                  <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
-                    {entry.evidenceFile?.name || entry.evidence_file || 'Click to upload'}
-                  </span>
-                  <FilePreviewButton file={entry.evidenceFile || entry.evidence_file} style={{ width: '32px', height: '32px' }} />
-                  {(entry.evidenceFile || entry.evidence_file) && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        updateBookEditedEntryField(index, 'evidenceFile', null)
-                        updateBookEditedEntryField(index, 'evidence_file', null)
-                      }}
-                      title="Remove uploaded document"
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        border: '1px solid #d1d8e0',
-                        borderRadius: '6px',
-                        background: '#fff',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
-
-      {!readOnly && (
-        <button
-          onClick={addBookEditedEntry}
-          disabled={!(bookEditedEntries.length > 0 && canAppendBookEdited(bookEditedEntries[bookEditedEntries.length - 1]))}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            backgroundColor: '#5cb85c',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: (bookEditedEntries.length > 0 && canAppendBookEdited(bookEditedEntries[bookEditedEntries.length - 1])) ? 'pointer' : 'not-allowed',
-            opacity: (bookEditedEntries.length > 0 && canAppendBookEdited(bookEditedEntries[bookEditedEntries.length - 1])) ? 1 : 0.6,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            marginTop: '1rem',
-            marginBottom: '2rem'
-          }}
-        >
-          <Plus size={18} />
-          Add Another Book
-        </button>
-      )}
-    </>
-  )
-
-  const renderBookForm = () => (
-    <>
-      {textbookEntries.map((entry, index) => (
-        <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0, color: '#2c3e50' }}>Textbook Entry #{index + 1}</h3>
-            {!readOnly && textbookEntries.length > 1 && (
-              <button
-                onClick={() => removeTextbookEntry(index)}
-                style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}
-              >
-                <X size={16} /> Remove Textbook
-              </button>
-            )}
-          </div>
-
-          {renderEntryPeople("Author's Name", entry.authors, {
-            onChange: (personIndex, field, value) => updateTextbookEntryField(index, 'authors', updatePersonInList(entry, 'authors', personIndex, field, value)),
-            onAdd: () => updateTextbookEntryField(index, 'authors', [...(entry.authors || [getEmptyAuthor()]), getEmptyAuthor()]),
-            onRemove: (personIndex) => updateTextbookEntryField(index, 'authors', removePersonFromList(entry, 'authors', personIndex))
-          })}
-
-          {renderEntryPeople("Editor's Name", entry.editors, {
-            onChange: (personIndex, field, value) => updateTextbookEntryField(index, 'editors', updatePersonInList(entry, 'editors', personIndex, field, value)),
-            onAdd: () => updateTextbookEntryField(index, 'editors', [...(entry.editors || [getEmptyAuthor()]), getEmptyAuthor()]),
-            onRemove: (personIndex) => updateTextbookEntryField(index, 'editors', removePersonFromList(entry, 'editors', personIndex))
-          }, false)}
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="form-field-vertical">
-              <label>Book Title <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="text"
-                value={entry.title || ''}
-                onChange={(e) => updateTextbookEntryField(index, 'title', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Publication Agency / Publisher</label>
-              <input
-                type="text"
-                value={entry.publicationAgency || ''}
-                onChange={(e) => updateTextbookEntryField(index, 'publicationAgency', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Year of Publication <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="number"
-                min="1900"
-                max="2100"
-                value={entry.yearOfPublication || ''}
-                onChange={(e) => updateTextbookEntryField(index, 'yearOfPublication', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-          </div>
-
-          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Additional Book Details</label>
-            <textarea
-              rows="4"
-              value={entry.details}
-              onChange={(e) => updateTextbookEntryField(index, 'details', e.target.value)}
-              placeholder="Author's Name, Title of Textbook, Editors Name, Publication Agency , Year of Publication, Publisher's Address ( City , State , Country)"
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: readOnly ? 'none' : '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '1rem',
-                background: readOnly ? 'transparent' : 'white',
-                fontFamily: 'inherit'
-              }}
-              disabled={readOnly}
-            />
-          </div>
-
-          {readOnly ? (
-            entry.evidence_file && (
-              <div className="form-field-vertical">
-                <label>Evidence</label>
-                <a
-                  href={`http://${window.location.hostname}:5001/uploads/${entry.evidence_file}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="evidence-link"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
-                >
-                  <ExternalLink size={18} /> View Textbook Evidence
-                </a>
-              </div>
-            )
-          ) : (
-            <div className="form-field-vertical">
-              <label>Upload Evidence <span style={{ color: 'red' }}>*</span></label>
-              <div style={{
-                border: '2px dashed #ddd',
-                borderRadius: '8px',
-                padding: '1rem',
-                textAlign: 'center',
-                backgroundColor: '#f9f9f9'
-              }}>
-                <input
-                  type="file"
-                  id={`evidence-upload-textbook-${index}`}
-                  accept={getAcceptAttribute(FILE_TYPES.documents)}
-                  onChange={(e) => handleValidatedFileInput(
-                    e,
-                    (file) => updateTextbookEntryField(index, 'evidenceFile', file),
-                    { allowedExtensions: FILE_TYPES.documents, label: 'Book evidence' }
-                  )}
-                  style={{ display: 'none' }}
-                />
-                <label
-                  htmlFor={`evidence-upload-textbook-${index}`}
-                  style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}
-                >
-                  <Upload size={24} color="#5b8fc7" />
-                  <span style={{ color: '#5b8fc7', fontSize: '0.9rem' }}>
-                    {entry.evidenceFile?.name || entry.evidence_file || 'Click to upload'}
-                  </span>
-                  <FilePreviewButton file={entry.evidenceFile || entry.evidence_file} style={{ width: '32px', height: '32px' }} />
-                  {(entry.evidenceFile || entry.evidence_file) && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        updateTextbookEntryField(index, 'evidenceFile', null)
-                        updateTextbookEntryField(index, 'evidence_file', null)
-                      }}
-                      title="Remove uploaded document"
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        border: '1px solid #d1d8e0',
-                        borderRadius: '6px',
-                        background: '#fff',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
-
-      {!readOnly && (
-        <button
-          onClick={addTextbookEntry}
-          disabled={!(textbookEntries.length > 0 && canAppendBook(textbookEntries[textbookEntries.length - 1]))}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            backgroundColor: '#5cb85c',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: (textbookEntries.length > 0 && canAppendBook(textbookEntries[textbookEntries.length - 1])) ? 'pointer' : 'not-allowed',
-            opacity: (textbookEntries.length > 0 && canAppendBook(textbookEntries[textbookEntries.length - 1])) ? 1 : 0.6,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            marginTop: '1rem',
-            marginBottom: '2rem'
-          }}
-        >
-          <Plus size={18} />
-          Add Another Textbook
-        </button>
-      )}
     </>
   )
 

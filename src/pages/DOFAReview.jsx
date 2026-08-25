@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, CheckCircle, XCircle, MessageSquare, User, BookOpen,
@@ -221,6 +221,7 @@ const DofaReview = () => {
   const reviewBasePath = isHodRoute ? '/hod' : (isOfficeRoute ? '/Dofa-office' : '/Dofa');
 
   const [submissionData, setSubmissionData] = useState(null);
+  const isFormA = String(submissionData?.submission?.form_type || formType || '').toUpperCase().includes('A');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [comment, setComment] = useState('');
@@ -1248,6 +1249,36 @@ const DofaReview = () => {
 
         {/* -- Sidebar -- */}
         <div className="content-sidebar">
+          {/* Session Evaluation Marks Summary */}
+          {isFormA && submissionData && (
+            <div className="comments-card" style={{ marginBottom: '1.25rem', background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', borderLeft: '4px solid #3b82f6', padding: '1.25rem' }}>
+              <h3 className="card-title" style={{ borderBottom: '1px solid #f0f2f7', paddingBottom: '0.75rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: '#1a2f5e' }}>
+                <Award size={16} style={{ color: '#3b82f6' }} /> Session Evaluation Marks
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 500 }}>Teaching Feedback Marks</span>
+                  <span style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 700, background: '#eff6ff', padding: '0.2rem 0.6rem', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                    {parseFloat(submissionData.teaching_marks || 0).toFixed(2).replace(/\.00$/, '')}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 500 }}>Research &amp; Other Marks</span>
+                  <span style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 700, background: '#f8fafc', padding: '0.2rem 0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    {parseFloat(submissionData.research_marks || 0).toFixed(2).replace(/\.00$/, '')}
+                  </span>
+                </div>
+                <div style={{ height: '1px', background: '#f0f2f7', margin: '0.25rem 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.82rem', color: '#1e293b', fontWeight: 700 }}>Total Session Marks</span>
+                  <span style={{ fontSize: '1.05rem', color: '#1e3a8a', fontWeight: 800, background: '#dbeafe', padding: '0.25rem 0.75rem', borderRadius: '8px', border: '1px solid #93c5fd' }}>
+                    {(parseFloat(submissionData.teaching_marks || 0) + parseFloat(submissionData.research_marks || 0)).toFixed(2).replace(/\.00$/, '')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="actions-card">
             <h3 className="card-title">

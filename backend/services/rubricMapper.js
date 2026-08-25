@@ -160,31 +160,46 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
     const facultyIds = Array.from(new Set([Number(facultyId), Number(resolvedFacultyInfoId)].filter(Number.isFinite)));
     const placeholders = facultyIds.map(() => '?').join(',');
 
+    // Fetch rows for this faculty from any table (no session filter — fallback)
     const byFacultyIds = async (tableName) => {
       const [rows] = await db.query(`SELECT * FROM ${tableName} WHERE faculty_id IN (${placeholders})`, facultyIds);
       return rows;
     };
 
-    // -- Fetch all faculty submission data ----------------------------------
-    const publications = await byFacultyIds('research_publications');
-    const courses = await byFacultyIds('courses_taught');
-    const newCourses = await byFacultyIds('new_courses');
-    const grants = await byFacultyIds('research_grants');
-    const patents = await byFacultyIds('patents');
-    const consultancy = await byFacultyIds('consultancy');
-    const awards = await byFacultyIds('awards_honours');
-    const proposals = await byFacultyIds('submitted_proposals');
-    const techTransfer = await byFacultyIds('technology_transfer');
-    const reviews = await byFacultyIds('paper_reviews');
-    const talks = await byFacultyIds('keynotes_talks');
-    const sessions = await byFacultyIds('conference_sessions');
-    const contribs = await byFacultyIds('institutional_contributions');
-    const teachingInnovation = await byFacultyIds('teaching_innovation');
+    // Fetch rows for this faculty AND this session only (preferred for all submission data)
+    const byFacultyIdsAndSession = async (tableName) => {
+      try {
+        const [rows] = await db.query(
+          `SELECT * FROM ${tableName} WHERE faculty_id IN (${placeholders}) AND session_id = ?`,
+          [...facultyIds, academicYear]
+        );
+        return rows;
+      } catch (_) {
+        // If session_id column doesn't exist fall back to all-time fetch
+        return byFacultyIds(tableName);
+      }
+    };
+
+    // -- Fetch all faculty submission data filtered to this session ----------
+    const publications     = await byFacultyIdsAndSession('research_publications');
+    const courses          = await byFacultyIdsAndSession('courses_taught');
+    const newCourses       = await byFacultyIdsAndSession('new_courses');
+    const grants           = await byFacultyIdsAndSession('research_grants');
+    const patents          = await byFacultyIdsAndSession('patents');
+    const consultancy      = await byFacultyIdsAndSession('consultancy');
+    const awards           = await byFacultyIdsAndSession('awards_honours');
+    const proposals        = await byFacultyIdsAndSession('submitted_proposals');
+    const techTransfer     = await byFacultyIdsAndSession('technology_transfer');
+    const reviews          = await byFacultyIdsAndSession('paper_reviews');
+    const talks            = await byFacultyIdsAndSession('keynotes_talks');
+    const sessions         = await byFacultyIdsAndSession('conference_sessions');
+    const contribs         = await byFacultyIdsAndSession('institutional_contributions');
+    const teachingInnovation = await byFacultyIdsAndSession('teaching_innovation');
 
     // Optional data sources: keep scoring resilient if these tables are not present yet.
     let guidance = [];
     try {
-      guidance = await byFacultyIds('research_guidance');
+      guidance = await byFacultyIdsAndSession('research_guidance');
     } catch (_) {
       guidance = [];
     }
@@ -204,6 +219,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
     } catch (_) {
       otherActivities = [];
     }
+
 
     const parsedOtherActivityVisits = otherActivities.flatMap((row) => {
       const raw = row?.content_json;
@@ -637,10 +653,6 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
           score = patents.filter(p =>
             (p.patent_type || '').toLowerCase().includes('publish')
           ).length > 0 ? max : 0;
-        } else if (sub.includes('filed')) {
-          score = patents.filter(p =>
-            (p.patent_type || '').toLowerCase().includes('fil')
-          ).length > 0 ? max : 0;
         } else {
           score = patents.length > 0 ? max : 0;
         }
@@ -652,51 +664,16 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         const softwareCount = getCountForType('software_developed_and_deployed');
         const technologyCount = getCountForType('technology_developed_and_transferred');
 
-        if (sub.includes('software developed and deployed') || sub.includes('software')) {
+        if (sub.includes('software')) {
           score = softwareCount * max;
-        } else if (sub.includes('technology developed and transferred') || sub.includes('technology')) {
+        } else if (sub.includes('technology')) {
           score = technologyCount * max;
         } else {
           score = (softwareCount + technologyCount) * max;
         }
       }
 
-      // -- 10. Review of Research Papers ---------------------------------
-      else if (sec.includes('review of research papers')) {
-        const reviewBucketCount = reviews.reduce((acc, review) => {
-          const reviewType = String(review.review_type || '').toLowerCase();
-          const paperCount = parseInt(review.number_of_papers, 10) || 0;
 
-          if (reviewType.includes('conference')) {
-            acc.low += paperCount;
-            return acc;
-          }
-
-          if (reviewType.includes('q1') || reviewType.includes('q2')) {
-            acc.high += paperCount;
-            return acc;
-          }
-
-          // Treat Q3/Q4/Scopus/Others and legacy journal values as low bucket.
-          if (
-            reviewType.includes('q3') ||
-            reviewType.includes('q4') ||
-            reviewType.includes('scopus') ||
-            reviewType.includes('other') ||
-            reviewType.includes('journal')
-          ) {
-            acc.low += paperCount;
-            return acc;
-          }
-
-          acc.low += paperCount;
-          return acc;
-        }, { high: 0, low: 0 });
-
-        const isHighBucketRubric = sub.includes('q1') || sub.includes('q2');
-        const applicableCount = isHighBucketRubric ? reviewBucketCount.high : reviewBucketCount.low;
-        score = Math.min(applicableCount * max, 10);
-      }
 
       // -- 11. Talks and Conferences --------------------------------------
       else if (sec.includes('talks and conferences')) {
@@ -869,9 +846,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       } else if (sec.includes('research guidance')) {
         // Guidance rubrics are per project/student, so multiple matching rows accumulate.
         scoreMap[rubric.id] = score;
-      } else if (sec.includes('review of research papers')) {
-        // Review rubrics use max_marks as per-paper points and cap each row at 10.
-        scoreMap[rubric.id] = score;
+
       } else if (getTextCap(sub) !== null) {
         // Some rubric rows store per-entry points in max_marks and name the row cap in text.
         scoreMap[rubric.id] = Math.min(score, getTextCap(sub));

@@ -800,6 +800,29 @@ exports.getSubmissionById = async (req, res) => {
     const yearNum = academicYear.split('-')[0];
     const sessionWindow = await getSessionWindowByAcademicYear(academicYear);
 
+        // Aggregate stored evaluation scores for this submission.
+    // Scores are session-accurate because autoAllocateMarks now fetches
+    // only data from this session (session_id = academicYear).
+    const [[scoreRow]] = await db.query(`
+      SELECT
+        COALESCE(SUM(CASE WHEN LOWER(r.section_name) LIKE '%teaching feedback%' THEN esd.score ELSE 0 END), 0) AS teaching_marks,
+        COALESCE(SUM(CASE WHEN LOWER(r.section_name) NOT LIKE '%teaching feedback%' THEN esd.score ELSE 0 END), 0) AS research_marks
+      FROM (
+        SELECT es1.rubric_id, es1.score
+        FROM Dofa_evaluation_scores es1
+        INNER JOIN (
+          SELECT rubric_id, MAX(id) AS latest_id
+          FROM Dofa_evaluation_scores
+          WHERE submission_id = ?
+          GROUP BY rubric_id
+        ) m ON m.latest_id = es1.id
+      ) esd
+      INNER JOIN Dofa_rubrics r ON r.id = esd.rubric_id
+    `, [id]);
+
+    const teachingMarks = scoreRow ? parseFloat(scoreRow.teaching_marks) || 0 : 0;
+    const researchMarks = scoreRow ? parseFloat(scoreRow.research_marks) || 0 : 0;
+
     // HOD must only review Form B content. Do not return Form A sections.
     if (role === 'hod' && formType === 'B') {
       const [facultyInfo] = await db.query('SELECT * FROM faculty_information WHERE id = ?', [fid]);
@@ -845,7 +868,9 @@ exports.getSubmissionById = async (req, res) => {
           researchPlan: null,
           teachingPlan: null,
           comments: comments || [],
-          dynamicData: dynamicData || []
+          dynamicData: dynamicData || [],
+          teaching_marks: teachingMarks,
+          research_marks: researchMarks
         }
       });
     }
@@ -957,7 +982,9 @@ exports.getSubmissionById = async (req, res) => {
         researchPlan: researchPlan || null,
         teachingPlan: teachingPlan || null,
         comments: comments || [],
-        dynamicData: dynamicData || []
+        dynamicData: dynamicData || [],
+        teaching_marks: teachingMarks,
+        research_marks: researchMarks
       }
     });
   } catch (error) {
