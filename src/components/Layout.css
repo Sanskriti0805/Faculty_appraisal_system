@@ -2,7 +2,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f5f7fa;
+  background-color: #f8fafc;
 }
 
 .layout-body {
@@ -13,10 +13,9 @@
 
 .main-content {
   flex: 1;
-  padding: 2.5rem;
+  padding: 2rem 2.5rem;
   overflow-y: auto;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  background-color: #f8fafc;
   min-width: 0;
   transition: padding 0.2s ease;
 }
-

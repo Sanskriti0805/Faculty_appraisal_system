@@ -116,25 +116,23 @@ const Header = ({ onLogout }) => {
         <div className="header-logo-container">
           <img src="/lnmiit-logo.png" alt="LNMIIT" className="header-logo" />
         </div>
-        <h1 className="header-title">Faculty Appraisal System</h1>
+        <div className="header-title-container">
+          <h1 className="header-title">Faculty Appraisal System</h1>
+          <div className="header-subtitle">The LNM Institute of Information Technology</div>
+        </div>
         <div className="header-actions">
           {user && (
-            <span style={{
-              fontSize: '13px', color: '#5b6e9f', fontWeight: '500',
-              padding: '6px 12px', background: '#f0f4ff', borderRadius: '20px'
-            }}>
+            <span className="header-user-badge">
               {displayName}
             </span>
           )}
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="settings-button" onClick={() => setShowSettings(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Settings size={15} />
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="settings-button" onClick={() => setShowSettings(true)}>
+              <Settings size={14} />
               Account Settings
             </button>
-            <button className="logout-button" onClick={onLogout}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <LogOut size={15} />
+            <button className="logout-button" onClick={onLogout}>
+              <LogOut size={14} />
               Logout
             </button>
           </div>

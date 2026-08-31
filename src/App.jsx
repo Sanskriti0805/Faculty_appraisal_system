@@ -12,6 +12,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
+const CollegeAuthCallback = lazy(() => import('./pages/CollegeAuthCallback'))
 
 // Dofa Registration (migrated from Admin)
 const DofaRegistration = lazy(() => import('./pages/DofaRegistration'))
@@ -83,6 +84,7 @@ function App() {
           <Routes>
             {/* -- Public Routes -- */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/auth/callback" element={<CollegeAuthCallback />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
 

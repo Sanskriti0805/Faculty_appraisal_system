@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -75,91 +75,126 @@ const LoginPage = () => {
 
         {/* Card */}
         <div className="login-card">
-          <form onSubmit={handleSubmit} noValidate>
-
-            {/* Role */}
-            <div className="login-field">
-              <label className="login-field-label">
-                <User size={15} />
-                Select Your Role
-              </label>
-              <select
-                name="role"
-                className="login-select"
-                value={form.role}
-                onChange={handleChange}
-                required
-              >
-                <option value="" disabled>Select your role</option>
-                {ROLES.map(r => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Email */}
-            <div className="login-field">
-              <label className="login-field-label">
-                <Mail size={15} />
-                Email Address
-              </label>
-              <input
-                type="email"
-                name="email"
-                className="login-input"
-                placeholder={form.role ? `${form.role}@lnmiit.ac.in` : 'Enter your email'}
-                value={form.email}
-                onChange={handleChange}
-                autoComplete="email"
-              />
-            </div>
-
-            {/* Password */}
-            <div className="login-field">
-              <label className="login-field-label">
-                <Lock size={15} />
-                Password
-              </label>
-              <div className="login-password-wrapper">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  className="login-input"
-                  placeholder="Enter your password"
-                  value={form.password}
-                  onChange={handleChange}
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  className="login-password-toggle"
-                  onClick={() => setShowPassword(p => !p)}
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="login-error">
-                <AlertCircle size={16} />
-                {error}
-              </div>
-            )}
-
-            {/* Submit */}
-            <button type="submit" className="login-submit-btn" disabled={loading}>
-              {loading && <span className="btn-spinner" />}
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-
-          {/* Forgot password */}
-          <div className="login-forgot">
-            <Link to="/forgot-password">Forgot your password?</Link>
+          <div className="login-field">
+            <label className="login-field-label">
+              <User size={15} />
+              Select Your Role
+            </label>
+            <select
+              name="role"
+              className="login-select"
+              value={form.role}
+              onChange={handleChange}
+              required
+            >
+              <option value="" disabled>Select your role</option>
+              {ROLES.map(r => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
           </div>
+
+          {form.role === 'faculty' ? (
+            <div style={{ textAlign: 'center', paddingTop: '0.5rem' }}>
+              <div style={{
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '8px',
+                padding: '1rem',
+                marginBottom: '1.25rem',
+                fontSize: '0.88rem',
+                color: '#1e40af',
+                lineHeight: '1.45'
+              }}>
+                Faculty authentication is managed via the central <strong>College Portal</strong>.
+              </div>
+              <button
+                type="button"
+                className="login-submit-btn"
+                onClick={() => {
+                  const ssoUrl = process.env.REACT_APP_COLLEGE_SSO_URL || '/auth/callback?token=mock_college_token_123';
+                  window.location.href = ssoUrl;
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <User size={18} />
+                Sign in with College Account
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} noValidate>
+              {/* Email */}
+              <div className="login-field">
+                <label className="login-field-label">
+                  <Mail size={15} />
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  className="login-input"
+                  placeholder={form.role ? `${form.role}@lnmiit.ac.in` : 'Enter your email'}
+                  value={form.email}
+                  onChange={handleChange}
+                  autoComplete="email"
+                />
+              </div>
+
+              {/* Password */}
+              <div className="login-field">
+                <label className="login-field-label">
+                  <Lock size={15} />
+                  Password
+                </label>
+                <div className="login-password-wrapper">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    className="login-input"
+                    placeholder="Enter your password"
+                    value={form.password}
+                    onChange={handleChange}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    className="login-password-toggle"
+                    onClick={() => setShowPassword(p => !p)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Error */}
+              {error && (
+                <div className="login-error">
+                  <AlertCircle size={16} />
+                  {error}
+                </div>
+              )}
+
+              {/* Submit */}
+              <button type="submit" className="login-submit-btn" disabled={loading}>
+                {loading && <span className="btn-spinner" />}
+                {loading ? 'Signing in...' : 'Sign In'}
+              </button>
+            </form>
+          )}
+
+          {/* Forgot password - only for internal password-based roles */}
+          {form.role && form.role !== 'faculty' && (
+            <div className="login-forgot">
+              <Link to="/forgot-password">Forgot your password?</Link>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
