@@ -14,7 +14,7 @@ const CollegeAuthCallback = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const collegeToken = searchParams.get('token');
+    const collegeToken = searchParams.get('token') || searchParams.get('sso_token') || searchParams.get('college_token');
 
     if (!collegeToken) {
       setError('No authentication token received from the college system. Please try logging in again via the main portal.');
