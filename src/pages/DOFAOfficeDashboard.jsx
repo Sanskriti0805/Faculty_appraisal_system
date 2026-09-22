@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
+import React, { useState, useEffect, useRef } from 'react';
 import { Lock, Unlock, Mail, Download, Users, FileText, Clock, CheckSquare, Eye, CheckCircle, XCircle, Calendar, FileCode, Table, X, ChevronDown, ChevronUp, LayoutList, Bell } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
@@ -6,7 +7,7 @@ import './DofaOfficeDashboard.css';
 import { showConfirm } from '../utils/appDialogs';
 import { buildReviewPath } from '../utils/reviewRoute';
 
-const API = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
+const API = API_BASE_URL;
 
 const DofaOfficeDashboard = () => {
   const navigate = useNavigate();

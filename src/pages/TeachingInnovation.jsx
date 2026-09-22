@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState, useEffect } from 'react'
 import { Upload, ExternalLink, X } from 'lucide-react'
 import './FormPages.css'
@@ -51,7 +52,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
 
     const fetchExisting = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/innovation/teaching/${user.id}`)
+        const res = await fetch(`${API_BASE_URL}/innovation/teaching/${user.id}`)
         const data = await res.json()
         if (!data.success || !Array.isArray(data.data)) return
 
@@ -137,7 +138,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
 
       const saveData = async (type, description, file, existingId) => {
         if (existingId) {
-          await fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/innovation/teaching/${existingId}`, {
+          await fetch(`${API_BASE_URL}/innovation/teaching/${existingId}`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` }
           })
@@ -205,7 +206,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                 {readOnly ? (
                   formData.onCampusFile && (
                     <a
-                      href={`http://${window.location.hostname}:5001/uploads/${formData.onCampusFile}`}
+                      href={`${UPLOADS_BASE_URL}${formData.onCampusFile}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="evidence-link"
@@ -290,7 +291,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                 {readOnly ? (
                   formData.onlineFile && (
                     <a
-                      href={`http://${window.location.hostname}:5001/uploads/${formData.onlineFile}`}
+                      href={`${UPLOADS_BASE_URL}${formData.onlineFile}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="evidence-link"
@@ -375,7 +376,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
                 {readOnly ? (
                   formData.evaluationFile && (
                     <a
-                      href={`http://${window.location.hostname}:5001/uploads/${formData.evaluationFile}`}
+                      href={`${UPLOADS_BASE_URL}${formData.evaluationFile}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="evidence-link"

@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -19,7 +20,7 @@ import TeachingInnovation from './TeachingInnovation';
 import InstitutionalContributions from './InstitutionalContributions';
 import PartB from './PartB';
 
-const API = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
+const API = API_BASE_URL;
 
 const decodeTokenPayload = (token) => {
   if (!token) return null;
@@ -197,7 +198,7 @@ const PubDetailCard = ({ pub }) => {
         <div className="pub-detail-field">
           <label>Evidence</label>
           <span>
-            <a href={`${API.replace('/api', '')}/uploads/${pub.evidence_file}`} target="_blank" rel="noopener noreferrer" className="evidence-link">
+            <a href={`${UPLOADS_BASE_URL}${pub.evidence_file}`} target="_blank" rel="noopener noreferrer" className="evidence-link">
               <ExternalLink size={12} /> View File
             </a>
           </span>
@@ -486,7 +487,7 @@ const DofaReview = () => {
   /* -- Helpers -- */
   const renderFileLink = (filename) => {
     if (!filename) return null;
-    const fileUrl = `${API.replace('/api', '')}/uploads/${filename}`;
+    const fileUrl = `${UPLOADS_BASE_URL}${filename}`;
     return (
       <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="evidence-link" title="View Supporting Document">
         <ExternalLink size={12} /><span>Evidence</span>

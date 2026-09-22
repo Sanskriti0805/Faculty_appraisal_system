@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState, useEffect } from 'react'
 import { Plus, Trash2, Upload, FileText, X } from 'lucide-react'
 import './FormPages.css'
@@ -164,8 +165,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
   }
 
   const handleViewEvidence = (filename) => {
-    const baseUrl = `http://${window.location.hostname}:5001`;
-    window.open(`${baseUrl}/uploads/${filename}`, '_blank')
+    window.open(`${UPLOADS_BASE_URL}${filename}`, '_blank')
   }
 
   return (

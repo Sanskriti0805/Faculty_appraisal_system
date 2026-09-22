@@ -1,9 +1,10 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState } from 'react';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import './LoginPage.css';
 
-const API_BASE = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
+const API_BASE = API_BASE_URL;
 
 const ResetPassword = () => {
   const { token } = useParams();

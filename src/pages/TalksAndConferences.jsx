@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState, useRef, useEffect } from 'react';
 import { Trash2, Plus, X, Calendar } from 'lucide-react';
 import './TalksAndConferences.css';
@@ -274,8 +275,8 @@ const TalksAndConferences = () => {
 
       // 1. Delete all persisted instances to cleanly overwrite
       await Promise.all([
-        ...persistedSessions.map(id => fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/activities/conference-sessions/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })),
-        ...persistedTalks.map(id => fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/activities/keynotes-talks/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }))
+        ...persistedSessions.map(id => fetch(`${API_BASE_URL}/activities/conference-sessions/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })),
+        ...persistedTalks.map(id => fetch(`${API_BASE_URL}/activities/keynotes-talks/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }))
       ]);
 
       const allItems = [...submittedItems];
@@ -315,7 +316,7 @@ const TalksAndConferences = () => {
           payload.append('role', item.role);
           payload.append('location', formatVenue(item.venue));
           payload.append('date', item.fromDate || item.toDate || '');
-          return fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/activities/conference-sessions`, {
+          return fetch(`${API_BASE_URL}/activities/conference-sessions`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: payload
@@ -326,7 +327,7 @@ const TalksAndConferences = () => {
           payload.append('audience_type', item.cat2SubCategory);
           payload.append('location', formatVenue(item.venue));
           payload.append('date', item.date || item.dates?.[0] || '');
-          return fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/activities/keynotes-talks`, {
+          return fetch(`${API_BASE_URL}/activities/keynotes-talks`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: payload

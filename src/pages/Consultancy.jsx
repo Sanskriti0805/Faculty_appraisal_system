@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState, useEffect } from 'react'
 import { Upload, Plus, Trash2, ExternalLink, X } from 'lucide-react'
 import './FormPages.css'
@@ -165,7 +166,7 @@ const Consultancy = ({ initialData, readOnly }) => {
       }
 
       await deleteIgnoringNotFound(
-        (id) => `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/consultancy/${id}`,
+        (id) => `${API_BASE_URL}/consultancy/${id}`,
         persistedConsultancyIds,
         token
       )
@@ -191,7 +192,7 @@ const Consultancy = ({ initialData, readOnly }) => {
           formData.append('existing_evidence_file', c.evidence_file);
         }
 
-        return fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/consultancy`, {
+        return fetch(`${API_BASE_URL}/consultancy`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formData
@@ -255,10 +256,9 @@ const Consultancy = ({ initialData, readOnly }) => {
   const renderEvidenceCell = (consultancy) => {
     if (readOnly) {
       if (consultancy.evidence_file) {
-        const baseUrl = `http://${window.location.hostname}:5001`;
         return (
           <a
-            href={`${baseUrl}/uploads/${consultancy.evidence_file}`}
+            href={`${UPLOADS_BASE_URL}${consultancy.evidence_file}`}
             target="_blank"
             rel="noopener noreferrer"
             className="evidence-link"

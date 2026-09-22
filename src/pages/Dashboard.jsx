@@ -1,9 +1,10 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileText, Clock, AlertTriangle, CheckCircle, CalendarOff, Calendar, Archive, Send } from 'lucide-react'
 import './Dashboard.css'
 
-const API = import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`)
+const API = API_BASE_URL;
 
 const Dashboard = () => {
   const navigate = useNavigate()

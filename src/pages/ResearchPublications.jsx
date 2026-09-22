@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState, useEffect } from 'react'
 import { Plus, X, Upload, ExternalLink, Trash2, Eye, RotateCw, CheckCircle, BookOpen, Award, FileText, Users } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
@@ -1417,7 +1418,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
                 <label>Evidence</label>
                 <a
-                  href={`http://${window.location.hostname}:5001/uploads/${entry.evidence_file}`}
+                  href={`${UPLOADS_BASE_URL}${entry.evidence_file}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="evidence-link"
@@ -1627,7 +1628,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               <div className="form-field-vertical" style={{ marginTop: '1.5rem' }}>
                 <label>Evidence</label>
                 <a
-                  href={`http://${window.location.hostname}:5001/uploads/${entry.evidence_file}`}
+                  href={`${UPLOADS_BASE_URL}${entry.evidence_file}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="evidence-link"
@@ -1733,7 +1734,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           <div className="form-field-vertical" style={{ marginTop: '1.5rem' }}>
             <label>Evidence</label>
             <a
-              href={`http://${window.location.hostname}:5001/uploads/${initialData.evidence_file}`}
+              href={`${UPLOADS_BASE_URL}${initialData.evidence_file}`}
               target="_blank"
               rel="noopener noreferrer"
               className="evidence-link"
@@ -1928,7 +1929,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                       <td style={{ padding: '1rem', textAlign: 'center' }}>
                         {pub.evidence_file ? (
                           <a 
-                            href={`http://${window.location.hostname}:5001/uploads/${pub.evidence_file}`} 
+                            href={`${UPLOADS_BASE_URL}${pub.evidence_file}`} 
                             target="_blank" 
                             rel="noopener noreferrer" 
                             title="View Document"

@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Upload, ExternalLink, X, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import './FormPages.css'
@@ -448,7 +449,7 @@ const Patents = ({ initialData, readOnly }) => {
                       {readOnly ? (
                         entry.file ? (
                           <a
-                            href={`http://${window.location.hostname}:5001/uploads/${entry.file}`}
+                            href={`${UPLOADS_BASE_URL}${entry.file}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="evidence-link"

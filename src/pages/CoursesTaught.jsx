@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState, useEffect } from 'react'
 import { Plus, Trash2, Upload, FileText, X, ExternalLink, Eye, CheckCircle, RotateCw } from 'lucide-react'
 import apiClient from '../services/api';
@@ -755,7 +756,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                               <td style={{ textAlign: 'center' }}>
                                  {c.evidence_file ? (
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                       <a href={`http://${window.location.hostname}:5001/uploads/${c.evidence_file}`} target="_blank" rel="noopener noreferrer" title="View File" style={{ color: '#3182ce' }}>
+                                       <a href={`${UPLOADS_BASE_URL}${c.evidence_file}`} target="_blank" rel="noopener noreferrer" title="View File" style={{ color: '#3182ce' }}>
                                           <Eye size={18} />
                                        </a>
                                     </div>
@@ -802,7 +803,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                               <td>{p.project_duration}</td>
                               <td style={{ textAlign: 'center' }}>
                                  {p.evidence_file ? (
-                                    <a href={`http://${window.location.hostname}:5001/uploads/${p.evidence_file}`} target="_blank" rel="noopener noreferrer" title="View File" style={{ color: '#3182ce' }}>
+                                    <a href={`${UPLOADS_BASE_URL}${p.evidence_file}`} target="_blank" rel="noopener noreferrer" title="View File" style={{ color: '#3182ce' }}>
                                        <Eye size={18} />
                                     </a>
                                  ) : '—'}
@@ -911,7 +912,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                         <div className="feedback-container" style={{ justifyContent: 'center' }}>
                            {readOnly ? (
                               course.evidence_file ? (
-                                 <a href={`http://${window.location.hostname}:5001/uploads/${course.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
+                                 <a href={`${UPLOADS_BASE_URL}${course.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
                                     <ExternalLink size={18} />
                                  </a>
                               ) : <span style={{ color: '#ccc' }}>None</span>
@@ -1044,7 +1045,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                      <td>
                         {readOnly ? (
                            project.evidence_file ? (
-                              <a href={`http://${window.location.hostname}:5001/uploads/${project.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
+                              <a href={`${UPLOADS_BASE_URL}${project.evidence_file}`} target="_blank" rel="noopener noreferrer" className="compact-upload-btn has-file">
                                  <ExternalLink size={18} />
                               </a>
                            ) : <span style={{ color: '#ccc' }}>None</span>

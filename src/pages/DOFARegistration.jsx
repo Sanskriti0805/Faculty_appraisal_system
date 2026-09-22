@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Building2, Users, Plus, X, CheckCircle, AlertCircle,
@@ -9,7 +10,7 @@ import { showConfirm } from '../utils/appDialogs';
 import { buildReviewPath } from '../utils/reviewRoute';
 import './DofaRegistration.css';
 
-const API_BASE = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
+const API_BASE = API_BASE_URL;
 
 const DESIGNATIONS = ['Professor', 'Associate Professor', 'Assistant Professor', 'Lecturer', 'Visiting Faculty'];
 const SALUTATIONS = ['Prof', 'Dr', 'Mr', 'Ms'];

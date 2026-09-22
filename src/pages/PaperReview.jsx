@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useEffect, useState } from 'react'
 import { Plus, Trash2, Upload, X } from 'lucide-react'
 import './FormPages.css'
@@ -240,7 +241,7 @@ const PaperReview = () => {
         return true
       }
 
-      await Promise.all(persistedReviewIds.map((id) => fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/activities/paper-reviews/${id}`, {
+      await Promise.all(persistedReviewIds.map((id) => fetch(`${API_BASE_URL}/activities/paper-reviews/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       })))
@@ -260,7 +261,7 @@ const PaperReview = () => {
           formDataObj.append('existing_evidence_file', entry.evidence_file)
         }
 
-        return fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/activities/paper-reviews`, {
+        return fetch(`${API_BASE_URL}/activities/paper-reviews`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formDataObj

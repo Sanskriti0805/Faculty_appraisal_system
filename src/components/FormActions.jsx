@@ -1,4 +1,5 @@
-﻿import React from 'react';
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
 import { FORM_SEQUENCE, getNextPath, getPreviousPath } from '../constants/navigation';
@@ -120,7 +121,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
     const loadAccess = async () => {
       try {
-        const sessionRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/sessions/active`);
+        const sessionRes = await fetch(`${API_BASE_URL}/sessions/active`);
         const sessionData = await sessionRes.json();
         if (!sessionData.success || !sessionData.data || sessionData.pastDeadline || !sessionData.released) {
           setSessionAccessMessage(sessionData.message || 'Forms are not currently open for changes.');
@@ -128,7 +129,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
           setSessionAccessMessage('');
         }
 
-        const subRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/submissions/my`, {
+        const subRes = await fetch(`${API_BASE_URL}/submissions/my`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const subData = await subRes.json();
@@ -148,7 +149,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
           return;
         }
 
-        const reqRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/edit-requests/my-submission/${subData.data.id}`, {
+        const reqRes = await fetch(`${API_BASE_URL}/edit-requests/my-submission/${subData.data.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const reqData = await reqRes.json();

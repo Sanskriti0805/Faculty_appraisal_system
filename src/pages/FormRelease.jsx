@@ -1,9 +1,10 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Send, PlayCircle, StopCircle, Timer, CheckCircle2, XCircle, Loader2, CalendarClock, Rocket, Ban } from 'lucide-react';
 import { showConfirm } from '../utils/appDialogs';
 import './FormRelease.css';
 
-const API = import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
+const API = API_BASE_URL;
 
 const FormRelease = () => {
   const [sessions, setSessions] = useState([]);

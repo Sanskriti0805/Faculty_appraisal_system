@@ -3,9 +3,11 @@
 // VITE_API_URL=https://appraisal.college.edu/api
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim()
 
-export const API_BASE_URL = (configuredApiUrl || (import.meta.env.DEV
-  ? `${window.location.protocol}//${window.location.hostname}:5001/api`
-  : '/api')).replace(/\/+$/, '')
+if (!configuredApiUrl) {
+  throw new Error('VITE_API_URL is required. Set it in the frontend .env file before starting or building the app.')
+}
+
+export const API_BASE_URL = configuredApiUrl.replace(/\/+$/, '')
 
 // Uploads are served by the same backend origin as the API.
 const apiUrl = new URL(API_BASE_URL, window.location.origin)

@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Download, FileText, LayoutList, ChevronDown, Eye, Calendar } from 'lucide-react';
@@ -6,7 +7,7 @@ import { buildReviewPath } from '../utils/reviewRoute';
 import './DofaOfficeDashboard.css';
 import './SessionLogs.css';
 
-const API = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`;
+const API = API_BASE_URL;
 
 const sortAcademicYearsDesc = (years = []) => {
   const parseStart = (year) => {

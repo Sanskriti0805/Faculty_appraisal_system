@@ -1,9 +1,10 @@
-﻿import React, { useState } from 'react';
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, User, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import './LoginPage.css';
 
-const API_BASE = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
+const API_BASE = API_BASE_URL;
 
 const ROLES = [
   { value: 'faculty', label: 'Faculty' },

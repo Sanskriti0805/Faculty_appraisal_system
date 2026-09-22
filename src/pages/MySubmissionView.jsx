@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -10,7 +11,7 @@ import {
 import './MySubmissionView.css';
 import { useAuth } from '../context/AuthContext';
 
-const API = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
+const API = API_BASE_URL;
 
 const REQUESTABLE_SECTION_GROUPS = [
   { key: 'teaching_learning', label: 'Teaching and Learning' },
@@ -247,7 +248,7 @@ const MySubmissionView = () => {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '-';
 
-  const uploadBase = `${API.replace('/api', '')}/uploads/`;
+  const uploadBase = UPLOADS_BASE_URL;
 
   const toLabel = (key) =>
     String(key || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());

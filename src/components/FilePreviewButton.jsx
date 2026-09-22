@@ -1,3 +1,4 @@
+import { UPLOADS_BASE_URL } from '../config/api'
 import React from 'react'
 import { Eye } from 'lucide-react'
 
@@ -6,7 +7,7 @@ const getDefaultUploadsBaseUrl = () => {
     return ''
   }
 
-  return `http://${window.location.hostname}:5001/uploads/`
+  return UPLOADS_BASE_URL
 }
 
 const FilePreviewButton = ({

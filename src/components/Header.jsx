@@ -1,9 +1,10 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState } from 'react'
 import { LogOut, Settings, X, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import './Header.css'
 
-const API_BASE = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
+const API_BASE = API_BASE_URL;
 
 const Header = ({ onLogout }) => {
   const { user, token } = useAuth()

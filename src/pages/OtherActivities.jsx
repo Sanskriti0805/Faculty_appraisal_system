@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState } from 'react'
 import { useEffect } from 'react'
 import { Plus, Upload, X } from 'lucide-react'
@@ -152,7 +153,7 @@ const OtherActivities = () => {
         }
       })
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/legacy-sections/other_activities/save`, {
+      const response = await fetch(`${API_BASE_URL}/legacy-sections/other_activities/save`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`

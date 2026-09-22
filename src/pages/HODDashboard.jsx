@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, LogOut, Mail, Hash, Briefcase, Calendar, Building2, Archive, RotateCcw, Eye, Download, FileText, X, Settings, Lock, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -6,7 +7,7 @@ import { confirmLogout, showConfirm } from '../utils/appDialogs';
 import { buildReviewPath } from '../utils/reviewRoute';
 import './HODDashboard.css';
 
-const API_BASE = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
+const API_BASE = API_BASE_URL;
 
 const HODDashboard = ({ embedded = false }) => {
   const { user, token, logout } = useAuth();

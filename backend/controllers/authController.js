@@ -69,7 +69,7 @@ exports.login = async (req, res) => {
     }
 
     if (!user.password) {
-      return res.status(401).json({ success: false, message: 'Password not set. Please check your email for the temporary password.' });
+      return res.status(401).json({ success: false, message: 'Password not set. Use "Forgot your password?" to set a password.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -287,4 +287,3 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
-

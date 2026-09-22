@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Upload, X, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import './FormPages.css'

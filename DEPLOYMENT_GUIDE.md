@@ -12,7 +12,7 @@
 4. [Database Setup (MySQL)](#4-database-setup)
 5. [Email Service Setup (SMTP)](#5-email-service-setup--smtp)
 6. [JWT Authentication](#6-jwt-authentication)
-7. [College SSO Integration (Optional)](#7-college-sso-integration-optional)
+7. [Faculty Login](#7-faculty-login)
 8. [Initial User Seeding](#8-initial-user-seeding)
 9. [File Uploads](#9-file-uploads)
 10. [Build & Run](#10-build--run)
@@ -112,11 +112,6 @@ DOFA_EMAIL=dofa@your-college.ac.in
 # ──────────────────────────────────────────────
 FRONTEND_URL=https://appraisal.your-college.ac.in
 
-# ──────────────────────────────────────────────
-# COLLEGE SSO (Optional — see Section 7)
-# ──────────────────────────────────────────────
-COLLEGE_API_URL=
-COLLEGE_API_SECRET=
 ```
 
 ### 3b. Frontend `.env` — Root `.env`
@@ -295,41 +290,14 @@ JWT_EXPIRES_IN=7d
 
 ---
 
-## 7. College SSO Integration (Optional)
+## 7. Faculty Login
 
-The system supports integration with your college's existing authentication system (ERP, SSO, etc.).
+Faculty sign in at `/login` by selecting **Faculty** and entering their registered email address and password.
 
-### How it works
-
-1. Your college system redirects to the appraisal portal with a short-lived token
-2. The appraisal backend calls your college API to validate the token
-3. If valid, the user is auto-logged-in (or auto-registered as faculty)
-
-### Configuration
-
-```env
-# URL of your college's API that validates the token and returns user info
-COLLEGE_API_URL=https://erp.your-college.ac.in/api/validate-token
-
-# Optional shared secret for server-to-server authentication
-COLLEGE_API_SECRET=your_shared_api_secret
-```
-
-### Expected College API Response
-
-The appraisal system expects your college API to return:
-```json
-{
-  "email": "professor@your-college.ac.in",
-  "name": "Dr. Professor Name"
-}
-```
-
-Field names are flexible — the system checks for: `email`/`Email`/`user_email` and `name`/`Name`/`user_name`/`full_name`.
-
-### If not using SSO
-
-Leave `COLLEGE_API_URL` blank. Users will log in with email + password through the built-in login system.
+- Register faculty through the existing faculty registration page; the system emails a temporary password.
+- Faculty can use **Forgot your password?** to receive a password reset link. Select the Faculty role on that page.
+- Existing accounts created through the former college login without a password must use the password reset flow before signing in.
+- Configure SMTP and `FRONTEND_URL` so temporary passwords and reset links are delivered correctly.
 
 ---
 
@@ -503,7 +471,6 @@ server {
 - [ ] **PM2** or equivalent process manager running the backend
 - [ ] **Firewall** — only ports 80/443 open externally; MySQL port 3306 blocked from external access
 - [ ] **Backups** — scheduled MySQL dumps + uploads directory backup
-- [ ] **College SSO** (optional) — `COLLEGE_API_URL` configured if integrating with existing ERP
 
 ---
 
@@ -529,8 +496,6 @@ server {
 | `FRONTEND_URL` | ✅ | `https://appraisal.college.ac.in` | Used in email links |
 | `MAX_FILE_SIZE` | ✅ | `10485760` | Max upload size (bytes) |
 | `UPLOAD_PATH` | ✅ | `./uploads` | Upload directory |
-| `COLLEGE_API_URL` | ❌ | `https://erp.college.ac.in/api/...` | SSO validation endpoint |
-| `COLLEGE_API_SECRET` | ❌ | *(shared secret)* | SSO API secret |
 | `VITE_API_URL` | ✅ | `https://appraisal.college.ac.in/api` | Frontend → Backend URL |
 
 Legend: ✅ Required | ⚡ Required for email (system works without, but emails log to console) | ❌ Optional

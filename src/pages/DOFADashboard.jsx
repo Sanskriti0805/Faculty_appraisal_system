@@ -1,11 +1,12 @@
-﻿import React, { useState, useEffect } from 'react';
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, CheckCircle, XCircle, MessageSquare, FileText, Users, Clock, CheckSquare, Bell, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import './DofaDashboard.css';
 import { showConfirm, showPrompt } from '../utils/appDialogs';
 import { buildReviewPath } from '../utils/reviewRoute';
 
-const API = import.meta.env.VITE_API_URL || (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
+const API = API_BASE_URL;
 
 const DofaDashboard = () => {
   const navigate = useNavigate();

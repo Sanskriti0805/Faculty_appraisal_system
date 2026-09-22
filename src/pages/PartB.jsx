@@ -1,3 +1,4 @@
+import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
 import React, { useState, useEffect, useMemo } from 'react'
 import { Plus, Trash2, Upload, FileText, X, CheckCircle, ExternalLink } from 'lucide-react'
 import './FormPages.css'
@@ -8,7 +9,7 @@ import FilePreviewButton from '../components/FilePreviewButton'
 import { showConfirm } from '../utils/appDialogs'
 import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
-const API_BASE = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`)
+const API_BASE = API_BASE_URL;
 
 const toText = (value) => (value === null || value === undefined ? '' : String(value))
 
@@ -549,7 +550,7 @@ const PartB = ({ initialData, readOnly }) => {
                     {readOnly ? (
                       goal.evidenceFile && (
                         <a
-                          href={`http://${window.location.hostname}:5001/uploads/${goal.evidenceFile}`}
+                          href={`${UPLOADS_BASE_URL}${goal.evidenceFile}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="evidence-link"
