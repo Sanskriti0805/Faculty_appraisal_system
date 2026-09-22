@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AlertCircle, ShieldCheck, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const API_BASE = `http://${window.location.hostname}:5001/api`;
+const API_BASE = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
 
 const CollegeAuthCallback = () => {
   const [searchParams] = useSearchParams();

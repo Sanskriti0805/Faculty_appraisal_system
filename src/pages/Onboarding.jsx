@@ -8,7 +8,7 @@ import {
 import { confirmLogout } from '../utils/appDialogs';
 import './Onboarding.css';
 
-const API_BASE = `http://${window.location.hostname}:5001/api`;
+const API_BASE = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
 
 const DESIGNATIONS = ['Professor', 'Associate Professor', 'Assistant Professor', 'Lecturer', 'Visiting Faculty'];
 const SALUTATIONS = ['Prof', 'Dr', 'Mr', 'Ms'];

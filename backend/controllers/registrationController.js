@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Registration Controller - Department and Faculty registration by Dofa
  * Sends temp password via email (LNMIIT template)
  */

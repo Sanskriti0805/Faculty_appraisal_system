@@ -6,7 +6,7 @@ import { confirmLogout, showConfirm } from '../utils/appDialogs';
 import { buildReviewPath } from '../utils/reviewRoute';
 import './HODDashboard.css';
 
-const API_BASE = `http://${window.location.hostname}:5001/api`;
+const API_BASE = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
 
 const HODDashboard = ({ embedded = false }) => {
   const { user, token, logout } = useAuth();

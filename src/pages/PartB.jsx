@@ -8,7 +8,7 @@ import FilePreviewButton from '../components/FilePreviewButton'
 import { showConfirm } from '../utils/appDialogs'
 import { FILE_TYPES, getAcceptAttribute, handleValidatedFileInput } from '../utils/fileValidation'
 
-const API_BASE = `http://${window.location.hostname}:5001/api`
+const API_BASE = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`)
 
 const toText = (value) => (value === null || value === undefined ? '' : String(value))
 

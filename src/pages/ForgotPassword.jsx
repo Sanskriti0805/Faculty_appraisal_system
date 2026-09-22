@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Mail, User, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import './LoginPage.css';
 
-const API_BASE = `http://${window.location.hostname}:5001/api`;
+const API_BASE = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
 
 const ROLES = [
   { value: 'faculty', label: 'Faculty' },

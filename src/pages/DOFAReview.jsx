@@ -19,7 +19,7 @@ import TeachingInnovation from './TeachingInnovation';
 import InstitutionalContributions from './InstitutionalContributions';
 import PartB from './PartB';
 
-const API = `http://${window.location.hostname}:5001/api`;
+const API = (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}`);
 
 const decodeTokenPayload = (token) => {
   if (!token) return null;

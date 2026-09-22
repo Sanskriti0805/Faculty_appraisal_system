@@ -239,7 +239,7 @@ const TechnologyTransfer = () => {
       if (mySub?.success && mySub?.data?.id) {
         const details = await apiClient.get(`/submissions/${mySub.data.id}`)
         const existingRows = Array.isArray(details?.data?.techTransfer) ? details.data.techTransfer : []
-        await Promise.all(existingRows.map((row) => fetch(`http://localhost:5001/api/activities/tech-transfer/${row.id}`, {
+        await Promise.all(existingRows.map((row) => fetch(`${API_BASE_URL}/activities/tech-transfer/${row.id}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         })))
@@ -261,7 +261,7 @@ const TechnologyTransfer = () => {
           formDataObj.append('existing_evidence_file', entry.file)
         }
 
-        const response = await fetch('http://localhost:5001/api/activities/tech-transfer', {
+        const response = await fetch(`${API_BASE_URL}/activities/tech-transfer`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formDataObj

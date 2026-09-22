@@ -120,7 +120,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
 
     const loadAccess = async () => {
       try {
-        const sessionRes = await fetch(`http://${window.location.hostname}:5001/api/sessions/active`);
+        const sessionRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/sessions/active`);
         const sessionData = await sessionRes.json();
         if (!sessionData.success || !sessionData.data || sessionData.pastDeadline || !sessionData.released) {
           setSessionAccessMessage(sessionData.message || 'Forms are not currently open for changes.');
@@ -128,7 +128,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
           setSessionAccessMessage('');
         }
 
-        const subRes = await fetch(`http://${window.location.hostname}:5001/api/submissions/my`, {
+        const subRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/submissions/my`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const subData = await subRes.json();
@@ -148,7 +148,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
           return;
         }
 
-        const reqRes = await fetch(`http://${window.location.hostname}:5001/api/edit-requests/my-submission/${subData.data.id}`, {
+        const reqRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/edit-requests/my-submission/${subData.data.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const reqData = await reqRes.json();

@@ -51,7 +51,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
 
     const fetchExisting = async () => {
       try {
-        const res = await fetch(`http://${window.location.hostname}:5001/api/innovation/teaching/${user.id}`)
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/innovation/teaching/${user.id}`)
         const data = await res.json()
         if (!data.success || !Array.isArray(data.data)) return
 
@@ -137,7 +137,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
 
       const saveData = async (type, description, file, existingId) => {
         if (existingId) {
-          await fetch(`http://${window.location.hostname}:5001/api/innovation/teaching/${existingId}`, {
+          await fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/innovation/teaching/${existingId}`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` }
           })
@@ -153,7 +153,7 @@ const TeachingInnovation = ({ initialData, readOnly }) => {
           formData.append('evidence_file', file)
         }
 
-        return fetch('http://localhost:5001/api/innovation/teaching', {
+        return fetch(`${API_BASE_URL}/innovation/teaching`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formData

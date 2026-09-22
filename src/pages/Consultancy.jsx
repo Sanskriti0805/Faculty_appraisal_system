@@ -165,7 +165,7 @@ const Consultancy = ({ initialData, readOnly }) => {
       }
 
       await deleteIgnoringNotFound(
-        (id) => `http://${window.location.hostname}:5001/api/consultancy/${id}`,
+        (id) => `${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/consultancy/${id}`,
         persistedConsultancyIds,
         token
       )
@@ -191,7 +191,7 @@ const Consultancy = ({ initialData, readOnly }) => {
           formData.append('existing_evidence_file', c.evidence_file);
         }
 
-        return fetch(`http://${window.location.hostname}:5001/api/consultancy`, {
+        return fetch(`${import.meta.env.VITE_API_URL || 'http://' + window.location.hostname + ':5001/api'}/consultancy`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formData
