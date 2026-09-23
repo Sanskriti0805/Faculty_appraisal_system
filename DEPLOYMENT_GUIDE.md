@@ -154,6 +154,45 @@ The backend **automatically creates all required tables** on first startup via `
 
 Just start the backend and it will set up ~25+ tables including `users`, `submissions`, `faculty_information`, `departments`, etc.
 
+### Troubleshooting: Save Draft reports an edit-permission error
+
+`Edit permission check failed` means the backend threw an exception while checking
+whether editing is allowed. It does not identify a problem with the faculty's
+course data. The screenshot alone cannot identify the underlying database error.
+
+Earlier versions issued `CREATE TABLE IF NOT EXISTS edit_requests` and potentially
+`ALTER TABLE` inside the save guard. These can fail when the runtime database user
+does not have schema modification privileges. The updated guard performs read-only
+permission checks; schema setup remains a deployment/startup responsibility.
+
+After deploying the updated backend, the webmaster can run this from the project
+root using the same configuration as the backend:
+
+```bash
+node backend/scripts/check_edit_permissions_schema.js
+pm2 logs faculty-appraisal --err --lines 100 --nostream
+```
+
+The diagnostic checks database connectivity, required columns, and SELECT access
+without reading faculty records or modifying the database. It exits with a nonzero
+status if a check fails. Look for `requireSectionEditAccess error` in the backend
+logs around the failed save (use the equivalent logs if PM2 is not used).
+
+- `ER_BAD_FIELD_ERROR` or `ER_NO_SUCH_TABLE`: the deployed schema is incomplete.
+  Have the database administrator apply the migration for the named column/table.
+  Startup messages beginning `Migration note:` can indicate a failed migration.
+- `ER_TABLEACCESS_DENIED_ERROR`: check the operation named in the server log.
+  Deploy this fix if it is the guard's old CREATE/ALTER operation; if it is SELECT,
+  the runtime database user needs read access to the workflow tables.
+- Connection errors: check the backend's database host, port, credentials, and service.
+
+Once checks pass, restart the updated backend (`pm2 restart faculty-appraisal` for
+the process configured in this guide) and retry Save Draft. The permission guard
+still rejects locked submissions, unreleased/final-locked sessions, expired
+deadlines, and sections outside an approved edit request. Missing lock columns
+cause an error rather than silently allowing edits. These checks do not verify
+the later INSERT/UPDATE operations; collect the backend error if saving still fails.
+
 ---
 
 ## 5. Email Service Setup (SMTP)

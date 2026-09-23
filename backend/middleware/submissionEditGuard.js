@@ -1,59 +1,22 @@
 const db = require('../config/database');
 const { getSessionWriteAccess } = require('../utils/sessionAccess');
 
-let editRequestsTableEnsured = false;
-let sessionFinalLockColumnsEnsured = false;
-
-async function ensureColumnExists(tableName, columnName, definitionSql) {
-  const [rows] = await db.query(
-    `SELECT 1
-     FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE()
-       AND TABLE_NAME = ?
-       AND COLUMN_NAME = ?
-     LIMIT 1`,
-    [tableName, columnName]
-  );
-
-  if (rows.length === 0) {
-    await db.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definitionSql}`);
-  }
+// Schema creation belongs to deployment/startup migrations, not faculty saves.
+// Explicitly check final_locked: SELECT * would silently omit a missing column
+// and getSessionState would otherwise interpret it as an unlocked session.
+async function verifySessionLockSchema() {
+  await db.query('SELECT final_locked FROM appraisal_sessions LIMIT 0');
 }
 
-async function ensureEditRequestsTable() {
-  if (editRequestsTableEnsured) return;
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS edit_requests (
-      id INT NOT NULL AUTO_INCREMENT,
-      submission_id INT NOT NULL,
-      faculty_id INT NOT NULL,
-      requested_sections JSON NOT NULL,
-      request_message TEXT DEFAULT NULL,
-      status ENUM('pending','approved','denied') DEFAULT 'pending',
-      approved_sections JSON DEFAULT NULL,
-      reviewed_by INT DEFAULT NULL,
-      reviewed_at TIMESTAMP NULL DEFAULT NULL,
-      Dofa_note TEXT DEFAULT NULL,
-      created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      PRIMARY KEY (id),
-      KEY submission_id (submission_id),
-      KEY faculty_id (faculty_id),
-      KEY reviewed_by (reviewed_by),
-      CONSTRAINT edit_requests_ibfk_1 FOREIGN KEY (submission_id) REFERENCES submissions (id) ON DELETE CASCADE,
-      CONSTRAINT edit_requests_ibfk_2 FOREIGN KEY (faculty_id) REFERENCES users (id) ON DELETE CASCADE,
-      CONSTRAINT edit_requests_ibfk_3 FOREIGN KEY (reviewed_by) REFERENCES users (id) ON DELETE SET NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
-  `);
-  editRequestsTableEnsured = true;
-}
-
-async function ensureSessionFinalLockColumns() {
-  if (sessionFinalLockColumnsEnsured) return;
-  await ensureColumnExists('appraisal_sessions', 'final_locked', 'TINYINT(1) NOT NULL DEFAULT 0');
-  await ensureColumnExists('appraisal_sessions', 'final_locked_at', 'TIMESTAMP NULL DEFAULT NULL');
-  await ensureColumnExists('appraisal_sessions', 'final_locked_by', 'INT NULL DEFAULT NULL');
-  sessionFinalLockColumnsEnsured = true;
+function permissionCheckError(error) {
+  const schemaMissing = ['ER_BAD_FIELD_ERROR', 'ER_NO_SUCH_TABLE'].includes(error.code);
+  return {
+    success: false,
+    code: schemaMissing ? 'EDIT_PERMISSION_SCHEMA_MISSING' : 'EDIT_PERMISSION_CHECK_FAILED',
+    message: schemaMissing
+      ? 'The server database is missing required appraisal fields or tables. Please contact the webmaster.'
+      : 'Unable to verify edit permissions. Please retry; if this continues, contact the webmaster.'
+  };
 }
 
 function safeJsonParse(value) {
@@ -109,9 +72,6 @@ const expandApprovedSectionKeys = (approvedSections = []) => {
 };
 
 async function checkSectionEditAccess(req, sectionKey) {
-  await ensureEditRequestsTable();
-  await ensureSessionFinalLockColumns();
-
   if (!req.user) {
     return {
       allowed: false,
@@ -124,6 +84,8 @@ async function checkSectionEditAccess(req, sectionKey) {
   if (req.user.role !== 'faculty') {
     return { allowed: true };
   }
+
+  await verifySessionLockSchema();
 
   const facultyId = req.user.id;
 
@@ -255,7 +217,7 @@ function requireSectionEditAccess(sectionKey) {
       return res.status(result.status || 403).json(result.body);
     } catch (error) {
       console.error('requireSectionEditAccess error:', error);
-      return res.status(500).json({ success: false, message: 'Edit permission check failed' });
+      return res.status(500).json(permissionCheckError(error));
     }
   };
 }
@@ -280,9 +242,6 @@ function requireSectionEditAccessFromParam(paramName = 'sectionKey') {
 function requireDynamicResponseEditAccess() {
   return async (req, res, next) => {
     try {
-      await ensureEditRequestsTable();
-      await ensureSessionFinalLockColumns();
-
       if (!req.user) {
         return res.status(401).json({ success: false, message: 'Not authenticated' });
       }
@@ -336,7 +295,7 @@ function requireDynamicResponseEditAccess() {
       return next();
     } catch (error) {
       console.error('requireDynamicResponseEditAccess error:', error);
-      return res.status(500).json({ success: false, message: 'Dynamic section permission check failed' });
+      return res.status(500).json(permissionCheckError(error));
     }
   };
 }
