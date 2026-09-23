@@ -786,7 +786,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                            <th>Project Title</th>
                            <th>Type</th>
                            <th>Role</th>
-                           <th>Student</th>
+                           <th>Student Name</th>
                            <th>Duration</th>
                            <th>Evidence</th>
                            <th style={{ width: '80px' }}>Action</th>
@@ -992,7 +992,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                   <th style={{ width: '12%' }}>Project Title <span className="required-star">*</span></th>
                   <th style={{ width: '10%' }}>Type <span className="required-star">*</span></th>
                   <th style={{ width: '10%' }}>Role <span className="required-star">*</span></th>
-                  <th style={{ width: '12%' }}>Student <span className="required-star">*</span></th>
+                  <th style={{ width: '12%' }}>Student Name <span className="required-star">*</span></th>
                   <th style={{ width: '10%' }}>Duration <span className="required-star">*</span></th>
                   <th style={{ width: '10%' }}>Outcome <span className="required-star">*</span></th>
                   <th style={{ width: '10%' }}>Remarks</th>
@@ -1039,7 +1039,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                         </ReadOnlyField>
                      </td>
                      <td><ReadOnlyField readOnly={readOnly} value={project.studentName}><input type="text" value={project.studentName} onChange={(e) => handleInputChange(semester, index, 'studentName', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
-                     <td><ReadOnlyField readOnly={readOnly} value={project.duration}><input type="text" value={project.duration} onChange={(e) => handleInputChange(semester, index, 'duration', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
+                     <td><ReadOnlyField readOnly={readOnly} value={project.duration}><input type="text" placeholder="e.g., x months or x years" value={project.duration} onChange={(e) => handleInputChange(semester, index, 'duration', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
                      <td><ReadOnlyField readOnly={readOnly} value={project.outcome}><input type="text" value={project.outcome} onChange={(e) => handleInputChange(semester, index, 'outcome', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
                      <td><ReadOnlyField readOnly={readOnly} value={project.remarks}><input type="text" value={project.remarks} onChange={(e) => handleInputChange(semester, index, 'remarks', e.target.value)} disabled={readOnly} /></ReadOnlyField></td>
                      <td>
