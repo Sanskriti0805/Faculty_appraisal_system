@@ -48,6 +48,18 @@ const TeachingPlan = () => {
     }
 
     try {
+      if (!formData.coreUGCourses || !formData.coreUGCourses.trim()) {
+        window.appToast('Core UG Courses field is required.')
+        return false
+      }
+      if (!formData.ugElectives || !formData.ugElectives.trim()) {
+        window.appToast('UG Elective Courses field is required.')
+        return false
+      }
+      if (!formData.graduateCourses || !formData.graduateCourses.trim()) {
+        window.appToast('Graduate Courses field is required.')
+        return false
+      }
       await legacySectionsService.saveSection('teaching_plan', formData)
       window.appToast('Data saved successfully!')
       return true
@@ -69,7 +81,7 @@ const TeachingPlan = () => {
       <div className="form-card">
         <div className="form-section">
           <div className="form-field-vertical">
-            <label>A- Core UG Courses (please provide at least five UG Core Subjects, in order of preference, as per curriculum)</label>
+            <label>A- Core UG Courses (please provide at least five UG Core Subjects, in order of preference, as per curriculum) <span style={{ color: '#d64550' }}>*</span></label>
             <textarea
               rows="6"
               value={formData.coreUGCourses}
@@ -79,7 +91,7 @@ const TeachingPlan = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>B- UG Elective Courses (existing and new)</label>
+            <label>B- UG Elective Courses (existing and new) <span style={{ color: '#d64550' }}>*</span></label>
             <textarea
               rows="6"
               value={formData.ugElectives}
@@ -89,7 +101,7 @@ const TeachingPlan = () => {
           </div>
 
           <div className="form-field-vertical">
-            <label>C- Graduate (Master's & Doctoral level) Courses</label>
+            <label>C- Graduate (Master's &amp; Doctoral level) Courses <span style={{ color: '#d64550' }}>*</span></label>
             <textarea
               rows="6"
               value={formData.graduateCourses}

@@ -630,12 +630,10 @@ const PartB = ({ initialData, readOnly }) => {
             In case, any faculty member is associated with more than one department, she/he needs to discuss with his primary department HoD about the goal details and that would be adequate for the purpose of the goal setting.
           </li>
           <li>
-            Please note that this goal setting form is to set your respective targets and try to achieve these, These are aspirational in nature.
+            Please note that this goal setting form is to set your respective targets and try to achieve these. These are aspirational in nature.
           </li>
         </ol>
-        <div style={{ marginTop: '3rem', textAlign: 'right', fontWeight: 'bold', color: '#1e3a5f' }}>
-          Signature
-        </div>
+
       </div>
       {!readOnly && (
         <FormActions 

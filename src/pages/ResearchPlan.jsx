@@ -40,6 +40,10 @@ const ResearchPlan = () => {
     }
 
     try {
+      if (!formData.researchPlan || !formData.researchPlan.trim()) {
+        window.appToast('Research Plan for Next Three Years is required.')
+        return false
+      }
       await legacySectionsService.saveSection('research_plan', formData)
       window.appToast('Data saved successfully!')
       return true
@@ -61,7 +65,7 @@ const ResearchPlan = () => {
       <div className="form-card">
         <div className="form-section">
           <div className="form-field-vertical">
-            <label>Research Plan for Next Three Years</label>
+            <label>Research Plan for Next Three Years <span style={{ color: '#d64550' }}>*</span></label>
             <textarea
               rows="12"
               value={formData.researchPlan}

@@ -883,7 +883,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                               value={course.percentage}
                               onChange={(e) => handleInputChange(semester, index, 'percentage', e.target.value)}
                               disabled={readOnly}
-                              placeholder={readOnly ? '' : "e.g., 100%"}
+                              placeholder={readOnly ? '' : "e.g., 100"}
                            />
                         </ReadOnlyField>
                      </td>
@@ -1141,8 +1141,8 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                   className="semester-dropdown"
                >
                   <option value="" disabled>Select Semester</option>
-                  <option value="fall">Fall / Odd Semester</option>
-                  <option value="spring">Spring / Even Semester</option>
+                  <option value="fall">Odd</option>
+                  <option value="spring">Even</option>
                   <option value="summer">Summer Term</option>
                </select>
             </div>

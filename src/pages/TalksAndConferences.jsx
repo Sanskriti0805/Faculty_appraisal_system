@@ -54,7 +54,7 @@ const TalksAndConferences = () => {
   const [persistedTalks, setPersistedTalks] = useState([]);
 
   const initialState = {
-    mainCategory: '1',
+    mainCategory: '',
     eventType: 'Conference', // Generic text for Cat 1 & 3
     eventMode: 'Offline', // Cat 3
     cat2Category: 'Keynote', // Keynote/Seminar/Invited Talk for Cat 2
@@ -82,7 +82,11 @@ const TalksAndConferences = () => {
     setFormData({
       ...initialState,
       mainCategory: formData.mainCategory,
-      role: formData.mainCategory === '1' ? CATEGORY_1_ROLES[0] : CATEGORY_3_ROLES[0]
+      role: formData.mainCategory === '1'
+        ? CATEGORY_1_ROLES[0]
+        : formData.mainCategory === '3'
+          ? CATEGORY_3_ROLES[0]
+          : ''
     });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -186,6 +190,7 @@ const TalksAndConferences = () => {
     setFileInputKey(prev => prev + 1);
   };
 
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -223,6 +228,7 @@ const TalksAndConferences = () => {
 
   const handleAddItem = (e) => {
     e.preventDefault();
+    if (!formData.mainCategory) return showToast('Please select a Category first.');
     if (!formData.title) return showToast('Please fill in at least the Title.');
 
     // For Cat 2, ensure dates exist
@@ -397,6 +403,7 @@ const TalksAndConferences = () => {
             <div className="form-group" style={{ width: '100%' }}>
               <label>Category<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
               <select name="mainCategory" value={formData.mainCategory} onChange={handleMainCategoryChange} style={{ fontSize: '1.05rem', fontWeight: 600, padding: '0.6rem 1rem' }}>
+                <option value="">-- Select Category --</option>
                 <option value="1">{MAIN_CATEGORIES[1]}</option>
                 <option value="2">{MAIN_CATEGORIES[2]}</option>
                 <option value="3">{MAIN_CATEGORIES[3]}</option>
@@ -487,62 +494,66 @@ const TalksAndConferences = () => {
             </>
           )}
 
-          <div className="section-fieldset">
-            <span className="section-legend">Venue</span>
-            <div className="venue-row">
-              <div className="form-group"><label>City</label><input type="text" name="city" value={formData.venue.city} onChange={handleVenueChange} /></div>
-              <div className="form-group"><label>State</label><input type="text" name="state" value={formData.venue.state} onChange={handleVenueChange} /></div>
-              <div className="form-group"><label>Country</label><input type="text" name="country" value={formData.venue.country} onChange={handleVenueChange} /></div>
-            </div>
-          </div>
-
-          {(formData.mainCategory === '1' || formData.mainCategory === '3') && (
-            <div className="form-row">
-              <div className="form-group"><label>From</label><input type="date" name="fromDate" value={formData.fromDate} onChange={handleInputChange} /></div>
-              <div className="form-group"><label>To</label><input type="date" name="toDate" value={formData.toDate} onChange={handleInputChange} /></div>
-            </div>
-          )}
-
-          {formData.mainCategory === '2' && (
-            <div className="form-row">
-              <div className="form-group">
-                <label>Date</label>
-                <div className="date-input-wrapper">
-                  <input type="date" name="date" value={formData.date} onChange={handleInputChange} />
-                  <Calendar className="calendar-icon" size={18} />
+          {formData.mainCategory && (
+            <>
+              <div className="section-fieldset">
+                <span className="section-legend">Venue</span>
+                <div className="venue-row">
+                  <div className="form-group"><label>City</label><input type="text" name="city" value={formData.venue.city} onChange={handleVenueChange} /></div>
+                  <div className="form-group"><label>State</label><input type="text" name="state" value={formData.venue.state} onChange={handleVenueChange} /></div>
+                  <div className="form-group"><label>Country</label><input type="text" name="country" value={formData.venue.country} onChange={handleVenueChange} /></div>
                 </div>
-                <button type="button" className="add-date-btn" onClick={handleAddDate} style={{ marginTop: '0.5rem', background: '#f1f5f9', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>Add Date</button>
-                {formData.dates.length > 0 && (
-                  <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {formData.dates.map((d) => (
-                      <span key={d} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.25rem 0.6rem', border: '1px solid #d1d8e0', borderRadius: '999px', fontSize: '0.85rem' }}>
-                        {d} <button type="button" onClick={() => handleRemoveDate(d)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>x</button>
-                      </span>
-                    ))}
+              </div>
+
+              {(formData.mainCategory === '1' || formData.mainCategory === '3') && (
+                <div className="form-row">
+                  <div className="form-group"><label>From</label><input type="date" name="fromDate" value={formData.fromDate} onChange={handleInputChange} /></div>
+                  <div className="form-group"><label>To</label><input type="date" name="toDate" value={formData.toDate} onChange={handleInputChange} /></div>
+                </div>
+              )}
+
+              {formData.mainCategory === '2' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Date</label>
+                    <div className="date-input-wrapper">
+                      <input type="date" name="date" value={formData.date} onChange={handleInputChange} />
+                      <Calendar className="calendar-icon" size={18} />
+                    </div>
+                    <button type="button" className="add-date-btn" onClick={handleAddDate} style={{ marginTop: '0.5rem', background: '#f1f5f9', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>Add Date</button>
+                    {formData.dates.length > 0 && (
+                      <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {formData.dates.map((d) => (
+                          <span key={d} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.25rem 0.6rem', border: '1px solid #d1d8e0', borderRadius: '999px', fontSize: '0.85rem' }}>
+                            {d} <button type="button" onClick={() => handleRemoveDate(d)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>x</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+              )}
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Upload Evidence<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <input key={fileInputKey} ref={fileInputRef} type="file" onChange={handleFileChange} accept={getAcceptAttribute(FILE_TYPES.documents)} />
+                    <FilePreviewButton file={formData.certificateFile} />
+                    {formData.certificateFile && (
+                      <button type="button" onClick={clearDraftEvidence} title="Remove" style={{ width: '32px', height: '32px', border: '1px solid #d1d8e0', borderRadius: '6px', background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={14} /></button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
+
+              <div className="form-actions">
+                <button type="button" onClick={handleAddItem} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 500, cursor: 'pointer' }}>
+                  <Plus size={18} /> Add Entry
+                </button>
+              </div>
+            </>
           )}
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Upload Evidence<span className={isDraftRequired ? "required-star" : ""} style={{ color: '#d64550', marginLeft: '0.25rem' }}>*</span></label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <input key={fileInputKey} ref={fileInputRef} type="file" onChange={handleFileChange} accept={getAcceptAttribute(FILE_TYPES.documents)} />
-                <FilePreviewButton file={formData.certificateFile} />
-                {formData.certificateFile && (
-                  <button type="button" onClick={clearDraftEvidence} title="Remove" style={{ width: '32px', height: '32px', border: '1px solid #d1d8e0', borderRadius: '6px', background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={14} /></button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="form-actions">
-            <button type="button" onClick={handleAddItem} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 500, cursor: 'pointer' }}>
-              <Plus size={18} /> Add Entry
-            </button>
-          </div>
 
           {submittedItems.length > 0 && (
             <div className="added-sessions-list" style={{ marginTop: '2rem' }}>

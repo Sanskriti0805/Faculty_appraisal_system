@@ -43,13 +43,6 @@ const getEmptyBookChapterEntry = () => ({
 
 const getEmptyJournalEntry = () => ({
   authors: [getEmptyAuthor()],
-  title: '',
-  journalName: '',
-  yearOfPublication: '',
-  volume: '',
-  number: '',
-  pagesFrom: '',
-  pagesTo: '',
   details: '',
   quartile: '',
   evidenceFile: null,
@@ -57,12 +50,9 @@ const getEmptyJournalEntry = () => ({
 })
 
 const getEmptyConferenceEntry = () => ({
-  authors: [getEmptyAuthor()],
   details: '',
   category: '',
   typeOfConference: '',
-  dateFrom: '',
-  dateTo: '',
   evidenceFile: null,
   evidence_file: null
 })
@@ -190,34 +180,17 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     if (data.publication_type === 'Journal') {
       setJournalEntries([{
         authors: normalizePeople(data.authors),
-        title: data.title || '',
-        journalName: data.journal_name || '',
-        yearOfPublication: data.year_of_publication || '',
-        volume: data.volume || '',
-        number: data.number || '',
-        pagesFrom: data.pages_from || '',
-        pagesTo: data.pages_to || '',
         details: data.details || data.title || '',
         quartile: data.quartile || data.sub_type || '',
+        evidenceFile: null,
         evidence_file: data.evidence_file
       }])
     } else if (data.publication_type === 'Conference') {
       setConferenceEntries([{
-        authors: normalizePeople(data.authors),
-        title: data.title || '',
-        conferenceName: data.conference_name || '',
-        abbreviation: data.abbreviation || '',
-        yearOfPublication: data.year_of_publication || '',
-        pagesFrom: data.pages_from || '',
-        pagesTo: data.pages_to || '',
-        city: data.city || '',
-        state: data.state || '',
-        country: data.country || '',
-        publicationAgency: data.publication_agency || '',
         details: data.details || data.title || '',
+        category: data.sub_type || '',
         typeOfConference: data.type_of_conference || '',
-        dateFrom: normalizeDateInput(data.date_from),
-        dateTo: normalizeDateInput(data.date_to),
+        evidenceFile: null,
         evidence_file: data.evidence_file
       }])
     } else if (data.publication_type === 'Monographs') {
@@ -312,13 +285,6 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         setJournalEntries(
           journals.map((entry) => ({
             authors: normalizePeople(entry.authors),
-            title: entry.title || '',
-            journalName: entry.journal_name || '',
-            yearOfPublication: entry.year_of_publication || '',
-            volume: entry.volume || '',
-            number: entry.number || '',
-            pagesFrom: entry.pages_from || '',
-            pagesTo: entry.pages_to || '',
             details: entry.details || entry.title || '',
             quartile: entry.quartile || entry.sub_type || '',
             evidenceFile: null,
@@ -339,21 +305,9 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       if (conferences.length > 0) {
         setConferenceEntries(
           conferences.map((entry) => ({
-            authors: normalizePeople(entry.authors),
-            title: entry.title || '',
-            conferenceName: entry.conference_name || '',
-            abbreviation: entry.abbreviation || '',
-            yearOfPublication: entry.year_of_publication || '',
-            pagesFrom: entry.pages_from || '',
-            pagesTo: entry.pages_to || '',
-            city: entry.city || '',
-            state: entry.state || '',
-            country: entry.country || '',
-            publicationAgency: entry.publication_agency || '',
             details: entry.details || entry.title || '',
+            category: entry.sub_type || '',
             typeOfConference: entry.type_of_conference || '',
-            dateFrom: normalizeDateInput(entry.date_from),
-            dateTo: normalizeDateInput(entry.date_to),
             evidenceFile: null,
             evidence_file: entry.evidence_file || null
           }))
@@ -669,11 +623,6 @@ const ResearchPublications = ({ initialData, readOnly }) => {
     if (readOnly) return false;
     if (e && e.preventDefault) e.preventDefault()
 
-    // Second click on 'Save and Next' navigates to next page
-    if (showFinalSummary) {
-       return true;
-    }
-
     setLoading(true)
     const createdIds = []
     try {
@@ -719,22 +668,12 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       )
       const hasConferenceValue = (entry) => (
         hasTextValue(entry?.details) ||
-        hasAuthorValue(entry?.authors) ||
         Boolean(entry?.category) ||
-        Boolean(entry?.typeOfConference) ||
-        Boolean(entry?.dateFrom) ||
-        Boolean(entry?.dateTo)
+        Boolean(entry?.typeOfConference)
       )
       const buildJournalPayload = (entry, evidencePayload) => ({
         ...publicationData,
         sub_type: entry.quartile,
-        title: entry.title,
-        journal_name: entry.journalName,
-        year_of_publication: entry.yearOfPublication || null,
-        volume: entry.volume,
-        number: entry.number,
-        pages_from: entry.pagesFrom || null,
-        pages_to: entry.pagesTo || null,
         details: entry.details,
         authors: cleanPeople(entry.authors),
         evidence_file: evidencePayload.evidence_file,
@@ -745,10 +684,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         sub_type: entry.category,
         title: entry.details ? (entry.details.length > 200 ? entry.details.substring(0, 200) + '...' : entry.details) : '',
         type_of_conference: entry.typeOfConference,
-        date_from: normalizeDateInput(entry.dateFrom),
-        date_to: normalizeDateInput(entry.dateTo),
         details: entry.details,
-        authors: cleanPeople(entry.authors),
         evidence_file: evidencePayload.evidence_file,
         existing_evidence_file: evidencePayload.existing_evidence_file
       })
@@ -810,18 +746,19 @@ const ResearchPublications = ({ initialData, readOnly }) => {
       if (publicationType === 'Journal') {
         for (const entry of journalEntries) {
           const hasQuartile = Boolean(entry.quartile)
+          const hasDetails = hasTextValue(entry?.details)
 
           const evidencePayload = resolveEvidencePayload(entry.evidenceFile, entry.evidence_file)
           const hasEvidence = !!(evidencePayload.evidence_file || evidencePayload.existing_evidence_file)
 
-          if (!hasJournalValue(entry) && !hasEvidence) continue
+          if (!hasDetails && !hasEvidence && !hasQuartile && !hasAuthorValue(entry.authors)) continue
 
           if (!hasAuthorValue(entry.authors)) {
             window.appToast('Please provide at least one author for the journal entry.')
             return false
           }
-          if (!hasTextValue(entry.title) || !hasTextValue(entry.journalName) || !hasTextValue(entry.yearOfPublication)) {
-            window.appToast('Please provide paper title, journal name, and year of publication for the journal entry.')
+          if (!hasDetails) {
+            window.appToast('Please provide publication details for the journal entry.')
             return false
           }
           if (!hasQuartile) {
@@ -841,8 +778,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         await refreshPublications()
         await fetchPersistedPublications()
         setShowFinalSummary(true)
-        window.appToast('Journal drafts saved successfully! Review your entries in the summary list below.')
-        return false
+        window.appToast('Journal drafts saved successfully!')
+        return true
       } else if (publicationType === 'Conference') {
         for (const entry of conferenceEntries) {
           const hasType = Boolean(entry.typeOfConference)
@@ -852,12 +789,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           const evidencePayload = resolveEvidencePayload(entry.evidenceFile, entry.evidence_file)
           const hasEvidence = !!(evidencePayload.evidence_file || evidencePayload.existing_evidence_file)
 
-          if (!hasDetails && !hasEvidence && !hasType && !hasCategory && !hasDateFrom && !hasDateTo) continue
+          if (!hasDetails && !hasEvidence && !hasType && !hasCategory) continue
 
-          if (!hasAuthorValue(entry.authors)) {
-            window.appToast('Please provide at least one author for the conference entry.')
-            return false
-          }
           if (!hasDetails) {
             window.appToast('Please provide conference details for the conference entry.')
             return false
@@ -868,11 +801,6 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           }
           if (!hasType) {
             window.appToast('Please select the type of conference for the conference entry.')
-            return false
-          }
-
-          if (!hasDateFrom || !hasDateTo) {
-            window.appToast('Please provide both Date From and Date To for the conference entry.')
             return false
           }
 
@@ -888,8 +816,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         await refreshPublications()
         await fetchPersistedPublications()
         setShowFinalSummary(true)
-        window.appToast('Conference drafts saved successfully! Review your entries in the summary list below.')
-        return false
+        window.appToast('Conference drafts saved successfully!')
+        return true
       } else if (publicationType === 'Monographs') {
         if (!bookSubType) {
           window.appToast('Please select a monograph sub-type before saving.')
@@ -924,8 +852,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           await refreshPublications()
           await fetchPersistedPublications()
           setShowFinalSummary(true)
-          window.appToast('Book chapter drafts saved successfully! Review your entries in the summary list below.')
-          return false
+          window.appToast('Book chapter drafts saved successfully!')
+          return true
         } else if (bookSubType === 'Book') {
           for (const entry of textbookEntries) {
             const evidencePayload = resolveEvidencePayload(entry.evidenceFile, entry.evidence_file);
@@ -953,8 +881,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           await refreshPublications()
           await fetchPersistedPublications()
           setShowFinalSummary(true)
-          window.appToast('Book drafts saved successfully! Review your entries in the summary list below.')
-          return false
+          window.appToast('Book drafts saved successfully!')
+          return true
         } else if (bookSubType === 'Book Edited') {
           for (const entry of bookEditedEntries) {
             const evidencePayload = resolveEvidencePayload(entry.evidenceFile, entry.evidence_file);
@@ -982,8 +910,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           await refreshPublications()
           await fetchPersistedPublications()
           setShowFinalSummary(true)
-          window.appToast('Book edited drafts saved successfully! Review your entries in the summary list below.')
-          return false
+          window.appToast('Book edited drafts saved successfully!')
+          return true
         }
       } else if (publicationType === 'Any Other') {
         if (!otherDetails || !otherDetails.trim()) {
@@ -1010,8 +938,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         await fetchPersistedPublications()
         setShowFinalSummary(true)
         
-        window.appToast('Research Publications saved successfully! Review your entries in the summary list below.')
-        return false; // Stay on page to show summary
+        window.appToast('Research Publications saved successfully!')
+        return true
       }
     } catch (error) {
       if (createdIds.length > 0) {
@@ -1239,20 +1167,14 @@ const ResearchPublications = ({ initialData, readOnly }) => {
   const hasEvidenceForEntry = (entry) => Boolean(entry?.evidenceFile || entry?.evidence_file)
   const canAppendJournal = (entry) => (
     hasPersonValue(entry?.authors) &&
-    hasTextValue(entry?.title) &&
-    hasTextValue(entry?.journalName) &&
-    hasTextValue(entry?.yearOfPublication) &&
+    hasTextValue(entry?.details) &&
     Boolean(entry?.quartile) &&
     hasEvidenceForEntry(entry)
   )
   const canAppendConference = (entry) => (
-    hasPersonValue(entry?.authors) &&
-    hasTextValue(entry?.title) &&
-    hasTextValue(entry?.conferenceName) &&
-    hasTextValue(entry?.yearOfPublication) &&
+    hasTextValue(entry?.details) &&
     Boolean(entry?.typeOfConference) &&
-    Boolean(entry?.dateFrom) &&
-    Boolean(entry?.dateTo) &&
+    Boolean(entry?.category) &&
     hasEvidenceForEntry(entry)
   )
   const canAppendBookChapter = (entry) => (
@@ -1297,92 +1219,14 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             onRemove: (personIndex) => updateJournalEntryField(index, 'authors', removePersonFromList(entry, 'authors', personIndex))
           })}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="form-field-vertical">
-              <label>Paper Title <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="text"
-                value={entry.title || ''}
-                onChange={(e) => updateJournalEntryField(index, 'title', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Journal Name <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="text"
-                value={entry.journalName || ''}
-                onChange={(e) => updateJournalEntryField(index, 'journalName', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Year of Publication <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="number"
-                min="1900"
-                max="2100"
-                value={entry.yearOfPublication || ''}
-                onChange={(e) => updateJournalEntryField(index, 'yearOfPublication', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="form-field-vertical">
-              <label>Volume</label>
-              <input
-                type="text"
-                value={entry.volume || ''}
-                onChange={(e) => updateJournalEntryField(index, 'volume', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Issue / Number</label>
-              <input
-                type="text"
-                value={entry.number || ''}
-                onChange={(e) => updateJournalEntryField(index, 'number', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Pages From - To</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
-                  type="text"
-                  value={entry.pagesFrom || ''}
-                  onChange={(e) => updateJournalEntryField(index, 'pagesFrom', e.target.value)}
-                  placeholder="From"
-                  style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-                <input
-                  type="text"
-                  value={entry.pagesTo || ''}
-                  onChange={(e) => updateJournalEntryField(index, 'pagesTo', e.target.value)}
-                  placeholder="To"
-                  style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                  disabled={readOnly}
-                />
-              </div>
-            </div>
-          </div>
 
           <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
-            <label>Additional Publication Details</label>
+            <label>Publication Details <span style={{ color: 'red' }}>*</span></label>
             <textarea
-              rows="5"
+              rows="6"
               value={entry.details}
               onChange={(e) => updateJournalEntryField(index, 'details', e.target.value)}
-              placeholder="Author's Name, Title of Paper, Name of Journal, Year of Publication, Pages (From - To)"
+              placeholder="Author's Name, Title of Paper, Name of Journal, Year of Publication, Pages (From - To), etc."
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -1543,12 +1387,6 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             )}
           </div>
 
-          {renderEntryPeople("Author's Name", entry.authors, {
-            onChange: (personIndex, field, value) => updateConferenceEntryField(index, 'authors', updatePersonInList(entry, 'authors', personIndex, field, value)),
-            onAdd: () => updateConferenceEntryField(index, 'authors', [...(entry.authors || [getEmptyAuthor()]), getEmptyAuthor()]),
-            onRemove: (personIndex) => updateConferenceEntryField(index, 'authors', removePersonFromList(entry, 'authors', personIndex))
-          })}
-
           <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
             <label>Conference Details <span style={{ color: 'red' }}>*</span></label>
             <textarea
@@ -1597,29 +1435,6 @@ const ResearchPublications = ({ initialData, readOnly }) => {
                 <option value="International">International</option>
                 <option value="National">National</option>
               </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="form-field-vertical">
-              <label>Date From <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="date"
-                value={entry.dateFrom || ''}
-                onChange={(e) => updateConferenceEntryField(index, 'dateFrom', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
-            </div>
-            <div className="form-field-vertical">
-              <label>Date To <span style={{ color: 'red' }}>*</span></label>
-              <input
-                type="date"
-                value={entry.dateTo || ''}
-                onChange={(e) => updateConferenceEntryField(index, 'dateTo', e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }}
-                disabled={readOnly}
-              />
             </div>
           </div>
 
@@ -1687,6 +1502,259 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           )}
         </div>
       ))}
+    </>
+  )
+
+  const renderEvidenceUpload = (entry, onFileChange, onClear, idSuffix) => (
+    readOnly ? (
+      entry.evidence_file && (
+        <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+          <label>Evidence</label>
+          <a
+            href={`${UPLOADS_BASE_URL}${entry.evidence_file}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="evidence-link"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#5b8fc7', fontWeight: '500', textDecoration: 'none' }}
+          >
+            <ExternalLink size={18} /> View Evidence
+          </a>
+        </div>
+      )
+    ) : (
+      <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+        <label>Upload Evidence <span style={{ color: 'red' }}>*</span></label>
+        <div style={{ border: '2px dashed #ddd', borderRadius: '8px', padding: '1.5rem', textAlign: 'center', backgroundColor: '#f9f9f9' }}>
+          <input
+            type="file"
+            id={`evidence-upload-${idSuffix}`}
+            accept={getAcceptAttribute(FILE_TYPES.documents)}
+            onChange={(e) => handleValidatedFileInput(e, onFileChange, { allowedExtensions: FILE_TYPES.documents, label: 'Publication evidence' })}
+            style={{ display: 'none' }}
+          />
+          <label
+            htmlFor={`evidence-upload-${idSuffix}`}
+            style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Upload size={32} color="#5b8fc7" />
+            <span style={{ color: '#5b8fc7', fontWeight: '500' }}>
+              {entry.evidenceFile?.name || entry.evidence_file || 'Click to upload or drag and drop'}
+            </span>
+            <span style={{ fontSize: '0.85rem', color: '#666' }}>PDF, DOC, DOCX, JPG, JPEG, PNG (Max 10MB)</span>
+            <FilePreviewButton file={entry.evidenceFile || entry.evidence_file} style={{ width: '32px', height: '32px' }} />
+            {(entry.evidenceFile || entry.evidence_file) && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClear() }}
+                title="Remove uploaded document"
+                style={{ width: '32px', height: '32px', border: '1px solid #d1d8e0', borderRadius: '6px', background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </label>
+        </div>
+      </div>
+    )
+  )
+
+  const renderBookChapterForm = () => (
+    <>
+      {bookChapterEntries.map((entry, index) => (
+        <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0, color: '#2c3e50' }}>Book Chapter Entry #{index + 1}</h3>
+            {!readOnly && bookChapterEntries.length > 1 && (
+              <button onClick={() => removeBookChapterEntry(index)} style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}>
+                <X size={16} /> Remove Entry
+              </button>
+            )}
+          </div>
+
+          {renderEntryPeople("Author's Name", entry.authors, {
+            onChange: (personIndex, field, value) => updateBookEntryField(index, 'authors', updatePersonInList(entry, 'authors', personIndex, field, value)),
+            onAdd: () => updateBookEntryField(index, 'authors', [...(entry.authors || [getEmptyAuthor()]), getEmptyAuthor()]),
+            onRemove: (personIndex) => updateBookEntryField(index, 'authors', removePersonFromList(entry, 'authors', personIndex))
+          })}
+
+          {renderEntryPeople("Editor's Name", entry.editors, {
+            onChange: (personIndex, field, value) => updateBookEntryField(index, 'editors', updatePersonInList(entry, 'editors', personIndex, field, value)),
+            onAdd: () => updateBookEntryField(index, 'editors', [...(entry.editors || [getEmptyAuthor()]), getEmptyAuthor()]),
+            onRemove: (personIndex) => updateBookEntryField(index, 'editors', removePersonFromList(entry, 'editors', personIndex))
+          }, false)}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="form-field-vertical">
+              <label>Chapter Title <span style={{ color: 'red' }}>*</span></label>
+              <input type="text" value={entry.title || ''} onChange={(e) => updateBookEntryField(index, 'title', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+            </div>
+            <div className="form-field-vertical">
+              <label>Title of Book <span style={{ color: 'red' }}>*</span></label>
+              <input type="text" value={entry.titleOfBook || ''} onChange={(e) => updateBookEntryField(index, 'titleOfBook', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="form-field-vertical">
+              <label>Publication Agency</label>
+              <input type="text" value={entry.publicationAgency || ''} onChange={(e) => updateBookEntryField(index, 'publicationAgency', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+            </div>
+            <div className="form-field-vertical">
+              <label>Year of Publication <span style={{ color: 'red' }}>*</span></label>
+              <input type="number" min="1900" max="2100" value={entry.yearOfPublication || ''} onChange={(e) => updateBookEntryField(index, 'yearOfPublication', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+            </div>
+            <div className="form-field-vertical">
+              <label>Pages From - To</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input type="text" value={entry.pagesFrom || ''} onChange={(e) => updateBookEntryField(index, 'pagesFrom', e.target.value)} placeholder="From" style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+                <input type="text" value={entry.pagesTo || ''} onChange={(e) => updateBookEntryField(index, 'pagesTo', e.target.value)} placeholder="To" style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+              </div>
+            </div>
+          </div>
+
+          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+            <label>Additional Details</label>
+            <textarea rows="4" value={entry.details || ''} onChange={(e) => updateBookEntryField(index, 'details', e.target.value)} placeholder="Any additional publication details..." style={{ width: '100%', padding: '0.75rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', fontSize: '1rem', fontFamily: 'inherit', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+          </div>
+
+          {renderEvidenceUpload(
+            entry,
+            (file) => updateBookEntryField(index, 'evidenceFile', file),
+            () => { updateBookEntryField(index, 'evidenceFile', null); updateBookEntryField(index, 'evidence_file', null) },
+            `book-chapter-${index}`
+          )}
+        </div>
+      ))}
+
+      {!readOnly && (
+        <button
+          onClick={addBookChapterEntry}
+          disabled={!(bookChapterEntries.length > 0 && canAppendBookChapter(bookChapterEntries[bookChapterEntries.length - 1]))}
+          style={{ width: '100%', padding: '0.75rem', backgroundColor: '#5cb85c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem', marginBottom: '2rem', opacity: canAppendBookChapter(bookChapterEntries[bookChapterEntries.length - 1]) ? 1 : 0.6 }}
+        >
+          <Plus size={18} /> Add Another Book Chapter
+        </button>
+      )}
+    </>
+  )
+
+  const renderBookForm = () => (
+    <>
+      {textbookEntries.map((entry, index) => (
+        <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0, color: '#2c3e50' }}>Book Entry #{index + 1}</h3>
+            {!readOnly && textbookEntries.length > 1 && (
+              <button onClick={() => removeTextbookEntry(index)} style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}>
+                <X size={16} /> Remove Entry
+              </button>
+            )}
+          </div>
+
+          {renderEntryPeople("Author's Name", entry.authors, {
+            onChange: (personIndex, field, value) => updateTextbookEntryField(index, 'authors', updatePersonInList(entry, 'authors', personIndex, field, value)),
+            onAdd: () => updateTextbookEntryField(index, 'authors', [...(entry.authors || [getEmptyAuthor()]), getEmptyAuthor()]),
+            onRemove: (personIndex) => updateTextbookEntryField(index, 'authors', removePersonFromList(entry, 'authors', personIndex))
+          })}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="form-field-vertical">
+              <label>Book Title <span style={{ color: 'red' }}>*</span></label>
+              <input type="text" value={entry.title || ''} onChange={(e) => updateTextbookEntryField(index, 'title', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+            </div>
+            <div className="form-field-vertical">
+              <label>Publication Agency</label>
+              <input type="text" value={entry.publicationAgency || ''} onChange={(e) => updateTextbookEntryField(index, 'publicationAgency', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+            </div>
+            <div className="form-field-vertical">
+              <label>Year of Publication <span style={{ color: 'red' }}>*</span></label>
+              <input type="number" min="1900" max="2100" value={entry.yearOfPublication || ''} onChange={(e) => updateTextbookEntryField(index, 'yearOfPublication', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+            </div>
+          </div>
+
+          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+            <label>Additional Details</label>
+            <textarea rows="4" value={entry.details || ''} onChange={(e) => updateTextbookEntryField(index, 'details', e.target.value)} placeholder="Any additional publication details..." style={{ width: '100%', padding: '0.75rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', fontSize: '1rem', fontFamily: 'inherit', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+          </div>
+
+          {renderEvidenceUpload(
+            entry,
+            (file) => updateTextbookEntryField(index, 'evidenceFile', file),
+            () => { updateTextbookEntryField(index, 'evidenceFile', null); updateTextbookEntryField(index, 'evidence_file', null) },
+            `book-${index}`
+          )}
+        </div>
+      ))}
+
+      {!readOnly && (
+        <button
+          onClick={addTextbookEntry}
+          disabled={!(textbookEntries.length > 0 && canAppendBook(textbookEntries[textbookEntries.length - 1]))}
+          style={{ width: '100%', padding: '0.75rem', backgroundColor: '#5cb85c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem', marginBottom: '2rem', opacity: canAppendBook(textbookEntries[textbookEntries.length - 1]) ? 1 : 0.6 }}
+        >
+          <Plus size={18} /> Add Another Book
+        </button>
+      )}
+    </>
+  )
+
+  const renderBookEditedForm = () => (
+    <>
+      {bookEditedEntries.map((entry, index) => (
+        <div key={index} style={{ border: '1px solid #eee', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', backgroundColor: '#fdfdfd' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0, color: '#2c3e50' }}>Book Edited Entry #{index + 1}</h3>
+            {!readOnly && bookEditedEntries.length > 1 && (
+              <button onClick={() => removeBookEditedEntry(index)} style={{ padding: '0.4rem', color: '#ff4444', cursor: 'pointer', background: 'none', border: '1px solid #ff4444', borderRadius: '4px' }}>
+                <X size={16} /> Remove Entry
+              </button>
+            )}
+          </div>
+
+          {renderEntryPeople("Editor's Name", entry.editors, {
+            onChange: (personIndex, field, value) => updateBookEditedEntryField(index, 'editors', updatePersonInList(entry, 'editors', personIndex, field, value)),
+            onAdd: () => updateBookEditedEntryField(index, 'editors', [...(entry.editors || [getEmptyAuthor()]), getEmptyAuthor()]),
+            onRemove: (personIndex) => updateBookEditedEntryField(index, 'editors', removePersonFromList(entry, 'editors', personIndex))
+          })}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="form-field-vertical">
+              <label>Book Title <span style={{ color: 'red' }}>*</span></label>
+              <input type="text" value={entry.title || ''} onChange={(e) => updateBookEditedEntryField(index, 'title', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+            </div>
+            <div className="form-field-vertical">
+              <label>Publication Agency</label>
+              <input type="text" value={entry.publicationAgency || ''} onChange={(e) => updateBookEditedEntryField(index, 'publicationAgency', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+            </div>
+            <div className="form-field-vertical">
+              <label>Year of Publication <span style={{ color: 'red' }}>*</span></label>
+              <input type="number" min="1900" max="2100" value={entry.yearOfPublication || ''} onChange={(e) => updateBookEditedEntryField(index, 'yearOfPublication', e.target.value)} style={{ width: '100%', padding: '0.5rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+            </div>
+          </div>
+
+          <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+            <label>Additional Details</label>
+            <textarea rows="4" value={entry.details || ''} onChange={(e) => updateBookEditedEntryField(index, 'details', e.target.value)} placeholder="Any additional publication details..." style={{ width: '100%', padding: '0.75rem', border: readOnly ? 'none' : '1px solid #ddd', borderRadius: '4px', fontSize: '1rem', fontFamily: 'inherit', background: readOnly ? 'transparent' : 'white' }} disabled={readOnly} />
+          </div>
+
+          {renderEvidenceUpload(
+            entry,
+            (file) => updateBookEditedEntryField(index, 'evidenceFile', file),
+            () => { updateBookEditedEntryField(index, 'evidenceFile', null); updateBookEditedEntryField(index, 'evidence_file', null) },
+            `book-edited-${index}`
+          )}
+        </div>
+      ))}
+
+      {!readOnly && (
+        <button
+          onClick={addBookEditedEntry}
+          disabled={!(bookEditedEntries.length > 0 && canAppendBookEdited(bookEditedEntries[bookEditedEntries.length - 1]))}
+          style={{ width: '100%', padding: '0.75rem', backgroundColor: '#5cb85c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem', marginBottom: '2rem', opacity: canAppendBookEdited(bookEditedEntries[bookEditedEntries.length - 1]) ? 1 : 0.6 }}
+        >
+          <Plus size={18} /> Add Another Book Edited
+        </button>
+      )}
     </>
   )
 
