@@ -676,7 +676,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
          return 'Courses Taught'
       }
       if (selectedSection === 'projects') {
-         return 'BTech/MTech/MS/LUSIP/SLI/Ph.D./Other Projects Guided / Co-Advised / Mentored'
+         return 'MTech/MS/LUSIP/Ph.D./Other Projects Guided / Co-Advised / Mentored'
       }
       return 'Please select both Section and Semester to start filling this form.'
    }
@@ -1017,14 +1017,13 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                         <ReadOnlyField readOnly={readOnly} value={project.projectType}>
                            <select value={project.projectType} onChange={(e) => handleInputChange(semester, index, 'projectType', e.target.value)} disabled={readOnly}>
                               <option value="">Select Type</option>
-                              <option value="B.Tech">B.Tech</option>
                               <option value="M.Tech">M.Tech</option>
                               <option value="MS">MS</option>
                               <option value="LUSIP">LUSIP</option>
                               <option value="BTP">BTP</option>
                               <option value="Mini Project">Mini Project</option>
                               <option value="M.Sc.">M.Sc.</option>
-                              <option value="SLI">SLI</option>
+                              <option value="PhD">PhD</option>
                               <option value="Other Projects">Other Projects</option>
                            </select>
                         </ReadOnlyField>

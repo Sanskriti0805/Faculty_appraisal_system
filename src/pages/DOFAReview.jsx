@@ -149,7 +149,8 @@ const PubDetailCard = ({ pub }) => {
   const isBookEdited = isMonograph && subType === 'book edited';
   const isBook = isMonograph && subType === 'book';
   const isOther = publicationType === 'any other';
-  const quartileValue = pub?.quartile || (isJournal ? pub?.sub_type : null);
+  const rawQuartileValue = pub?.quartile || (isJournal ? pub?.sub_type : null);
+  const quartileValue = rawQuartileValue === 'Others' ? 'Other Peer Reviewed Journal' : rawQuartileValue;
   const venue = [pub?.city, pub?.state, pub?.country].filter(Boolean).join(', ');
   const showRequiredAuthors = isJournal || isConference || isBook || isBookChapter;
   const showRequiredTitle = isJournal || isConference || isBook || isBookChapter || isBookEdited;

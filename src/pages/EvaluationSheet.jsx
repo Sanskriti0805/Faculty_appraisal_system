@@ -545,7 +545,7 @@ const EvaluationSheet = () => {
                         type="number"
                         step="0.1"
                         min="0"
-                        max={rub.max_marks}
+                        max={/teaching feedback|research guidance/i.test(rub.section_name) ? undefined : rub.max_marks}
                         value={getScore(sub.submission_id, rub.id)}
                         onChange={(e) => handleScoreChange(sub.submission_id, rub.id, e.target.value)}
                         placeholder="0"

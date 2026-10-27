@@ -41,7 +41,6 @@ const CATEGORY_3_ROLES = [
   'Programme Committee Chair',
   'Session Chair',
   'General Chair',
-  'TPC Member',
   'Other Member'
 ];
 

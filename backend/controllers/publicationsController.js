@@ -226,11 +226,6 @@ exports.createPublication = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Publication type is required.' });
     }
 
-    if (publication_type === 'Conference' && (!normalizedDateFrom || !normalizedDateTo)) {
-      await connection.rollback();
-      return res.status(400).json({ success: false, message: 'Date From and Date To are required for conference publications.' });
-    }
-
     if (publication_type === 'Monographs' && !sub_type) {
       await connection.rollback();
       return res.status(400).json({ success: false, message: 'Monograph sub-type is required.' });

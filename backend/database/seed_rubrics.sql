@@ -34,7 +34,8 @@ UNION ALL SELECT "4. Research publications", "Journals: Peer Reviewed", 2.00, "m
 UNION ALL SELECT "5. Conference", "Tier 1", 5.00, "manual", NULL, NULL
 UNION ALL SELECT "5. Conference", "Tier 2", 3.00, "manual", NULL, NULL
 UNION ALL SELECT "5. Conference", "Tier 3", 2.00, "manual", NULL, NULL
-UNION ALL SELECT "6. Others", "Paper/Poster Presentation", 2.00, "manual", NULL, NULL
+UNION ALL SELECT "6. Others", "Paper Presentation", 5.00, "manual", NULL, NULL
+UNION ALL SELECT "6. Others", "Poster Presentation", 2.00, "manual", NULL, NULL
 UNION ALL SELECT "6. Others", "Book chapter", 3.00, "manual", NULL, NULL
 UNION ALL SELECT "6. Others", "Book edited", 5.00, "manual", NULL, NULL
 UNION ALL SELECT "6. Others", "Textbook published", 6.00, "manual", NULL, NULL

@@ -504,7 +504,8 @@ const MySubmissionView = () => {
       ? `${pub.issue || pub.number}${pages ? `, pp. ${pages}` : ''}`
       : pages;
     const venue = [pub.city, pub.state, pub.country].filter(Boolean).join(', ');
-    const quartileValue = pub.quartile || (isJournal ? pub.sub_type : null);
+    const rawQuartileValue = pub.quartile || (isJournal ? pub.sub_type : null);
+    const quartileValue = rawQuartileValue === 'Others' ? 'Other Peer Reviewed Journal' : rawQuartileValue;
     const quartileBadge = String(quartileValue || '').toLowerCase().includes('q1')
       ? 'q1'
       : String(quartileValue || '').toLowerCase().includes('q2')

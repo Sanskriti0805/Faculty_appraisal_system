@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const evaluationController = require('../controllers/evaluationController');
+const { authenticate, requireRole } = require('../middleware/authMiddleware');
+
+// Evaluation sheets (scores, remarks, grading, increments) are DOFA-office only.
+router.use(authenticate, requireRole('admin', 'Dofa', 'Dofa_office'));
 
 // GET all evaluation data (rubrics + submissions + scores + remarks)
 router.get('/', evaluationController.getEvaluationData);

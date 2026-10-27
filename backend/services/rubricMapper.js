@@ -41,6 +41,20 @@ const ensureRuleDrivenColumns = async () => {
     }
   };
 
+  const ensureManualScoreColumn = async () => {
+    const [rows] = await db.query(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Dofa_evaluation_scores' AND COLUMN_NAME = 'is_manual'`
+    );
+
+    if (rows.length === 0) {
+      await db.query('ALTER TABLE Dofa_evaluation_scores ADD COLUMN is_manual TINYINT(1) NOT NULL DEFAULT 0');
+      console.log('  Migration: added Dofa_evaluation_scores.is_manual');
+    }
+  };
+
+  await ensureManualScoreColumn();
   await ensureColumn('scoring_type', "scoring_type VARCHAR(20) NOT NULL DEFAULT 'manual'");
   await ensureColumn('per_unit_marks', 'per_unit_marks DECIMAL(10,2) NULL');
   await ensureColumn('dynamic_section_id', 'dynamic_section_id INT NULL');
@@ -136,7 +150,8 @@ const bootstrapTeachingFeedbackRuleConfigs = async () => {
  *   Each qualifying course contributes independently to exactly one rubric,
  *   and scores are accumulated across all courses.
  */
-const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
+const autoAllocateMarks = async (submissionId, facultyId, academicYear, options = {}) => {
+  const { resetManual = false } = options;
   try {
     console.log(`\n=== Auto-Allocating Marks ===`);
     console.log(`  Submission: ${submissionId} | Faculty: ${facultyId} | Year: ${academicYear}`);
@@ -350,6 +365,16 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
           return projectRole.includes('co') ? sum + projectCount : sum;
         }
 
+        if (text.includes('phd') || text.includes('ph.d')) {
+          const isPhd = projectType.includes('phd') || projectType.includes('ph.d');
+          return isPhd && !projectRole.includes('co') ? sum + projectCount : sum;
+        }
+
+        if (text.includes('lusip') || text.includes('mini project')) {
+          const isLusipOrMini = projectType.includes('lusip') || projectType.includes('mini project');
+          return isLusipOrMini ? sum + projectCount : sum;
+        }
+
         if (text.includes('m.tech') || text.includes('m.sc')) {
           const isMTechOrMSc = projectType.includes('m.tech') || projectType.includes('mtech') || projectType.includes('m.sc') || projectType.includes('msc');
           return isMTechOrMSc ? sum + studentCount : sum;
@@ -535,12 +560,19 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
             (p.sub_type || '').toUpperCase().includes('Q3')
           ).length;
           score = Math.min(count * perMatch(max), max);
-        } else if (sub.includes('q4') || sub.includes('scopus') || sub.includes('peer')) {
+        } else if (sub.includes('peer')) {
+          // "Other Peer Reviewed Journal" is stored as sub_type 'Others'
+          const count = publications.filter(p =>
+            (p.publication_type || '').toLowerCase() === 'journal' &&
+            ((p.sub_type || '').toLowerCase().includes('other') ||
+             (p.sub_type || '').toLowerCase().includes('peer'))
+          ).length;
+          score = Math.min(count * perMatch(max), max);
+        } else if (sub.includes('q4') || sub.includes('scopus')) {
           const count = publications.filter(p =>
             (p.publication_type || '').toLowerCase() === 'journal' &&
             ((p.sub_type || '').toUpperCase().includes('Q4') ||
-             (p.sub_type || '').toLowerCase().includes('scopus') ||
-             (p.sub_type || '').toLowerCase().includes('peer'))
+             (p.sub_type || '').toLowerCase().includes('scopus'))
           ).length;
           score = Math.min(count * perMatch(max), max);
         } else {
@@ -555,8 +587,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
         );
         if (sub.includes('tier 1')) {
           const count = confPubs.filter(p =>
-            (p.sub_type || '').toLowerCase().includes('tier 1') ||
-            (p.type_of_conference || '').toLowerCase().includes('international')
+            (p.sub_type || '').toLowerCase().includes('tier 1')
           ).length;
           score = Math.min(count * max, max);
         } else if (sub.includes('tier 2')) {
@@ -565,11 +596,9 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
           ).length;
           score = Math.min(count * max, max);
         } else if (sub.includes('tier 3')) {
-          const count = confPubs.filter(p => {
-            const sType = (p.sub_type || '').toLowerCase();
-            const cType = (p.type_of_conference || '').toLowerCase();
-            return sType.includes('tier 3') || (cType.includes('national') && !cType.includes('international'));
-          }).length;
+          const count = confPubs.filter(p =>
+            (p.sub_type || '').toLowerCase().includes('tier 3')
+          ).length;
           score = Math.min(count * max, max);
         } else {
           score = confPubs.length > 0 ? max : 0;
@@ -579,10 +608,24 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
       // -- 6. Others - book chapter / edited / textbook / paper presentation -
       else if (sec.startsWith('6.') || (sec.includes('others') && !sec.includes('institutional') && !sec.includes('activities'))) {
         if (sub.includes('paper') || sub.includes('poster')) {
-          score = publications.filter(p =>
-            (p.publication_type || '').toLowerCase().includes('poster') ||
-            (p.publication_type || '').toLowerCase().includes('presentation')
-          ).length > 0 ? max : 0;
+          // Conference presentations are saved as publication_type 'Conference' with a
+          // 'Conference Paper Presentation' / 'Poster Presentation' sub_type.
+          const isPoster = (p) => {
+            const typeText = (p.publication_type || '').toLowerCase();
+            const subText = (p.sub_type || '').toLowerCase();
+            return typeText.includes('poster') || (typeText === 'conference' && subText.includes('poster'));
+          };
+          const isPaperPresentation = (p) => {
+            const typeText = (p.publication_type || '').toLowerCase();
+            const subText = (p.sub_type || '').toLowerCase();
+            if (isPoster(p)) return false;
+            return typeText.includes('presentation') || (typeText === 'conference' && subText.includes('presentation'));
+          };
+          const wantsPoster = sub.includes('poster');
+          const wantsPaper = sub.includes('paper');
+          score = publications.filter(p => (
+            (wantsPoster && isPoster(p)) || (wantsPaper && isPaperPresentation(p))
+          )).length > 0 ? max : 0;
         } else if (sub.includes('book chapter')) {
           score = publications.filter(p =>
             (p.publication_type || '').toLowerCase().includes('book chapter') ||
@@ -597,8 +640,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
           score = publications.filter(p =>
             (p.publication_type || '').toLowerCase().includes('textbook') ||
             (p.sub_type || '').toLowerCase().includes('textbook') ||
-            (p.sub_type || '').toLowerCase() === 'book' ||
-            (p.publication_type || '').toLowerCase().includes('monograph')
+            (p.sub_type || '').toLowerCase() === 'book'
           ).length > 0 ? max : 0;
         }
       }
@@ -628,14 +670,15 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
             if (sub.includes('>=20') || /\u2265\s*20/.test(sub) || sub.includes('value>=20') || sub.includes('value>20')) {
               return amt >= 20;
+            } else if (sub.includes('50000') || sub.includes('0.5')) {
+              // Must be tested before the 2-5 lakh range: '50000' also contains a '5' and '2lacs' a '2'.
+              return amt >= 0.5 && amt < 2;
             } else if (sub.includes('10') && sub.includes('20')) {
               return amt >= 10 && amt < 20;
             } else if (sub.includes('5') && sub.includes('10')) {
               return amt >= 5 && amt < 10;
             } else if (sub.includes('2') && sub.includes('5')) {
               return amt >= 2 && amt < 5;
-            } else if (sub.includes('50000') || sub.includes('0.5')) {
-              return amt >= 0.5 && amt < 2;
             }
             return false;
           });
@@ -705,7 +748,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
           score = Math.min(fdpTalks.length * max, 10);
         } else if (sub.includes('invited')) {
           const invitedOther = talks.filter(talk => !isFdpOrConferenceTalk(talk));
-          score = Math.min(invitedOther.length * max, 5);
+          score = Math.min(invitedOther.length * max, 8);
         } else if (sub.includes('pc chair') || sub.includes('session chair') || sub.includes('general chair')) {
           score = hasSessionMatch(({ roleText, all }) => roleText === 'programme committee chair' || roleText === 'session chair' || roleText === 'general chair' || all.includes('pc chair') || all.includes('session chair') || all.includes('general chair') || (all.includes('chair') && !all.includes('organizing chair'))) ? max : 0;
         } else if (sub.includes('tpc') || sub.includes('other member')) {
@@ -857,10 +900,23 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
 
     // -- Reset previous rows for this submission first.
     // This avoids cumulative duplicates in legacy databases missing a unique key.
-    await db.query('DELETE FROM Dofa_evaluation_scores WHERE submission_id = ?', [submissionId]);
+    // Scores that DOFA edited by hand (is_manual = 1) are kept unless resetManual is set.
+    const manualRubricIds = new Set();
+    if (resetManual) {
+      await db.query('DELETE FROM Dofa_evaluation_scores WHERE submission_id = ?', [submissionId]);
+    } else {
+      const [manualRows] = await db.query(
+        'SELECT DISTINCT rubric_id FROM Dofa_evaluation_scores WHERE submission_id = ? AND is_manual = 1',
+        [submissionId]
+      );
+      manualRows.forEach(row => manualRubricIds.add(Number(row.rubric_id)));
+      await db.query('DELETE FROM Dofa_evaluation_scores WHERE submission_id = ? AND is_manual = 0', [submissionId]);
+    }
 
     // -- Insert all rubric rows (including zeros) --------------------------
-    const valuesToInsert = rubrics.map(r => [submissionId, r.id, scoreMap[r.id] ?? 0]);
+    const valuesToInsert = rubrics
+      .filter(r => !manualRubricIds.has(Number(r.id)))
+      .map(r => [submissionId, r.id, scoreMap[r.id] ?? 0]);
 
     await db.query(
       `INSERT INTO Dofa_evaluation_scores (submission_id, rubric_id, score)
@@ -871,6 +927,9 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
     const nonZero = valuesToInsert.filter(v => v[2] > 0).length;
     const total   = valuesToInsert.reduce((s, v) => s + v[2], 0);
     console.log(`  [OK] Allocated ${nonZero}/${rubrics.length} rubric(s) with scores. Grand Total: ${total.toFixed(2)}`);
+    if (manualRubricIds.size > 0) {
+      console.log(`  Kept ${manualRubricIds.size} manual DOFA override(s) unchanged`);
+    }
 
     return true;
   } catch (error) {
@@ -879,5 +938,5 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear) => {
   }
 };
 
-module.exports = { autoAllocateMarks };
+module.exports = { autoAllocateMarks, ensureRuleDrivenColumns };
 

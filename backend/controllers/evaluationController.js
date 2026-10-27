@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { ensureRuleDrivenColumns } = require('../services/rubricMapper');
 
 let sessionFinalLockColumnsEnsured = false;
 let evaluationSheet2FeedbackColumnsEnsured = false;
@@ -629,7 +630,7 @@ exports.saveScore = async (req, res) => {
 
     // Validate against max marks
     const [rubricRows] = await db.query(
-      'SELECT max_marks FROM Dofa_rubrics WHERE id = ?',
+      'SELECT max_marks, section_name FROM Dofa_rubrics WHERE id = ?',
       [rubric_id]
     );
     
@@ -637,8 +638,13 @@ exports.saveScore = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Rubric not found' });
     }
 
+    // Teaching feedback and research guidance rows score per course/project, so the
+    // auto-allocated total can legitimately exceed the per-item max_marks.
+    const sectionName = String(rubricRows[0].section_name || '').toLowerCase();
+    const isCumulativeRubric = sectionName.includes('teaching feedback') || sectionName.includes('research guidance');
+
     const maxMarks = parseFloat(rubricRows[0].max_marks);
-    if (parseFloat(score) > maxMarks) {
+    if (!isCumulativeRubric && parseFloat(score) > maxMarks) {
       return res.status(400).json({
         success: false,
         message: `Score ${score} exceeds max marks of ${maxMarks} for this item`
@@ -647,16 +653,18 @@ exports.saveScore = async (req, res) => {
 
     const numericScore = parseFloat(score) || 0;
 
+    await ensureRuleDrivenColumns();
+
     // Update existing rows first so this works even if UNIQUE(submission_id, rubric_id)
     // is missing in a legacy database.
     const [upd] = await db.query(
-      'UPDATE Dofa_evaluation_scores SET score = ? WHERE submission_id = ? AND rubric_id = ?',
+      'UPDATE Dofa_evaluation_scores SET score = ?, is_manual = 1 WHERE submission_id = ? AND rubric_id = ?',
       [numericScore, submission_id, rubric_id]
     );
 
     if (!upd || upd.affectedRows === 0) {
       await db.query(
-        'INSERT INTO Dofa_evaluation_scores (submission_id, rubric_id, score) VALUES (?, ?, ?)',
+        'INSERT INTO Dofa_evaluation_scores (submission_id, rubric_id, score, is_manual) VALUES (?, ?, ?, 1)',
         [submission_id, rubric_id, numericScore]
       );
     }
@@ -718,6 +726,8 @@ exports.rerunAllocation = async (req, res) => {
   try {
     const { submissionId } = req.params;
     const { autoAllocateMarks } = require('../services/rubricMapper');
+    // Manual DOFA edits are kept unless the caller explicitly asks to discard them.
+    const resetManual = req.body?.reset_manual === true;
 
     const [rows] = await db.query('SELECT faculty_id, academic_year FROM submissions WHERE id = ?', [submissionId]);
     if (rows.length === 0) {
@@ -731,7 +741,7 @@ exports.rerunAllocation = async (req, res) => {
         message: `Session ${academic_year} is final-locked. Re-allocation is disabled.`
       });
     }
-    await autoAllocateMarks(submissionId, faculty_id, academic_year);
+    await autoAllocateMarks(submissionId, faculty_id, academic_year, { resetManual });
 
     // Return updated scores
     const [scores] = await db.query(
