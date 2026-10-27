@@ -355,103 +355,30 @@ const DofaOfficeDashboard = () => {
     }
   };
 
+  // Same full-form PDF that faculty, HoD and Manage Users download.
   const handleDownloadPDF = async (submission) => {
     setDownloadingFormat('pdf');
     try {
-      const data = await fetchSubmissionData(submission.id);
-      if (!data) return window.appToast('Could not fetch submission data');
-
-      const { submission: sub, facultyInfo, publications, courses, grants, patents, awards, proposals, newCourses } = data;
-
-      const html = `<!DOCTYPE html><html><head><title>${sub.faculty_name} - Appraisal ${sub.academic_year}</title>
-      <style>
-        body{font-family:Arial,sans-serif;margin:30px;color:#222}
-        h1{color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:8px}
-        h2{color:#2d4373;margin-top:24px;font-size:1.1rem;border-bottom:1px solid #ddd;padding-bottom:4px}
-        table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
-        th{background:#f5f7fa;padding:8px;text-align:left;border:1px solid #ddd}
-        td{padding:8px;border:1px solid #ddd}
-        .meta{display:flex;gap:2rem;background:#f9fafb;padding:12px;border-radius:6px;margin-bottom:12px}
-        .meta-item label{font-size:11px;color:#777;display:block}
-        .meta-item span{font-weight:600}
-      </style></head><body>
-      <h1>Annual Performance Appraisal - Form ${sub.form_type || 'A'}</h1>
-      <div class="meta">
-        <div class="meta-item"><label>Name</label><span>${sub.faculty_name}</span></div>
-        <div class="meta-item"><label>Department</label><span>${sub.department || 'N/A'}</span></div>
-        <div class="meta-item"><label>Academic Year</label><span>${sub.academic_year}</span></div>
-        <div class="meta-item"><label>Status</label><span>${sub.status}</span></div>
-        <div class="meta-item"><label>Designation</label><span>${facultyInfo?.designation || 'N/A'}</span></div>
-      </div>
-
-      <h2>Part A - Courses Taught (${courses?.length || 0})</h2>
-      <table><tr><th>Course Name</th><th>Code</th><th>Semester</th><th>Program</th><th>Enrollment</th></tr>
-      ${(courses || []).map(c => `<tr><td>${c.course_name||''}</td><td>${c.course_code||''}</td><td>${c.semester||''}</td><td>${c.program||''}</td><td>${c.enrollment||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Research Publications (${publications?.length || 0})</h2>
-      <table><tr><th>Type</th><th>Sub Type</th><th>Title</th><th>Year</th><th>Journal/Conference</th></tr>
-      ${(publications || []).map(p => `<tr><td>${p.publication_type||''}</td><td>${p.sub_type||''}</td><td>${p.title||''}</td><td>${p.year_of_publication||''}</td><td>${p.journal_name||p.conference_name||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Research Grants (${grants?.length || 0})</h2>
-      <table><tr><th>Project Name</th><th>Agency</th><th>Amount (Lakhs)</th><th>Role</th></tr>
-      ${(grants || []).map(g => `<tr><td>${g.project_name||''}</td><td>${g.funding_agency||''}</td><td>${g.amount_in_lakhs||0}</td><td>${g.role||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Patents (${patents?.length || 0})</h2>
-      <table><tr><th>Type</th><th>Title</th><th>Agency</th></tr>
-      ${(patents || []).map(p => `<tr><td>${p.patent_type||''}</td><td>${p.title||''}</td><td>${p.agency||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Awards & Honours (${awards?.length || 0})</h2>
-      <table><tr><th>Award</th><th>Agency</th><th>Year</th></tr>
-      ${(awards || []).map(a => `<tr><td>${a.award_name||''}</td><td>${a.awarding_agency||''}</td><td>${a.year||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>New Courses Developed (${newCourses?.length || 0})</h2>
-      <table><tr><th>Course Name</th><th>Code</th><th>Level</th><th>Program</th></tr>
-      ${(newCourses || []).map(c => `<tr><td>${c.course_name||''}</td><td>${c.course_code||''}</td><td>${c.level||''}</td><td>${c.program||''}</td></tr>`).join('')}
-      </table>
-
-      <h2>Submitted Proposals (${proposals?.length || 0})</h2>
-      <table><tr><th>Title</th><th>Agency</th><th>Amount</th><th>Status</th></tr>
-      ${(proposals || []).map(p => `<tr><td>${p.title||''}</td><td>${p.funding_agency||''}</td><td>${p.grant_amount||0}</td><td>${p.status||''}</td></tr>`).join('')}
-      </table>
-
-      ${((data?.dynamicData || []).length > 0 ? `
-      <h2>Custom Sections</h2>
-      ${(data.dynamicData || []).map(entry => {
-        const section = entry?.section || {};
-        const fields = entry?.fields || [];
-        const fieldsHtml = fields.map(f => {
-          const value = f.value;
-          if (!value) return '';
-          const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
-          return `<div style="margin:10px 0;"><strong>${f.label || f.field_type}:</strong> <span>${displayValue}</span></div>`;
-        }).join('');
-        return `<h3 style="color:#2d4373;margin-top:16px;font-size:1rem;border-bottom:1px solid #ddd;padding-bottom:4px;">${section.title || 'Custom Section'}</h3>${fieldsHtml}`;
-      }).join('')}
-      ` : '')}
-
-      <p style="margin-top:40px;font-size:11px;color:#888">Generated on ${new Date().toLocaleString()}</p>
-      </body></html>`;
-
-      try {
-        const blob = await apiClient.post('/submissions/export/html-to-pdf', { html, filename: `${sub.faculty_name || 'appraisal'}_${sub.academic_year || ''}.pdf` }, { responseType: 'blob' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${sub.faculty_name || 'appraisal'}_${sub.academic_year || ''}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-        setDownloadModal({ open: false, submission: null });
-      } catch (err) {
-        console.error('PDF export failed:', err);
-        window.appToast('Failed to generate PDF');
+      const res = await fetch(`${API}/submissions/${submission.id}/pdf`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      if (!res.ok) {
+        window.appToast('Failed to download PDF');
+        return;
       }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${submission.faculty_name || 'faculty'}_${submission.academic_year || 'session'}_appraisal.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      setDownloadModal({ open: false, submission: null });
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      window.appToast('Failed to generate PDF');
     } finally {
       setDownloadingFormat(null);
     }
@@ -553,127 +480,36 @@ const DofaOfficeDashboard = () => {
   };
 
   // -- Bulk Export: All Faculty Forms PDF (one PDF with all faculty detailed forms) --
+  // All forms for the selected year in one PDF, in the same layout as the single-form download.
   const handleExportFormsPDF = async () => {
     setExportLoading('forms');
     setExportDropdownOpen(false);
     try {
       const yearLabel = yearFilter || 'Active Academic Year';
-      const subs = submissions;
 
-      if (subs.length === 0) {
+      if (submissions.length === 0) {
         window.appToast('No submissions found for the selected academic year.');
         return;
       }
 
-      // Fetch full data for each submission
-      const allData = [];
-      for (const sub of subs) {
-        try {
-          const res = await fetch(`${API}/submissions/${sub.id}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
-          });
-          const data = await res.json();
-          if (data.success) allData.push(data.data);
-        } catch (e) {
-          console.warn(`Could not fetch submission ${sub.id}`);
-        }
-      }
-
-      const facultySections = allData.map(({ submission: s, facultyInfo, courses, publications, grants, patents, awards, newCourses, proposals, institutionalContributions, teachingInnovation }) => `
-        <div class="faculty-block">
-          <div class="faculty-header">
-            <h2>${s.faculty_name}</h2>
-            <div class="faculty-meta-grid">
-              <div><label>Department</label><span>${s.department || '-'}</span></div>
-              <div><label>Designation</label><span>${facultyInfo?.designation || s.designation || '-'}</span></div>
-              <div><label>Email</label><span>${s.email || '-'}</span></div>
-              <div><label>Academic Year</label><span>${s.academic_year}</span></div>
-              <div><label>Form Type</label><span>Form ${s.form_type || 'A'}</span></div>
-              <div><label>Status</label><span class="badge ${s.status}">${(String(s.form_type || 'A').toUpperCase() === 'B' ? 'Form B' : 'Form A')} - ${{
-                draft: 'Draft',
-                submitted: 'Submitted to DoFA',
-                submitted_hod: 'Submitted to HoD',
-                hod_approved: 'HoD Approved - Pending DoFA',
-                under_review: 'Under DoFA Review',
-                under_review_hod: 'Under HoD Review',
-                approved: 'Approved',
-                sent_back: 'Sent Back'
-              }[s.status] || s.status}</span></div>
-              <div><label>Date of Submission</label><span>${s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Not Submitted'}</span></div>
-              ${s.total_score != null ? `<div><label>Total Score</label><span>${s.total_score}</span></div>` : ''}
-            </div>
-          </div>
-
-          <h3>Courses Taught (${(courses || []).length})</h3>
-          ${(courses || []).length > 0 ? `<table><thead><tr><th>Course Name</th><th>Code</th><th>Semester</th><th>Program</th><th>Enrollment</th><th>Feedback Score</th></tr></thead><tbody>
-          ${(courses || []).map(c => `<tr><td>${c.course_name||'-'}</td><td>${c.course_code||'-'}</td><td>${c.semester||'-'}</td><td>${c.program||'-'}</td><td>${c.enrollment||'-'}</td><td>${c.feedback_score||'-'}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-
-          <h3>Research Publications (${(publications || []).length})</h3>
-          ${(publications || []).length > 0 ? `<table><thead><tr><th>Type</th><th>Sub-type</th><th>Title</th><th>Year</th><th>Journal / Conference</th></tr></thead><tbody>
-          ${(publications || []).map(p => `<tr><td>${p.publication_type||''}</td><td>${p.sub_type||''}</td><td>${p.title||''}</td><td>${p.year_of_publication||''}</td><td>${p.journal_name||p.conference_name||''}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-
-          <h3>Research Grants (${(grants || []).length})</h3>
-          ${(grants || []).length > 0 ? `<table><thead><tr><th>Project Title</th><th>Funding Agency</th><th>Amount (Lakhs)</th><th>Role</th></tr></thead><tbody>
-          ${(grants || []).map(g => `<tr><td>${g.project_name||''}</td><td>${g.funding_agency||''}</td><td>${g.amount_in_lakhs||0}</td><td>${g.role||''}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-
-          <h3>Patents (${(patents || []).length})</h3>
-          ${(patents || []).length > 0 ? `<table><thead><tr><th>Type</th><th>Title</th><th>Agency</th></tr></thead><tbody>
-          ${(patents || []).map(p => `<tr><td>${p.patent_type||''}</td><td>${p.title||''}</td><td>${p.agency||''}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-
-          <h3>Awards &amp; Honours (${(awards || []).length})</h3>
-          ${(awards || []).length > 0 ? `<table><thead><tr><th>Award</th><th>Awarding Agency</th><th>Year</th></tr></thead><tbody>
-          ${(awards || []).map(a => `<tr><td>${a.award_name||''}</td><td>${a.awarding_agency||''}</td><td>${a.year||''}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-
-          <h3>New Courses Developed (${(newCourses || []).length})</h3>
-          ${(newCourses || []).length > 0 ? `<table><thead><tr><th>Course Name</th><th>Code</th><th>Level</th><th>Program</th></tr></thead><tbody>
-          ${(newCourses || []).map(c => `<tr><td>${c.course_name||''}</td><td>${c.course_code||''}</td><td>${c.level||''}</td><td>${c.program||''}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-        </div>
-      `).join('');
-
-      const html = `<!DOCTYPE html>
-<html><head><title>Faculty Appraisal Forms - ${yearLabel}</title>
-<style>
-  @page { size: A4 portrait; margin: 16mm; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
-  h1 { font-size: 18px; color: #1e3a5f; margin-bottom: 4px; }
-  .cover-meta { font-size: 11px; color: #6b7280; margin-bottom: 10px; }
-  .faculty-block { page-break-after: always; padding: 12px 0; }
-  .faculty-block:last-child { page-break-after: auto; }
-  .faculty-header { background: #f0f4f8; border-left: 4px solid #1e3a5f; padding: 12px 16px; border-radius: 4px; margin-bottom: 14px; }
-  .faculty-header h2 { font-size: 16px; color: #1e3a5f; margin: 0 0 10px 0; }
-  .faculty-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 16px; }
-  .faculty-meta-grid div label { display: block; font-size: 9px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.3px; }
-  .faculty-meta-grid div span { font-weight: 600; font-size: 11px; }
-  h3 { font-size: 12px; color: #374151; margin: 14px 0 6px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 10px; }
-  th { background: #1e3a5f; color: white; padding: 6px 8px; text-align: left; }
-  td { padding: 5px 8px; border-bottom: 1px solid #f0f0f0; }
-  tr:nth-child(even) td { background: #fafafa; }
-  .none { color: #9ca3af; font-style: italic; font-size: 10px; margin: 4px 0 8px; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 9px; font-weight: 700; }
-  .badge.draft { background: #f3f4f6; color: #6b7280; }
-  .badge.submitted { background: #dbeafe; color: #1e40af; }
-  .badge.under_review { background: #fed7aa; color: #92400e; }
-  .badge.approved { background: #bbf7d0; color: #166534; }
-  .badge.sent_back { background: #fecaca; color: #991b1b; }
-</style></head><body>
-<h1>Annual Performance Appraisal - Faculty Forms</h1>
-<p class="cover-meta">Academic Year: <strong>${yearLabel}</strong> &nbsp;|&nbsp; Total Faculty: <strong>${allData.length}</strong> &nbsp;|&nbsp; Generated: ${new Date().toLocaleString('en-IN')}</p>
-${facultySections}
-</body></html>`;
+      // One form per faculty and year (a Form A and Form B row would print the same data twice).
+      const seen = new Set();
+      const submissionIds = submissions
+        .filter((item) => {
+          const key = item.faculty_id ? `${item.faculty_id}-${item.academic_year}` : `id-${item.id}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .map((item) => item.id);
 
       try {
-        const blob = await apiClient.post('/submissions/export/html-to-pdf', { html, filename: `DoFA_All_Forms_${yearLabel}.pdf` }, { responseType: 'blob' });
+        const fileName = `DoFA_All_Forms_${yearLabel}.pdf`;
+        const blob = await apiClient.post('/submissions/export/forms-pdf', { submission_ids: submissionIds, filename: fileName }, { responseType: 'blob' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `DoFA_All_Forms_${yearLabel}.pdf`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         a.remove();

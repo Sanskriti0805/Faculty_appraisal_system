@@ -142,12 +142,16 @@ async function fetchDynamicData(facultyId) {
   }
 }
 
-/* Main controller: GET /api/submissions/:id/pdf */
-exports.generateSubmissionPdf = async (req, res) => {
-  const { id } = req.params;
+/* Error with an HTTP status, thrown while collecting a submission for the PDF. */
+class PdfRequestError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
 
-  // -- 1. Auth / fetch submission ------------------------------------------
-  try {
+/* Collects every section for one submission and renders the full-form HTML. */
+const buildSubmissionHtml = async (id, user) => {
     const [subRows] = await db.query(`
       SELECT s.*, u.name AS faculty_name, u.department, u.email, u.designation,
              a.name AS approved_by_name
@@ -158,14 +162,14 @@ exports.generateSubmissionPdf = async (req, res) => {
     `, [id]);
 
     if (subRows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Submission not found' });
+      throw new PdfRequestError(404, 'Submission not found');
     }
 
     const sub = subRows[0];
 
     // Only owner or Dofa/admin can download
-    if (req.user?.role === 'faculty' && Number(req.user.id) !== Number(sub.faculty_id)) {
-      return res.status(403).json({ success: false, message: 'Access denied.' });
+    if (user?.role === 'faculty' && Number(user.id) !== Number(sub.faculty_id)) {
+      throw new PdfRequestError(403, 'Access denied.');
     }
 
     const fid = (await resolveFacultyInfoId({ facultyId: sub.faculty_id, email: sub.email }))
@@ -218,80 +222,133 @@ exports.generateSubmissionPdf = async (req, res) => {
       dynamicData   // custom sections from Form Builder
     });
 
-    // -- 4. Launch Puppeteer -> PDF -----------------------------------------
-    let browser;
-    try {
-      console.log(`[PDF] Launching browser for submission ${id}...`);
-      browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu'
-        ]
-      });
+    return { html, sub };
+};
 
-      const page = await browser.newPage();
+/* Prints HTML to an A4 landscape PDF with the standard confidential footer. */
+const renderPdfBuffer = async (html, label) => {
+  let browser;
+  try {
+    console.log(`[PDF] Launching browser for ${label}...`);
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu'
+      ]
+    });
 
-      // Inject HTML directly (faster than navigating to a URL)
-      console.log(`[PDF] Setting content for submission ${id}...`);
-      await page.setContent(html, { waitUntil: 'load', timeout: 30000 });
+    const page = await browser.newPage();
 
-      console.log(`[PDF] Generating PDF for submission ${id}...`);
-      const pdfBuffer = await page.pdf({
-        format:           'A4',
-        landscape:        true,
-        printBackground:  true,
-        margin:           { top: '14mm', bottom: '16mm', left: '12mm', right: '12mm' },
-        displayHeaderFooter: true,
-        headerTemplate:  '<div></div>',
-        footerTemplate: `
-          <div style="font-family:Arial,sans-serif;font-size:8px;color:#94a3b8;width:100%;display:flex;justify-content:space-between;padding:0 12mm;box-sizing:border-box;">
-            <span>LNMIIT Faculty Appraisal System &mdash; Confidential</span>
-            <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
-          </div>`
-      });
+    // Inject HTML directly (faster than navigating to a URL)
+    await page.setContent(html, { waitUntil: 'load', timeout: 60000 });
 
-      await browser.close();
-      browser = null;
-      console.log(`[PDF] PDF generated successfully for submission ${id}. Size: ${pdfBuffer.length} bytes`);
+    const pdfBuffer = await page.pdf({
+      format:           'A4',
+      landscape:        true,
+      printBackground:  true,
+      margin:           { top: '14mm', bottom: '16mm', left: '12mm', right: '12mm' },
+      displayHeaderFooter: true,
+      headerTemplate:  '<div></div>',
+      footerTemplate: `
+        <div style="font-family:Arial,sans-serif;font-size:8px;color:#94a3b8;width:100%;display:flex;justify-content:space-between;padding:0 12mm;box-sizing:border-box;">
+          <span>LNMIIT Faculty Appraisal System &mdash; Confidential</span>
+          <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+        </div>`
+    });
 
-      // -- 5. Stream the PDF back ----------------------------------------
-      // Sanitize filename to avoid invalid header characters (CR/LF, quotes, control chars)
-      const rawName = `${sub.faculty_name || 'faculty'}`;
-      const rawYear = `${sub.academic_year || 'report'}`;
-      // Produce an ASCII-safe fallback and a UTF-8 encoded filename* per RFC5987
-      const asciiSafe = (`Appraisal_${rawName}_${rawYear}.pdf`).replace(/[\r\n"<>\\\/\x00-\x1F\x7F]/g, '_').replace(/[^\x20-\x7E]/g, '_');
-      const utf8Encoded = encodeURIComponent(`Appraisal_${rawName}_${rawYear}.pdf`);
+    console.log(`[PDF] PDF generated for ${label}. Size: ${pdfBuffer.length} bytes`);
+    return pdfBuffer;
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+};
 
-      res.setHeader('Content-Type', 'application/pdf');
-      // Provide both a basic filename and a UTF-8 filename* as a fallback for clients
-      res.setHeader('Content-Disposition', `attachment; filename="${asciiSafe}"; filename*=UTF-8''${utf8Encoded}`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      return res.end(pdfBuffer);
+/* Sends a PDF buffer as a download. Keeps the header ASCII-safe (RFC 5987 for the real name). */
+const sendPdf = (res, pdfBuffer, fileName) => {
+  const asciiSafe = fileName.replace(/[\r\n"<>\\/\x00-\x1F\x7F]/g, '_').replace(/[^\x20-\x7E]/g, '_');
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${asciiSafe}"; filename*=UTF-8''${encodeURIComponent(fileName)}`);
+  res.setHeader('Content-Length', pdfBuffer.length);
+  return res.end(pdfBuffer);
+};
 
-    } finally {
-      if (browser) await browser.close().catch(() => {});
-    }
+const logPdfFailure = (label, err, html) => {
+  console.error('PDF generation error:', err);
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    fs.appendFileSync(path.join(__dirname, '../pdf_error.log'), `
+[${new Date().toISOString()}] ${label}
+Error: ${err.stack}
+`);
+    if (html) fs.writeFileSync(path.join(__dirname, '../last_failed_pdf.html'), html);
+  } catch (logErr) {
+    console.error('Failed to write to PDF log file:', logErr);
+  }
+};
 
+/* Main controller: GET /api/submissions/:id/pdf */
+exports.generateSubmissionPdf = async (req, res) => {
+  const { id } = req.params;
+  let html;
+  try {
+    const built = await buildSubmissionHtml(id, req.user);
+    html = built.html;
+    const pdfBuffer = await renderPdfBuffer(html, `submission ${id}`);
+    return sendPdf(res, pdfBuffer, `Appraisal_${built.sub.faculty_name || 'faculty'}_${built.sub.academic_year || 'report'}.pdf`);
   } catch (err) {
-    console.error('PDF generation error:', err);
-    try {
-      const fs = require('fs');
-      const logPath = require('path').join(__dirname, '../pdf_error.log');
-      const timestamp = new Date().toISOString();
-      const logEntry = `\n[${timestamp}] Submission ID: ${id}\nError: ${err.stack}\n`;
-      fs.appendFileSync(logPath, logEntry);
-      
-      // Also dump the HTML if it was generated
-      if (typeof html !== 'undefined') {
-        fs.writeFileSync(require('path').join(__dirname, '../last_failed_pdf.html'), html);
-      }
-    } catch (logErr) {
-      console.error('Failed to write to PDF log file:', logErr);
+    if (err instanceof PdfRequestError) {
+      return res.status(err.status).json({ success: false, message: err.message });
     }
+    logPdfFailure(`Submission ID: ${id}`, err, html);
     return res.status(500).json({ success: false, message: 'PDF generation failed: ' + err.message });
   }
 };
 
+/* POST /api/submissions/export/forms-pdf  { submission_ids: [..], filename? }
+ * Several full forms in one PDF: same layout as the single-form download, each form starting on a new page. */
+exports.generateBulkFormsPdf = async (req, res) => {
+  const MAX_FORMS = 300;
+  const ids = [...new Set((Array.isArray(req.body?.submission_ids) ? req.body.submission_ids : [])
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0))];
+
+  if (ids.length === 0) {
+    return res.status(400).json({ success: false, message: 'submission_ids is required.' });
+  }
+  if (ids.length > MAX_FORMS) {
+    return res.status(400).json({ success: false, message: `At most ${MAX_FORMS} forms can be exported at once.` });
+  }
+
+  let combined;
+  try {
+    const documents = [];
+    for (const id of ids) {
+      try {
+        documents.push((await buildSubmissionHtml(id, req.user)).html);
+      } catch (err) {
+        if (!(err instanceof PdfRequestError)) throw err;
+        console.warn(`[PDF] Skipping submission ${id}: ${err.message}`);
+      }
+    }
+    if (documents.length === 0) {
+      return res.status(404).json({ success: false, message: 'No matching submissions found.' });
+    }
+
+    const bodyOf = (document) => (document.match(/<body[^>]*>([\s\S]*)<\/body>/i) || [null, ''])[1];
+    const bodies = documents.map((document, index) => (
+      index === 0 ? bodyOf(document) : `<div style="page-break-before:always">${bodyOf(document)}</div>`
+    ));
+    combined = documents[0].replace(/<body[^>]*>[\s\S]*<\/body>/i, () => `<body>${bodies.join('\n')}</body>`);
+
+    const pdfBuffer = await renderPdfBuffer(combined, `${documents.length} submissions`);
+    const requestedName = typeof req.body?.filename === 'string' ? req.body.filename.trim() : '';
+    return sendPdf(res, pdfBuffer, requestedName || 'Faculty_Forms.pdf');
+  } catch (err) {
+    logPdfFailure(`Bulk export of ${ids.length} submissions`, err, combined);
+    return res.status(500).json({ success: false, message: 'PDF generation failed: ' + err.message });
+  }
+};

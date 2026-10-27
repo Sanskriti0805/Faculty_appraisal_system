@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const submissionsController = require('../controllers/submissionsController');
 const pdfController = require('../controllers/pdfController');
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, requireRole } = require('../middleware/authMiddleware');
 const { requireSectionEditAccess } = require('../middleware/submissionEditGuard');
 
 // Get current faculty's submission (or create draft) — MUST be before /:id
@@ -25,6 +25,9 @@ router.put('/session-lock', authenticate, submissionsController.setSessionFinalL
 router.get('/:id/pdf', authenticate, pdfController.generateSubmissionPdf);
 // Render arbitrary HTML posted from frontend to PDF (used by export flows)
 router.post('/export/html-to-pdf', authenticate, pdfController.generateHtmlPdf);
+
+// Several full forms in one PDF (same layout as the single-form download). DoFA office only.
+router.post('/export/forms-pdf', authenticate, requireRole('admin', 'Dofa', 'Dofa_office'), pdfController.generateBulkFormsPdf);
 
 // Submission version history
 router.get('/:id/versions', authenticate, submissionsController.getSubmissionVersions);

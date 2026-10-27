@@ -339,6 +339,7 @@ const SessionLogs = () => {
     }
   };
 
+  // All selected forms in one PDF, in the same layout as the single-form download.
   const handleExportFormsPDF = async () => {
     setExportLoading('forms');
     setExportDropdownOpen(false);
@@ -351,136 +352,31 @@ const SessionLogs = () => {
         return;
       }
 
-      const token = localStorage.getItem('auth_token');
-      const allData = [];
-      for (const sub of subs) {
-        try {
-          const data = await apiClient.get(`/submissions/${sub.id}`);
-          if (data.success) allData.push(data.data);
-        } catch (e) {
-          console.warn(`Could not fetch submission ${sub.id}`);
-        }
-      }
-
-      const facultySections = allData.map(({ submission: s, facultyInfo, courses, publications, grants, patents, awards, newCourses }) => `
-        <div class="faculty-block">
-          <div class="faculty-header">
-            <h2>${s.faculty_name}</h2>
-            <div class="faculty-meta-grid">
-              <div><label>Department</label><span>${s.department || '-'}</span></div>
-              <div><label>Designation</label><span>${facultyInfo?.designation || s.designation || '-'}</span></div>
-              <div><label>Email</label><span>${s.email || '-'}</span></div>
-              <div><label>Academic Year</label><span>${s.academic_year}</span></div>
-              <div><label>Form Type</label><span>Form ${s.form_type || 'A'}</span></div>
-              <div><label>Status</label><span>${statusLabel(s)}</span></div>
-            </div>
-          </div>
-
-          <h3>Courses Taught (${(courses || []).length})</h3>
-          ${(courses || []).length > 0 ? `<table><thead><tr><th>Course Name</th><th>Code</th><th>Semester</th><th>Program</th><th>Enrollment</th></tr></thead><tbody>
-          ${(courses || []).map(c => `<tr><td>${c.course_name || '-'}</td><td>${c.course_code || '-'}</td><td>${c.semester || '-'}</td><td>${c.program || '-'}</td><td>${c.enrollment || '-'}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-
-          <h3>Research Publications (${(publications || []).length})</h3>
-          ${(publications || []).length > 0 ? `<table><thead><tr><th>Type</th><th>Sub-type</th><th>Title</th><th>Year</th><th>Journal / Conference</th></tr></thead><tbody>
-          ${(publications || []).map(p => `<tr><td>${p.publication_type || ''}</td><td>${p.sub_type || ''}</td><td>${p.title || ''}</td><td>${p.year_of_publication || ''}</td><td>${p.journal_name || p.conference_name || ''}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-
-          <h3>Research Grants (${(grants || []).length})</h3>
-          ${(grants || []).length > 0 ? `<table><thead><tr><th>Project</th><th>Agency</th><th>Amount</th><th>Role</th></tr></thead><tbody>
-          ${(grants || []).map(g => `<tr><td>${g.project_name || ''}</td><td>${g.funding_agency || ''}</td><td>${g.amount_in_lakhs || 0}</td><td>${g.role || ''}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-
-          <h3>Patents (${(patents || []).length})</h3>
-          ${(patents || []).length > 0 ? `<table><thead><tr><th>Type</th><th>Title</th><th>Agency</th></tr></thead><tbody>
-          ${(patents || []).map(p => `<tr><td>${p.patent_type || ''}</td><td>${p.title || ''}</td><td>${p.agency || ''}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-
-          <h3>Awards (${(awards || []).length})</h3>
-          ${(awards || []).length > 0 ? `<table><thead><tr><th>Award</th><th>Agency</th><th>Year</th></tr></thead><tbody>
-          ${(awards || []).map(a => `<tr><td>${a.award_name || ''}</td><td>${a.awarding_agency || ''}</td><td>${a.year || ''}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-
-          <h3>New Courses (${(newCourses || []).length})</h3>
-          ${(newCourses || []).length > 0 ? `<table><thead><tr><th>Course Name</th><th>Code</th><th>Level</th><th>Program</th></tr></thead><tbody>
-          ${(newCourses || []).map(c => `<tr><td>${c.course_name || ''}</td><td>${c.course_code || ''}</td><td>${c.level || ''}</td><td>${c.program || ''}</td></tr>`).join('')}
-          </tbody></table>` : '<p class="none">None recorded.</p>'}
-        </div>
-      `).join('');
-
-      const logoUrl = window.location.origin + '/lnmiit-logo.png';
-      const html = `<!DOCTYPE html>
-<html><head><title>Session Logs Forms - ${yearLabel}</title>
-<style>
-  @page { size: A4 portrait; margin: 16mm; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a2e; }
-  
-  /* Cover Page Styles */
-  .cover-page {
-    height: 90vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    page-break-after: always;
-    border: 6px solid #1e3a8a;
-    padding: 40px;
-    box-sizing: border-box;
-  }
-  .cover-page img { max-height: 120px; margin-bottom: 30px; }
-  .cover-page .inst-name { font-size: 16px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 30px; }
-  .cover-page h1 { font-size: 32px; color: #1e3a8a; margin-bottom: 10px; }
-  .cover-page h2 { font-size: 20px; color: #64748b; font-weight: 400; margin-bottom: 40px; }
-  .cover-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; background: #f8fafc; padding: 25px; border-radius: 8px; border: 1px solid #e2e8f0; width: 80%; }
-  .meta-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-  .meta-item label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-  .meta-item span { font-size: 16px; font-weight: 700; color: #0f172a; }
-
-  /* Content Styles */
-  .faculty-block { page-break-after: always; padding: 12px 0; }
-  .faculty-block:last-child { page-break-after: auto; }
-  .faculty-header { background: #f8fafc; border: 1px solid #e2e8f0; border-top: 4px solid #1e3a8a; padding: 16px; border-radius: 6px; margin-bottom: 20px; }
-  .faculty-header h2 { font-size: 18px; color: #1e3a8a; margin: 0 0 14px 0; }
-  .faculty-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 16px; }
-  .faculty-meta-grid div label { display: block; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-  .faculty-meta-grid div span { font-weight: 600; font-size: 12px; color: #1e293b; }
-  h3 { font-size: 14px; color: #1e3a8a; margin: 20px 0 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px; }
-  th { background: #f1f5f9; color: #334155; padding: 8px 10px; text-align: left; border-bottom: 2px solid #cbd5e1; text-transform: uppercase; font-size: 10px; }
-  td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; }
-  tr:nth-child(even) td { background: #fafafa; }
-  .none { color: #94a3b8; font-style: italic; font-size: 11px; margin: 4px 0 12px; }
-</style></head><body>
-
-<div class="cover-page">
-  <img src="${logoUrl}" alt="LNMIIT Logo" />
-  <div class="inst-name">The LNM Institute of Information Technology, Jaipur</div>
-  <h1>Historical Session Forms</h1>
-  <h2>Faculty Appraisal Bulk Export</h2>
-  <div class="cover-meta">
-    <div class="meta-item"><label>View Academic Year</label><span>${yearLabel}</span></div>
-    <div class="meta-item"><label>Faculty Records</label><span>${allData.length}</span></div>
-    <div class="meta-item"><label>Generated</label><span>${new Date().toLocaleDateString('en-IN')}</span></div>
-  </div>
-</div>
-
-${facultySections}
-</body></html>`;
+      // One form per faculty and year (a Form A and Form B row would print the same data twice).
+      const seen = new Set();
+      const submissionIds = subs
+        .filter((item) => {
+          const key = item.faculty_id ? `${item.faculty_id}-${item.academic_year}` : `id-${item.id}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .map((item) => item.id);
 
       try {
-        const blob = await apiClient.post('/submissions/export/html-to-pdf', { html, filename: `SessionLogs_Forms_${yearLabel}.pdf` }, { responseType: 'blob' });
+        const fileName = `SessionLogs_Forms_${yearLabel}.pdf`;
+        const blob = await apiClient.post('/submissions/export/forms-pdf', { submission_ids: submissionIds, filename: fileName }, { responseType: 'blob' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `SessionLogs_Forms_${yearLabel}.pdf`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         a.remove();
         window.URL.revokeObjectURL(url);
       } catch (err) {
         console.error('Forms PDF export failed:', err);
-        window.appToast('Failed to generate combined forms PDF');
+        window.appToast('Failed to generate forms PDF');
       }
     } finally {
       setExportLoading(null);
@@ -802,7 +698,7 @@ ${facultySections}
     <div class="doc-meta">Generated: ${genDate} &nbsp;|&nbsp; ${submissionsData.length} Faculty &nbsp;|&nbsp; ${rubrics.length} Rubric Items</div>
   </div>
 </div>
-<div class="part-label">Part A &#8212; Summary: Section-wise Scores</div>
+<div class="part-label">Form A &#8212; Summary: Section-wise Scores</div>
 <table class="summary-table">
   <thead><tr><th>#</th><th>Faculty Name</th><th>Department</th>${summaryHeaderCols}<th>Grand Total</th></tr></thead>
   <tbody>${summaryRows}</tbody>
@@ -815,7 +711,7 @@ ${facultySections}
       <h1>Evaluation Sheet 1 &#8212; ${selectedYear}</h1>
     </div>
   </div>
-  <div class="part-label">Part B &#8212; Detail: Per-Faculty Rubric Breakdown</div>
+  <div class="part-label">Form B &#8212; Detail: Per-Faculty Rubric Breakdown</div>
   ${detailCards}
 </div>
 </body></html>`;

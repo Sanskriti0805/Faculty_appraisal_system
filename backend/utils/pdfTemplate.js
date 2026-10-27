@@ -40,6 +40,7 @@ const fmtCell = (key, val) => {
   if (val === null || val === undefined || val === '') return '—';
   if (isFileCol(key))  return fmtFile(val);
   if (isDateCol(key))  return fmtDate(val);
+  if (key === 'percentage') return String(val).trim().endsWith('%') ? String(val) : `${val}%`;
   return String(val);
 };
 
@@ -99,7 +100,7 @@ const COL = {
     { key: 'credits',        label: 'Credits'     },
     { key: 'enrollment',     label: 'Enrollment'  },
     { key: 'feedback_score', label: 'Feedback'    },
-    { key: 'percentage',     label: '%ile'        },
+    { key: 'percentage',     label: 'Percentage'   },
     { key: 'remarks',        label: 'Remarks'     },
     { key: 'status',         label: 'Status'      },
   ],
@@ -494,33 +495,33 @@ const generateHtml = (data) => {
 <!-- Faculty Information -->
 ${section('Faculty Information', infoGrid(facultyInfo))}
 
-<!-- Part A -->
-${section('Part A — Courses Taught',              curatedTable(courseRows,               COL.courses))}
-${section('Part A — Projects Guided',            curatedTable(projectRows,              COL.projects))}
-${section('Part A — New Courses Developed',       curatedTable(newCourses,               COL.newCourses))}
-${section('Part A — Research Publications',       curatedTable(publications,             COL.publications))}
-${section('Part A — Research Grants',             curatedTable(grants,                   COL.grants))}
-${section('Part A — Submitted Proposals',         curatedTable(proposals,                COL.proposals))}
-${section('Part A — Patents',                     curatedTable(patents,                  COL.patents))}
-${section('Part A — Paper Reviews',               curatedTable(paperReviews,             COL.paperReviews))}
-${section('Part A — Technology Transfer',         curatedTable(techTransfer,             COL.techTransfer))}
-${section('Part A — Conference Sessions',         curatedTable(conferenceSessions,       COL.conferences))}
-${section('Part A — Keynotes & Invited Talks',    curatedTable(keynotesTalks,            COL.keynotes))}
-${section('Part A — Awards & Honours',            curatedTable(awards,                   COL.awards))}
-${section('Part A — Consultancy',                 curatedTable(consultancy,              COL.consultancy))}
-${section('Part A — Teaching Innovation',         curatedTable(teachingInnovation,       COL.teachingInnovation))}
-${section('Part A — Institutional Contributions', curatedTable(institutionalContributions, COL.contributions))}
+<!-- Form A -->
+${section('Form A — Courses Taught',              curatedTable(courseRows,               COL.courses))}
+${section('Form A — Projects Guided',            curatedTable(projectRows,              COL.projects))}
+${section('Form A — New Courses Developed',       curatedTable(newCourses,               COL.newCourses))}
+${section('Form A — Research Publications',       curatedTable(publications,             COL.publications))}
+${section('Form A — Research Grants',             curatedTable(grants,                   COL.grants))}
+${section('Form A — Submitted Proposals',         curatedTable(proposals,                COL.proposals))}
+${section('Form A — Patents',                     curatedTable(patents,                  COL.patents))}
+${section('Form A — Paper Reviews',               curatedTable(paperReviews,             COL.paperReviews))}
+${section('Form A — Technology Transfer',         curatedTable(techTransfer,             COL.techTransfer))}
+${section('Form A — Conference Sessions',         curatedTable(conferenceSessions,       COL.conferences))}
+${section('Form A — Keynotes & Invited Talks',    curatedTable(keynotesTalks,            COL.keynotes))}
+${section('Form A — Awards & Honours',            curatedTable(awards,                   COL.awards))}
+${section('Form A — Consultancy',                 curatedTable(consultancy,              COL.consultancy))}
+${section('Form A — Teaching Innovation',         curatedTable(teachingInnovation,       COL.teachingInnovation))}
+${section('Form A — Institutional Contributions', curatedTable(institutionalContributions, COL.contributions))}
 
-${courseware          ? section('Part A — Courseware',           legacyJsonBlock(courseware))          : ''}
-${continuingEducation ? section('Part A — Continuing Education', legacyJsonBlock(continuingEducation)) : ''}
-${otherActivities     ? section('Part A — Other Activities',     legacyJsonBlock(otherActivities))     : ''}
+${courseware          ? section('Form A — Courseware',           legacyJsonBlock(courseware))          : ''}
+${continuingEducation ? section('Form A — Continuing Education', legacyJsonBlock(continuingEducation)) : ''}
+${otherActivities     ? section('Form A — Other Activities',     legacyJsonBlock(otherActivities))     : ''}
 
-<!-- Part B -->
-${section('Part B — Research Plan',
+<!-- Form B -->
+${section('Form B — Research Plan',
   researchPlan  ? legacyJsonBlock(researchPlan)  : '<p class="no-data">No research plan recorded.</p>')}
-${section('Part B — Teaching Plan',
+${section('Form B — Teaching Plan',
   teachingPlan  ? legacyJsonBlock(teachingPlan)  : '<p class="no-data">No teaching plan recorded.</p>')}
-${section('Part B — Goals & Targets', curatedTable(goals, COL.goals))}
+${section('Form B — Goals & Targets', curatedTable(goals, COL.goals))}
 
 <!-- Dynamic / Form Builder sections -->
 ${dynamicSectionsHtml(dynamicData)}
