@@ -456,7 +456,7 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
     email: sub.email
   });
   const fid = resolvedFacultyInfoId || Number(user_id) || null;
-  const yearNum = academicYear.split('-')[0];
+  const yearNum = academicYear.split(/[-–—]/)[0];
   const sessionWindow = await getSessionWindowByAcademicYear(academicYear);
 
   const [
@@ -797,7 +797,7 @@ exports.getSubmissionById = async (req, res) => {
     const fid = resolvedFacultyInfoId || Number(user_id) || null;
 
     // Helper to get year from academic_year string (e.g. "2025-26" -> 2025)
-    const yearNum = academicYear.split('-')[0];
+    const yearNum = academicYear.split(/[-–—]/)[0];
     const sessionWindow = await getSessionWindowByAcademicYear(academicYear);
 
         // Aggregate stored evaluation scores for this submission.
@@ -1736,7 +1736,7 @@ exports.exportComprehensiveExcel = async (req, res) => {
     const awardsData = [];
 
     for (const sub of submissions) {
-      const yearNum = sub.academic_year.split('-')[0];
+      const yearNum = sub.academic_year.split(/[-–—]/)[0];
       const fid = sub.faculty_info_id; // Mapping to faculty_information table ID
 
       // Basic summary mapping

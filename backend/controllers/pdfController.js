@@ -13,6 +13,27 @@ const puppeteer  = require('puppeteer');
 const { generateHtml } = require('../utils/pdfTemplate');
 const { resolveFacultyInfoId } = require('../utils/facultyResolver');
 
+// '2025-26' and '2025–26' (en dash) both start at 2025.
+const academicYearStart = (academicYear) => String(academicYear || '').split(/[-–—]/)[0];
+
+// Rows saved for one appraisal session. Older databases without session_id fall back to all rows.
+const querySessionRows = async (tableName, facultyId, sessionId, extraWhere = '', extraParams = []) => {
+  const extra = extraWhere ? ` AND ${extraWhere}` : '';
+  try {
+    const [rows] = await db.query(
+      `SELECT * FROM ${tableName} WHERE faculty_id = ? AND session_id = ?${extra}`,
+      [facultyId, sessionId, ...extraParams]
+    );
+    return rows || [];
+  } catch (err) {
+    if (err && (err.code === 'ER_BAD_FIELD_ERROR' || err.errno === 1054)) {
+      const [rows] = await db.query(`SELECT * FROM ${tableName} WHERE faculty_id = ?${extra}`, [facultyId, ...extraParams]);
+      return rows || [];
+    }
+    throw err;
+  }
+};
+
 /* POST /api/submissions/export/html-to-pdf
  * Accepts JSON { html: '<html>...</html>', filename: 'optional.pdf' }
  * Renders the HTML with Puppeteer and streams back a PDF buffer.
@@ -149,7 +170,8 @@ exports.generateSubmissionPdf = async (req, res) => {
 
     const fid = (await resolveFacultyInfoId({ facultyId: sub.faculty_id, email: sub.email }))
       || Number(sub.faculty_id);
-    const yearNum = (sub.academic_year || '').split('-')[0];
+    const yearNum = academicYearStart(sub.academic_year);
+    const sid = sub.academic_year;
 
     // -- 2. Parallel data fetch --------------------------------------------
     const [
@@ -161,20 +183,21 @@ exports.generateSubmissionPdf = async (req, res) => {
       dynamicData
     ] = await Promise.all([
       db.query('SELECT * FROM faculty_information WHERE id = ?', [fid]).then(r => r[0][0] || {}),
-      db.query('SELECT * FROM courses_taught WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM research_publications WHERE faculty_id = ? AND year_of_publication >= ?', [fid, yearNum]).then(r => r[0] || []),
-      db.query('SELECT * FROM research_grants WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM patents WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM awards_honours WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM new_courses WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM submitted_proposals WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM paper_reviews WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM technology_transfer WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM conference_sessions WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM keynotes_talks WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM consultancy WHERE faculty_id = ? AND year >= ?', [fid, yearNum]).then(r => r[0] || []),
-      db.query('SELECT * FROM teaching_innovation WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
-      db.query('SELECT * FROM institutional_contributions WHERE faculty_id = ?', [fid]).then(r => r[0] || []),
+      querySessionRows('courses_taught', fid, sid),
+      // Session scope decides which publications belong here; the forms no longer collect a year.
+      querySessionRows('research_publications', fid, sid),
+      querySessionRows('research_grants', fid, sid),
+      querySessionRows('patents', fid, sid),
+      querySessionRows('awards_honours', fid, sid),
+      querySessionRows('new_courses', fid, sid),
+      querySessionRows('submitted_proposals', fid, sid),
+      querySessionRows('paper_reviews', fid, sid),
+      querySessionRows('technology_transfer', fid, sid),
+      querySessionRows('conference_sessions', fid, sid),
+      querySessionRows('keynotes_talks', fid, sid),
+      querySessionRows('consultancy', fid, sid, 'year >= ?', [yearNum]),
+      querySessionRows('teaching_innovation', fid, sid),
+      querySessionRows('institutional_contributions', fid, sid),
       db.query('SELECT * FROM faculty_goals WHERE faculty_id = ? AND session_id = ?', [fid, sub.academic_year]).then(r => r[0] || []),
       fetchLegacySectionContent(sub.faculty_id, sub.academic_year, 'courseware'),
       fetchLegacySectionContent(sub.faculty_id, sub.academic_year, 'continuing_education'),

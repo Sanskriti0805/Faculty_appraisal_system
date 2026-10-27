@@ -103,6 +103,16 @@ const COL = {
     { key: 'remarks',        label: 'Remarks'     },
     { key: 'status',         label: 'Status'      },
   ],
+  projects: [
+    { key: 'semester',         label: 'Semester'      },
+    { key: 'project_title',    label: 'Project Title' },
+    { key: 'project_type',     label: 'Type'          },
+    { key: 'project_role',     label: 'Role'          },
+    { key: 'student_name',     label: 'Student'       },
+    { key: 'project_duration', label: 'Duration'      },
+    { key: 'project_outcome',  label: 'Outcome'       },
+    { key: 'remarks',          label: 'Remarks'       },
+  ],
   newCourses: [
     { key: 'course_name',  label: 'Course Name' },
     { key: 'course_code',  label: 'Code'        },
@@ -324,6 +334,11 @@ const generateHtml = (data) => {
 
   const title = `Faculty Appraisal — ${submission.faculty_name || 'Faculty'} — ${submission.academic_year || ''}`;
 
+  // Courses and projects guided share one table; show them in separate sections.
+  const isProjectRow = (row) => String(row?.section || '').toLowerCase() === 'projects';
+  const courseRows = courses.filter((row) => !isProjectRow(row));
+  const projectRows = courses.filter(isProjectRow);
+
   /* Parse a legacy JSON string and render as human-readable HTML */
   const legacyJsonBlock = (raw) => {
     if (!raw) return '<p class="no-data">No data recorded.</p>';
@@ -480,7 +495,8 @@ const generateHtml = (data) => {
 ${section('Faculty Information', infoGrid(facultyInfo))}
 
 <!-- Part A -->
-${section('Part A — Courses Taught',              curatedTable(courses,                  COL.courses))}
+${section('Part A — Courses Taught',              curatedTable(courseRows,               COL.courses))}
+${section('Part A — Projects Guided',            curatedTable(projectRows,              COL.projects))}
 ${section('Part A — New Courses Developed',       curatedTable(newCourses,               COL.newCourses))}
 ${section('Part A — Research Publications',       curatedTable(publications,             COL.publications))}
 ${section('Part A — Research Grants',             curatedTable(grants,                   COL.grants))}

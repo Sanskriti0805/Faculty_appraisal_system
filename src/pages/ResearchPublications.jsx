@@ -2309,11 +2309,13 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             </div>
           )}
 
-          {publicationType === 'Monographs' && bookSubType === 'Book Chapter' && renderBookChapterForm()}
-          {publicationType === 'Monographs' && bookSubType === 'Book' && renderBookForm()}
-          {publicationType === 'Monographs' && bookSubType === 'Book Edited' && renderBookEditedForm()}
+          {/* key: remount the form (and its file inputs) when the sub-type changes, so
+              re-attaching the same evidence file is registered as a new selection. */}
+          {publicationType === 'Monographs' && bookSubType === 'Book Chapter' && <React.Fragment key="book-chapter">{renderBookChapterForm()}</React.Fragment>}
+          {publicationType === 'Monographs' && bookSubType === 'Book' && <React.Fragment key="book">{renderBookForm()}</React.Fragment>}
+          {publicationType === 'Monographs' && bookSubType === 'Book Edited' && <React.Fragment key="book-edited">{renderBookEditedForm()}</React.Fragment>}
           {publicationType === 'Journal' && renderJournalForm()}
-          {publicationType === 'Conference' && conferenceSubType && renderConferenceForm()}
+          {publicationType === 'Conference' && conferenceSubType && <React.Fragment key={'conference-' + conferenceSubType}>{renderConferenceForm()}</React.Fragment>}
           {publicationType === 'Any Other' && renderAnyOtherForm()}
 
           {publicationType && !readOnly && (

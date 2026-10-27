@@ -20,6 +20,8 @@ const AwardsHonours = ({ initialData, readOnly }) => {
     evidenceFile: null
   })
   const [loading, setLoading] = useState(false)
+  // Bumped to remount the file input, so choosing the same file again registers as a new selection.
+  const [fileInputKey, setFileInputKey] = useState(0)
 
   const showToast = (message, type = 'error') => {
     setToast({ message, type })
@@ -130,6 +132,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
         description: '',
         evidenceFile: null
       })
+      setFileInputKey((key) => key + 1)
 
       await loadAwards()
       if (showSuccessAlert) {
@@ -255,6 +258,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
                 backgroundColor: '#fff'
               }}>
                 <input
+                  key={fileInputKey}
                   type="file"
                   id="award-evidence"
                   accept={getAcceptAttribute(FILE_TYPES.documents)}
@@ -289,6 +293,7 @@ const AwardsHonours = ({ initialData, readOnly }) => {
                         e.preventDefault()
                         e.stopPropagation()
                         setFormData({ ...formData, evidenceFile: null })
+                        setFileInputKey((key) => key + 1)
                       }}
                       title="Remove uploaded document"
                       style={{
