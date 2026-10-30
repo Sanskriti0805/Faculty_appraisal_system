@@ -3,6 +3,18 @@ const { ensureRuleDrivenColumns } = require('../services/rubricMapper');
 
 let sessionFinalLockColumnsEnsured = false;
 let evaluationSheet2FeedbackColumnsEnsured = false;
+let gradingParametersColumnsEnsured = false;
+
+async function ensureGradingParametersColumns() {
+  if (gradingParametersColumnsEnsured) return;
+  await ensureColumnExists('Dofa_grading_parameters', 'min_score', 'DECIMAL(10,2) NULL');
+  await ensureColumnExists('Dofa_grading_parameters', 'max_score', 'DECIMAL(10,2) NULL');
+  try {
+    await db.query(`ALTER TABLE Dofa_grading_parameters MODIFY COLUMN condition_op VARCHAR(10) NULL`);
+    await db.query(`ALTER TABLE Dofa_grading_parameters MODIFY COLUMN threshold_value DECIMAL(10,2) NULL`);
+  } catch (_) {}
+  gradingParametersColumnsEnsured = true;
+}
 
 async function ensureColumnExists(tableName, columnName, definitionSql) {
   const [rows] = await db.query(
@@ -201,7 +213,38 @@ exports.getSheet2Data = async (req, res) => {
     sheet2Data.forEach(s => sheet2Map[s.submission_id] = s);
 
     // 4. Get Grading Parameters
-    const [gradingParams] = await db.query('SELECT * FROM Dofa_grading_parameters ORDER BY threshold_value DESC');
+    await ensureGradingParametersColumns();
+    const [gradingParamsRaw] = await db.query(`
+      SELECT id, min_score, max_score, grade, condition_op, threshold_value
+      FROM Dofa_grading_parameters
+      ORDER BY COALESCE(min_score, threshold_value) DESC, id ASC
+    `);
+
+    const gradingParams = gradingParamsRaw.map(r => {
+      let min = r.min_score !== null && r.min_score !== undefined ? parseFloat(r.min_score) : null;
+      let max = r.max_score !== null && r.max_score !== undefined ? parseFloat(r.max_score) : null;
+
+      if (min === null && max === null && r.threshold_value !== null && r.threshold_value !== undefined) {
+        const tv = parseFloat(r.threshold_value);
+        if (r.condition_op === '>' || r.condition_op === '>=') {
+          min = tv;
+        } else if (r.condition_op === '<' || r.condition_op === '<=') {
+          max = tv;
+        } else if (r.condition_op === '=') {
+          min = tv;
+          max = tv;
+        }
+      }
+
+      return {
+        id: r.id,
+        min_score: min !== null ? min : '',
+        max_score: max !== null ? max : '',
+        grade: r.grade || '',
+        condition_op: r.condition_op || '>=',
+        threshold_value: r.threshold_value !== null ? parseFloat(r.threshold_value) : ''
+      };
+    });
 
     const result = submissions.map(sub => ({
       ...sub,
@@ -281,8 +324,40 @@ exports.saveSheet2Remarks = async (req, res) => {
 // GET /api/evaluation/grading-parameters
 exports.getGradingParameters = async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM Dofa_grading_parameters ORDER BY threshold_value DESC');
-    res.json({ success: true, parameters: rows });
+    await ensureGradingParametersColumns();
+    const [rows] = await db.query(`
+      SELECT id, min_score, max_score, grade, condition_op, threshold_value
+      FROM Dofa_grading_parameters
+      ORDER BY COALESCE(min_score, threshold_value) DESC, id ASC
+    `);
+
+    const parameters = rows.map(r => {
+      let min = r.min_score !== null && r.min_score !== undefined ? parseFloat(r.min_score) : null;
+      let max = r.max_score !== null && r.max_score !== undefined ? parseFloat(r.max_score) : null;
+
+      if (min === null && max === null && r.threshold_value !== null && r.threshold_value !== undefined) {
+        const tv = parseFloat(r.threshold_value);
+        if (r.condition_op === '>' || r.condition_op === '>=') {
+          min = tv;
+        } else if (r.condition_op === '<' || r.condition_op === '<=') {
+          max = tv;
+        } else if (r.condition_op === '=') {
+          min = tv;
+          max = tv;
+        }
+      }
+
+      return {
+        id: r.id,
+        min_score: min !== null ? min : '',
+        max_score: max !== null ? max : '',
+        grade: r.grade || '',
+        condition_op: r.condition_op || '>=',
+        threshold_value: r.threshold_value !== null ? parseFloat(r.threshold_value) : ''
+      };
+    });
+
+    res.json({ success: true, parameters });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -291,19 +366,39 @@ exports.getGradingParameters = async (req, res) => {
 // POST /api/evaluation/grading-parameters
 exports.saveGradingParameters = async (req, res) => {
   try {
+    await ensureGradingParametersColumns();
     const academicYear = await getTargetAcademicYear();
     if (await isSessionFinalLocked(academicYear)) {
       return res.status(423).json({ success: false, message: `Session ${academicYear} is final-locked. Grading parameters cannot be modified.` });
     }
 
-    const { parameters } = req.body; // Array of {condition_op, threshold_value, grade}
+    const { parameters } = req.body; // Array of {min_score, max_score, grade}
     
     // Simple approach: Delete all and re-insert
     await db.query('DELETE FROM Dofa_grading_parameters');
     
     if (parameters && parameters.length > 0) {
-      const values = parameters.map(p => [p.condition_op, p.threshold_value, p.grade]);
-      await db.query('INSERT INTO Dofa_grading_parameters (condition_op, threshold_value, grade) VALUES ?', [values]);
+      const values = parameters
+        .filter(p => p && p.grade && String(p.grade).trim() !== '')
+        .map(p => {
+          const rawMin = p.min_score !== undefined && p.min_score !== '' && p.min_score !== null ? parseFloat(p.min_score) : null;
+          const rawMax = p.max_score !== undefined && p.max_score !== '' && p.max_score !== null ? parseFloat(p.max_score) : null;
+          const grade = String(p.grade).trim();
+          const condition_op = p.condition_op || (rawMin !== null && rawMax === null ? '>=' : (rawMax !== null && rawMin === null ? '<=' : 'range'));
+          const threshold_value = rawMin !== null ? rawMin : (rawMax !== null ? rawMax : (parseFloat(p.threshold_value) || 0));
+
+          return [
+            rawMin,
+            rawMax,
+            grade,
+            condition_op,
+            threshold_value
+          ];
+        });
+
+      if (values.length > 0) {
+        await db.query('INSERT INTO Dofa_grading_parameters (min_score, max_score, grade, condition_op, threshold_value) VALUES ?', [values]);
+      }
     }
     
     res.json({ success: true, message: 'Parameters saved' });
@@ -345,32 +440,49 @@ exports.applyGrading = async (req, res) => {
     `, [academicYear]);
 
     // 2. Fetch parameters
-    const [params] = await db.query('SELECT * FROM Dofa_grading_parameters ORDER BY threshold_value DESC');
+    await ensureGradingParametersColumns();
+    const [params] = await db.query(`
+      SELECT * FROM Dofa_grading_parameters 
+      ORDER BY COALESCE(min_score, threshold_value) DESC, id ASC
+    `);
 
     if (params.length === 0) {
       return res.status(400).json({ success: false, message: 'No grading parameters defined' });
     }
 
-    // 3. Apply logic for each submission and always persist the latest grade.
-    //    This clears stale legacy grades (e.g., removed AB) when no rule matches.
+    // 3. Apply range logic for each submission and always persist the latest grade.
+    //    This clears stale legacy grades when no rule matches.
     for (const s of scores) {
       const ts = parseFloat(s.total_score);
       let assignedGrade = '';
 
       for (const p of params) {
-        const threshold = parseFloat(p.threshold_value);
         let match = false;
-        switch (p.condition_op) {
-          case '>': match = ts > threshold; break;
-          case '<': match = ts < threshold; break;
-          case '>=': match = ts >= threshold; break;
-          case '<=': match = ts <= threshold; break;
-          case '=': match = ts === threshold; break;
-          default: break;
+        const hasMin = p.min_score !== null && p.min_score !== undefined && p.min_score !== '' && !isNaN(parseFloat(p.min_score));
+        const hasMax = p.max_score !== null && p.max_score !== undefined && p.max_score !== '' && !isNaN(parseFloat(p.max_score));
+
+        if (hasMin || hasMax) {
+          const minVal = hasMin ? parseFloat(p.min_score) : -Infinity;
+          const maxVal = hasMax ? parseFloat(p.max_score) : Infinity;
+          const lower = Math.min(minVal, maxVal);
+          const upper = Math.max(minVal, maxVal);
+
+          match = ts >= lower && ts <= upper;
+        } else if (p.threshold_value !== null && p.threshold_value !== undefined && p.threshold_value !== '') {
+          const threshold = parseFloat(p.threshold_value);
+          switch (p.condition_op) {
+            case '>': match = ts > threshold; break;
+            case '<': match = ts < threshold; break;
+            case '>=': match = ts >= threshold; break;
+            case '<=': match = ts <= threshold; break;
+            case '=': match = ts === threshold; break;
+            default: break;
+          }
         }
+
         if (match) {
           assignedGrade = p.grade;
-          break; // Stop at first match (since they are ordered)
+          break; // Stop at first match (since they are ordered descending)
         }
       }
 

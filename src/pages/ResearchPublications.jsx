@@ -1438,7 +1438,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               rows="6"
               value={entry.details || ''}
               onChange={(e) => updateConferenceEntryField(index, 'details', e.target.value)}
-              placeholder="Author's Name, Paper Title, Conference Name, Abbreviation of Conference, Publication Agency, City, State, Country etc."
+              placeholder="Author's Name, Paper Title, Conference Name, Abbreviation of Conference, Organiser, City, State, Country etc."
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -1541,7 +1541,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               rows="4"
               value={entry.details}
               onChange={(e) => updateBookEntryField(index, 'details', e.target.value)}
-              placeholder="Author's Name, Title of Book, Publication Agency , Year of Publication, Pages (From - To)"
+              placeholder="Author's Name, Title of Book, Organiser, Year of Publication, Pages (From - To)"
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -1682,7 +1682,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               rows="4"
               value={entry.details}
               onChange={(e) => updateBookEditedEntryField(index, 'details', e.target.value)}
-              placeholder="Author's Name, Title of Textbook, Publication Agency , Year of Publication, Publisher Address ( City , State , Country)"
+              placeholder="Author's Name, Title of Textbook, Organiser, Year of Publication, Publisher Address ( City , State , Country)"
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -1823,7 +1823,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
               rows="4"
               value={entry.details}
               onChange={(e) => updateTextbookEntryField(index, 'details', e.target.value)}
-              placeholder="Author's Name, Title of Textbook, Publication Agency , Year of Publication, Publisher's Address ( City , State , Country)"
+              placeholder="Author's Name, Title of Textbook, Organiser, Year of Publication, Publisher's Address ( City , State , Country)"
               style={{
                 width: '100%',
                 padding: '0.75rem',

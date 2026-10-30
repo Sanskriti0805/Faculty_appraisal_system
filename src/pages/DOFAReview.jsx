@@ -170,14 +170,14 @@ const PubDetailCard = ({ pub }) => {
       {isJournal && field('Journal', pub?.journal_name, true)}
       {isConference && field('Conference', pub?.conference_name, true)}
       {isBookChapter && optionalField('Book', pub?.title_of_book || pub?.book_title, true)}
-      {(isBook || isBookEdited) && optionalField('Publisher / Agency', pub?.publisher || pub?.publication_agency)}
-      {isBookChapter && optionalField('Publisher / Agency', pub?.publisher || pub?.publication_agency)}
+      {(isBook || isBookEdited) && optionalField('Publisher / Organiser', pub?.publisher || pub?.publication_agency)}
+      {isBookChapter && optionalField('Publisher / Organiser', pub?.publisher || pub?.publication_agency)}
       {isConference && optionalField('Abbreviation', pub?.abbreviation)}
       {isConference && field('Conference Type', pub?.type_of_conference)}
       {isConference && field('Date From', pub?.date_from)}
       {isConference && field('Date To', pub?.date_to)}
       {isConference && optionalField('Venue', venue)}
-      {isConference && optionalField('Publication Agency', pub?.publication_agency)}
+      {isConference && optionalField('Organiser', pub?.publication_agency)}
       {isJournal && optionalField('Volume', pub?.volume)}
       {(isJournal || isConference || isBookChapter) && optionalField('Issue / Pages', issuePages)}
       {(isJournal || isBook || isBookEdited || isBookChapter) && optionalField('ISSN / ISBN', pub?.issn || pub?.isbn)}

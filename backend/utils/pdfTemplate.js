@@ -141,7 +141,7 @@ const COL = {
     { key: 'city',                label: 'City'           },
     { key: 'state',               label: 'State'          },
     { key: 'country',             label: 'Country'        },
-    { key: 'publication_agency',  label: 'Publisher'      },
+    { key: 'publication_agency',  label: 'Publisher / Organiser' },
     { key: 'title_of_book',       label: 'Book Title'     },
     { key: 'details',             label: 'Details'        },
     { key: 'status',              label: 'Status'         },

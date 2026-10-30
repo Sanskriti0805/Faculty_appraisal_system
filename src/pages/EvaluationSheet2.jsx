@@ -105,7 +105,7 @@ const EvaluationSheet2 = () => {
   const calculateStats = () => calcStats(null);
 
   const handleAddRule = () => {
-    setGradingParams([...gradingParams, { condition_op: '>', threshold_value: 0, grade: '' }]);
+    setGradingParams([...gradingParams, { min_score: '', max_score: '', grade: '' }]);
   };
 
   const handleRemoveRule = (index) => {
@@ -114,23 +114,53 @@ const EvaluationSheet2 = () => {
 
   const handleRuleChange = (index, field, value) => {
     const newParams = [...gradingParams];
-    newParams[index][field] = value;
+    newParams[index] = { ...newParams[index], [field]: value };
     setGradingParams(newParams);
   };
 
+  const validateParams = () => {
+    if (gradingParams.length === 0) {
+      showToast('Please add at least one grading range rule', 'error');
+      return false;
+    }
+    for (let i = 0; i < gradingParams.length; i++) {
+      const p = gradingParams[i];
+      if (!p.grade || !String(p.grade).trim()) {
+        showToast(`Please enter a grade for Rule ${i + 1}`, 'error');
+        return false;
+      }
+      const hasMin = p.min_score !== '' && p.min_score !== null && p.min_score !== undefined;
+      const hasMax = p.max_score !== '' && p.max_score !== null && p.max_score !== undefined;
+      if (!hasMin && !hasMax) {
+        showToast(`Please enter at least a Min or Max score for Rule ${i + 1}`, 'error');
+        return false;
+      }
+      if (hasMin && hasMax && parseFloat(p.min_score) > parseFloat(p.max_score)) {
+        showToast(`Rule ${i + 1}: Min score cannot be greater than Max score`, 'error');
+        return false;
+      }
+    }
+    return true;
+  };
+
   const saveGradingParams = async () => {
+    if (!validateParams()) return false;
     try {
       await apiClient.post('/evaluation/grading-parameters', { parameters: gradingParams });
-      showToast('Grading parameters saved');
+      showToast('Grading range parameters saved');
+      return true;
     } catch {
       showToast('Error saving parameters', 'error');
+      return false;
     }
   };
 
   const applyGrading = async () => {
+    if (!validateParams()) return;
     try {
       setLoading(true);
-      await saveGradingParams();
+      const saved = await saveGradingParams();
+      if (!saved) return;
       const res = await apiClient.post('/evaluation/apply-grading');
       if (res.success) {
         showToast('Grading applied successfully');
@@ -154,7 +184,7 @@ const EvaluationSheet2 = () => {
         <td>${item.research_remarks || '-'}</td>
         <td>${item.research_marks || 0}</td>
         <td>${item.teaching_feedback || '-'}</td>
-        <td></td>
+        <td>${item.teaching_marks || 0}</td>
         <td>${item.overall_feedback || '-'}</td>
         <td>${item.total_score || 0}</td>
         <td><strong>${item.final_grade || '-'}</strong></td>
@@ -308,44 +338,70 @@ const EvaluationSheet2 = () => {
         ))}
       </div>
 
-      {/* Grading Config */}
+      {/* Grading Range Config */}
       <div className="eval2-grading-config">
-        <h2>Grading Parameters Configuration</h2>
-        <div className="grading-rules-list">
-          {gradingParams.map((param, idx) => (
-            <div key={idx} className="grading-rule-row">
-              <span>If Total Score</span>
-              <select
-                className="rule-select"
-                value={param.condition_op}
-                onChange={(e) => handleRuleChange(idx, 'condition_op', e.target.value)}
-              >
-                <option value=">">&gt;</option>
-                <option value=">=">&ge;</option>
-                <option value="<">&lt;</option>
-                <option value="<=">&le;</option>
-                <option value="=">=</option>
-              </select>
-              <input
-                type="number"
-                className="rule-input"
-                value={param.threshold_value}
-                onChange={(e) => handleRuleChange(idx, 'threshold_value', e.target.value)}
-              />
-              <span>then Grade</span>
-              <input
-                type="text"
-                className="grade-input"
-                placeholder="e.g. A"
-                value={param.grade}
-                onChange={(e) => handleRuleChange(idx, 'grade', e.target.value)}
-              />
-              <button className="remove-rule-btn" onClick={() => handleRemoveRule(idx)}>Remove</button>
-            </div>
-          ))}
+        <div className="grading-config-header">
+          <div>
+            <h2>Grading Range Configuration</h2>
+            <p className="grading-config-subtitle">Define score ranges to allocate grades to faculty submissions</p>
+          </div>
+          <div className="grading-header-actions">
+            <button type="button" className="add-rule-btn" onClick={handleAddRule}>+ Add Range Rule</button>
+            <button type="button" className="save-params-btn" onClick={saveGradingParams}>Save Rules</button>
+            <button type="button" className="apply-grading-btn" onClick={applyGrading}>Apply Grading to All</button>
+          </div>
         </div>
-        <button className="add-rule-btn" onClick={handleAddRule}>+ Add Rule</button>
-        <button className="apply-grading-btn" onClick={applyGrading}>Apply Grading to All</button>
+
+        <div className="grading-rules-list">
+          {gradingParams.length === 0 ? (
+            <div className="no-rules-message">No grading range rules defined. Click "+ Add Range Rule" to define score ranges.</div>
+          ) : (
+            gradingParams.map((param, idx) => (
+              <div key={idx} className="grading-rule-row">
+                <span className="rule-badge">Rule {idx + 1}</span>
+                <span className="rule-label">If Score Range:</span>
+                <div className="range-inputs-container">
+                  <input
+                    type="number"
+                    step="any"
+                    className="rule-input"
+                    placeholder="Min Score"
+                    value={param.min_score ?? ''}
+                    onChange={(e) => handleRuleChange(idx, 'min_score', e.target.value)}
+                    title="Minimum score (inclusive)"
+                  />
+                  <span className="range-to-text">to</span>
+                  <input
+                    type="number"
+                    step="any"
+                    className="rule-input"
+                    placeholder="Max Score"
+                    value={param.max_score ?? ''}
+                    onChange={(e) => handleRuleChange(idx, 'max_score', e.target.value)}
+                    title="Maximum score (inclusive)"
+                  />
+                </div>
+                <span className="rule-label rule-label-allocate">allocate Grade:</span>
+                <input
+                  type="text"
+                  className="grade-input"
+                  placeholder="e.g. A"
+                  value={param.grade || ''}
+                  onChange={(e) => handleRuleChange(idx, 'grade', e.target.value)}
+                  title="Grade to allocate for this range"
+                />
+                <button
+                  type="button"
+                  className="remove-rule-btn"
+                  onClick={() => handleRemoveRule(idx)}
+                  title="Remove this rule"
+                >
+                  &times; Remove
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Data Table */}

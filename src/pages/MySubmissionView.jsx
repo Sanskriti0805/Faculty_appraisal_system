@@ -534,9 +534,9 @@ const MySubmissionView = () => {
         {isConference && optionalField('Date From', pub.date_from)}
         {isConference && optionalField('Date To', pub.date_to)}
         {isConference && optionalField('Venue', venue, true)}
-        {isConference && optionalField('Publication Agency', pub.publication_agency)}
+        {isConference && optionalField('Organiser', pub.publication_agency)}
         {isBookChapter && optionalField('Book', pub.title_of_book || pub.book_title, true)}
-        {isMonograph && optionalField('Publisher / Agency', pub.publisher || pub.publication_agency, true)}
+        {isMonograph && optionalField('Publisher / Organiser', pub.publisher || pub.publication_agency, true)}
         {isJournal && optionalField('Volume', pub.volume)}
         {(isJournal || isConference || isBookChapter) && optionalField('Issue / Pages', issuePages)}
         {(isJournal || isConference || isMonograph) && optionalField('ISSN / ISBN', pub.issn || pub.isbn)}

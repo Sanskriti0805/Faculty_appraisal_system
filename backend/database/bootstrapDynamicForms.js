@@ -1,4 +1,4 @@
-﻿const db = require('../config/database');
+const db = require('../config/database');
 
 async function bootstrapDatabaseTables() {
   try {
@@ -132,8 +132,10 @@ async function bootstrapDatabaseTables() {
     await db.query(`
       CREATE TABLE IF NOT EXISTS Dofa_grading_parameters (
         id INT PRIMARY KEY AUTO_INCREMENT,
-        condition_op ENUM('>', '<', '>=', '<=', '=') NOT NULL,
-        threshold_value DECIMAL(10,2) NOT NULL,
+        min_score DECIMAL(10,2) NULL,
+        max_score DECIMAL(10,2) NULL,
+        condition_op VARCHAR(10) NULL,
+        threshold_value DECIMAL(10,2) NULL,
         grade VARCHAR(20) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -342,9 +344,71 @@ async function bootstrapDatabaseTables() {
         }
       }
     }
+
+    // Ensure rubric updates (splits Paper/Poster Presentation, updates marks)
+    await ensureRubricMigrations();
   } catch (error) {
     console.error('[ERROR] Database bootstrap error:', error.message);
     throw error;
+  }
+}
+
+async function ensureRubricMigrations() {
+  try {
+    const section = '6. Others';
+
+    const [combined] = await db.query(
+      "SELECT id FROM Dofa_rubrics WHERE section_name = ? AND sub_section = 'Paper/Poster Presentation' ORDER BY id LIMIT 1",
+      [section]
+    );
+    const [paper] = await db.query(
+      "SELECT id FROM Dofa_rubrics WHERE section_name = ? AND sub_section = 'Paper Presentation' LIMIT 1",
+      [section]
+    );
+    const [poster] = await db.query(
+      "SELECT id FROM Dofa_rubrics WHERE section_name = ? AND sub_section = 'Poster Presentation' LIMIT 1",
+      [section]
+    );
+
+    if (paper.length > 0) {
+      await db.query("UPDATE Dofa_rubrics SET max_marks = 5.00, data_source = 'research_publications' WHERE id = ?", [paper[0].id]);
+    } else if (combined.length > 0) {
+      await db.query(
+        "UPDATE Dofa_rubrics SET sub_section = 'Paper Presentation', max_marks = 5.00, data_source = 'research_publications' WHERE id = ?",
+        [combined[0].id]
+      );
+    }
+
+    if (poster.length > 0) {
+      await db.query("UPDATE Dofa_rubrics SET max_marks = 2.00, data_source = 'research_publications' WHERE id = ?", [poster[0].id]);
+    } else if (combined.length > 0 || paper.length > 0) {
+      await db.query(
+        "INSERT INTO Dofa_rubrics (section_name, sub_section, max_marks, scoring_type, data_source) VALUES (?, 'Poster Presentation', 2.00, 'manual', 'research_publications')",
+        [section]
+      );
+    }
+
+    // Ensure LUSIP/Mini Project in 2. Research Guidance
+    const [lusip] = await db.query(
+      "SELECT id FROM Dofa_rubrics WHERE section_name = '2. Research Guidance' AND (sub_section LIKE '%LUSIP%' OR sub_section LIKE '%Mini Project%')"
+    );
+    if (lusip.length === 0) {
+      await db.query(
+        "INSERT INTO Dofa_rubrics (section_name, sub_section, max_marks, scoring_type, per_unit_marks, data_source) VALUES (?, ?, ?, ?, ?, ?)",
+        ['2. Research Guidance', 'LUSIP/Mini Project', 1.00, 'manual', 1.00, 'courses_taught']
+      );
+    }
+
+    // Ensure Invited talks other cap to 8 points
+    await db.query(`
+      UPDATE Dofa_rubrics
+      SET sub_section = 'Invited talks: Other invited talks (up to a maximum of 8 points)'
+      WHERE section_name = '11. Talks and conferences'
+        AND sub_section = 'Invited talks: Other invited talks (up to a maximum of 5 points)'
+    `);
+  } catch (err) {
+    // If Dofa_rubrics doesn't exist yet, continue
+    console.warn('Note on rubric migration:', err.message);
   }
 }
 
