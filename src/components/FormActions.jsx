@@ -8,7 +8,7 @@ import { showConfirm } from '../utils/appDialogs';
 
 const SECTION_GROUP_MEMBERS = {
   teaching_learning: ['courses_taught', 'new_courses', 'courseware', 'teaching_innovation'],
-  research_development: ['research_publications', 'research_grants', 'patents', 'technology_transfer', 'paper_review', 'talks_and_conferences', 'awards_honours', 'consultancy', 'continuing_education'],
+  research_development: ['research_publications', 'research_grants', 'patents', 'phd_thesis_review', 'technology_transfer', 'paper_review', 'talks_and_conferences', 'awards_honours', 'consultancy', 'continuing_education'],
   other_institutional_activities: ['institutional_contributions', 'other_activities', 'research_plan', 'teaching_plan']
 };
 
@@ -87,6 +87,7 @@ const FormActions = ({ onSave, currentPath, loading, showPrevious = true, nextLa
     '/patents': 'patents',
     '/technology-transfer': 'technology_transfer',
     '/paper-review': 'paper_review',
+    '/phd-thesis-review': 'phd_thesis_review',
     '/talks-and-conferences': 'talks_and_conferences',
     '/conference-sessions': 'conference_sessions',
     '/keynotes-talks': 'keynotes_talks',

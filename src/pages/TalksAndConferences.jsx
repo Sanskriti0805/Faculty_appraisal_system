@@ -58,6 +58,7 @@ const TalksAndConferences = () => {
     eventMode: 'Offline', // Cat 3
     cat2Category: 'Keynote', // Keynote/Seminar/Invited Talk for Cat 2
     cat2SubCategory: 'FDP/Conference', // FDP/Conference vs Other for Cat 2
+    talkLevel: 'National', // National vs International (scores 10 for an invited talk)
     title: '',
     organizer: '',
     role: CATEGORY_1_ROLES[0],
@@ -159,6 +160,7 @@ const TalksAndConferences = () => {
             mainCategory: '2',
             cat2Category: row.event_type || 'Keynote',
             cat2SubCategory: row.audience_type || 'Other',
+            talkLevel: row.talk_level || 'National',
             title: row.title || '',
             organizer: row.event_name || '',
             date: row.date ? String(row.date).slice(0, 10) : '',
@@ -330,6 +332,7 @@ const TalksAndConferences = () => {
           payload.append('event_name', item.organizer);
           payload.append('event_type', item.cat2Category);
           payload.append('audience_type', item.cat2SubCategory);
+          payload.append('talk_level', item.cat2Category === 'Invited Talk' ? (item.talkLevel || 'National') : '');
           payload.append('location', formatVenue(item.venue));
           payload.append('date', item.date || item.dates?.[0] || '');
           return fetch(`${API_BASE_URL}/activities/keynotes-talks`, {
@@ -479,6 +482,18 @@ const TalksAndConferences = () => {
                   </select>
                 </div>
               </div>
+
+              {formData.cat2Category === 'Invited Talk' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Invited Talk Level</label>
+                    <select name="talkLevel" value={formData.talkLevel} onChange={handleInputChange}>
+                      <option value="National">National</option>
+                      <option value="International">International</option>
+                    </select>
+                  </div>
+                </div>
+              )}
               
               <div className="form-row">
                 <div className="form-group">
@@ -568,7 +583,7 @@ const TalksAndConferences = () => {
                         {item.title}
                       </div>
                       <div style={{ fontSize: '0.85rem', color: '#4b5563', marginBottom: '0.15rem' }}>
-                        {item.mainCategory === '2' ? `Type: ${item.cat2Category} (${item.cat2SubCategory})` : `Event: ${item.eventType} | Role: ${item.role}`} | Organizer: {item.organizer}
+                        {item.mainCategory === '2' ? `Type: ${item.cat2Category}${item.cat2Category === 'Invited Talk' && item.talkLevel ? ` - ${item.talkLevel}` : ''} (${item.cat2SubCategory})` : `Event: ${item.eventType} | Role: ${item.role}`} | Organizer: {item.organizer}
                       </div>
                       <div style={{ fontSize: '0.85rem', color: '#4b5563', marginBottom: '0.15rem' }}>Venue: {formatVenue(item.venue) || 'N/A'}</div>
                       <div style={{ fontSize: '0.85rem', color: '#4b5563' }}>

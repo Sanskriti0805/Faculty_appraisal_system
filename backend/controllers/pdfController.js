@@ -180,7 +180,7 @@ const buildSubmissionHtml = async (id, user) => {
     // -- 2. Parallel data fetch --------------------------------------------
     const [
       facultyInfo, courses, publications, grants, patents, awards,
-      newCourses, proposals, paperReviews, techTransfer,
+      newCourses, proposals, paperReviews, phdThesisReviews, techTransfer,
       conferenceSessions, keynotesTalks, consultancy,
       teachingInnovation, institutionalContributions, goals,
       courseware, continuingEducation, otherActivities, researchPlan, teachingPlan,
@@ -196,6 +196,7 @@ const buildSubmissionHtml = async (id, user) => {
       querySessionRows('new_courses', fid, sid),
       querySessionRows('submitted_proposals', fid, sid),
       querySessionRows('paper_reviews', fid, sid),
+      querySessionRows('phd_thesis_reviews', fid, sid),
       querySessionRows('technology_transfer', fid, sid),
       querySessionRows('conference_sessions', fid, sid),
       querySessionRows('keynotes_talks', fid, sid),
@@ -215,7 +216,7 @@ const buildSubmissionHtml = async (id, user) => {
     const html = generateHtml({
       submission: sub,
       facultyInfo, courses, publications, grants, patents, awards,
-      newCourses, proposals, paperReviews, techTransfer,
+      newCourses, proposals, paperReviews, phdThesisReviews, techTransfer,
       conferenceSessions, keynotesTalks, consultancy,
       teachingInnovation, institutionalContributions, goals,
       courseware, continuingEducation, otherActivities, researchPlan, teachingPlan,

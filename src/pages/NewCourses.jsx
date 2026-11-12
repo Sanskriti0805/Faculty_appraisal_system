@@ -41,7 +41,7 @@ const NewCourses = () => {
   const [persistedCourseIds, setPersistedCourseIds] = useState([])
   
   const [courses, setCourses] = useState([
-    { id: 1, courseName: '', courseCode: '', levelType: '', program: '', level: '', remarks: '', cifFile: null }
+    { id: 1, courseName: '', courseCode: '', levelType: '', program: '', level: '', remarks: '', isCoordinator: 'No', numSections: '', numStudents: '', cifFile: null }
   ])
 
   const levelTypeOptions = ['UG', 'PG', 'Doctoral']
@@ -66,6 +66,9 @@ const NewCourses = () => {
           program: row.program || '',
           level: row.level || '',
           remarks: row.remarks || '',
+          isCoordinator: row.is_coordinator === 'Yes' ? 'Yes' : 'No',
+          numSections: row.num_sections ?? '',
+          numStudents: row.num_students ?? '',
           cifFile: null,
           cif_file: row.cif_file || null
         })
@@ -92,6 +95,9 @@ const NewCourses = () => {
       program: '',
       level: '',
       remarks: '',
+      isCoordinator: 'No',
+      numSections: '',
+      numStudents: '',
       cifFile: null
     }
     setCourses([...courses, newCourse])
@@ -111,6 +117,9 @@ const NewCourses = () => {
            result.level = value === 'Doctoral' ? '7' : ''
         } else if (field === 'program') {
            result.level = ''
+        } else if (field === 'isCoordinator' && value !== 'Yes') {
+           result.numSections = ''
+           result.numStudents = ''
         }
         return result
       }
@@ -149,6 +158,16 @@ const NewCourses = () => {
       return false
     }
 
+    // Validate: coordinators must say how many sections and students they handled
+    const missingCoordinatorDetails = rowsWithData.find(course =>
+      course.isCoordinator === 'Yes' &&
+      !(Number(course.numSections) >= 1 && Number(course.numStudents) >= 1)
+    )
+    if (missingCoordinatorDetails) {
+      window.appToast('Please enter the number of sections and number of students for every course where you served as Course Coordinator.')
+      return false
+    }
+
     // Validate: if CIF is uploaded, details must be filled
     const rowsWithCIF = courses.filter(course => course.cifFile || course.cif_file)
     const missingDetails = rowsWithCIF.find(course => !hasCourseInputData(course))
@@ -174,6 +193,9 @@ const NewCourses = () => {
         course_code: course.courseCode,
         level: course.level,
         remarks: course.remarks,
+        is_coordinator: course.isCoordinator === 'Yes' ? 'Yes' : 'No',
+        num_sections: course.isCoordinator === 'Yes' ? course.numSections : '',
+        num_students: course.isCoordinator === 'Yes' ? course.numStudents : '',
         cif_file: course.cifFile,
         existing_cif_file: course.cif_file || null
       }))
@@ -239,6 +261,7 @@ const NewCourses = () => {
                   <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '140px' }}>Program <span style={{ color: 'red' }}>*</span></th>
                   <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '100px' }}>Level <span style={{ color: 'red' }}>*</span></th>
                   <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '150px' }}>Remarks <span style={{ color: 'red' }}>*</span></th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '190px' }}>Did you serve as Course Coordinator?</th>
                   <th style={{ padding: '0.75rem', textAlign: 'left', minWidth: '150px' }}>Upload CIF <span style={{ color: 'red' }}>*</span></th>
                   <th style={{ padding: '0.75rem', textAlign: 'center', width: '60px' }}>Action</th>
                 </tr>
@@ -311,6 +334,36 @@ const NewCourses = () => {
                         placeholder="Remarks"
                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
                       />
+                    </td>
+                    <td style={{ padding: '0.75rem' }}>
+                      <select
+                        value={course.isCoordinator || 'No'}
+                        onChange={(e) => updateCourse(course.id, 'isCoordinator', e.target.value)}
+                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                      >
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                      </select>
+                      {course.isCoordinator === 'Yes' && (
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                          <input
+                            type="number"
+                            min="1"
+                            value={course.numSections}
+                            onChange={(e) => updateCourse(course.id, 'numSections', e.target.value)}
+                            placeholder="No. of sections"
+                            style={{ width: '50%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                          />
+                          <input
+                            type="number"
+                            min="1"
+                            value={course.numStudents}
+                            onChange={(e) => updateCourse(course.id, 'numStudents', e.target.value)}
+                            placeholder="No. of students"
+                            style={{ width: '50%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                          />
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '0.75rem' }}>
                       <label style={{ 

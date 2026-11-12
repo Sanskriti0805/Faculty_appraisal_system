@@ -121,6 +121,9 @@ const COL = {
     { key: 'level',        label: 'Level'       },
     { key: 'program',      label: 'Program'     },
     { key: 'remarks',      label: 'Remarks'     },
+    { key: 'is_coordinator', label: 'Course Coordinator' },
+    { key: 'num_sections',   label: 'Sections'    },
+    { key: 'num_students',   label: 'Students'    },
     { key: 'cif_file',     label: 'CIF File'    },
   ],
   publications: [
@@ -183,6 +186,11 @@ const COL = {
     { key: 'number_of_papers',  label: 'No. of Papers'        },
     { key: 'month_of_review',   label: 'Month of Review'      },
   ],
+  phdThesisReviews: [
+    { key: 'review_type',      label: 'Type'                },
+    { key: 'institution_name', label: 'Name of Institution' },
+    { key: 'evidence_file',    label: 'Evidence'            },
+  ],
   techTransfer: [
     { key: 'title',       label: 'Title'        },
     { key: 'description', label: 'Description'  },
@@ -202,6 +210,8 @@ const COL = {
     { key: 'event_name',    label: 'Event'         },
     { key: 'date',          label: 'Date'          },
     { key: 'location',      label: 'Location'      },
+    { key: 'event_type',    label: 'Talk Type'     },
+    { key: 'talk_level',    label: 'Scope'         },
     { key: 'audience_type', label: 'Audience Type' },
   ],
   awards: [
@@ -326,7 +336,7 @@ const generateHtml = (data) => {
   const {
     submission = {}, facultyInfo = {},
     courses = [], publications = [], grants = [], patents = [], awards = [],
-    newCourses = [], proposals = [], paperReviews = [], techTransfer = [],
+    newCourses = [], proposals = [], paperReviews = [], phdThesisReviews = [], techTransfer = [],
     conferenceSessions = [], keynotesTalks = [], consultancy = [],
     teachingInnovation = [], institutionalContributions = [], goals = [],
     courseware, researchPlan, teachingPlan, continuingEducation, otherActivities,
@@ -504,6 +514,7 @@ ${section('Form A — Research Grants',             curatedTable(grants,        
 ${section('Form A — Submitted Proposals',         curatedTable(proposals,                COL.proposals))}
 ${section('Form A — Patents',                     curatedTable(patents,                  COL.patents))}
 ${section('Form A — Paper Reviews',               curatedTable(paperReviews,             COL.paperReviews))}
+${section('Form A — PhD Thesis Reviewer/Examiner', curatedTable(phdThesisReviews,         COL.phdThesisReviews))}
 ${section('Form A — Technology Transfer',         curatedTable(techTransfer,             COL.techTransfer))}
 ${section('Form A — Conference Sessions',         curatedTable(conferenceSessions,       COL.conferences))}
 ${section('Form A — Keynotes & Invited Talks',    curatedTable(keynotesTalks,            COL.keynotes))}

@@ -33,6 +33,18 @@ const CONFERENCE_SUBTYPES = [
   'Poster Presentation'
 ]
 
+// Conference paper publications are scored by the category of the conference (rubric 5. Conference).
+const CONFERENCE_TIERS = ['A*', 'A', 'Tier 1 (B/C)', 'Tier 2', 'Tier 3']
+
+// Older rows kept the tier in sub_type ("Tier 1", "Tier 2", "Tier 3") instead of type_of_conference.
+const legacyConferenceTier = (subType) => {
+  const text = String(subType || '').toLowerCase()
+  if (/tier\s*1/.test(text)) return 'Tier 1 (B/C)'
+  if (/tier\s*2/.test(text)) return 'Tier 2'
+  if (/tier\s*3/.test(text)) return 'Tier 3'
+  return ''
+}
+
 // Older conference rows stored a tier (Tier 1/2/3) in sub_type; those are paper publications.
 const resolveConferenceSubType = (subType) => (
   CONFERENCE_SUBTYPES.includes(subType) ? subType : 'Conference Paper Publication'
@@ -231,7 +243,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         country: data.country || '',
         publicationAgency: data.publication_agency || '',
         details: data.details || data.title || '',
-        typeOfConference: data.type_of_conference || '',
+        typeOfConference: data.type_of_conference || legacyConferenceTier(data.sub_type),
         dateFrom: normalizeDateInput(data.date_from),
         dateTo: normalizeDateInput(data.date_to),
         evidence_file: data.evidence_file
@@ -371,7 +383,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             country: entry.country || '',
             publicationAgency: entry.publication_agency || '',
             details: entry.details || entry.title || '',
-            typeOfConference: entry.type_of_conference || '',
+            typeOfConference: entry.type_of_conference || legacyConferenceTier(entry.sub_type),
             dateFrom: normalizeDateInput(entry.date_from),
             dateTo: normalizeDateInput(entry.date_to),
             evidenceFile: null,
@@ -865,6 +877,8 @@ const ResearchPublications = ({ initialData, readOnly }) => {
         window.appToast('Journal drafts saved successfully! Review your entries in the summary list below.')
         return false
       } else if (publicationType === 'Conference') {
+        // Validate every entry before saving any of them, so a rejected entry does not leave duplicates behind.
+        const conferenceEntriesToSave = []
         for (const entry of conferenceEntries) {
           const hasType = Boolean(entry.typeOfConference)
           const hasCategory = Boolean(entry.category)
@@ -879,12 +893,18 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             window.appToast('Please provide publication details (including author names) for the conference entry.')
             return false
           }
+          if (conferenceSubType === 'Conference Paper Publication' && !hasType) {
+            window.appToast('Please select the conference category (A*, A, Tier 1 (B/C), Tier 2 or Tier 3) for the conference paper entry.')
+            return false
+          }
           if (!hasEvidence) {
             window.appToast('Please upload evidence for conference paper entry.')
             return false
           }
 
-          const entryData = buildConferencePayload(entry, evidencePayload)
+          conferenceEntriesToSave.push(buildConferencePayload(entry, evidencePayload))
+        }
+        for (const entryData of conferenceEntriesToSave) {
           await createAndTrack(entryData)
         }
         await deleteIgnoringNotFound(publicationsService.deletePublication, idsToDelete)
@@ -1234,6 +1254,7 @@ const ResearchPublications = ({ initialData, readOnly }) => {
   )
   const canAppendConference = (entry) => (
     hasTextValue(entry?.details) &&
+    (conferenceSubType !== 'Conference Paper Publication' || Boolean(entry?.typeOfConference)) &&
     hasEvidenceForEntry(entry)
   )
   const canAppendBookChapter = (entry) => (
@@ -1452,6 +1473,30 @@ const ResearchPublications = ({ initialData, readOnly }) => {
             />
           </div>
 
+          {conferenceSubType === 'Conference Paper Publication' && (
+            <div className="form-field-vertical" style={{ marginBottom: '1.5rem' }}>
+              <label>Conference Category <span style={{ color: 'red' }}>*</span></label>
+              <select
+                value={entry.typeOfConference || ''}
+                onChange={(e) => updateConferenceEntryField(index, 'typeOfConference', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: readOnly ? 'none' : '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  background: readOnly ? 'transparent' : 'white'
+                }}
+                disabled={readOnly}
+              >
+                <option value="">Select category</option>
+                {CONFERENCE_TIERS.map((tier) => (
+                  <option key={tier} value={tier}>{tier}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {readOnly ? (
             entry.evidence_file && (
               <div className="form-field-vertical" style={{ marginTop: '1.5rem' }}>
@@ -1516,6 +1561,32 @@ const ResearchPublications = ({ initialData, readOnly }) => {
           )}
         </div>
       ))}
+
+      {!readOnly && (
+        <button
+          onClick={addConferenceEntry}
+          disabled={!(conferenceEntries.length > 0 && canAppendConference(conferenceEntries[conferenceEntries.length - 1]))}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: '#5cb85c',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: (conferenceEntries.length > 0 && canAppendConference(conferenceEntries[conferenceEntries.length - 1])) ? 'pointer' : 'not-allowed',
+            opacity: (conferenceEntries.length > 0 && canAppendConference(conferenceEntries[conferenceEntries.length - 1])) ? 1 : 0.6,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            marginTop: '1rem',
+            marginBottom: '2rem'
+          }}
+        >
+          <Plus size={18} />
+          Add Another Conference Entry
+        </button>
+      )}
     </>
   )
 

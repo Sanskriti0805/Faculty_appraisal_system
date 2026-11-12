@@ -7,6 +7,8 @@ const { requireSectionEditAccess } = require('../middleware/submissionEditGuard'
 
 router.post('/paper-reviews', authenticate, uploadSingle('evidence_file'), requireSectionEditAccess('paper_review'), activityController.createPaperReview);
 router.delete('/paper-reviews/:id', authenticate, requireSectionEditAccess('paper_review'), activityController.deletePaperReview);
+router.post('/phd-thesis-reviews', authenticate, uploadSingle('evidence_file'), requireSectionEditAccess('phd_thesis_review'), activityController.createPhdThesisReview);
+router.delete('/phd-thesis-reviews/:id', authenticate, requireSectionEditAccess('phd_thesis_review'), activityController.deletePhdThesisReview);
 router.post('/tech-transfer', authenticate, uploadSingle('evidence_file'), requireSectionEditAccess('technology_transfer'), activityController.createTechTransfer);
 router.delete('/tech-transfer/:id', authenticate, requireSectionEditAccess('technology_transfer'), activityController.deleteTechTransfer);
 router.post('/conference-sessions', authenticate, uploadSingle('evidence_file'), requireSectionEditAccess('conference_sessions'), activityController.createConferenceSession);

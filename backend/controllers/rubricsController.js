@@ -69,7 +69,7 @@ exports.recalculateScores = async (req, res) => {
 // GET all rubrics
 exports.getAllRubrics = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM Dofa_rubrics ORDER BY id ASC');
+        const [rows] = await db.query(`SELECT * FROM Dofa_rubrics ORDER BY CASE WHEN section_name REGEXP '^[0-9]+[.]' THEN CAST(SUBSTRING_INDEX(section_name, '.', 1) AS UNSIGNED) ELSE 1000000 END, id ASC`);
         const data = rows.map((row) => ({
             ...row,
             rule_config: parseRuleConfig(row.rule_config)

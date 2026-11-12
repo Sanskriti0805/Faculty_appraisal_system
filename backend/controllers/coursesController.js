@@ -347,10 +347,22 @@ exports.createNewCourse = async (req, res) => {
       level,
       remarks,
       existing_cif_file,
+      is_coordinator,
+      num_sections,
+      num_students,
       status = 'draft'
     } = req.body;
     const sessionId = await getCurrentSessionWindow(db);
     const cif_file = req.file ? req.file.filename : (existing_cif_file || null);
+
+    // Coordinator details only apply when the faculty answered "Yes".
+    const isCoordinator = String(is_coordinator || '').trim().toLowerCase() === 'yes' ? 'Yes' : 'No';
+    const toCount = (value) => {
+      const parsed = parseInt(value, 10);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    };
+    const sectionsCount = isCoordinator === 'Yes' ? toCount(num_sections) : null;
+    const studentsCount = isCoordinator === 'Yes' ? toCount(num_students) : null;
 
     const hasMeaningfulPayload = Boolean(
       hasText(level_type) ||
@@ -376,8 +388,8 @@ exports.createNewCourse = async (req, res) => {
     }
 
     const [result] = await db.query(
-      'INSERT INTO new_courses (faculty_id, session_id, level_type, program, course_name, course_code, level, remarks, cif_file, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [facultyInfoId, sessionId, level_type, program, course_name, course_code, level, remarks, cif_file, status]
+      'INSERT INTO new_courses (faculty_id, session_id, level_type, program, course_name, course_code, level, remarks, cif_file, is_coordinator, num_sections, num_students, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [facultyInfoId, sessionId, level_type, program, course_name, course_code, level, remarks, cif_file, isCoordinator, sectionsCount, studentsCount, status]
     );
 
     res.status(201).json({

@@ -463,7 +463,7 @@ const DofaReview = () => {
 
   const {
     submission, facultyInfo, courses, publications, grants, patents,
-    awards, newCourses, proposals, paperReviews, techTransfer,
+    awards, newCourses, proposals, paperReviews, phdThesisReviews, techTransfer,
     conferenceSessions, keynotesTalks, consultancy, teachingInnovation,
     institutionalContributions, courseware, continuingEducation,
     otherActivities, researchPlan, teachingPlan, goals,
@@ -886,6 +886,7 @@ const DofaReview = () => {
                           <th>Program</th>
                           <th>Level</th>
                           <th>Remarks</th>
+                          <th>Course Coordinator</th>
                           <th style={{ textAlign: 'center' }}>CIF</th>
                         </tr>
                       </thead>
@@ -898,6 +899,11 @@ const DofaReview = () => {
                             <td>{course.program || '-'}</td>
                             <td>{course.level || '-'}</td>
                             <td>{course.remarks || '-'}</td>
+                            <td>
+                              {course.is_coordinator === 'Yes'
+                                ? `Yes (${course.num_sections ?? '-'} sections, ${course.num_students ?? '-'} students)`
+                                : 'No'}
+                            </td>
                             <td className="cell-center">{renderFileLink(course.cif_file) || '-'}</td>
                           </tr>
                         ))}
@@ -999,6 +1005,37 @@ const DofaReview = () => {
                   <p className="no-data" style={{ padding: '0.75rem 1rem' }}>No paper reviews data available.</p>
                 )}
               </CollapsibleSection>
+
+              <CollapsibleSection
+                title="PhD Thesis Reviewer/Examiner"
+                count={phdThesisReviews?.length || 0}
+                defaultOpen={true}
+              >
+                {(phdThesisReviews && phdThesisReviews.length > 0) ? (
+                  <div className="table-responsive">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Type</th>
+                          <th>Name of Institution</th>
+                          <th style={{ textAlign: 'center' }}>Evidence</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {phdThesisReviews.map((pt, i) => (
+                          <tr key={pt.id || i}>
+                            <td>{pt.review_type || '-'}</td>
+                            <td className="cell-title">{pt.institution_name || '-'}</td>
+                            <td className="cell-center">{renderFileLink(pt.evidence_file) || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="no-data" style={{ padding: '0.75rem 1rem' }}>No PhD thesis reviewer/examiner data available.</p>
+                )}
+              </CollapsibleSection>
             </div>
           )}
 
@@ -1047,6 +1084,7 @@ const DofaReview = () => {
                           <th>Event</th>
                           <th>Title</th>
                           <th>Type</th>
+                          <th>Scope</th>
                           <th>Audience</th>
                           <th style={{ textAlign: 'center' }}>Evidence</th>
                         </tr>
@@ -1057,6 +1095,7 @@ const DofaReview = () => {
                             <td className="cell-title">{k.event_name}</td>
                             <td className="cell-title">{k.title}</td>
                             <td>{k.event_type || '-'}</td>
+                            <td>{k.talk_level || '-'}</td>
                             <td>{k.audience_type || '-'}</td>
                             <td className="cell-center">{renderFileLink(k.evidence_file) || '-'}</td>
                           </tr>

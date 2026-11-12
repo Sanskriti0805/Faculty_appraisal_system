@@ -211,6 +211,13 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear, options 
     const contribs         = await byFacultyIdsAndSession('institutional_contributions');
     const teachingInnovation = await byFacultyIdsAndSession('teaching_innovation');
 
+    let phdThesisReviews = [];
+    try {
+      phdThesisReviews = await byFacultyIdsAndSession('phd_thesis_reviews');
+    } catch (_) {
+      phdThesisReviews = [];
+    }
+
     // Optional data sources: keep scoring resilient if these tables are not present yet.
     let guidance = [];
     try {
@@ -289,6 +296,51 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear, options 
       const match = text.match(/(?:maximum|max)\s+of\s+([0-9]+(?:\.[0-9]+)?)/)
         || text.match(/(?:maximum|max)\s+([0-9]+(?:\.[0-9]+)?)\s+points/);
       return match ? Number(match[1]) : null;
+    };
+    // Project value ranges in rubric labels, e.g. "50lacs<=value<1cr", "Value>=1cr", "Project Value >50 lacs", "<2 lacs".
+    // Returned in lakhs (1 cr = 100 lakhs); a bare number of 1000 or more is read as rupees.
+    const toLakhs = (amount, unit) => {
+      const n = parseFloat(amount);
+      if (/^cr/.test(unit || '')) return n * 100;
+      if (unit) return n;
+      return n >= 1000 ? n / 100000 : n;
+    };
+    const parseValueRange = (labelText) => {
+      const text = norm(labelText).replace(/\s+/g, '').replace(/projectvalue/g, 'value');
+      const NUM = '(\\d+(?:\\.\\d+)?)';
+      const UNIT = '(crores?|cr|lacs?|lakhs?)?';
+
+      let m = text.match(new RegExp(NUM + UNIT + '(<=|<)value(<=|<)' + NUM + UNIT));
+      if (m) {
+        return { min: toLakhs(m[1], m[2]), minInclusive: m[3] === '<=', max: toLakhs(m[5], m[6]), maxInclusive: m[4] === '<=' };
+      }
+      m = text.match(new RegExp('value(>=|>)' + NUM + UNIT));
+      if (m) return { min: toLakhs(m[2], m[3]), minInclusive: m[1] === '>=', max: Infinity, maxInclusive: false };
+      m = text.match(new RegExp('value(<=|<)' + NUM + UNIT));
+      if (m) return { min: -Infinity, minInclusive: false, max: toLakhs(m[2], m[3]), maxInclusive: m[1] === '<=' };
+      m = text.match(new RegExp('(>=|>)' + NUM + UNIT));
+      if (m) return { min: toLakhs(m[2], m[3]), minInclusive: m[1] === '>=', max: Infinity, maxInclusive: false };
+      m = text.match(new RegExp('(<=|<)' + NUM + UNIT));
+      if (m) return { min: -Infinity, minInclusive: false, max: toLakhs(m[2], m[3]), maxInclusive: m[1] === '<=' };
+      return null;
+    };
+    const inValueRange = (amount, range) => {
+      if (!range) return false;
+      const aboveMin = amount > range.min || (range.minInclusive && amount === range.min);
+      const belowMax = amount < range.max || (range.maxInclusive && amount === range.max);
+      return aboveMin && belowMax;
+    };
+
+    // Conference publication tier: A*, A, Tier 1 (B/C), Tier 2, Tier 3. Older rows kept "Tier n" in sub_type.
+    const resolveConferenceTier = (pub = {}) => {
+      const text = norm(pub.type_of_conference).trim() || norm(pub.sub_type).trim();
+      if (!text) return '';
+      if (text.startsWith('a*')) return 'a*';
+      if (/tier\s*3/.test(text)) return 'tier 3';
+      if (/tier\s*2/.test(text)) return 'tier 2';
+      if (/tier\s*1/.test(text) || /^b(\b|\/)/.test(text) || /^c(\b|\/)/.test(text)) return 'tier 1';
+      if (/^a\b/.test(text)) return 'a';
+      return '';
     };
     const resolveTechnologyType = (row = {}) => {
       const explicit = norm(row.technology_type);
@@ -404,6 +456,7 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear, options 
       conference_sessions: sessions,
       institutional_contributions: contribs,
       teaching_innovation: teachingInnovation,
+      phd_thesis_reviews: phdThesisReviews,
       research_guidance: guidance,
       other_activities: otherActivities,
       dynamic_responses: dynamicResponses
@@ -531,7 +584,12 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear, options 
 
       // -- 3. New Courses designed (ID 11) -------------------------------
       else if (sec.includes('new courses')) {
-        score = newCourses.length > 0 ? max : 0;
+        if (sub.includes('coordinator')) {
+          // Each new course carries its own "did you serve as course coordinator?" answer.
+          score = newCourses.some(course => norm(course.is_coordinator) === 'yes') ? max : 0;
+        } else {
+          score = newCourses.length > 0 ? max : 0;
+        }
       }
 
       // -- 4. Research Publications ---------------------------------------
@@ -582,23 +640,15 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear, options 
 
       // -- 5. Conference Publications -------------------------------------
       else if (sec.includes('conference') && !sec.includes('talks and conferences')) {
-        const confPubs = publications.filter(p =>
-          (p.publication_type || '').toLowerCase() === 'conference'
-        );
-        if (sub.includes('tier 1')) {
-          const count = confPubs.filter(p =>
-            (p.sub_type || '').toLowerCase().includes('tier 1')
-          ).length;
-          score = Math.min(count * max, max);
-        } else if (sub.includes('tier 2')) {
-          const count = confPubs.filter(p =>
-            (p.sub_type || '').toLowerCase().includes('tier 2')
-          ).length;
-          score = Math.min(count * max, max);
-        } else if (sub.includes('tier 3')) {
-          const count = confPubs.filter(p =>
-            (p.sub_type || '').toLowerCase().includes('tier 3')
-          ).length;
+        // Presentations and posters are scored under "6. Others"; only paper publications carry a tier.
+        const confPubs = publications.filter(p => {
+          if ((p.publication_type || '').toLowerCase() !== 'conference') return false;
+          const subText = (p.sub_type || '').toLowerCase();
+          return !subText.includes('presentation') && !subText.includes('poster');
+        });
+        const rowTier = resolveConferenceTier({ type_of_conference: (sub.split(':').pop() || '').trim() });
+        if (rowTier) {
+          const count = confPubs.filter(p => resolveConferenceTier(p) === rowTier).length;
           score = Math.min(count * max, max);
         } else {
           score = confPubs.length > 0 ? max : 0;
@@ -668,19 +718,8 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear, options 
 
             if (!piMatch) return false;
 
-            if (sub.includes('>=20') || /\u2265\s*20/.test(sub) || sub.includes('value>=20') || sub.includes('value>20')) {
-              return amt >= 20;
-            } else if (sub.includes('50000') || sub.includes('0.5')) {
-              // Must be tested before the 2-5 lakh range: '50000' also contains a '5' and '2lacs' a '2'.
-              return amt >= 0.5 && amt < 2;
-            } else if (sub.includes('10') && sub.includes('20')) {
-              return amt >= 10 && amt < 20;
-            } else if (sub.includes('5') && sub.includes('10')) {
-              return amt >= 5 && amt < 10;
-            } else if (sub.includes('2') && sub.includes('5')) {
-              return amt >= 2 && amt < 5;
-            }
-            return false;
+            // The value bracket is read from the rubric label itself (amount_in_lakhs; 1 crore = 100 lakhs).
+            return inValueRange(amt, parseValueRange(sub));
           });
           score = Math.min(matchingGrants.length * max, max);
         }
@@ -701,7 +740,14 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear, options 
         }
       }
 
-      // -- 9. Technology Contribution -------------------------------------
+      // -- 9. PhD Thesis Reviewer / Examiner ------------------------------
+      else if (sec.includes('phd thesis')) {
+        // Points per thesis, capped at the row maximum (10 per year => two theses count).
+        const perThesis = f(rubric.per_unit_marks) || 5;
+        score = Math.min(phdThesisReviews.length * perThesis, max);
+      }
+
+      // -- 10. Technology Contribution ------------------------------------
       else if (sec.includes('technology contribution')) {
         const getCountForType = (typeName) => techTransfer.filter((tt) => resolveTechnologyType(tt) === typeName).length;
         const softwareCount = getCountForType('software_developed_and_deployed');
@@ -737,17 +783,27 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear, options 
           return eventType.includes('fdp') || eventType.includes('conference') || eventName.includes('fdp') || eventName.includes('conference') || title.includes('fdp') || title.includes('conference');
         };
 
+        const isKeynoteTalk = (talk) => norm(talk.event_type).includes('keynote');
+        const isInternationalInvitedTalk = (talk) =>
+          !isKeynoteTalk(talk) && norm(talk.event_type).includes('invited') && norm(talk.talk_level).includes('international');
+        // A talk is counted under exactly one row: keynote, international invited talk, FDP/conference, or other.
+        const isPlainTalk = (talk) => !isKeynoteTalk(talk) && !isInternationalInvitedTalk(talk);
+
         if (sub.includes('convenor') && !sub.includes('co-convenor')) {
           score = hasSessionMatch(({ roleText, all }) => roleText === 'convenor/coordinator' || (!roleText.includes('co-') && (all.includes('convenor') || all.includes('coordinator')))) ? max : 0;
         } else if (sub.includes('co-convenor')) {
           score = hasSessionMatch(({ roleText, all }) => roleText === 'co-convenor/co-coordinator/organizing chair' || all.includes('co-convenor') || all.includes('co convenor') || all.includes('co-coordinator')) ? max : 0;
         } else if (sub.includes('organizing committee')) {
           score = hasSessionMatch(({ roleText, all }) => roleText === 'organizing committee member' || all.includes('organizing committee') || all.includes('committee member')) ? max : 0;
+        } else if (sub.includes('keynote')) {
+          score = talks.filter(isKeynoteTalk).length > 0 ? max : 0;
+        } else if (sub.includes('international')) {
+          score = talks.filter(isInternationalInvitedTalk).length > 0 ? max : 0;
         } else if (sub.includes('fdp') || (sub.includes('invited') && sub.includes('fdp'))) {
-          const fdpTalks = talks.filter(isFdpOrConferenceTalk);
+          const fdpTalks = talks.filter(talk => isPlainTalk(talk) && isFdpOrConferenceTalk(talk));
           score = Math.min(fdpTalks.length * max, 10);
         } else if (sub.includes('invited')) {
-          const invitedOther = talks.filter(talk => !isFdpOrConferenceTalk(talk));
+          const invitedOther = talks.filter(talk => isPlainTalk(talk) && !isFdpOrConferenceTalk(talk));
           score = Math.min(invitedOther.length * max, 8);
         } else if (sub.includes('pc chair') || sub.includes('session chair') || sub.includes('general chair')) {
           score = hasSessionMatch(({ roleText, all }) => roleText === 'programme committee chair' || roleText === 'session chair' || roleText === 'general chair' || all.includes('pc chair') || all.includes('session chair') || all.includes('general chair') || (all.includes('chair') && !all.includes('organizing chair'))) ? max : 0;
@@ -786,10 +842,9 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear, options 
               ? !role.includes('co')
               : role.includes('co');
 
-            if (sub.includes('>5')) return amt > 5 && piMatch;
-            if (sub.includes('2') && sub.includes('5')) return amt >= 2 && amt <= 5 && piMatch;
-            if (sub.includes('<2')) return amt < 2 && piMatch;
-            return piMatch;
+            // Value bracket comes from the rubric label (lakhs): >50, 25-50, 5-25, 2-5, <2.
+            const range = parseValueRange(sub);
+            return range ? inValueRange(amt, range) && piMatch : piMatch;
           });
           score = Math.min(matching.length * max, max);
         }
@@ -867,7 +922,9 @@ const autoAllocateMarks = async (submissionId, facultyId, academicYear, options 
         if (matchedCount > 0) {
           if (sub.includes('scholarly')) {
             score = Math.min(matchedCount * max, 9);
-          } else if (sub.includes('committee member') || sub.includes('faculty mentor')) {
+          } else if (sub.includes('committee member')) {
+            score = Math.min(matchedCount * max, 6);
+          } else if (sub.includes('faculty mentor')) {
             score = Math.min(matchedCount * max, 5);
           } else {
             score = max;

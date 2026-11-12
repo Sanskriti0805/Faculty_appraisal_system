@@ -44,6 +44,7 @@ const SECTION_GROUP_EXPANSIONS = {
     'patents',
     'technology_transfer',
     'paper_review',
+    'phd_thesis_review',
     'conference_sessions',
     'keynotes_talks',
     'consultancy',

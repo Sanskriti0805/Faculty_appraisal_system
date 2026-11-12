@@ -31,6 +31,7 @@ const ResearchGrants = lazy(() => import('./pages/ResearchGrants'))
 const Patents = lazy(() => import('./pages/Patents'))
 const TechnologyTransfer = lazy(() => import('./pages/TechnologyTransfer'))
 const PaperReview = lazy(() => import('./pages/PaperReview'))
+const PhDThesisReview = lazy(() => import('./pages/PhDThesisReview'))
 const TalksAndConferences = lazy(() => import('./pages/TalksAndConferences'))
 const OtherActivities = lazy(() => import('./pages/OtherActivities'))
 const AwardsHonours = lazy(() => import('./pages/AwardsHonours'))
@@ -127,6 +128,7 @@ function App() {
               <Route path="patents" element={<Patents />} />
               <Route path="technology-transfer" element={<TechnologyTransfer />} />
               <Route path="paper-review" element={<PaperReview />} />
+              <Route path="phd-thesis-review" element={<PhDThesisReview />} />
               <Route path="talks-and-conferences" element={<TalksAndConferences />} />
               <Route path="other-activities" element={<OtherActivities />} />
               <Route path="awards-honours" element={<AwardsHonours />} />

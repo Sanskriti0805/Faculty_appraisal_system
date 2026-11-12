@@ -94,7 +94,8 @@ exports.getEvaluationData = async (req, res) => {
 
     // 1. All rubrics for the evaluation structure
     const [rubrics] = await db.query(
-      'SELECT id, section_name, sub_section, max_marks FROM Dofa_rubrics ORDER BY id ASC'
+      `SELECT id, section_name, sub_section, max_marks FROM Dofa_rubrics
+       ORDER BY CASE WHEN section_name REGEXP '^[0-9]+[.]' THEN CAST(SUBSTRING_INDEX(section_name, '.', 1) AS UNSIGNED) ELSE 1000000 END, id ASC`
     );
 
     // 2. Faculty submissions

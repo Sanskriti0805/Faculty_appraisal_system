@@ -33,6 +33,7 @@ const SECTION_LABELS = [
   { key: 'patents', label: 'Patents' },
   { key: 'technology_transfer', label: 'Technology Transfer' },
   { key: 'paper_review', label: 'Paper Review' },
+  { key: 'phd_thesis_review', label: 'PhD Thesis Reviewer/Examiner' },
   { key: 'conference_sessions', label: 'Conference Sessions' },
   { key: 'keynotes_talks', label: 'Keynotes & Invited Talks' },
   { key: 'awards_honours', label: 'Awards & Honours' },
@@ -638,7 +639,7 @@ const MySubmissionView = () => {
 
   const {
     submission, facultyInfo, courses, newCourses, publications,
-    grants, proposals, patents, awards, paperReviews, techTransfer,
+    grants, proposals, patents, awards, paperReviews, phdThesisReviews, techTransfer,
     conferenceSessions, keynotesTalks, consultancy, teachingInnovation,
     institutionalContributions, goals, comments, courseware, continuingEducation,
     otherActivities, researchPlan, teachingPlan,
@@ -917,7 +918,7 @@ const MySubmissionView = () => {
               <h3 className="msv-section-title"><BookOpen size={17} /> Teaching & Courses</h3>
               {renderDataTable('Courses Taught', taughtCourses, ['course_code', 'course_name', 'course_title', 'semester', 'session_id', 'program', 'enrollment', 'students', 'percentage', 'feedback_score', 'remarks', 'evidence_file'])}
               {renderDataTable('Projects Guided', guidedProjects, ['semester', 'session_id', 'project_title', 'project_type', 'project_role', 'student_name', 'project_duration', 'project_outcome', 'remarks', 'evidence_file'])}
-              {renderDataTable('New Courses Developed', newCourses, ['title', 'course_name', 'semester', 'year', 'role', 'evidence_file'])}
+              {renderDataTable('New Courses Developed', newCourses, ['title', 'course_name', 'semester', 'year', 'role', 'is_coordinator', 'num_sections', 'num_students', 'evidence_file'])}
             </>
           )}
 
@@ -957,8 +958,9 @@ const MySubmissionView = () => {
               {renderDataTable('Patents', patents, ['title', 'patent_number', 'status', 'year', 'country', 'evidence_file'])}
               {renderDataTable('Awards & Honours', awards, ['title', 'awarding_body', 'year', 'level', 'evidence_file'])}
               {renderDataTable('Paper Reviews', paperReviews, ['journal_name', 'review_count', 'year', 'details', 'evidence_file'])}
+              {renderDataTable('PhD Thesis Reviewer/Examiner', phdThesisReviews, ['review_type', 'institution_name', 'evidence_file'])}
               {renderDataTable('Conference Sessions', conferenceSessions, ['conference_name', 'role', 'date', 'location', 'evidence_file'])}
-              {renderDataTable('Keynotes & Talks', keynotesTalks, ['title', 'event_name', 'date', 'location', 'evidence_file'])}
+              {renderDataTable('Keynotes & Talks', keynotesTalks, ['title', 'event_name', 'date', 'location', 'event_type', 'talk_level', 'evidence_file'])}
             </>
           )}
 

@@ -123,6 +123,12 @@ exports.runMigrations = async () => {
     await ensureColumn('courses_taught', 'status', "status ENUM('draft','submitted') DEFAULT 'draft'");
     await ensureColumn('courses_taught', 'feedback_score', 'feedback_score DECIMAL(5,3) NULL');
     await ensureColumn('new_courses', 'status', "status ENUM('draft','submitted') DEFAULT 'draft'");
+    // Course coordinator question captured per new course (4 points when "Yes").
+    await ensureColumn('new_courses', 'is_coordinator', "is_coordinator VARCHAR(3) NULL DEFAULT 'No'");
+    await ensureColumn('new_courses', 'num_sections', 'num_sections INT NULL');
+    await ensureColumn('new_courses', 'num_students', 'num_students INT NULL');
+    // International vs national scope of an invited talk (International invited talks score 10).
+    await ensureColumn('keynotes_talks', 'talk_level', 'talk_level VARCHAR(20) NULL');
 
     // Ensure research_publications has evidence_file and status columns
     await ensureColumn('research_publications', 'evidence_file', "evidence_file VARCHAR(255) NULL COMMENT 'Path to uploaded evidence file'");
@@ -158,6 +164,22 @@ exports.runMigrations = async () => {
     await ensureColumn('appraisal_sessions', 'final_locked', 'final_locked TINYINT(1) NOT NULL DEFAULT 0');
     await ensureColumn('appraisal_sessions', 'final_locked_at', 'final_locked_at TIMESTAMP NULL DEFAULT NULL');
     await ensureColumn('appraisal_sessions', 'final_locked_by', 'final_locked_by INT NULL DEFAULT NULL');
+
+    // PhD thesis reviewer/examiner entries (5 points per thesis, max 10 per year).
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS phd_thesis_reviews (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        faculty_id INT,
+        session_id VARCHAR(20) NULL,
+        review_type VARCHAR(50),
+        institution_name VARCHAR(255),
+        evidence_file VARCHAR(255) NULL,
+        status ENUM('draft','submitted') DEFAULT 'draft',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_phd_thesis_reviews_faculty_session (faculty_id, session_id),
+        FOREIGN KEY (faculty_id) REFERENCES faculty_information(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+    `);
 
     // Ensure workflow tables used by edit-request and lock guards exist.
     await db.query(`

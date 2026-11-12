@@ -110,6 +110,57 @@ exports.createPaperReview = async (req, res) => {
     }
 };
 
+// --- PhD Thesis Reviewer / Examiner ---
+const PHD_THESIS_REVIEW_TYPES = ['PhD Thesis Reviewer', 'PhD Thesis Examiner'];
+
+exports.createPhdThesisReview = async (req, res) => {
+    try {
+        const { faculty_id, review_type, institution_name, existing_evidence_file } = req.body;
+        const sessionId = await getCurrentSessionWindow(db);
+
+        if (!PHD_THESIS_REVIEW_TYPES.includes(String(review_type || '').trim())) {
+            return res.status(400).json({ success: false, message: 'Type must be PhD Thesis Reviewer or PhD Thesis Examiner.' });
+        }
+        if (!String(institution_name || '').trim()) {
+            return res.status(400).json({ success: false, message: 'Name of institution is required.' });
+        }
+
+        const facultyInfoId = await resolveFacultyInfoId({
+          facultyId: faculty_id || req.user?.id,
+          email: req.user?.email
+        });
+
+        if (!facultyInfoId) {
+          return res.status(400).json({ success: false, message: 'Faculty profile not found. Complete onboarding first.' });
+        }
+
+        const evidence_file = req.file ? req.file.filename : (existing_evidence_file || null);
+        const [result] = await db.query(
+          `INSERT INTO phd_thesis_reviews (faculty_id, session_id, review_type, institution_name, evidence_file)
+           VALUES (?, ?, ?, ?, ?)`,
+          [facultyInfoId, sessionId, String(review_type).trim(), String(institution_name).trim(), evidence_file]
+        );
+        res.status(201).json({ success: true, id: result.insertId });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.deletePhdThesisReview = async (req, res) => {
+    try {
+    const sessionId = await getCurrentSessionWindow(db);
+    const [result] = await db.query('DELETE FROM phd_thesis_reviews WHERE id = ? AND session_id = ?', [req.params.id, sessionId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'PhD thesis review not found' });
+        }
+
+        res.json({ success: true, message: 'PhD thesis review deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 exports.deletePaperReview = async (req, res) => {
     try {
     const sessionId = await getCurrentSessionWindow(db);
@@ -199,7 +250,7 @@ exports.deleteConferenceSession = async (req, res) => {
 // --- Keynotes & Talks ---
 exports.createKeynoteTalk = async (req, res) => {
     try {
-  const { faculty_id, event_name, title, event_type, audience_type, date, location, existing_evidence_file } = req.body;
+  const { faculty_id, event_name, title, event_type, audience_type, talk_level, date, location, existing_evidence_file } = req.body;
   const sessionId = await getCurrentSessionWindow(db);
         
         const facultyInfoId = await resolveFacultyInfoId({
@@ -213,9 +264,9 @@ exports.createKeynoteTalk = async (req, res) => {
 
         const evidence_file = req.file ? req.file.filename : (existing_evidence_file || null);
         const [result] = await db.query(
-          `INSERT INTO keynotes_talks (faculty_id, session_id, event_name, title, date, location, event_type, audience_type, evidence_file) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [facultyInfoId, sessionId, event_name, title, date || null, location || null, event_type, audience_type, evidence_file]
+          `INSERT INTO keynotes_talks (faculty_id, session_id, event_name, title, date, location, event_type, audience_type, talk_level, evidence_file) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [facultyInfoId, sessionId, event_name, title, date || null, location || null, event_type, audience_type, talk_level || null, evidence_file]
         );
         res.status(201).json({ success: true, id: result.insertId });
     } catch (error) {

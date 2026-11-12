@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { applyNov2026RubricUpdate } = require('./rubricUpdateNov2026');
 
 async function bootstrapDatabaseTables() {
   try {
@@ -406,6 +407,9 @@ async function ensureRubricMigrations() {
       WHERE section_name = '11. Talks and conferences'
         AND sub_section = 'Invited talks: Other invited talks (up to a maximum of 5 points)'
     `);
+
+    // Nov 2026 rubric revision (new PhD thesis section, conference tiers, grant/consultancy brackets, ...)
+    await applyNov2026RubricUpdate(db);
   } catch (err) {
     // If Dofa_rubrics doesn't exist yet, continue
     console.warn('Note on rubric migration:', err.message);

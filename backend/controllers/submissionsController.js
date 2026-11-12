@@ -281,7 +281,7 @@ const COMMENT_SECTION_LABEL_TO_KEYS = {
   'Faculty Information': ['faculty_info'],
   'Teaching & Projects': TEACHING_SECTION_KEYS,
   'Research Publications': ['research_publications'],
-  'Research, Grants & Reviews': ['research_grants', 'paper_review', 'submitted_proposals'],
+  'Research, Grants & Reviews': ['research_grants', 'paper_review', 'phd_thesis_review', 'submitted_proposals'],
   'Events, Patents & Awards': ['patents', 'awards_honours', 'conference_sessions', 'keynotes_talks', 'technology_transfer'],
   'Consultancy': ['consultancy'],
   'Innovation & Contributions': ['teaching_innovation', 'institutional_contributions'],
@@ -313,6 +313,7 @@ const coerceSnapshotData = (data) => {
     newCourses: Array.isArray(data.newCourses) ? data.newCourses : [],
     proposals: Array.isArray(data.proposals) ? data.proposals : [],
     paperReviews: Array.isArray(data.paperReviews) ? data.paperReviews : [],
+    phdThesisReviews: Array.isArray(data.phdThesisReviews) ? data.phdThesisReviews : [],
     techTransfer: Array.isArray(data.techTransfer) ? data.techTransfer : [],
     conferenceSessions: Array.isArray(data.conferenceSessions) ? data.conferenceSessions : [],
     keynotesTalks: Array.isArray(data.keynotesTalks) ? data.keynotesTalks : [],
@@ -469,6 +470,7 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
     newCourses,
     proposals,
     paperReviews,
+    phdThesisReviews,
     techTransfer,
     conferenceSessions,
     keynotesTalks,
@@ -493,6 +495,7 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
     queryFacultySectionRows({ tableName: 'new_courses', facultyInfoId: fid, sessionWindow }),
     queryFacultySectionRows({ tableName: 'submitted_proposals', facultyInfoId: fid, sessionWindow }),
     queryFacultySectionRows({ tableName: 'paper_reviews', facultyInfoId: fid, sessionWindow }),
+    queryFacultySectionRows({ tableName: 'phd_thesis_reviews', facultyInfoId: fid, sessionWindow }),
     queryFacultySectionRows({ tableName: 'technology_transfer', facultyInfoId: fid, sessionWindow }),
     queryFacultySectionRows({ tableName: 'conference_sessions', facultyInfoId: fid, sessionWindow }),
     queryFacultySectionRows({ tableName: 'keynotes_talks', facultyInfoId: fid, sessionWindow }),
@@ -540,6 +543,7 @@ const buildSubmissionSnapshotPayload = async (submissionId) => {
     newCourses: newCourses[0] || [],
     proposals: proposals[0] || [],
     paperReviews: paperReviews[0] || [],
+    phdThesisReviews: phdThesisReviews[0] || [],
     techTransfer: techTransfer[0] || [],
     conferenceSessions: conferenceSessions[0] || [],
     keynotesTalks: keynotesTalks[0] || [],
@@ -855,6 +859,7 @@ exports.getSubmissionById = async (req, res) => {
           newCourses: [],
           proposals: [],
           paperReviews: [],
+          phdThesisReviews: [],
           techTransfer: [],
           conferenceSessions: [],
           keynotesTalks: [],
@@ -903,6 +908,9 @@ exports.getSubmissionById = async (req, res) => {
 
     // Get paper reviews
     const [paperReviews] = await queryFacultySectionRows({ tableName: 'paper_reviews', facultyInfoId: fid, sessionWindow });
+
+    // Get PhD thesis reviewer/examiner entries
+    const [phdThesisReviews] = await queryFacultySectionRows({ tableName: 'phd_thesis_reviews', facultyInfoId: fid, sessionWindow });
 
     // Get technology transfer
     const [techTransfer] = await queryFacultySectionRows({ tableName: 'technology_transfer', facultyInfoId: fid, sessionWindow });
@@ -969,6 +977,7 @@ exports.getSubmissionById = async (req, res) => {
         newCourses: newCourses || [],
         proposals: proposals || [],
         paperReviews: paperReviews || [],
+        phdThesisReviews: phdThesisReviews || [],
         techTransfer: techTransfer || [],
         conferenceSessions: conferenceSessions || [],
         keynotesTalks: keynotesTalks || [],

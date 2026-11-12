@@ -7,7 +7,7 @@ import './Sidebar.css'
 
 const SECTION_GROUP_MEMBERS = {
   teaching_learning: ['courses_taught', 'new_courses', 'courseware', 'teaching_innovation'],
-  research_development: ['research_publications', 'research_grants', 'patents', 'technology_transfer', 'paper_review', 'talks_and_conferences', 'awards_honours', 'consultancy', 'continuing_education'],
+  research_development: ['research_publications', 'research_grants', 'patents', 'phd_thesis_review', 'technology_transfer', 'paper_review', 'talks_and_conferences', 'awards_honours', 'consultancy', 'continuing_education'],
   other_institutional_activities: ['institutional_contributions', 'other_activities', 'research_plan', 'teaching_plan']
 }
 
@@ -158,6 +158,7 @@ const Sidebar = ({ collapsed = false, onToggleCollapse }) => {
     '/patents': 'patents',
     '/technology-transfer': 'technology_transfer',
     '/paper-review': 'paper_review',
+    '/phd-thesis-review': 'phd_thesis_review',
     '/talks-and-conferences': 'talks_and_conferences',
     '/other-activities': 'other_activities',
     '/awards-honours': 'awards_honours',
@@ -265,6 +266,7 @@ const Sidebar = ({ collapsed = false, onToggleCollapse }) => {
         { name: 'Research Publications', path: '/research-publications' },
         { name: 'External Sponsored Research & Development Grants received/submitted during this Academic Session', path: '/research-grants' },
         { name: 'Patents', path: '/patents' },
+        { name: 'PhD Thesis Reviewer/Examiner', path: '/phd-thesis-review' },
         { name: 'Technology Developed/Transferred', path: '/technology-transfer' },
         { name: 'Review of research papers for Tier-1/2 refereed internal research journals', path: '/paper-review' },
         { name: 'Talks and Conferences', path: '/talks-and-conferences' },

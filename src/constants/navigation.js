@@ -9,6 +9,7 @@ export const FORM_SEQUENCE = [
   { name: 'Research Publications', path: '/research-publications' },
   { name: 'Research Grants', path: '/research-grants' },
   { name: 'Patents', path: '/patents' },
+  { name: 'PhD Thesis Reviewer/Examiner', path: '/phd-thesis-review' },
   { name: 'Technology Transfer', path: '/technology-transfer' },
   { name: 'Paper Review', path: '/paper-review' },
   { name: 'Talks and Conferences', path: '/talks-and-conferences' },

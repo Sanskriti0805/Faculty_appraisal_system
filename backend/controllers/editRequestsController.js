@@ -85,6 +85,7 @@ const SECTION_LABELS = {
   patents: 'Patents',
   technology_transfer: 'Technology Transfer',
   paper_review: 'Paper Review',
+  phd_thesis_review: 'PhD Thesis Reviewer/Examiner',
   conference_sessions: 'Conference Sessions',
   keynotes_talks: 'Keynotes & Invited Talks',
   conferences_outside: 'Conferences Outside',
