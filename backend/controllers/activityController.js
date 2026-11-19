@@ -19,9 +19,14 @@ const resolveFacultyInfoId = async ({ facultyId, email }) => {
   }
 
   if (numericFacultyId !== null) {
-    const [fiById] = await db.query('SELECT id FROM faculty_information WHERE id = ? LIMIT 1', [numericFacultyId]);
-    if (fiById.length > 0) {
-      return fiById[0].id;
+    // users.id and faculty_information.id are different sequences: if this id belongs to a user,
+    // never treat it as a faculty_information.id (it may be a different person's row).
+    const [userMatch] = await db.query('SELECT id FROM users WHERE id = ? LIMIT 1', [numericFacultyId]);
+    if (userMatch.length === 0) {
+      const [fiById] = await db.query('SELECT id FROM faculty_information WHERE id = ? LIMIT 1', [numericFacultyId]);
+      if (fiById.length > 0) {
+        return fiById[0].id;
+      }
     }
 
     const [usersById] = await db.query('SELECT email FROM users WHERE id = ? LIMIT 1', [numericFacultyId]);
