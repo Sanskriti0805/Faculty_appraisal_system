@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { API_BASE_URL } from '../config/api'
 import { Edit2 } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import './FacultyInformation.css'
@@ -7,7 +8,7 @@ import { useAuth } from '../context/AuthContext'
 
 const FacultyInformation = () => {
   const location = useLocation()
-  const { user } = useAuth()
+  const { user, token, refreshUser } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [facultyData, setFacultyData] = useState({
     name: '',
@@ -47,15 +48,25 @@ const FacultyInformation = () => {
   }
 
   const handleSave = async () => {
-    setIsEditing(false)
-    console.log('Saving data:', facultyData)
-    // simulate delay
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        window.appToast('Data saved successfully!')
-        resolve(true)
-      }, 500)
-    })
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ designation: facultyData.designation })
+      })
+      const data = await res.json()
+      if (!data.success) {
+        window.appToast(data.message || 'Could not save designation')
+        return false
+      }
+      await refreshUser()
+      setIsEditing(false)
+      window.appToast('Data saved successfully!')
+      return true
+    } catch (error) {
+      window.appToast('Error saving data: ' + error.message)
+      return false
+    }
   }
 
   return (
@@ -76,15 +87,7 @@ const FacultyInformation = () => {
         <div className="form-grid">
           <div className="form-field">
             <label>1. Name</label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={facultyData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-              />
-            ) : (
-              <p>{facultyData.name}</p>
-            )}
+            <p>{facultyData.name}</p>
           </div>
 
           <div className="form-field">
@@ -102,28 +105,12 @@ const FacultyInformation = () => {
 
           <div className="form-field">
             <label>3. Department</label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={facultyData.department}
-                onChange={(e) => handleInputChange('department', e.target.value)}
-              />
-            ) : (
-              <p>{facultyData.department}</p>
-            )}
+            <p>{facultyData.department}</p>
           </div>
 
           <div className="form-field">
             <label>4. Date of Joining</label>
-            {isEditing ? (
-              <input
-                type="text"
-                value={facultyData.dateOfJoining}
-                onChange={(e) => handleInputChange('dateOfJoining', e.target.value)}
-              />
-            ) : (
-              <p>{facultyData.dateOfJoining}</p>
-            )}
+            <p>{facultyData.dateOfJoining}</p>
           </div>
         </div>
       </div>

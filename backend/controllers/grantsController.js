@@ -61,10 +61,22 @@ const resolveFacultyInfoId = async ({ facultyId, email }) => {
   return null;
 };
 
+// users.id and faculty_information.id are different sequences. For reads the frontend sends users.id,
+// so map it to the user's email first; otherwise the id can match another faculty's row.
+const resolveFacultyInfoIdForRead = async (rawFacultyId) => {
+  const numericId = toNumberOrNull(rawFacultyId);
+  let email = null;
+  if (numericId !== null) {
+    const [u] = await db.query('SELECT email FROM users WHERE id = ? LIMIT 1', [numericId]);
+    if (u.length > 0) email = u[0].email;
+  }
+  return resolveFacultyInfoId({ facultyId: rawFacultyId, email });
+};
+
 // Get all grants for a faculty
 exports.getGrantsByFaculty = async (req, res) => {
   try {
-    const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+    const facultyInfoId = await resolveFacultyInfoIdForRead(req.params.facultyId);
     if (!facultyInfoId) {
       return res.json({ success: true, data: [] });
     }
@@ -194,7 +206,7 @@ exports.updateGrant = async (req, res) => {
 // Get all proposals for a faculty
 exports.getProposalsByFaculty = async (req, res) => {
   try {
-    const facultyInfoId = await resolveFacultyInfoId({ facultyId: req.params.facultyId });
+    const facultyInfoId = await resolveFacultyInfoIdForRead(req.params.facultyId);
     if (!facultyInfoId) {
       return res.json({ success: true, data: [] });
     }

@@ -252,6 +252,26 @@ exports.getMe = async (req, res) => {
 };
 
 /**
+ * PUT /api/auth/profile
+ * Body: { designation }
+ * Persists the logged-in faculty's designation (users + faculty_information).
+ */
+exports.updateProfile = async (req, res) => {
+  try {
+    const designation = String(req.body.designation || '').trim();
+    if (!designation) {
+      return res.status(400).json({ success: false, message: 'Designation is required' });
+    }
+    await db.query('UPDATE users SET designation = ? WHERE id = ?', [designation, req.user.id]);
+    await db.query('UPDATE faculty_information SET designation = ? WHERE email = ?', [designation, req.user.email]);
+    res.json({ success: true, message: 'Profile updated', designation });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+/**
  * POST /api/auth/change-password
  * Body: { currentPassword, newPassword }
  */
