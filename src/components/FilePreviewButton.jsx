@@ -1,4 +1,4 @@
-import { UPLOADS_BASE_URL } from '../config/api'
+import { UPLOADS_BASE_URL, getUploadUrl } from '../config/api'
 import React from 'react'
 import { Eye } from 'lucide-react'
 
@@ -32,7 +32,7 @@ const FilePreviewButton = ({
     if (typeof file === 'string') {
       previewUrl = file.startsWith('http://') || file.startsWith('https://') || file.startsWith('blob:')
         ? file
-        : `${uploadsBaseUrl}${file}`
+        : (baseUrl ? `${uploadsBaseUrl}${file}` : getUploadUrl(file))
     } else if (typeof File !== 'undefined' && file instanceof File) {
       previewUrl = window.URL.createObjectURL(file)
       window.setTimeout(() => {

@@ -33,12 +33,30 @@ const cacheMiddleware = (duration = 300) => {
 
         // Override res.json to cache the response
         res.json = (body) => {
-            cache.set(key, body, duration);
+            // Never cache error responses
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+                cache.set(key, body, duration);
+            }
             return originalJson(body);
         };
 
         next();
     };
+};
+
+/**
+ * Express middleware: flush the response cache after any successful write
+ * (POST/PUT/PATCH/DELETE) so lists never show stale data after save/delete.
+ */
+const invalidateOnWrite = (req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+        res.on('finish', () => {
+            if (res.statusCode >= 200 && res.statusCode < 400) {
+                cache.flushAll();
+            }
+        });
+    }
+    next();
 };
 
 /**
@@ -75,6 +93,7 @@ const getCacheStats = () => {
 module.exports = {
     cache,
     cacheMiddleware,
+    invalidateOnWrite,
     clearCache,
     clearAllCache,
     getCacheStats

@@ -1,4 +1,4 @@
-import { API_BASE_URL, UPLOADS_BASE_URL } from '../config/api'
+import { API_BASE_URL, UPLOADS_BASE_URL, getUploadUrl } from '../config/api'
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -199,7 +199,7 @@ const PubDetailCard = ({ pub }) => {
         <div className="pub-detail-field">
           <label>Evidence</label>
           <span>
-            <a href={`${UPLOADS_BASE_URL}${pub.evidence_file}`} target="_blank" rel="noopener noreferrer" className="evidence-link">
+            <a href={getUploadUrl(pub.evidence_file)} target="_blank" rel="noopener noreferrer" className="evidence-link">
               <ExternalLink size={12} /> View File
             </a>
           </span>
@@ -488,7 +488,7 @@ const DofaReview = () => {
   /* -- Helpers -- */
   const renderFileLink = (filename) => {
     if (!filename) return null;
-    const fileUrl = `${UPLOADS_BASE_URL}${filename}`;
+    const fileUrl = getUploadUrl(filename);
     return (
       <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="evidence-link" title="View Supporting Document">
         <ExternalLink size={12} /><span>Evidence</span>

@@ -788,6 +788,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                            <th>Role</th>
                            <th>Student Name</th>
                            <th>Duration</th>
+                           <th>Remarks</th>
                            <th>Evidence</th>
                            <th style={{ width: '80px' }}>Action</th>
                         </tr>
@@ -801,6 +802,7 @@ const CoursesTaught = ({ initialData, readOnly }) => {
                               <td>{p.project_role}</td>
                               <td>{p.student_name}</td>
                               <td>{p.project_duration}</td>
+                              <td>{p.remarks || '—'}</td>
                               <td style={{ textAlign: 'center' }}>
                                  {p.evidence_file ? (
                                     <a href={`${UPLOADS_BASE_URL}${p.evidence_file}`} target="_blank" rel="noopener noreferrer" title="View File" style={{ color: '#3182ce' }}>

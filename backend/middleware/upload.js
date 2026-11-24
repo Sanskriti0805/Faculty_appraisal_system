@@ -3,7 +3,9 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure upload directory exists
-const uploadDir = './uploads';
+// Absolute path so uploads land in the same folder server.js serves from,
+// regardless of the directory the server process was started in.
+const uploadDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -16,7 +18,7 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     // Create unique filename: timestamp-random-originalname
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
+    cb(null, uniqueSuffix + '-' + file.originalname.replace(/[^\w.\-]+/g, '_'));
   }
 });
 

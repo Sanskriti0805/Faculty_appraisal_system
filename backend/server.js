@@ -13,6 +13,9 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+const { invalidateOnWrite } = require('./middleware/cache');
+app.use('/api', invalidateOnWrite);
+
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
