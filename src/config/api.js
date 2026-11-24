@@ -13,4 +13,6 @@ export const API_BASE_URL = configuredApiUrl.replace(/\/+$/, '')
 const apiUrl = new URL(API_BASE_URL, window.location.origin)
 export const UPLOADS_BASE_URL = `${apiUrl.origin}/uploads/`
 
-export const getUploadUrl = (fileName = '') => `${UPLOADS_BASE_URL}${String(fileName).replace(/^\/+/, '')}`
+const encodeFileName = (name) => String(name).replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')
+
+export const getUploadUrl = (fileName = '') => `${UPLOADS_BASE_URL}${encodeFileName(fileName)}`
